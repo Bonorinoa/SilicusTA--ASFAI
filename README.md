@@ -11,6 +11,8 @@ This repository currently preserves the existing ASFAI integration handoff and p
 - `asfai-mcp-field-manual.html` — ASFAI MCP field manual.
 - `asfai-mcp-tests/` — prior lesson-plan and MCP smoke-test artifacts.
 - `patches/` — proposed upstream MCP clarification-receipt fix and issue notes.
+- `research-marble-asfai-education.md` — primary-source review of Marble’s published taxonomy, licensing, and its runtime integration through ASFAI Education’s `asfai_graph` gateway.
+- `research-asfai-education-mcp-implementation.md` — repository-level review of the ASFAI Education MCP gateway contract, storage boundary, teacher confirmation responsibilities, and integration implications for Silicus.
 
 ## Product boundaries to preserve
 
@@ -22,4 +24,4 @@ This repository currently preserves the existing ASFAI integration handoff and p
 
 ## Status
 
-Repository initialization only. Architecture and implementation should follow after the Marble and ASFAI Education MCP research reports are reviewed.
+Repository initialized. Primary-source research reports on Marble and the ASFAI Education MCP are included; architecture decisions remain pending review of those findings and explicit product-contract decisions.

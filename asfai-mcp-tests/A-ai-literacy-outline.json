@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "0.1",
+  "kind": "lesson-outline",
+  "id": "lesson-outline.ai-literacy.teaching-with-examples-7-9",
+  "version": 1,
+  "status": "draft",
+  "course": "AI literacy — What is a computer that learns? (ages 7–9)",
+  "topic": "Teaching a computer with examples (patterns, machine learning, a first trained model)",
+  "audience": "Year 3–4 class (ages 7–9); mixed ability; one hour computing / AI-literacy slot; no prior coding",
+  "learningOutcomes": [
+    "Sort a mixed set of objects or pictures into categories and explain the rule they used.",
+    "Describe machine learning in three steps: give examples, find patterns, make a prediction about something new.",
+    "Train a two-class model in Teachable Machine (or equivalent), test it on a new example, and say what changed when they used few examples versus many.",
+    "Give one example of the model getting something wrong and explain that it only knows patterns from the examples it was shown."
+  ],
+  "sections": [
+    {
+      "id": "hook",
+      "title": "Hook: a machine that seems to know you",
+      "purpose": "Activate everyday experience of recommendations or face unlock without treating that chat as proof of understanding."
+    },
+    {
+      "id": "sort",
+      "title": "We sort; computers need many examples",
+      "purpose": "Make pattern-and-classification visible with a hands-on sort so later training talk has a concrete landing pad."
+    },
+    {
+      "id": "three_steps",
+      "title": "Three steps: examples, pattern, prediction",
+      "purpose": "Give a shared, sayable model of machine learning before any tool is opened."
+    },
+    {
+      "id": "train_lab",
+      "title": "Lab: train a two-class model",
+      "purpose": "Each pair actually trains and tests a model so the idea is something they did, not only something they heard."
+    },
+    {
+      "id": "few_vs_many",
+      "title": "Few examples, many examples, and a mistake",
+      "purpose": "Show that quality and number of examples change the prediction, and that a wrong label is a pattern gap, not magic failing."
+    },
+    {
+      "id": "exit",
+      "title": "Individual check-out",
+      "purpose": "Collect one independent spoken or written account per learner; pair work does not count as individual evidence."
+    }
+  ],
+  "createdAt": "2026-10-06T17:09:00Z",
+  "updatedAt": "2026-10-06T17:09:00Z"
+}

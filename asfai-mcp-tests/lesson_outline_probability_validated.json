@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "0.1",
+  "id": "lesson-outline.econ-stats.probability-foundations.prices",
+  "version": 1,
+  "status": "draft",
+  "sourceRefs": [
+    "Teacher structured intake via Hermes",
+    "Reconcile choice: split intent \u2014 probability only today",
+    "Session: single 50-minute class",
+    "Domain: prices, inflation, or consumer behavior"
+  ],
+  "decisionTrace": [],
+  "createdAt": "2026-09-26T02:34:22Z",
+  "updatedAt": "2026-09-26T02:34:22Z",
+  "kind": "lesson-outline",
+  "course": "Econ / social-science applied statistics sequence (first-year undergraduate)",
+  "topic": "Probability foundations: chance, conditional probability, Bayes-lite intuition (prices/inflation/consumer examples)",
+  "audience": "First-year undergraduate students in an applied econ or social-science statistics sequence",
+  "learningOutcomes": [
+    "Distinguish outcomes, events, and simple probability assignments in an applied prices/consumer setting",
+    "Use conditional probability language correctly (including base-rate caution) on a short applied example",
+    "Update a simple prior with new information at an intuitive Bayes-lite level (no formal Bayes theorem derivation required)",
+    "Explain in plain language why chance models matter for reading economic numbers\u2014without claiming sample-to-population inference yet"
+  ],
+  "sections": [
+    {
+      "id": "hook_price_claim",
+      "title": "Hook: a confident price claim",
+      "purpose": "Surface how everyday economic claims smuggle chance and uncertainty without naming them.",
+      "suggestedActivities": [
+        "whole-class claim autopsy"
+      ]
+    },
+    {
+      "id": "chance_vocab",
+      "title": "Outcomes, events, and simple chance",
+      "purpose": "Build a shared vocabulary for random outcomes and events using a consumer/price scenario.",
+      "suggestedActivities": [
+        "pair sample-space sketch"
+      ]
+    },
+    {
+      "id": "conditional",
+      "title": "Conditional probability without the trap",
+      "purpose": "Practice \u201cprobability given information\u201d and flag base-rate / inverted-condition mistakes.",
+      "suggestedActivities": [
+        "2x2 table walkthrough"
+      ]
+    },
+    {
+      "id": "bayes_lite",
+      "title": "Bayes-lite: updating a prior with news",
+      "purpose": "Show intuitive prior \u2192 evidence \u2192 revised belief without formal theorem derivation.",
+      "suggestedActivities": [
+        "prior-to-posterior intuition with natural frequencies"
+      ]
+    },
+    {
+      "id": "exit_and_bridge",
+      "title": "Exit check + bridge to next class",
+      "purpose": "Collect individual formative evidence on chance/conditioning; explicitly park parameter vs statistic for next meeting.",
+      "suggestedActivities": [
+        "individual exit ticket"
+      ]
+    }
+  ],
+  "unresolvedDecisions": []
+}

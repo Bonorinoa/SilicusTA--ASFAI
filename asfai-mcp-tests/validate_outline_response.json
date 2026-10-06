@@ -1,0 +1,64 @@
+{
+  "valid": true,
+  "outline": {
+    "schemaVersion": "0.1",
+    "id": "lesson-outline.undergrad-stats.descriptive-sampling-variability",
+    "version": 1,
+    "status": "draft",
+    "sourceRefs": [],
+    "decisionTrace": [],
+    "createdAt": "2026-09-25T19:30:00Z",
+    "updatedAt": "2026-09-25T19:30:00Z",
+    "kind": "lesson-outline",
+    "course": "Introductory Statistics (STAT 101 / first-year undergraduate, general-education or social-science track)",
+    "topic": "Descriptive statistics and sampling variability",
+    "audience": "First-year undergraduate university students; high-school algebra; no calculus",
+    "learningOutcomes": [
+      "Compute and interpret sample mean, median, and standard deviation in context for a small quantitative dataset.",
+      "Distinguish a population parameter from a sample statistic and explain why a statistic can change from sample to sample.",
+      "Use a simple repeated-sampling activity to describe the center and spread of sample means qualitatively (no formal CLT).",
+      "Identify and correct the misuse of treating one sample mean as if it were the certain population mean."
+    ],
+    "sections": [
+      {
+        "id": "hook",
+        "title": "Hook: one number, many stories",
+        "purpose": "Activate prior ideas about averages and surface uncertainty about generalizing from one sample.",
+        "suggestedActivities": []
+      },
+      {
+        "id": "vocab_and_summaries",
+        "title": "Mini-lesson: mean, median, SD in context",
+        "purpose": "Build shared language for mean, median, and SD as sample summaries in context.",
+        "suggestedActivities": []
+      },
+      {
+        "id": "param_vs_stat",
+        "title": "Parameter vs statistic",
+        "purpose": "Separate population targets from sample calculations so later inference talk has a place to land.",
+        "suggestedActivities": []
+      },
+      {
+        "id": "sampling_lab",
+        "title": "Activity: many samples, many means",
+        "purpose": "Make sampling variability visible by comparing many sample means from the same population.",
+        "suggestedActivities": []
+      },
+      {
+        "id": "misuse_discussion",
+        "title": "Discussion: the overconfident headline",
+        "purpose": "Practice responsible communication that does not overclaim from one sample mean.",
+        "suggestedActivities": []
+      },
+      {
+        "id": "exit_ticket",
+        "title": "Individual check for understanding",
+        "purpose": "Collect individual formative evidence of the lesson outcomes.",
+        "suggestedActivities": []
+      }
+    ],
+    "unresolvedDecisions": []
+  },
+  "errors": [],
+  "nextState": "reviewed"
+}

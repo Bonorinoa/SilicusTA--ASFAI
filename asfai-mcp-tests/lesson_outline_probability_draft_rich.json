@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "0.1",
+  "kind": "lesson-outline",
+  "id": "lesson-outline.econ-stats.probability-foundations.prices",
+  "version": 1,
+  "status": "draft",
+  "title": "Chance, Conditioning, and Careful Updating (Prices & Consumers)",
+  "description": "50-minute first-year applied econ/social-science stats lesson on probability foundations only. Parameter vs statistic and sampling variability explicitly deferred.",
+  "course": "Econ / social-science applied statistics sequence (first-year undergraduate)",
+  "audience": "First-year undergraduate students in an applied econ or social-science statistics sequence",
+  "topic": "Probability foundations: chance, conditional probability, Bayes-lite intuition (prices/inflation/consumer examples)",
+  "durationMinutes": 50,
+  "learningOutcomes": [
+    "Distinguish outcomes, events, and simple probability assignments in an applied prices/consumer setting",
+    "Use conditional probability language correctly (including base-rate caution) on a short applied example",
+    "Update a simple prior with new information at an intuitive Bayes-lite level (no formal Bayes theorem derivation required)",
+    "Explain in plain language why chance models matter for reading economic numbers\u2014without claiming sample-to-population inference yet"
+  ],
+  "sections": [
+    {
+      "id": "hook_price_claim",
+      "title": "Hook: a confident price claim",
+      "purpose": "Surface how everyday economic claims smuggle chance and uncertainty without naming them.",
+      "minutes": 6,
+      "teacherNotes": "Open with a short consumer/inflation-style claim (e.g., \u201cMost shoppers will see prices fall this month\u201d or a store \u201c80% of customers save\u201d). Ask what would make the claim true/false and what \u201cmost\u201d hides. Do not introduce parameters/samples yet.",
+      "learnerTask": "In one or two sentences, say what would count as evidence for or against the claim\u2014and what still feels unclear.",
+      "suggestedActivities": [
+        "whole-class claim autopsy"
+      ]
+    },
+    {
+      "id": "chance_vocab",
+      "title": "Outcomes, events, and simple chance",
+      "purpose": "Build a shared vocabulary for random outcomes and events using a consumer/price scenario.",
+      "minutes": 12,
+      "teacherNotes": "Define outcome vs event with a concrete shopper/price example (e.g., randomly selected receipt; categories: price-up / flat / price-down on a basket). Assign simple probabilities that sum to 1. Emphasize model vs reality.",
+      "learnerTask": "With a partner, list the sample space for a tiny consumer scenario and assign rough probabilities that add to 1; mark one event of interest.",
+      "suggestedActivities": [
+        "pair sample-space sketch"
+      ]
+    },
+    {
+      "id": "conditional",
+      "title": "Conditional probability without the trap",
+      "purpose": "Practice \u201cprobability given information\u201d and flag base-rate / inverted-condition mistakes.",
+      "minutes": 14,
+      "teacherNotes": "Move to P(A|B) language with a prices/consumer filter (e.g., probability a basket rose given it was mostly food; or probability a shopper is \u201cdeal-seeking\u201d given they used a coupon). Show a 2x2 count table. Explicitly contrast P(A|B) vs P(B|A). No Bayes formula wall yet.",
+      "learnerTask": "Using a provided 2x2 table, compute or reason about one conditional probability and state the inverted conditional in words (do not equate them).",
+      "suggestedActivities": [
+        "2x2 table walkthrough"
+      ]
+    },
+    {
+      "id": "bayes_lite",
+      "title": "Bayes-lite: updating a prior with news",
+      "purpose": "Show intuitive prior \u2192 evidence \u2192 revised belief without formal theorem derivation.",
+      "minutes": 10,
+      "teacherNotes": "Start with a prior belief about inflation/price direction (given as simple chances). Add one piece of news (survey blip, oil move, retailer note). Walk natural frequencies or a simple tree. Keep algebra light; stress that new information revises chances, it does not certify certainty.",
+      "learnerTask": "Given a prior and one evidence scenario, say whether your chance of \u201cprices up\u201d should rise, fall, or stay put\u2014and why in plain language.",
+      "suggestedActivities": [
+        "prior-to-posterior intuition with natural frequencies"
+      ]
+    },
+    {
+      "id": "exit_and_bridge",
+      "title": "Exit check + bridge to next class",
+      "purpose": "Collect individual formative evidence on chance/conditioning; explicitly park parameter vs statistic for next meeting.",
+      "minutes": 8,
+      "teacherNotes": "Individual exit ticket on outcomes/events, one conditional vs inverse, and one updating judgment. Close with a one-minute preview: next class uses chance language to talk about estimates that move across samples (parameter vs statistic)\u2014not today.",
+      "learnerTask": "Individually answer three short items; optionally jot one economic headline that confuses \u201cgiven\u201d information with the reverse.",
+      "suggestedActivities": [
+        "individual exit ticket"
+      ]
+    }
+  ],
+  "materials": [
+    "One short consumer/price claim for the hook",
+    "Simple 2x2 count table (shopper type \u00d7 basket price-change)",
+    "Natural-frequency or tree handout for Bayes-lite",
+    "Exit ticket (paper or LMS)"
+  ],
+  "assessmentNotes": "Formative only. No consequential grading. Parameter/statistic and sampling variability are out of scope for this session by teacher decision.",
+  "assumptions": [
+    "Teacher chose split intent: probability foundations only today",
+    "50-minute single class",
+    "Applied examples in prices/inflation/consumer behavior",
+    "Defer parameter vs statistic + sampling variability to next class",
+    "No formal Bayes theorem derivation required"
+  ],
+  "sourceRefs": [
+    "Teacher structured intake via Hermes",
+    "Reconcile choice: split intent \u2014 probability only today",
+    "Session: single 50-minute class",
+    "Domain: prices, inflation, or consumer behavior"
+  ],
+  "createdAt": "2026-09-26T02:34:22Z",
+  "updatedAt": "2026-09-26T02:34:22Z"
+}

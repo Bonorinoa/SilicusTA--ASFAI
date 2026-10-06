@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "0.1",
+  "kind": "lesson-outline",
+  "id": "lesson-outline.econ167.mle-as-function-of-parameters",
+  "version": 1,
+  "status": "draft",
+  "course": "ECON 167 — Econometrics / Statistical methods (university)",
+  "topic": "Maximum likelihood estimation: likelihood as a function of parameters",
+  "audience": "Undergraduate economics students (ECON 167 / similar); calculus-based probability; first encounter with likelihood as a function of parameters",
+  "learningOutcomes": [
+    "Write the likelihood of an i.i.d. sample as a function of a parameter and distinguish it from the probability of data given a known parameter.",
+    "Sketch why maximizing the likelihood (or log-likelihood) is a method of point estimation, using a one-parameter example (e.g. Bernoulli or Normal mean).",
+    "Explain in the course's own analogy (from lecture notes) what the MLE is doing, without substituting a grade-school 'likely/unlikely' vocabulary.",
+    "State one limitation of MLE that the course actually teaches (regularity, invariance, or finite-sample behavior) as given in the notes — mark unknown if the notes do not say."
+  ],
+  "sections": [
+    {
+      "id": "hook",
+      "title": "Hook: the lecture analogy, not a weather forecast",
+      "purpose": "Activate the course's own MLE analogy from notes and block grade-school likelihood language from taking over."
+    },
+    {
+      "id": "likelihood_vs_probability",
+      "title": "Likelihood as a function of the parameter",
+      "purpose": "Write L(theta | data) for an i.i.d. sample and contrast it with P(data | theta known)."
+    },
+    {
+      "id": "maximize",
+      "title": "Why we maximize (log) likelihood",
+      "purpose": "Treat MLE as a point estimator on a one-parameter example the course actually uses."
+    },
+    {
+      "id": "notes_limitation",
+      "title": "One limitation as the notes state it",
+      "purpose": "Record a course-true caveat or explicitly mark unknown if the uploaded notes do not say."
+    },
+    {
+      "id": "exit",
+      "title": "Individual check",
+      "purpose": "Each student writes L(theta) for a tiny sample and one sentence on what maximizing it is doing; chatting with notes is not this check."
+    }
+  ],
+  "createdAt": "2026-10-06T17:20:00Z",
+  "updatedAt": "2026-10-06T17:20:00Z"
+}

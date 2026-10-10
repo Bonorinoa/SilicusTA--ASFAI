@@ -76,5 +76,5 @@ Pass bar: would hand this plan to a colleague without rewriting the **structure*
 - [ ] Wrong object
 
 Artifacts:
-- `asfai-mcp-tests/A-ai-literacy-outline.json`
-- `asfai-mcp-tests/A-ai-literacy-lesson-plan.md`
+- `docs/archive/asfai-mcp-tests/A-ai-literacy-outline.json`
+- `docs/archive/asfai-mcp-tests/A-ai-literacy-lesson-plan.md`

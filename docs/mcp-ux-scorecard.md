@@ -82,7 +82,7 @@ Tick one:
 
 - [ ] **Freeze-worthy** — I can design a GUI against these tools
 - [ ] **Iterate** — useful, but tools/objects still moving (list what must freeze)
-- [ ] **Wrong object** — rebuild the contract (`01-lesson-planning-object.md`) before any GUI
+- [ ] **Wrong object** — rebuild the contract (`docs/lesson-planning-object.md`) before any GUI
 
 ## Feedback note (paste to Stephen / Michael)
 

@@ -1,27 +1,29 @@
-# SilicusTA--ASFAI
+# Silicus TA 3.0
 
-Silicus TA 3.0 is being designed as a teacher/student product that integrates natively with ASFAI Education records and MCP contracts, while remaining compatible with graph ontologies more generally.
+A teacher/student product built on ASFAI Education records and its MCP contract, while staying
+compatible with graph ontologies more generally. AI assists, the teacher confirms: every
+objective, plan and published version passes a recorded human checkpoint.
 
-This repository currently preserves the existing ASFAI integration handoff and prototype-evaluation materials as a starting point. Product implementation and architecture decisions are intentionally pending the upstream research on Marble and the ASFAI Education MCP.
+## Layout
 
-## Current materials
+| Path | What it is |
+|---|---|
+| `confirm-gate/` | Headless trust core: five-checkpoint state machine + residual rule. Contract in `SPEC.md`. Change nothing here without a failing test first. |
+| `host/` | The real transport (zero-dependency `node:http`). Runs the gate server-side, event-sourced, hash-chained log, verified archive. Intents-only API. See `host/README.md`. |
+| `frontend/` | Vite + React + TS sidecar app; a thin client of the host. See `frontend/README.md`. |
+| `docs/` | Contract (`lesson-planning-object.md`), UX scorecard, `research/` (Marble, ASFAI MCP), and `archive/` (dated Oct 2026 MCP smoke-test evidence). |
+| `patches/` | Proposed upstream fix for the ASFAI clarification receipt. |
 
-- `01-lesson-planning-object.md` — initial course/package/objective/lesson-plan contract and human confirmation checkpoints.
-- `02-mcp-ux-scorecard.md` — teacher usefulness and integration test scorecard.
-- `asfai-mcp-field-manual.html` — ASFAI MCP field manual.
-- `asfai-mcp-tests/` — prior lesson-plan and MCP smoke-test artifacts.
-- `patches/` — proposed upstream MCP clarification-receipt fix and issue notes.
-- `research-marble-asfai-education.md` — primary-source review of Marble’s published taxonomy, licensing, and its runtime integration through ASFAI Education’s `asfai_graph` gateway.
-- `research-asfai-education-mcp-implementation.md` — repository-level review of the ASFAI Education MCP gateway contract, storage boundary, teacher confirmation responsibilities, and integration implications for Silicus.
+## Verify
 
-## Product boundaries to preserve
+    cd confirm-gate && node --test
+    cd host && node --test && node scripts/e2e-restart.mjs
+    cd frontend && npm test && npm run build && node scripts/live-host-smoke.mjs
 
-- Silicus is the teacher/student product surface; ASFAI Education is an independent records/protocol product.
+## Boundaries to preserve
+
+- Silicus is the product surface; ASFAI Education is an independent records/protocol product.
 - Teacher confirmation gates publication. AI proposes; it does not decide.
-- Marble is an optional public skills-map alignment, not the course store, LMS, or learner database. Local objectives must remain first-class.
-- Student chat is not evidence of learning. Teacher onboarding and student use are separate workflows.
-- Keep the first real-user slice focused on ages 5–14; RA and graduate-school expansion is parked.
-
-## Status
-
-Repository initialized. Primary-source research reports on Marble and the ASFAI Education MCP are included; architecture decisions remain pending review of those findings and explicit product-contract decisions.
+- Marble is optional alignment, not the course store. Local objectives are first-class.
+- Student chat is not evidence. Teacher onboarding and student use are separate.
+- First real-user slice is ages 5-14; RA and graduate school are parked.

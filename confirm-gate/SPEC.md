@@ -3,8 +3,8 @@
 **Status:** reference contract for the host side of Silicus TA 3.0.
 **Scope:** two host-side guarantees that ASFAI (by design) cannot make for us.
 **Composes with:** ASFAI PR #15 (clarification receipts / `draftAuthorization`), the
-four-record object graph in `../01-lesson-planning-object.md`, and the boundary facts in
-`../research-asfai-education-mcp-implementation.md`.
+four-record object graph in `../docs/lesson-planning-object.md`, and the boundary facts in
+`../docs/research/asfai-education-mcp-implementation.md`.
 
 Two rules are law here:
 

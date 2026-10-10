@@ -14,9 +14,9 @@ Host-side reference implementation of two rules the ASFAI MCP cannot enforce for
    impossible (no code path from model output to a teacher turn or a confirmation).
 
 Contract: [`SPEC.md`](./SPEC.md). Upstream context:
-`../01-lesson-planning-object.md` (four records + five checkpoints),
+`../docs/lesson-planning-object.md` (four records + five checkpoints),
 `../patches/2026-10-05-clarification-receipt-issue.md` (PR #15 semantics),
-`../research-asfai-education-mcp-implementation.md` (ASFAI boundary facts).
+`../docs/research/asfai-education-mcp-implementation.md` (ASFAI boundary facts).
 
 ## Files
 

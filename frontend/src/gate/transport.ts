@@ -40,7 +40,7 @@ export interface HostCourseMeta {
   createdAt: number;
 }
 
-/** Checkpoint 2's host-side gate: the ASFAI intake round, reported by the runtime. */
+/** Checkpoint 2's host-side gate: the ASFAI intake round, driven by the host. */
 export interface IntakeStatus {
   courseId: string;
   guardState: string;
@@ -48,6 +48,7 @@ export interface IntakeStatus {
   roundOpened: boolean;
   roundAnswered: boolean;
   questions: { id: string; prompt: string; reason: string | null }[];
+  answeredKeys?: string[];
   draftAuthorization: boolean;
   outlineAuthorized: boolean;
   mayCallPrepareOutline: boolean;
@@ -59,6 +60,7 @@ export interface HostView {
   course: HostCourseMeta;
   checkpoints: Record<string, HostCheckpoint>;
   intake: IntakeStatus;
+  validations?: PlanValidation[];
   proposals: ProposalView[];
   objectives: ObjectiveCiteView[];
   decisions: unknown[];
@@ -70,6 +72,9 @@ export interface HostView {
   ledger: HostLedgerTurn[];
   integrity: { events: number; head: string };
 }
+
+export interface AsfaiStatus { connected: boolean; expiresAt: number | null; scope: string | null; canRefresh: boolean }
+export interface PlanValidation { planId: string; valid: boolean; issues: string[]; at: number }
 
 export class HostError extends Error {
   code?: string;
@@ -114,7 +119,14 @@ export const host = {
   confirmCheckpoint: (id: string, b: { id: "files" | "outline"; text: string; note?: string }) =>
     call("POST", `/courses/${enc(id)}/checkpoints`, b),
   intake: (id: string) => call<IntakeStatus>("GET", `/courses/${enc(id)}/intake`),
-  answerIntake: (id: string, b: { text: string }) => call<IntakeStatus>("POST", `/courses/${enc(id)}/intake/answer`, b),
+  /** The HOST calls ASFAI's prepare_outline; the UI sends no fields, so none can be smuggled in. */
+  callIntake: (id: string) => call<IntakeStatus>("POST", `/courses/${enc(id)}/intake/call`, {}),
+  /** The teacher's words, per question id. These are the only source of the second call's fields. */
+  answerIntake: (id: string, b: { text?: string; answers?: Record<string, string | string[]> }) =>
+    call<IntakeStatus>("POST", `/courses/${enc(id)}/intake/answer`, b),
+  validatePlan: (id: string) => call<{ validation: PlanValidation }>("POST", `/courses/${enc(id)}/plan/validate`, {}),
+  asfaiStatus: () => call<AsfaiStatus>("GET", "/asfai/status"),
+  asfaiConnect: () => call<{ authorizeUrl: string }>("POST", "/asfai/connect", {}),
   anchor: (id: string, version: number) =>
     call<{ anchor: CourseAnchor | null }>("GET", `/courses/${enc(id)}/anchor/${version}`),
   archiveCourse: (id: string, ref?: string) =>

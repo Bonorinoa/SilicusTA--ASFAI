@@ -69,6 +69,7 @@ function mockHost(view: HostView | null): { calls: Call[] } {
     if (url === "/api/courses") {
       return ok({ courses: view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1 }] : [] });
     }
+    if (url === "/api/asfai/status") return ok({ connected: true, expiresAt: 9, scope: "asfai", canRefresh: true });
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
     if (url.startsWith("/api/courses/")) return ok(view);
     return ok({});
@@ -131,11 +132,27 @@ describe("LiveCourse — thin client of the host", () => {
     // The gate's refusal reason is surfaced.
     expect(screen.getByText(/clarifying questions and the teacher has not answered/i)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Your answer"), "Topic: how AI answers are built.");
-    await user.click(screen.getByRole("button", { name: "Send my answer" }));
+    // One answer per question ASFAI asked; the teacher's own words are the only thing that is sent.
+    await user.type(screen.getByLabelText("What topic should this lesson cover?"), "how AI answers are built");
+    await user.type(screen.getByLabelText("Which course is this part of?"), "AI literacy, ages 8-10");
+    await user.click(screen.getByRole("button", { name: "Record my answers" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/answer"))).toBe(true));
-    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as { text: string };
-    expect(body.text).toBe("Topic: how AI answers are built.");
+    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as { answers: Record<string, string> };
+    expect(body.answers).toEqual({ topic: "how AI answers are built", course: "AI literacy, ages 8-10" });
+    // The browser never builds the ASFAI call: asking carries no body at all.
+    expect(JSON.stringify(body)).not.toMatch(/payload|learningOutcomes|mode/);
+  });
+
+  it("asking ASFAI sends NO fields from the browser (the host builds the call)", async () => {
+    const fresh = stubView();
+    fresh.checkpoints.outline.status = "pending";
+    fresh.intake = { ...fresh.intake, roundOpened: false, roundAnswered: false, observedState: null, questions: [], refusal: null, mayCallPrepareOutline: true };
+    const { calls } = mockHost(fresh);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await user.click(await screen.findByRole("button", { name: "Ask ASFAI for the questions" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/call"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/intake/call"))!.body).toEqual({});
   });
 
   it("offers to start a course and writes NOTHING on load", async () => {

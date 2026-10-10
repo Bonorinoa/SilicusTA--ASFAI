@@ -38,6 +38,9 @@ export class LessonIntake {
   // count a round as completed unless a teacher turn landed after the questions.
   #roundOpened = false;
   #roundAnswered = false;
+  // What the TEACHER said, keyed by the question ids ASFAI asked. This is the only
+  // thing the second prepare_outline call may be built from.
+  #answers = null;
 
   constructor({ ledger, courseId }) {
     this.#guard = new ResidualRuleGuard({ ledger });
@@ -72,9 +75,36 @@ export class LessonIntake {
    * TeacherChannel minted off the session ledger, which is what makes an
    * AI-self-unblocking reply structurally impossible.
    */
-  answer({ viaChannel, text, at }) {
+  answer({ viaChannel, text, answers = null, at }) {
     this.#roundAnswered = true;
+    this.#answers = cleanAnswers(answers, this.#questions);
     return this.#guard.onTeacherReply(text, { via: viaChannel, at });
+  }
+
+  /**
+   * The payload for the NEXT prepare_outline call, or a refusal. Round 1 asks with no
+   * fields (that is how ASFAI opens its questionnaire). After a clarifying round the
+   * fields come from the teacher's recorded answers and from nowhere else: the host
+   * never fills topic / course / learningOutcomes itself.
+   */
+  nextCall() {
+    const gate = this.mayCallPrepareOutline();
+    if (!gate.allowed) return { allowed: false, code: gate.code, reason: gate.reason };
+    if (!this.#roundOpened) return { allowed: true, payload: { mode: "new", audience: "teacher" } };
+    if (this.#observedState === "ready_to_draft") return { allowed: false, code: "ALREADY_READY", reason: "the intake already reached ready_to_draft" };
+    const a = this.#answers;
+    if (!a || Object.keys(a).length === 0) {
+      return { allowed: false, code: "NO_TEACHER_ANSWERS", reason: "the teacher's reply carried no answers to the questions; nothing may be sent on their behalf" };
+    }
+    return {
+      allowed: true,
+      payload: {
+        mode: "new", audience: "teacher",
+        ...(a.topic ? { topic: a.topic } : {}),
+        ...(a.course ? { course: a.course } : {}),
+        ...(a.learning_outcomes ? { learningOutcomes: a.learning_outcomes } : {}),
+      },
+    };
   }
 
   /** Consult BEFORE every prepare_outline call. */
@@ -121,10 +151,32 @@ export class LessonIntake {
       roundOpened: this.#roundOpened,
       roundAnswered: this.#roundAnswered,
       questions: this.#questions,
+      answeredKeys: this.#answers ? Object.keys(this.#answers) : [],
       draftAuthorization: this.#guard.hasDraftAuthorization(),
       outlineAuthorized: this.outlineAuthorized(),
       mayCallPrepareOutline: call.allowed,
       refusal: call.allowed ? null : { code: call.code, reason: call.reason },
     };
   }
+}
+
+const MAX_FIELD = 2000;
+const KNOWN = new Set(["topic", "course", "learning_outcomes"]);
+
+/** Only keys ASFAI actually asked about survive; values are trimmed teacher words, bounded. */
+function cleanAnswers(raw, asked) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const askedIds = new Set((asked ?? []).map((q) => q.id));
+  const out = {};
+  for (const key of Object.keys(raw)) {
+    if (!KNOWN.has(key) || !askedIds.has(key)) continue; // an answer to a question nobody asked is ignored
+    const v = raw[key];
+    if (key === "learning_outcomes") {
+      const list = (Array.isArray(v) ? v : String(v ?? "").split("\n")).map((x) => String(x).trim()).filter(Boolean).slice(0, 12);
+      if (list.length) out[key] = list.map((x) => x.slice(0, MAX_FIELD));
+    } else if (typeof v === "string" && v.trim()) {
+      out[key] = v.trim().slice(0, MAX_FIELD);
+    }
+  }
+  return out;
 }

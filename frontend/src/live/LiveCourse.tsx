@@ -15,7 +15,7 @@ import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
 import { describeIntent } from "../gate/harness";
 import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
-import { host, type HostView } from "../gate/transport";
+import { host, type AsfaiStatus, type HostView } from "../gate/transport";
 import type { DecisionIntent } from "../gate/types";
 import styles from "./LiveCourse.module.css";
 
@@ -56,7 +56,8 @@ export function LiveCourse() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [answer, setAnswer] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
 
@@ -76,7 +77,11 @@ export function LiveCourse() {
     })();
   }, []);
 
-  const reload = async (id = courseId) => { if (id) setView(await host.getCourse(id)); };
+  const reload = async (id = courseId) => {
+    if (id) setView(await host.getCourse(id));
+    try { setAsfai(await host.asfaiStatus()); } catch { /* an old host: leave unknown */ }
+  };
+  useEffect(() => { void host.asfaiStatus().then(setAsfai).catch(() => {}); }, []);
   const run = (fn: () => Promise<void>) => {
     setBusy(true);
     fn()
@@ -99,11 +104,33 @@ export function LiveCourse() {
     await reload();
   });
 
-  /** The teacher's reply to the ASFAI clarifying questions. It is what unblocks the outline. */
+  /** Ask ASFAI for the clarifying questions (round 1) or send the teacher's answers (round 2). */
+  const askAsfai = () => run(async () => {
+    try { await host.callIntake(courseId!); }
+    catch (e) { setNotice(`ASFAI: ${(e as Error).message}`); }
+    finally { await reload(); }
+  });
+
+  /** Ask ASFAI to format-check the drafted plan. A signal only; confirming is still the teacher's act. */
+  const checkPlan = () => run(async () => {
+    try { await host.validatePlan(courseId!); }
+    catch (e) { setNotice(`ASFAI: ${(e as Error).message}`); }
+    finally { await reload(); }
+  });
+
+  /** Open ASFAI's consent screen in a new tab. Nothing is connected until the teacher clicks there. */
+  const connectAsfai = () => run(async () => {
+    const { authorizeUrl } = await host.asfaiConnect();
+    window.open(authorizeUrl, "_blank", "noopener");
+    setNotice("Approve ASFAI in the new tab, then come back and press “I approved it”.");
+  });
+
+  /** The teacher's reply to the ASFAI clarifying questions, one answer per question. It is what unblocks the outline. */
   const sendAnswer = () => run(async () => {
     try {
-      await host.answerIntake(courseId!, { text: answer });
-      setAnswer("");
+      const given = Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim()));
+      await host.answerIntake(courseId!, { answers: given });
+      setAnswers({});
     } catch (e) {
       setNotice(`Refused by the intake gate: ${(e as Error).message}`);
     } finally {
@@ -274,40 +301,54 @@ export function LiveCourse() {
           ) : (
             <section className={styles.intake} aria-label="ASFAI course intake">
               <h2 className={styles.intakeTitle}>Course intake (ASFAI)</h2>
+              {asfai && !asfai.connected ? (
+                <p className={styles.intakeNote}>
+                  ASFAI is not connected. Nothing is sent until you approve it.{" "}
+                  <button type="button" className={styles.ghostButton} onClick={connectAsfai} disabled={busy}>Connect ASFAI</button>{" "}
+                  <button type="button" className={styles.ghostButton} onClick={() => run(reload)} disabled={busy}>I approved it</button>
+                </p>
+              ) : null}
               {view.intake.questions.length > 0 ? (
                 <>
                   <ol className={styles.intakeQuestions}>
                     {view.intake.questions.map((q) => (
                       <li key={q.id}>
-                        <span className={styles.intakePrompt}>{q.prompt}</span>
+                        <label className={styles.intakePrompt} htmlFor={`intake-${q.id}`}>{q.prompt}</label>
                         {q.reason ? <span className={styles.intakeReason}>{q.reason}</span> : null}
+                        <textarea
+                          id={`intake-${q.id}`}
+                          className={styles.intakeAnswer}
+                          rows={q.id === "learning_outcomes" ? 4 : 2}
+                          value={answers[q.id] ?? ""}
+                          onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                        />
                       </li>
                     ))}
                   </ol>
-                  <label className={styles.intakeAnswerLabel} htmlFor="intake-answer">
-                    Your answer
-                  </label>
-                  <textarea
-                    id="intake-answer"
-                    className={styles.intakeAnswer}
-                    rows={3}
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className={styles.primaryButton}
-                    onClick={sendAnswer}
-                    disabled={busy || answer.trim().length === 0}
-                  >
-                    Send my answer
-                  </button>
+                  {view.intake.roundAnswered ? (
+                    <button type="button" className={styles.primaryButton} onClick={askAsfai} disabled={busy}>
+                      Send your answers to ASFAI
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.primaryButton}
+                      onClick={sendAnswer}
+                      disabled={busy || Object.values(answers).every((v) => !v.trim())}
+                    >
+                      Record my answers
+                    </button>
+                  )}
                 </>
               ) : (
-                <p className={styles.intakeNote}>
-                  The intake has not reported yet. The assistant asks ASFAI for the clarifying
-                  questions; they surface here, and only your answer unblocks the outline.
-                </p>
+                <>
+                  <p className={styles.intakeNote}>
+                    ASFAI will ask a few questions about the lesson. Your answers, in your words, are all it will be sent.
+                  </p>
+                  <button type="button" className={styles.primaryButton} onClick={askAsfai} disabled={busy || asfai?.connected === false}>
+                    Ask ASFAI for the questions
+                  </button>
+                </>
               )}
               {view.intake.refusal ? (
                 <p className={styles.intakeRefusal}>{view.intake.refusal.reason}</p>
@@ -326,10 +367,22 @@ export function LiveCourse() {
           </button>
         ) : null}
         {plan && plan.status === "draft" ? (
-          <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
-            Confirm the lesson plan
-          </button>
+          <>
+            <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
+              Check the plan with ASFAI
+            </button>
+            <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
+              Confirm the lesson plan
+            </button>
+          </>
         ) : null}
+        {plan && (view.validations ?? []).filter((v) => v.planId === plan.id).slice(-1).map((v) => (
+          <p key={v.at} className={styles.intakeNote} role="status">
+            {v.valid
+              ? "ASFAI found the plan structurally sound. That is a format check, not a review — the decision is still yours."
+              : `ASFAI flagged the plan format: ${v.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
+          </p>
+        ))}
         {plan && plan.status === "invalidated" ? (
           <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
             Re-confirm the lesson plan

@@ -11,18 +11,23 @@ import { spawn } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { startMockAsfai } from "../test/mock-asfai.mjs";
 
 const PORT = 8791;
 const DATA = mkdtempSync(join(tmpdir(), "silicus-e2e-"));
 const BASE = `http://127.0.0.1:${PORT}`;
 const OWNER = "teacher:tk-1";
 
+const mock = await startMockAsfai();   // the host calls THIS, over real HTTP, never the network
 const results = [];
 const check = (name, ok, extra = "") => results.push(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? " — " + extra : ""}`);
 
 function startHost() {
   const child = spawn(process.execPath, ["server.mjs"], {
-    env: { ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(PORT) },
+    env: {
+      ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(PORT),
+      SILICUS_ASFAI_MCP_URL: mock.mcpUrl, SILICUS_ASFAI_PRM_URL: mock.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
   child.stdout.on("data", () => {});
@@ -64,14 +69,21 @@ const courseId = created.json.courseId;
 check("course created", created.status === 201 && !!courseId);
 
 await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
-// checkpoint 2: the ASFAI intake round (the runtime reports the observed results).
-await post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: [
-  { id: "topic", prompt: "What topic should this lesson cover?" },
-  { id: "course", prompt: "Which course is this part of?" },
-  { id: "learning_outcomes", prompt: "What should learners be able to do by the end?" },
-] });
-await post(`/api/courses/${courseId}/intake/answer`, { text: "Topic: how AI answers are built. Course: AI literacy, ages 8-10." });
-await post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
+// checkpoint 2: the HOST drives the ASFAI intake round. Connect first (the teacher's consent click,
+// played here by the mock issuer), then call -> teacher answers -> call.
+const conn = await post("/api/asfai/connect", {});
+const consent = mock.consent(conn.json.authorizeUrl);
+const cb = await fetch(`${BASE}/api/asfai/callback?code=${consent.code}&state=${consent.state}`);
+check("ASFAI consent completes through the host's own callback", cb.status === 200 && (await get("/api/asfai/status")).json.connected === true);
+const r1 = await post(`/api/courses/${courseId}/intake/call`, {});
+check("host-driven prepare_outline returns the clarifying round", r1.json.observedState === "clarifying" && r1.json.questions.length === 3);
+const again = await post(`/api/courses/${courseId}/intake/call`, {});
+check("the host cannot go again before the teacher answers", again.status === 409 && again.json.code === "AWAITING_TEACHER_REPLY");
+await post(`/api/courses/${courseId}/intake/answer`, { answers: {
+  topic: "how AI answers are built", course: "AI literacy, ages 8-10",
+  learning_outcomes: ["Students can explain what an algorithm is."] } });
+const r2 = await post(`/api/courses/${courseId}/intake/call`, {});
+check("the second call, built from the teacher's answers, reaches ready_to_draft", r2.json.observedState === "ready_to_draft" && r2.json.outlineAuthorized === true);
 await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
 const proposed = await post(`/api/courses/${courseId}/objectives`, { items: ITEMS, sources: ["from your slides p.4", "suggested match"] });
 const [p1, p2] = proposed.json.proposals.map((r) => r.id);

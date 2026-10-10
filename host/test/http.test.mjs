@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after } from "node:test";
 import { createApp } from "../server.mjs";
+import { connectedAsfai, ANSWERS } from "./asfai-fixture.mjs";
 
 // A failing assertion skips the test's own stop(), which leaves a listening
 // server and makes the test process hang at exit. Force-close everything.
@@ -32,8 +33,13 @@ const ITEMS = [
   { kind: "public", publicId: "mt_alpha", statement: "Learners can find the claim in an AI answer." },
 ];
 
-async function start(dataDir) {
-  const app = createApp({ dataDir });
+const MOCKS = [];
+after(() => MOCKS.forEach((m) => m.close()));
+
+async function start(dataDir, { asfai } = {}) {
+  let svc = asfai;
+  if (svc === undefined) { const c = await connectedAsfai(); MOCKS.push(c.mock); svc = c.svc; }
+  const app = createApp({ dataDir, asfai: svc });
   APPS.push(app);
   await new Promise((r) => app.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${app.address().port}`;
@@ -50,6 +56,7 @@ async function start(dataDir) {
   return {
     app,
     base,
+    asfai: svc,
     post,
     get,
     // closeAllConnections first: fetch keeps sockets alive and server.close()
@@ -77,9 +84,9 @@ async function driveHttp({ post }, owner = OWNER) {
   const courseId = created.json.courseId;
 
   await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
-  await post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: CLARIFY });
-  await post(`/api/courses/${courseId}/intake/answer`, { text: "Topic: how AI answers are built." });
-  await post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/intake/answer`, { answers: ANSWERS });
+  await post(`/api/courses/${courseId}/intake/call`, {});
   await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
   const proposed = await post(`/api/courses/${courseId}/objectives`, { items: ITEMS, sources: ["from your slides p.4", "suggested match"] });
   const [p1, p2] = proposed.json.proposals.map((r) => r.id);
@@ -193,16 +200,20 @@ test("checkpoint 2 is refused over HTTP until the intake is authorized", async (
   assert.equal(early.status, 409);
   assert.equal(early.json.code, "MISSING_DRAFT_AUTHORIZATION");
 
-  // The bypass: claim ready_to_draft without the teacher ever answering.
-  await h.post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: CLARIFY });
+  // The bypass: the host opens the round, then tries to go again with nobody having answered.
+  const opened = await h.post(`/api/courses/${courseId}/intake/call`, {});
+  assert.equal(opened.json.observedState, "clarifying");
   const gate = await h.get(`/api/courses/${courseId}/intake`);
   assert.equal(gate.json.mayCallPrepareOutline, false);
-  await h.post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
+  const second = await h.post(`/api/courses/${courseId}/intake/call`, {});
+  assert.equal(second.status, 409);
+  assert.equal(second.json.code, "AWAITING_TEACHER_REPLY");
   const bypass = await h.post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
   assert.equal(bypass.status, 409, "an unanswered round must not open checkpoint 2");
 
   // The real round.
-  await h.post(`/api/courses/${courseId}/intake/answer`, { text: "Topic: how AI answers are built." });
+  await h.post(`/api/courses/${courseId}/intake/answer`, { answers: ANSWERS });
+  await h.post(`/api/courses/${courseId}/intake/call`, {});
   const ok = await h.post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
   assert.equal(ok.status, 200);
   assert.equal(ok.json.status, "confirmed");

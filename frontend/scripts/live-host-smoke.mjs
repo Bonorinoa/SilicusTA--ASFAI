@@ -16,9 +16,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
+import { startMockAsfai } from "../../host/test/mock-asfai.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));      // frontend/
 const REPO = join(HERE, "..");
+const MOCK = await startMockAsfai();   // the host calls this over real HTTP; no network, no real teacher data
 const DATA = mkdtempSync(join(tmpdir(), "silicus-live-"));
 const HOST_PORT = 8787;
 const APP_PORT = 5173;
@@ -26,12 +28,6 @@ const HOST = `http://127.0.0.1:${HOST_PORT}`;
 const APP = `http://127.0.0.1:${APP_PORT}`;
 
 // The live server's clarifying questions (captured from asfai-learning 2.0.0).
-const CLARIFY = [
-  { id: "topic", prompt: "What topic should this lesson cover?" },
-  { id: "course", prompt: "Which course is this part of?" },
-  { id: "learning_outcomes", prompt: "What should learners be able to do by the end?" },
-];
-const ANSWER = "Topic: how AI answers are built. Course: AI literacy, ages 8-10.";
 
 const results = [];
 const check = (name, ok, extra = "") => {
@@ -96,7 +92,10 @@ const bodyHas = (page, t) => page.evaluate((s) => document.body.innerText.toLowe
 // ---------------------------------------------------------------- boot both
 bg(process.execPath, ["server.mjs"], {
   cwd: join(REPO, "host"),
-  env: { ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT) },
+  env: {
+    ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT),
+    SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
+  },
 });
 bg("npm", ["run", "preview", "--", "--port", String(APP_PORT), "--strictPort"], { cwd: HERE });
 
@@ -134,14 +133,19 @@ await clickText(page, "Confirm the material list");
 await poll(async () => (await getView(courseId)).checkpoints.files.status === "confirmed");
 check("materials confirmed IN THE HOST", true);
 
-// checkpoint 2 — the ASFAI intake round. The smoke plays the RUNTIME's role for the
-// MCP call (it reports what a real prepare_outline returned); the teacher's answer
-// goes through the UI, and only that answer unblocks the outline.
-await post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: CLARIFY });
-// The runtime reports out of band, so the page re-reads (an operator refresh).
+// checkpoint 2 — the ASFAI intake round, now driven BY THE HOST. The teacher's consent click is played
+// by the mock issuer; everything after it goes through the real UI.
+const unconnected = await post(`/api/courses/${courseId}/intake/call`, {});
+check("before consent the host refuses to call ASFAI (401 AUTH_REQUIRED)", unconnected.status === 401 && unconnected.json.code === "AUTH_REQUIRED");
+const conn = await post("/api/asfai/connect", {});
+const consent = MOCK.consent(conn.json.authorizeUrl);
+const cbRes = await fetch(`${HOST}/api/asfai/callback?code=${consent.code}&state=${consent.state}`);
+check("ASFAI consent completes through the host's own callback", cbRes.status === 200);
 await page.reload({ waitUntil: "networkidle0" });
+await poll(async () => await bodyHas(page, "Ask ASFAI for the questions"));
+await clickText(page, "Ask ASFAI for the questions");
 await poll(() => page.evaluate(() => document.body.innerText.includes("What topic should this lesson cover?")));
-check("the intake questions surface in the UI", true);
+check("the host called ASFAI and the questions surface in the UI", true);
 
 const premature = await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
 check(
@@ -149,20 +153,27 @@ check(
   premature.status === 409 && premature.json.code === "MISSING_DRAFT_AUTHORIZATION",
   `status=${premature.status} code=${premature.json.code}`,
 );
+const rushed = await post(`/api/courses/${courseId}/intake/call`, {});
+check("the host cannot ask ASFAI again before the teacher answers", rushed.status === 409 && rushed.json.code === "AWAITING_TEACHER_REPLY");
 
-await page.evaluate((text) => {
-  const ta = document.querySelector("#intake-answer");
+const fill = (id, text) => page.evaluate((id, text) => {
+  const ta = document.querySelector(`#intake-${id}`);
   const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
   setter.call(ta, text);
   ta.dispatchEvent(new Event("input", { bubbles: true }));
-}, ANSWER);
-await clickText(page, "Send my answer");
+}, id, text);
+await fill("topic", "how AI answers are built");
+await fill("course", "AI literacy, ages 8-10");
+await fill("learning_outcomes", "Students can explain what an algorithm is.\nLearners can find the claim in an AI answer.");
+await clickText(page, "Record my answers");
 await poll(async () => (await getView(courseId)).intake.roundAnswered === true);
-check("the teacher's answer is recorded on the host and arms the round", true);
+check("the teacher's answers are recorded on the host and arm the round", true);
 
-// The runtime now reports the completed intake; only then does the outline open.
-const stillBlocked = await post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
-check("the intake reports ready_to_draft", stillBlocked.json.outlineAuthorized === true);
+await poll(async () => await bodyHas(page, "Send your answers to ASFAI"));
+await clickText(page, "Send your answers to ASFAI");
+await poll(async () => (await getView(courseId)).intake.outlineAuthorized === true);
+const sent = (MOCK.st.toolArgs ?? []).filter((a) => a.action === "prepare_outline").at(-1).payload;
+check("ASFAI received exactly the teacher's words", sent.topic === "how AI answers are built" && sent.learningOutcomes.length === 2, JSON.stringify(Object.keys(sent)));
 await page.reload({ waitUntil: "networkidle0" });
 await poll(async () => await bodyHas(page, "Confirm the outline"));
 await clickText(page, "Confirm the outline");
@@ -295,6 +306,7 @@ console.log(`screenshot: ${DATA}/live-sealed.png`);
 
 await browser.close();
 killAll();
+MOCK.close();
 console.log("\n" + results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(`\n${results.length - failed}/${results.length} live acceptance checks passed`);

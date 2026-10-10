@@ -90,6 +90,7 @@ export class CourseSession {
   #ledger;
   #gate;
   #intake;
+  #validations = [];
   /** @type {string[]} proposal ids in the order the AI proposed them */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
@@ -162,9 +163,14 @@ export class CourseSession {
         });
         return;
       }
+      case "plan.validated": {
+        // A recorded ASFAI verdict on a plan. Inert for the gate: it can never confirm anything.
+        this.#validations.push({ planId: event.planId, valid: event.valid, issues: event.issues ?? [], at: event.at });
+        return;
+      }
       case "intake.answered": {
         const channel = this.#ledger.teacherChannel({ teacherId: this.meta.owner, channel: CHANNEL });
-        this.#intake.answer({ viaChannel: channel, text: event.text, at: event.at });
+        this.#intake.answer({ viaChannel: channel, text: event.text, answers: event.answers ?? null, at: event.at });
         return;
       }
       case "objectives.proposed": {
@@ -235,21 +241,60 @@ export class CourseSession {
    * came back and enforces the residual rule over it. A `clarifying` result
    * surfaces the questions and blocks a second call until the teacher replies.
    */
-  observeIntake({ state, questions = [], draftAuthorization = null, receipt = null, at } = {}) {
+  observeIntake({ state, questions = [], draftAuthorization = null, receipt = null, sent = null, at } = {}) {
     const a = at ?? Date.now();
-    const event = { kind: "intake.observed", state, questions, draftAuthorization, receipt, at: a };
+    const event = { kind: "intake.observed", state, questions, draftAuthorization, receipt, ...(sent ? { sent } : {}), at: a };
     this.#apply(event);
     this.#append(event);
     return this.intakeStatus();
   }
 
   /** The teacher's reply to the clarifying questions: a REAL turn, and it arms the round. */
-  answerIntake({ text, at } = {}) {
+  answerIntake({ text, answers = null, at } = {}) {
     const a = at ?? Date.now();
-    const event = { kind: "intake.answered", text: requireMsg(text, "text"), at: a };
+    const event = { kind: "intake.answered", text: requireMsg(text, "text"), ...(answers ? { answers } : {}), at: a };
     this.#apply(event);
     this.#append(event);
     return this.intakeStatus();
+  }
+
+  /**
+   * The drafted spine as an ASFAI lesson-outline, built from the CONFIRMED objectives and
+   * the current plan. Refuses until there is a plan; sends nothing the teacher has not
+   * already seen on the plan card.
+   */
+  outlineForValidation() {
+    const plan = this.#gate.currentPlan();
+    if (!plan) return { ok: false, code: "NO_PLAN", reason: "there is no lesson plan to check yet" };
+    const outcomes = this.#gate.confirmedObjectives().map((o) => this.wording(o.id)).filter(Boolean);
+    if (outcomes.length === 0) return { ok: false, code: "NO_CONFIRMED_OBJECTIVES", reason: "no confirmed objectives to check against" };
+    return {
+      ok: true,
+      planId: plan.id,
+      outline: {
+        schemaVersion: "0.1", kind: "lesson-outline", version: 1, status: "draft",
+        course: this.meta.title, topic: plan.title ?? this.meta.title, audience: "teacher-authored course",
+        learningOutcomes: outcomes,
+        sections: (plan.activities ?? []).map((a, i) => ({
+          id: `activity-${i + 1}`, title: a.title,
+          purpose: String(a.learnerDoes || a.teacherDoes || a.title),
+        })),
+      },
+    };
+  }
+
+  /** Record ASFAI's verdict on the plan. A signal in the timeline; the teacher still decides. */
+  recordValidation({ planId, valid, issues = [], at } = {}) {
+    const a = at ?? Date.now();
+    const event = { kind: "plan.validated", planId, valid: valid === true, issues, at: a };
+    this.#apply(event);
+    this.#append(event);
+    return this.#validations.at(-1);
+  }
+
+  /** What the host may send to prepare_outline next (built from teacher words only), or why not. */
+  intakeNextCall() {
+    return this.#intake.nextCall();
   }
 
   /** The intake state to consult before/after every prepare_outline call. */
@@ -408,6 +453,7 @@ export class CourseSession {
       },
       checkpoints: this.#gate.checkpoints(),
       intake: this.#intake.status(),
+      validations: [...this.#validations],
       proposals: this.#rows(),
       objectives: this.#objectiveView(),
       decisions: this.#gate.decisions(),

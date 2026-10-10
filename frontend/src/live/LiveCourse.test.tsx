@@ -31,6 +31,21 @@ function stubView(): HostView {
       { id: "urn:uuid:aaaa", kind: "local", status: "proposed", statement: STATEMENT,
         originalStatement: STATEMENT, source: "from your slides p.4", alignment: null, by: "ai" },
     ],
+    intake: {
+      courseId: COURSE_ID,
+      guardState: "clarifying",
+      observedState: "clarifying",
+      roundOpened: true,
+      roundAnswered: false,
+      questions: [
+        { id: "topic", prompt: "What topic should this lesson cover?", reason: "The outline needs a subject." },
+        { id: "course", prompt: "Which course is this part of?", reason: "Course context sets scope and sequencing." },
+      ],
+      draftAuthorization: false,
+      outlineAuthorized: false,
+      mayCallPrepareOutline: false,
+      refusal: { code: "AWAITING_TEACHER_REPLY", reason: "The intake asked clarifying questions and the teacher has not answered." },
+    },
     objectives: [],
     decisions: [],
     plan: null,
@@ -99,6 +114,28 @@ describe("LiveCourse — thin client of the host", () => {
     expect(wire).not.toMatch(/provenance/);
     expect(wire).not.toMatch(/decidedBy/);
     expect(wire).not.toMatch(/channel/);
+  });
+
+  it("gates checkpoint 2: the intake questions surface, and no outline confirm is offered", async () => {
+    // The outline must still be open for the intake gate to be the thing in the way.
+    const gated = stubView();
+    gated.checkpoints.outline.status = "pending";
+    const { calls } = mockHost(gated);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+
+    expect(await screen.findByRole("region", { name: "ASFAI course intake" })).toBeInTheDocument();
+    expect(screen.getByText("What topic should this lesson cover?")).toBeInTheDocument();
+    // The outline is NOT offered while the intake is unanswered.
+    expect(screen.queryByRole("button", { name: "Confirm the outline" })).not.toBeInTheDocument();
+    // The gate's refusal reason is surfaced.
+    expect(screen.getByText(/clarifying questions and the teacher has not answered/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Your answer"), "Topic: how AI answers are built.");
+    await user.click(screen.getByRole("button", { name: "Send my answer" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/answer"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as { text: string };
+    expect(body.text).toBe("Topic: how AI answers are built.");
   });
 
   it("offers to start a course and writes NOTHING on load", async () => {

@@ -24,6 +24,14 @@ const APP_PORT = 5173;
 const HOST = `http://127.0.0.1:${HOST_PORT}`;
 const APP = `http://127.0.0.1:${APP_PORT}`;
 
+// The live server's clarifying questions (captured from asfai-learning 2.0.0).
+const CLARIFY = [
+  { id: "topic", prompt: "What topic should this lesson cover?" },
+  { id: "course", prompt: "Which course is this part of?" },
+  { id: "learning_outcomes", prompt: "What should learners be able to do by the end?" },
+];
+const ANSWER = "Topic: how AI answers are built. Course: AI literacy, ages 8-10.";
+
 const results = [];
 const check = (name, ok, extra = "") => {
   const line = `${ok ? "PASS" : "FAIL"}  ${name}${extra ? " — " + extra : ""}`;
@@ -60,6 +68,14 @@ async function poll(fn, ms = 10000) {
   throw new Error("poll timed out");
 }
 
+const post = async (p, body) => {
+  const r = await fetch(HOST + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  return { status: r.status, json: await r.json() };
+};
+const get = async (p) => {
+  const r = await fetch(HOST + p);
+  return { status: r.status, json: await r.json() };
+};
 const listCourses = async () => (await (await fetch(`${HOST}/api/courses`)).json()).courses;
 const getView = async (id) => await (await fetch(`${HOST}/api/courses/${encodeURIComponent(id)}`)).json();
 
@@ -117,11 +133,40 @@ await clickText(page, "Confirm the material list");
 await poll(async () => (await getView(courseId)).checkpoints.files.status === "confirmed");
 check("materials confirmed IN THE HOST", true);
 
-// checkpoint 2
+// checkpoint 2 — the ASFAI intake round. The smoke plays the RUNTIME's role for the
+// MCP call (it reports what a real prepare_outline returned); the teacher's answer
+// goes through the UI, and only that answer unblocks the outline.
+await post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: CLARIFY });
+// The runtime reports out of band, so the page re-reads (an operator refresh).
+await page.reload({ waitUntil: "networkidle0" });
+await poll(() => page.evaluate(() => document.body.innerText.includes("What topic should this lesson cover?")));
+check("the intake questions surface in the UI", true);
+
+const premature = await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+check(
+  "an outline confirm is refused before the teacher answers",
+  premature.status === 409 && premature.json.code === "MISSING_DRAFT_AUTHORIZATION",
+  `status=${premature.status} code=${premature.json.code}`,
+);
+
+await page.evaluate((text) => {
+  const ta = document.querySelector("#intake-answer");
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+  setter.call(ta, text);
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+}, ANSWER);
+await clickText(page, "Send my answer");
+await poll(async () => (await getView(courseId)).intake.roundAnswered === true);
+check("the teacher's answer is recorded on the host and arms the round", true);
+
+// The runtime now reports the completed intake; only then does the outline open.
+const stillBlocked = await post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
+check("the intake reports ready_to_draft", stillBlocked.json.outlineAuthorized === true);
+await page.reload({ waitUntil: "networkidle0" });
 await poll(async () => await bodyHas(page, "Confirm the outline"));
 await clickText(page, "Confirm the outline");
 await poll(async () => (await getView(courseId)).checkpoints.outline.status === "confirmed");
-check("outline confirmed IN THE HOST", true);
+check("outline confirmed IN THE HOST after the real intake round", true);
 
 // AI proposes (no teacher turn required)
 await poll(async () => await bodyHas(page, "Ask the assistant to propose objectives"));
@@ -197,6 +242,12 @@ const sealed = await poll(async () => {
 check("package sealed as version 1 on the host", sealed.versions[0].version === 1);
 check("all five checkpoints confirmed after publish",
   ["files", "outline", "objectives", "plan", "publish"].every((k) => sealed.checkpoints[k].status === "confirmed"));
+
+// Sprint 2a: the export archives with an atomic write + read-back verified digest.
+const arch = await post(`/api/courses/${courseId}/archive`, {});
+check("export archived with a verified read-back digest", arch.status === 200 && arch.json.verified === true, `digest=${String(arch.json.digest ?? "").slice(0, 12)}`);
+const back = await get(`/api/courses/${courseId}/archive/${encodeURIComponent(arch.json.ref)}`);
+check("the archived record reloads and re-verifies", back.json.verified === true && back.json.export.versions.length === 1);
 
 const exp = await (await fetch(`${HOST}/api/courses/${encodeURIComponent(courseId)}/export`)).json();
 check("tamper-evident export carries one sealed version", exp.versions.length === 1 && typeof exp.integrity.head === "string");

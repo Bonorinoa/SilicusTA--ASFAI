@@ -8,9 +8,25 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { after } from "node:test";
 import { createApp } from "../server.mjs";
 
+// A failing assertion skips the test's own stop(), which leaves a listening
+// server and makes the test process hang at exit. Force-close everything.
+const APPS = [];
+after(async () => {
+  for (const app of APPS) {
+    try { if (typeof app.closeAllConnections === "function") app.closeAllConnections(); } catch { /* gone */ }
+    try { app.close(); } catch { /* gone */ }
+  }
+});
+
 const OWNER = "teacher:tk-1";
+const CLARIFY = [
+  { id: "topic", prompt: "What topic should this lesson cover?", kind: "open" },
+  { id: "course", prompt: "Which course is this part of?", kind: "open" },
+  { id: "learning_outcomes", prompt: "What should learners be able to do by the end?", kind: "open" },
+];
 const ITEMS = [
   { kind: "local", statement: "Students can explain what an algorithm is." },
   { kind: "public", publicId: "mt_alpha", statement: "Learners can find the claim in an AI answer." },
@@ -18,6 +34,7 @@ const ITEMS = [
 
 async function start(dataDir) {
   const app = createApp({ dataDir });
+  APPS.push(app);
   await new Promise((r) => app.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${app.address().port}`;
   const post = async (path, body) => {
@@ -30,7 +47,18 @@ async function start(dataDir) {
     const res = await fetch(base + path);
     return { status: res.status, json: await res.json() };
   };
-  return { app, base, post, get, stop: () => new Promise((r) => app.close(r)) };
+  return {
+    app,
+    base,
+    post,
+    get,
+    // closeAllConnections first: fetch keeps sockets alive and server.close()
+    // waits for them, which hangs the test file.
+    stop: () => new Promise((r) => {
+      if (typeof app.closeAllConnections === "function") app.closeAllConnections();
+      app.close(r);
+    }),
+  };
 }
 
 const planSpec = (p1, p2) => ({
@@ -49,6 +77,9 @@ async function driveHttp({ post }, owner = OWNER) {
   const courseId = created.json.courseId;
 
   await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+  await post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: CLARIFY });
+  await post(`/api/courses/${courseId}/intake/answer`, { text: "Topic: how AI answers are built." });
+  await post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
   await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
   const proposed = await post(`/api/courses/${courseId}/objectives`, { items: ITEMS, sources: ["from your slides p.4", "suggested match"] });
   const [p1, p2] = proposed.json.proposals.map((r) => r.id);
@@ -148,6 +179,53 @@ test("unknown course is a 404, not a crash", async () => {
   const r = await h.get("/api/courses/urn:uuid:does-not-exist");
   assert.equal(r.status, 404);
   assert.equal(r.json.code, "UNKNOWN_COURSE");
+  await h.stop();
+});
+
+test("checkpoint 2 is refused over HTTP until the intake is authorized", async () => {
+  const h = await start(mkdtempSync(join(tmpdir(), "silicus-http-")));
+  const created = await h.post("/api/courses", { owner: OWNER, title: "T" });
+  const courseId = created.json.courseId;
+  await h.post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+
+  // No intake at all.
+  const early = await h.post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  assert.equal(early.status, 409);
+  assert.equal(early.json.code, "MISSING_DRAFT_AUTHORIZATION");
+
+  // The bypass: claim ready_to_draft without the teacher ever answering.
+  await h.post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: CLARIFY });
+  const gate = await h.get(`/api/courses/${courseId}/intake`);
+  assert.equal(gate.json.mayCallPrepareOutline, false);
+  await h.post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
+  const bypass = await h.post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  assert.equal(bypass.status, 409, "an unanswered round must not open checkpoint 2");
+
+  // The real round.
+  await h.post(`/api/courses/${courseId}/intake/answer`, { text: "Topic: how AI answers are built." });
+  const ok = await h.post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.json.status, "confirmed");
+  await h.stop();
+});
+
+test("an export round-trips through the HTTP archive", async () => {
+  const h = await start(mkdtempSync(join(tmpdir(), "silicus-http-")));
+  const { courseId } = await driveHttp(h);
+
+  const saved = await h.post(`/api/courses/${courseId}/archive`, {});
+  assert.equal(saved.status, 200);
+  assert.equal(saved.json.saved, true);
+  assert.equal(saved.json.verified, true);
+
+  const listed = await h.get("/api/archives");
+  assert.ok(listed.json.refs.length >= 1);
+
+  const back = await h.get(`/api/courses/${courseId}/archive/${encodeURIComponent(saved.json.ref)}`);
+  assert.equal(back.status, 200);
+  assert.equal(back.json.verified, true);
+  assert.equal(back.json.export.versions.length, 1);
+  assert.equal(back.json.digest, saved.json.digest);
   await h.stop();
 });
 

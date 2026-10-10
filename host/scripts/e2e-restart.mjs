@@ -64,6 +64,14 @@ const courseId = created.json.courseId;
 check("course created", created.status === 201 && !!courseId);
 
 await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+// checkpoint 2: the ASFAI intake round (the runtime reports the observed results).
+await post(`/api/courses/${courseId}/intake/observe`, { state: "clarifying", questions: [
+  { id: "topic", prompt: "What topic should this lesson cover?" },
+  { id: "course", prompt: "Which course is this part of?" },
+  { id: "learning_outcomes", prompt: "What should learners be able to do by the end?" },
+] });
+await post(`/api/courses/${courseId}/intake/answer`, { text: "Topic: how AI answers are built. Course: AI literacy, ages 8-10." });
+await post(`/api/courses/${courseId}/intake/observe`, { state: "ready_to_draft" });
 await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
 const proposed = await post(`/api/courses/${courseId}/objectives`, { items: ITEMS, sources: ["from your slides p.4", "suggested match"] });
 const [p1, p2] = proposed.json.proposals.map((r) => r.id);

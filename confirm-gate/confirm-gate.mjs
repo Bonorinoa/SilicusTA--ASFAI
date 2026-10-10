@@ -355,12 +355,24 @@ export class ConfirmGate {
     }
     this.#requirePriorCheckpoints(id);
     const prov = this.#requireTeacherProvenance(provenance);
-    if (id === "outline" && this.#hostGuard && !this.#hostGuard.hasDraftAuthorization()) {
-      throw new ConfirmGateError(
-        "outline checkpoint cannot be confirmed before a PR #15 draftAuthorization was observed " +
-          "(the clarification round must have completed with an armed receipt — see host-guard.mjs)",
-        "MISSING_DRAFT_AUTHORIZATION",
-      );
+    if (id === "outline" && this.#hostGuard) {
+      // The host decides what counts as authorization for checkpoint 2. Prefer
+      // `outlineAuthorized()` when the host provides it: the live asfai-learning
+      // server issues no `draftAuthorization`, so a host binds this checkpoint to
+      // the intake outcome it actually OBSERVED plus a real teacher turn. A
+      // `draftAuthorization`, when a server does emit one, still satisfies it.
+      const authorized =
+        typeof this.#hostGuard.outlineAuthorized === "function"
+          ? this.#hostGuard.outlineAuthorized()
+          : this.#hostGuard.hasDraftAuthorization();
+      if (!authorized) {
+        throw new ConfirmGateError(
+          "outline checkpoint cannot be confirmed before the host has observed a completed intake " +
+            "(a prepare_outline result of ready_to_draft after the teacher answered the clarifying round — " +
+            "see intake.mjs), or an observed PR #15 draftAuthorization",
+          "MISSING_DRAFT_AUTHORIZATION",
+        );
+      }
     }
     const cp = this.#checkpoints.get(id);
     cp.status = "confirmed";

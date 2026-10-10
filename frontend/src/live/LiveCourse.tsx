@@ -55,6 +55,7 @@ export function LiveCourse() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [answer, setAnswer] = useState("");
 
   // Discover an existing course on load. NEVER writes on load.
   useEffect(() => {
@@ -92,6 +93,28 @@ export function LiveCourse() {
   const confirm = (id: "files" | "outline") => run(async () => {
     await host.confirmCheckpoint(courseId!, { id, text: id === "files" ? "Confirm the material list." : "Confirm the outline." });
     await reload();
+  });
+
+  /** The teacher's reply to the ASFAI clarifying questions. It is what unblocks the outline. */
+  const sendAnswer = () => run(async () => {
+    try {
+      await host.answerIntake(courseId!, { text: answer });
+      setAnswer("");
+    } catch (e) {
+      setNotice(`Refused by the intake gate: ${(e as Error).message}`);
+    } finally {
+      await reload();
+    }
+  });
+
+  /** Sprint 2a: archive the export (atomic write + read-back verified digest). */
+  const archiveCourse = () => run(async () => {
+    try {
+      const r = await host.archiveCourse(courseId!);
+      setNotice(r.verified ? `Archived and read back — digest ${String(r.digest).slice(0, 16)}…` : "The archive did not verify.");
+    } catch (e) {
+      setNotice(`Archive failed: ${(e as Error).message}`);
+    }
   });
 
   const proposeObjectives = () => run(async () => {
@@ -215,9 +238,53 @@ export function LiveCourse() {
           </button>
         ) : null}
         {is("files", "confirmed") && (is("outline", "pending") || is("outline", "open")) ? (
-          <button type="button" className={styles.primaryButton} onClick={() => confirm("outline")} disabled={busy}>
-            Confirm the outline
-          </button>
+          view.intake.outlineAuthorized ? (
+            <button type="button" className={styles.primaryButton} onClick={() => confirm("outline")} disabled={busy}>
+              Confirm the outline
+            </button>
+          ) : (
+            <section className={styles.intake} aria-label="ASFAI course intake">
+              <h2 className={styles.intakeTitle}>Course intake (ASFAI)</h2>
+              {view.intake.questions.length > 0 ? (
+                <>
+                  <ol className={styles.intakeQuestions}>
+                    {view.intake.questions.map((q) => (
+                      <li key={q.id}>
+                        <span className={styles.intakePrompt}>{q.prompt}</span>
+                        {q.reason ? <span className={styles.intakeReason}>{q.reason}</span> : null}
+                      </li>
+                    ))}
+                  </ol>
+                  <label className={styles.intakeAnswerLabel} htmlFor="intake-answer">
+                    Your answer
+                  </label>
+                  <textarea
+                    id="intake-answer"
+                    className={styles.intakeAnswer}
+                    rows={3}
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    onClick={sendAnswer}
+                    disabled={busy || answer.trim().length === 0}
+                  >
+                    Send my answer
+                  </button>
+                </>
+              ) : (
+                <p className={styles.intakeNote}>
+                  The intake has not reported yet. The assistant asks ASFAI for the clarifying
+                  questions; they surface here, and only your answer unblocks the outline.
+                </p>
+              )}
+              {view.intake.refusal ? (
+                <p className={styles.intakeRefusal}>{view.intake.refusal.reason}</p>
+              ) : null}
+            </section>
+          )
         ) : null}
         {is("outline", "confirmed") && view.proposals.length === 0 ? (
           <button type="button" className={styles.ghostButton} onClick={proposeObjectives} disabled={busy}>
@@ -242,6 +309,11 @@ export function LiveCourse() {
         <button type="button" className={styles.textButton} onClick={verifyLog} disabled={busy}>
           Verify the event log
         </button>
+        {published ? (
+          <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>
+            Archive the export
+          </button>
+        ) : null}
       </div>
 
       <div className={styles.grid}>

@@ -1,0 +1,61 @@
+{
+  "_note": "Verbatim responses captured from the live ASFAI Learning MCP (asfai-learning 2.0.0, https://constitution.asfai.org/education/api/mcp) on 2026-10-10 via asfai_lesson action prepare_outline. These are the contract the host's intake gate binds to. Two facts to keep in view: the clarifying round issues NO clarificationReceipt, and ready_to_draft carries NO draftAuthorization.",
+  "clarifying": {
+    "request": { "action": "prepare_outline", "payload": { "mode": "new", "audience": "teacher" } },
+    "response": {
+      "primitive": "Lesson",
+      "phase": "new",
+      "state": "clarifying",
+      "questions": [
+        { "id": "topic", "prompt": "What topic should this lesson cover?", "kind": "open", "reason": "The outline needs a subject." },
+        { "id": "course", "prompt": "Which course is this part of?", "kind": "open", "reason": "Course context sets scope and sequencing." },
+        { "id": "learning_outcomes", "prompt": "What should learners be able to do by the end?", "kind": "open", "reason": "An observable outcome anchors the outline." }
+      ],
+      "context": { "mode": "new", "audience": "teacher" },
+      "next": "Ask the unresolved questions, then call prepare_outline again with the answers and source-backed inferences.",
+      "storage": "Caller-owned draft. Save a reviewed version through asfai_resource and verify persistence with asfai_storage; this call retains nothing."
+    }
+  },
+  "ready_to_draft": {
+    "request": {
+      "action": "prepare_outline",
+      "payload": {
+        "mode": "new",
+        "audience": "teacher",
+        "topic": "how AI answers are built",
+        "course": "AI literacy, ages 8-10",
+        "learningOutcomes": [
+          "Students can explain what an algorithm is, in their own words, with an example from everyday life.",
+          "Learners can find the claim in an AI answer and name what evidence would back it up.",
+          "Students can ask one honest question about how an AI tool works."
+        ]
+      }
+    },
+    "response": {
+      "primitive": "Lesson",
+      "phase": "new",
+      "state": "ready_to_draft",
+      "questions": [],
+      "context": {
+        "mode": "new",
+        "topic": "how AI answers are built",
+        "course": "AI literacy, ages 8-10",
+        "audience": "teacher",
+        "learningOutcomes": [
+          "Students can explain what an algorithm is, in their own words, with an example from everyday life.",
+          "Learners can find the claim in an AI answer and name what evidence would back it up.",
+          "Students can ask one honest question about how an AI tool works."
+        ]
+      },
+      "next": "Draft or revise a lesson-outline artifact, then call asfai_lesson validate_outline. Do not publish or claim it is saved yet.",
+      "storage": "Caller-owned draft. Save a reviewed version through asfai_resource and verify persistence with asfai_storage; this call retains nothing."
+    }
+  },
+  "storage_resource": {
+    "_note": "asfai_capability get_skill name asfai-storage-local, for owner=educator: the save discipline the host's LocalArchive mirrors (atomic replace then REREAD then asfai_storage verify with expected/actual; say saved only when verified is true). Also note: these stores hold the learner profile and educator workspace ONLY - course files need a file-capable store.",
+    "owner": "educator",
+    "mode": "local_file",
+    "location": "asfai/educator-workspace.json",
+    "requiredCapability": "local_filesystem"
+  }
+}

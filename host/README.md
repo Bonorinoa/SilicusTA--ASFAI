@@ -56,6 +56,12 @@ cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
 | `GET /api/courses/:id` | — | the full view |
 | `GET /api/courses/:id/export` | — | tamper-evident JSON export |
 | `GET /api/courses/:id/verify` | — | recompute the event-log chain |
+| `GET /api/courses/:id/intake` | — | checkpoint 2's gate: consult BEFORE `prepare_outline` |
+| `POST /api/courses/:id/intake/observe` | state, questions?, draftAuthorization?, receipt? | report an OBSERVED `prepare_outline` result |
+| `POST /api/courses/:id/intake/answer` | text | the teacher's reply (a real turn; arms the round) |
+| `POST /api/courses/:id/archive` | ref? | save the export (atomic + read-back verified) |
+| `GET /api/courses/:id/archive/:ref` | — | load and re-verify an archived export |
+| `GET /api/archives` | — | list archive refs |
 | `POST /api/courses/:id/checkpoints` | id (files\|outline), text, note? | checkpoints 1–2 |
 | `POST /api/courses/:id/objectives` | items, sources?, assistantText? | AI proposes; nothing is confirmed |
 | `POST /api/courses/:id/decisions` | decisions, text | checkpoints 3 (teacher) |
@@ -123,10 +129,44 @@ an event, then recompute every digest from genesis — verifies `ok: true` and i
 served as ordinary teacher decisions with ordinary `urn:turn` provenance. Nothing
 in the log is signed, so the only defence is pinning the head out of band.
 
-## Known gap (Sprint 2)
+## Checkpoint 2: the ASFAI intake round (Sprint 2b)
 
-Checkpoint 2 (`outline`) is **not yet bound** to an observed ASFAI
-`draftAuthorization`. That binding requires the real `asfai_lesson`
-`prepare_outline` round-trip; wiring host-guard's `ResidualRuleGuard` before that
-would make the flow unreachable without inventing server state. That is the next
-sprint, together with the MCP storage round-trip.
+The outline is not confirmable until the ASFAI clarification round actually happened,
+and the host will not take a server token's word for it.
+
+Live contract, captured 2026-10-10 (`fixtures/lesson-intake.json`, asfai-learning
+2.0.0): `prepare_outline` with `mode: "new"` and nothing else returns
+`state: "clarifying"` with three open questions and issues **no**
+`clarificationReceipt`; returning the fields yields `ready_to_draft` with **no**
+`draftAuthorization`. Binding this checkpoint to a server-issued authorization would
+therefore make the one-teacher flow permanently unreachable. It binds to what
+happened instead:
+
+> an **observed** `ready_to_draft` **and** a teacher turn landing after the questions.
+
+- The host does not call the MCP yet (no in-process OAuth client). The runtime asks
+  `GET /intake`, makes the real call, and reports the result to
+  `POST /intake/observe`. That mirrors host-guard's design: the guard observes tool
+  results; it never executes them.
+- `POST /intake/answer` records the teacher's reply through the same inbound hook as
+  every other teacher action. That is what arms the round.
+- Reporting `ready_to_draft` **without** an answer does not authorize. host-guard's
+  `onPrepareOutlineResult(ready_to_draft)` clears an unanswered clarifying round by
+  design (SPEC §7), so the intake tracks the round itself. Both the session test and
+  an HTTP test pin the bypass.
+- A `draftAuthorization`, if a future server emits one, authorizes on its own.
+
+## Archive (Sprint 2a)
+
+`POST /archive` copies the current export into the local archive;
+`GET /api/courses/:id/archive/:ref` reads it back. Following the ASFAI storage
+resource for a local file store, a save is only "saved" after a temp write, an
+**atomic replace**, and a **read-back digest comparison** — so `verified: true` means
+the bytes came back. A record that no longer matches its digest is refused
+(`ARCHIVE_DIGEST_MISMATCH`).
+
+Not invented: `action_schema` publishes no schema for the ASFAI object operations
+(`put_object` / `get_object`), and the educator workspace store explicitly does not
+hold course files. A Pod-backed archive therefore needs a file-capable store and its
+field names confirmed against the live server first. `export` + `verify` are the
+documented ASFAI-shaped path.

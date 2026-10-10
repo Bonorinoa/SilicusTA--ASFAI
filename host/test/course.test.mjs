@@ -12,6 +12,16 @@ import { CourseSession } from "../course.mjs";
 
 const OWNER = "teacher:tk-1";
 
+// The REAL live contract, captured from asfai-learning 2.0.0. Checkpoint 2 is
+// bound to it: the clarifying round issues no receipt, ready_to_draft carries no
+// draftAuthorization, so authorization is the OBSERVED outcome plus a teacher turn.
+const FX = JSON.parse(readFileSync(new URL("../fixtures/lesson-intake.json", import.meta.url), "utf8"));
+const CLARIFY = FX.clarifying.response;
+const READY = FX.ready_to_draft.response;
+const TEACHER_ANSWER =
+  "Topic: how AI answers are built. Course: AI literacy, ages 8-10. " +
+  "Outcomes: explain an algorithm in their own words; find the claim in an AI answer; ask one honest question.";
+
 function newStore() {
   return new CourseStore(mkdtempSync(join(tmpdir(), "silicus-host-test-")));
 }
@@ -38,6 +48,11 @@ const planSpec = (p1, p2, addedId) => ({
 /** Drive the whole one-teacher flow at fixed timestamps. Returns useful ids. */
 function drive(session, t0 = 1000) {
   session.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: t0 });
+  // Checkpoint 2 needs the real intake round: the runtime reports what the MCP
+  // returned, the teacher answers, then the intake is authorized.
+  session.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: t0 + 500 });
+  session.answerIntake({ text: TEACHER_ANSWER, at: t0 + 750 });
+  session.observeIntake({ state: READY.state, at: t0 + 900 });
   session.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: t0 + 1000 });
   session.proposeObjectives({ items: ITEMS, sources: ["from your slides p.4", "suggested match"],
     assistantText: "Proposed 2 objectives.", at: t0 + 2000 });
@@ -74,7 +89,7 @@ test("create -> confirm -> propose -> decide -> plan -> publish", () => {
   assert.equal(v.versions[0].version, 1);
   assert.deepEqual(v.versions[0].objectiveRefs.map((o) => o.id).sort(), [ids.p1, ids.p2, ids.addedId].sort());
   assert.equal(v.publish.canPublish, true);
-  assert.equal(v.integrity.events, 8, "course.created + 7 flow events");
+  assert.equal(v.integrity.events, 11, "course.created + files + 3 intake + outline + 5 later events");
 });
 
 test("restart: a fresh session rebuilt from the event log is identical", () => {
@@ -112,6 +127,9 @@ test("the public API takes intents, never provenance; recorded decisions cite th
   const store = newStore();
   const session = CourseSession.create(store, { owner: OWNER, title: "T" });
   session.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  session.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: 1500 });
+  session.answerIntake({ text: TEACHER_ANSWER, at: 1700 });
+  session.observeIntake({ state: READY.state, at: 1900 });
   session.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 2000 });
   session.proposeObjectives({ items: ITEMS, at: 3000 });
   const [p1] = session.view().proposals.map((r) => r.id);
@@ -141,6 +159,9 @@ test("publish is blocked until the plan is confirmed", () => {
   const store = newStore();
   const session = CourseSession.create(store, { owner: OWNER, title: "T" });
   session.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  session.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: 1500 });
+  session.answerIntake({ text: TEACHER_ANSWER, at: 1700 });
+  session.observeIntake({ state: READY.state, at: 1900 });
   session.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 2000 });
   session.proposeObjectives({ items: ITEMS, at: 3000 });
   const [p1, p2] = session.view().proposals.map((r) => r.id);

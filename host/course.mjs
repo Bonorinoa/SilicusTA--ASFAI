@@ -23,6 +23,7 @@ import { randomUUID } from "node:crypto";
 import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gate.mjs";
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { CourseStore } from "./store.mjs";
+import { LessonIntake } from "./intake.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -66,12 +67,15 @@ export class CourseSession {
     this.meta = meta;
     this.#now = meta.createdAt;
     this.#ledger = new TurnLedger({ clock: () => this.#now });
+    // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.
+    this.#intake = new LessonIntake({ ledger: this.#ledger, courseId: meta.courseId });
     this.#gate = new ConfirmGate({
       courseId: meta.courseId,
       owner: meta.owner,
       title: meta.title,
       description: meta.description,
       ledger: this.#ledger,
+      hostGuard: this.#intake,
       materials: meta.materials ?? [],
       clock: () => this.#now,
       idFactory: deterministicIdFactory(meta.seed),
@@ -84,6 +88,7 @@ export class CourseSession {
   #now;
   #ledger;
   #gate;
+  #intake;
   /** @type {string[]} proposal ids in the order the AI proposed them */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
@@ -146,6 +151,21 @@ export class CourseSession {
         this.#gate.confirmCheckpoint(event.id, this.#prov(turnRef, event.at), event.note ?? null);
         return;
       }
+      case "intake.observed": {
+        this.#intake.observe({
+          state: event.state,
+          questions: event.questions ?? [],
+          draftAuthorization: event.draftAuthorization ?? null,
+          receipt: event.receipt ?? null,
+          at: event.at,
+        });
+        return;
+      }
+      case "intake.answered": {
+        const channel = this.#ledger.teacherChannel({ teacherId: this.meta.owner, channel: CHANNEL });
+        this.#intake.answer({ viaChannel: channel, text: event.text, at: event.at });
+        return;
+      }
       case "objectives.proposed": {
         if (event.assistantText) {
           this.#ledger.recordAssistantTurn(event.assistantText, { channel: "model", at: event.at });
@@ -206,6 +226,34 @@ export class CourseSession {
     this.#apply(event);
     this.#append(event);
     return this.view().checkpoints[id];
+  }
+
+  /**
+   * Checkpoint 2 input: record an OBSERVED prepare_outline result. The runtime
+   * makes the real MCP call (it asks intakeStatus() first); the host records what
+   * came back and enforces the residual rule over it. A `clarifying` result
+   * surfaces the questions and blocks a second call until the teacher replies.
+   */
+  observeIntake({ state, questions = [], draftAuthorization = null, receipt = null, at } = {}) {
+    const a = at ?? Date.now();
+    const event = { kind: "intake.observed", state, questions, draftAuthorization, receipt, at: a };
+    this.#apply(event);
+    this.#append(event);
+    return this.intakeStatus();
+  }
+
+  /** The teacher's reply to the clarifying questions: a REAL turn, and it arms the round. */
+  answerIntake({ text, at } = {}) {
+    const a = at ?? Date.now();
+    const event = { kind: "intake.answered", text: requireMsg(text, "text"), at: a };
+    this.#apply(event);
+    this.#append(event);
+    return this.intakeStatus();
+  }
+
+  /** The intake state to consult before/after every prepare_outline call. */
+  intakeStatus() {
+    return this.#intake.status();
   }
 
   /** Checkpoint 3: the AI proposes objectives (never confirmed here). */
@@ -358,6 +406,7 @@ export class CourseSession {
         description: this.meta.description, materials: this.meta.materials ?? [], createdAt: this.meta.createdAt,
       },
       checkpoints: this.#gate.checkpoints(),
+      intake: this.#intake.status(),
       proposals: this.#rows(),
       objectives: this.#objectiveView(),
       decisions: this.#gate.decisions(),
@@ -394,6 +443,7 @@ export class CourseSession {
       kind: "silicus.course.export.v1",
       course: this.view().course,
       checkpoints: this.#gate.checkpoints(),
+      intake: this.#intake.status(),
       objectives: this.#gate.confirmedObjectives(),
       decisions: this.#gate.decisions(),
       plan: this.#gate.currentPlan(),

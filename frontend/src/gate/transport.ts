@@ -39,10 +39,25 @@ export interface HostCourseMeta {
   createdAt: number;
 }
 
+/** Checkpoint 2's host-side gate: the ASFAI intake round, reported by the runtime. */
+export interface IntakeStatus {
+  courseId: string;
+  guardState: string;
+  observedState: "clarifying" | "ready_to_draft" | null;
+  roundOpened: boolean;
+  roundAnswered: boolean;
+  questions: { id: string; prompt: string; reason: string | null }[];
+  draftAuthorization: boolean;
+  outlineAuthorized: boolean;
+  mayCallPrepareOutline: boolean;
+  refusal: { code: string; reason: string } | null;
+}
+
 /** The host's course view: gate state, derived rows, ledger and log fingerprint. */
 export interface HostView {
   course: HostCourseMeta;
   checkpoints: Record<string, HostCheckpoint>;
+  intake: IntakeStatus;
   proposals: ProposalView[];
   objectives: ObjectiveCiteView[];
   decisions: unknown[];
@@ -97,6 +112,11 @@ export const host = {
   verify: (id: string) => call<{ ok: boolean; events: number; head: string }>("GET", `/courses/${enc(id)}/verify`),
   confirmCheckpoint: (id: string, b: { id: "files" | "outline"; text: string; note?: string }) =>
     call("POST", `/courses/${enc(id)}/checkpoints`, b),
+  intake: (id: string) => call<IntakeStatus>("GET", `/courses/${enc(id)}/intake`),
+  answerIntake: (id: string, b: { text: string }) => call<IntakeStatus>("POST", `/courses/${enc(id)}/intake/answer`, b),
+  archiveCourse: (id: string, ref?: string) =>
+    call<{ saved: boolean; verified: boolean; ref: string; digest: string }>("POST", `/courses/${enc(id)}/archive`, { ref }),
+  archives: () => call<{ refs: string[] }>("GET", "/archives"),
   proposeObjectives: (id: string, b: { items: unknown[]; sources?: string[]; assistantText?: string }) =>
     call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives`, b),
   decide: (id: string, b: { decisions: unknown[]; text: string }) =>

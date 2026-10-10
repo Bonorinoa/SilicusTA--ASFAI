@@ -197,9 +197,18 @@ Division of labor — note these are **different events**:
 the other.** The confirm gate never treats tool state (`clarifying`, `ready_to_draft`,
 `valid`, a receipt, a `draftAuthorization`) as a teacher decision, and the host-guard never
 treats a decision as an answered clarification. Concrete composition point: checkpoint 2
-(`outline`) cannot be teacher-confirmed while the shared `ResidualRuleGuard` has not
-observed a `draftAuthorization` (`MISSING_DRAFT_AUTHORIZATION`) — so an outline built on an
-unanswered clarification round cannot reach the plan or publish gates.
+(`outline`) cannot be teacher-confirmed until the HOST's intake gate authorizes it
+(`MISSING_DRAFT_AUTHORIZATION` otherwise) — so an outline built on an unanswered
+clarification round cannot reach the plan or publish gates. **The gate asks the host, not
+the server**: when a `hostGuard` implements `outlineAuthorized()`, that decision is the
+host's, because the live asfai-learning 2.0.0 server issues neither a
+`clarificationReceipt` nor a `draftAuthorization` (captured 2026-10-10; see the Silicus
+host's `fixtures/lesson-intake.json`). A host therefore binds this checkpoint to the intake
+outcome it OBSERVED plus a real teacher turn, and honors a `draftAuthorization` when a
+server does emit one. Note also that `ResidualRuleGuard.onPrepareOutlineResult("ready_to_draft")`
+clears an unanswered clarifying round by design — a host needing the stronger rule must
+track the round itself (the Silicus host's `intake.mjs` does, because a `ready_to_draft`
+result the host cannot verify must not, alone, open this checkpoint).
 
 ## 8. Non-guarantees (honest limits)
 

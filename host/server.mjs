@@ -12,6 +12,12 @@
  *   GET  /api/courses/:id                    the full course view
  *   GET  /api/courses/:id/export             tamper-evident export
  *   GET  /api/courses/:id/verify             recompute the event-log hash chain
+ *   GET  /api/courses/:id/intake             the ASFAI intake gate status (consult before prepare_outline)
+ *   POST /api/courses/:id/intake/observe     report an OBSERVED prepare_outline result {state, questions?, draftAuthorization?, receipt?}
+ *   POST /api/courses/:id/intake/answer      the teacher's reply {text} (records a real turn; arms the round)
+ *   POST /api/courses/:id/archive            {ref?} save the export to the local archive (atomic + read-back verified)
+ *   GET  /api/courses/:id/archive/:ref       load + re-verify an archived export
+ *   GET  /api/archives                       list archive refs
  *   POST /api/courses/:id/checkpoints        {id:"files"|"outline", text, note?}
  *   POST /api/courses/:id/objectives         {items:[...], sources?, assistantText?}   (AI proposes)
  *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides)
@@ -25,6 +31,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { CourseStore } from "./store.mjs";
 import { CourseSession } from "./course.mjs";
+import { LocalArchive } from "./archive.mjs";
 
 const MAX_BODY = 1 << 20;
 
@@ -40,6 +47,7 @@ class HttpError extends Error {
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
 export function createApp({ dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host") } = {}) {
   const store = new CourseStore(dataDir);
+  const archives = new LocalArchive(join(dataDir, "archives"));
 
   /**
    * Load per request. The event log is the source of record, so a fresh verified
@@ -78,6 +86,7 @@ export function createApp({ dataDir = process.env.SILICUS_HOST_DATA ?? join(home
     if (parts[0] !== "api") throw new HttpError(404, "NOT_FOUND", "not found");
 
     if (parts[1] === "health" && method === "GET") return { status: 200, json: { ok: true, courses: store.list().length } };
+    if (parts[1] === "archives" && method === "GET") return { status: 200, json: { refs: archives.list() } };
 
     if (parts[1] === "courses") {
       // /api/courses
@@ -106,11 +115,26 @@ export function createApp({ dataDir = process.env.SILICUS_HOST_DATA ?? join(home
       if (!tail && method === "GET") return { status: 200, json: s.view() };
       if (tail === "export" && method === "GET") return { status: 200, json: s.export() };
       if (tail === "verify" && method === "GET") return { status: 200, json: s.verifyLog() };
+      // Checkpoint 2's intake gate: consult BEFORE a prepare_outline call, report
+      // the observed result AFTER it, and record the teacher's reply in between.
+      if (tail === "intake" && method === "GET") return { status: 200, json: s.intakeStatus() };
+      if (tail.startsWith("archive/") && method === "GET") {
+        const ref = decodeURIComponent(tail.slice("archive/".length));
+        const record = archives.load(ref);
+        const ver = archives.verify(ref, record.digest);
+        return { status: 200, json: { verified: ver.verified, ref, digest: record.digest, archivedAt: record.archivedAt, export: record.payload } };
+      }
       if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed for ${tail}`);
 
       const b = await body(req);
       switch (tail) {
         case "checkpoints":  return { status: 200, json: s.confirmCheckpoint({ id: b.id, text: b.text, note: b.note ?? null }) };
+        case "intake/observe":
+          return { status: 200, json: s.observeIntake({ state: b.state, questions: b.questions ?? [], draftAuthorization: b.draftAuthorization ?? null, receipt: b.receipt ?? null }) };
+        case "intake/answer":
+          return { status: 200, json: s.answerIntake({ text: b.text }) };
+        case "archive":
+          return { status: 200, json: archives.save(b.ref ?? s.courseId, s.export()) };
         case "objectives":   return { status: 200, json: { proposals: s.proposeObjectives({ items: b.items, sources: b.sources ?? [], assistantText: b.assistantText ?? null }) } };
         case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
         case "plan":         return { status: 200, json: s.proposeLessonPlan({ spec: b.spec, assistantText: b.assistantText ?? null }) };

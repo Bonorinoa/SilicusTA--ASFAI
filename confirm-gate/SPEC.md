@@ -258,7 +258,13 @@ over it.
   authorship: a writer with access to the record directory can rewrite history and
   recompute a self-consistent chain. The head digest is therefore meaningful only once
   recorded somewhere else. **The provenance check is "a second host reloads the export
-  and reaches the same record", not the local chain check alone.**
+  and reaches the same record", not the local chain check alone.** Silicus implements that
+  reference: on publish the client records the sealed version's anchor — the digest of the
+  sealed record, plus the log's head and length at that moment — in its OWN local device
+  storage, and can re-check it on demand (a rewritten record or a shortened history is
+  visible to the pin holder even though the chain still verifies). A pin anchors a sealed
+  version, not the tail; nothing in the log is signed, so this gives third-party-visible
+  *change detection*, not non-repudiation.
 - **Fails closed on read.** The hosting process recomputes the chain before serving a
   course and *refuses* a record that does not verify (naive edit, mid-log deletion)
   rather than replaying it; it exposes no ledger or gate object to its own callers, so

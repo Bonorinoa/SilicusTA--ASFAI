@@ -14,6 +14,7 @@ import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
 import { describeIntent } from "../gate/harness";
+import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
 import { host, type HostView } from "../gate/transport";
 import type { DecisionIntent } from "../gate/types";
 import styles from "./LiveCourse.module.css";
@@ -56,6 +57,8 @@ export function LiveCourse() {
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [answer, setAnswer] = useState("");
+  const [pins, setPins] = useState<CoursePin[]>([]);
+  const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
 
   // Discover an existing course on load. NEVER writes on load.
   useEffect(() => {
@@ -65,6 +68,7 @@ export function LiveCourse() {
         if (courses.length > 0) {
           setCourseId(courses[0].courseId);
           setView(await host.getCourse(courses[0].courseId));
+          setPins(listPins(courses[0].courseId));
         }
       } catch {
         setOffline(true);
@@ -105,6 +109,23 @@ export function LiveCourse() {
     } finally {
       await reload();
     }
+  });
+
+  /** Re-check every pin this device holds against the host's current account. */
+  const checkPins = () => run(async () => {
+    const held = listPins(courseId!);
+    const report: { version: number; status: string; detail: string }[] = [];
+    for (const pin of held) {
+      const { anchor } = await host.anchor(courseId!, pin.version);
+      const cmp = comparePin(pin, anchor);
+      report.push({ version: pin.version, status: cmp.status, detail: cmp.detail });
+    }
+    setPinReport(report);
+    setNotice(
+      report.every((r) => r.status === "ok" || r.status === "advanced")
+        ? "Every pinned version still matches this device's copy."
+        : "A pinned version does NOT match this device's copy — investigate.",
+    );
   });
 
   /** Sprint 2a: archive the export (atomic write + read-back verified digest). */
@@ -151,7 +172,15 @@ export function LiveCourse() {
     void run(async () => {
       try {
         const r = await host.publish(courseId!, { text: "Publish the course package." });
-        setNotice(`Version ${r.version.version} sealed.`);
+        // Pin the sealed version on THIS device: the out-of-band reference the
+        // host's own verify() can never be.
+        const { anchor } = await host.anchor(courseId!, r.version.version);
+        if (anchor && pinVersion(anchor)) {
+          setPins(listPins(courseId!));
+          setNotice(`Version ${r.version.version} sealed and pinned on this device.`);
+        } else {
+          setNotice(`Version ${r.version.version} sealed.`);
+        }
       } catch (e) {
         setNotice(`Refused by the confirm-gate: ${(e as Error).message}`);
       } finally {
@@ -315,6 +344,32 @@ export function LiveCourse() {
           </button>
         ) : null}
       </div>
+
+      {pins.length > 0 ? (
+        <section className={styles.pins} aria-label="Pinned copies on this device">
+          <h2 className={styles.pinTitle}>Pinned on this device</h2>
+          <p className={styles.pinNote}>
+            Your own copies of each sealed version, held outside the host. Re-check them to
+            detect a record that was rewritten or shortened — the host cannot tell you that.
+          </p>
+          <ul className={styles.pinList}>
+            {pins.map((p) => {
+              const r = pinReport.find((x) => x.version === p.version);
+              return (
+                <li key={p.version} className={styles.pinRow} data-status={r ? r.status : "unchecked"}>
+                  <span className={styles.pinVersion}>v{p.version}</span>
+                  <span className={styles.pinDigest}>{p.versionDigest.slice(0, 12)}…</span>
+                  <span className={styles.pinStatus}>{r ? r.status : "not checked"}</span>
+                  {r ? <span className={styles.pinDetail}>{r.detail}</span> : null}
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" className={styles.ghostButton} onClick={checkPins} disabled={busy}>
+            Check my pinned copies
+          </button>
+        </section>
+      ) : null}
 
       <div className={styles.grid}>
         <DecisionCard

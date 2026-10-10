@@ -60,6 +60,7 @@ cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
 | `POST /api/courses/:id/intake/observe` | state, questions?, draftAuthorization?, receipt? | report an OBSERVED `prepare_outline` result |
 | `POST /api/courses/:id/intake/answer` | text | the teacher's reply (a real turn; arms the round) |
 | `POST /api/courses/:id/archive` | ref? | save the export (atomic + read-back verified) |
+| `GET /api/courses/:id/anchor/:version` | — | the anchor a client PINS on the teacher's device |
 | `GET /api/courses/:id/archive/:ref` | — | load and re-verify an archived export |
 | `GET /api/archives` | — | list archive refs |
 | `POST /api/courses/:id/checkpoints` | id (files\|outline), text, note? | checkpoints 1–2 |
@@ -126,8 +127,26 @@ regression test):
 
 Still true, and unfixed by design: a **self-consistent rewrite** — edit or insert
 an event, then recompute every digest from genesis — verifies `ok: true` and is
-served as ordinary teacher decisions with ordinary `urn:turn` provenance. Nothing
-in the log is signed, so the only defence is pinning the head out of band.
+served as ordinary teacher decisions with ordinary `urn:turn` provenance. Nothing in
+the log is signed, so the only defence is a reference the writer cannot reach.
+
+**That defence now exists (the pin).** `GET /api/courses/:id/anchor/:version`
+returns the anchor for a sealed version — the digest of the sealed version record,
+plus the log's head and length at the moment it sealed. The GUI pins it in **local
+browser storage** (`frontend/src/gate/pin.ts`): no new dependency, no server-side
+secret, and, crucially, outside the host's write surface. "Check my pinned copies"
+compares each pin against the host's current account and reports:
+
+| status | meaning |
+|---|---|
+| `ok` | the sealed version is exactly as it was when pinned |
+| `changed` | the sealed record differs, or the history is SHORTER (events removed) |
+| `missing` | the version is no longer in the record at all |
+| `advanced` | the record has legitimately grown since (expected if you have worked) |
+
+A pin is per version, so later work does not disturb it. It anchors the *sealed
+version* and the log's length at that moment — not the tail: a forged event appended
+after the pin is only covered when you pin again.`
 
 ## Checkpoint 2: the ASFAI intake round (Sprint 2b)
 

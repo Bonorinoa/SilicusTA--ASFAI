@@ -17,6 +17,7 @@
  *   POST /api/courses/:id/intake/answer      the teacher's reply {text} (records a real turn; arms the round)
  *   POST /api/courses/:id/archive            {ref?} save the export to the local archive (atomic + read-back verified)
  *   GET  /api/courses/:id/archive/:ref       load + re-verify an archived export
+ *   GET  /api/courses/:id/anchor/:version    the anchor a client pins on the teacher's device
  *   GET  /api/archives                       list archive refs
  *   POST /api/courses/:id/checkpoints        {id:"files"|"outline", text, note?}
  *   POST /api/courses/:id/objectives         {items:[...], sources?, assistantText?}   (AI proposes)
@@ -118,6 +119,14 @@ export function createApp({ dataDir = process.env.SILICUS_HOST_DATA ?? join(home
       // Checkpoint 2's intake gate: consult BEFORE a prepare_outline call, report
       // the observed result AFTER it, and record the teacher's reply in between.
       if (tail === "intake" && method === "GET") return { status: 200, json: s.intakeStatus() };
+      // The anchor a client PINS on the teacher's device (see frontend/src/gate/pin.ts).
+      if (tail.startsWith("anchor/") && method === "GET") {
+        const version = Number(tail.slice("anchor/".length));
+        if (!Number.isInteger(version) || version < 1) {
+          throw new HttpError(400, "BAD_VERSION", "an anchor needs a positive integer version");
+        }
+        return { status: 200, json: { anchor: s.publishAnchor(version) } };
+      }
       if (tail.startsWith("archive/") && method === "GET") {
         const ref = decodeURIComponent(tail.slice("archive/".length));
         const record = archives.load(ref);

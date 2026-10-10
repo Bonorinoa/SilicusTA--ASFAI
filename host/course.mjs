@@ -24,6 +24,7 @@ import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gat
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { CourseStore } from "./store.mjs";
 import { LessonIntake } from "./intake.mjs";
+import { digestOf } from "./archive.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -417,6 +418,41 @@ export class CourseSession {
       timeline: this.#timeline(),
       ledger: this.#ledger.list(),
       integrity: { events: this.#log.count, head: this.#log.headDigest },
+    };
+  }
+
+  /**
+   * The out-of-band ANCHOR for a sealed version: what a reader records on a device
+   * the writer does not control, and later compares against.
+   *
+   * Computed from the log, but its whole value is that it is stored ELSEWHERE. The
+   * host's own verify() cannot detect a self-consistent rewrite (recompute the chain)
+   * or a tail truncation; a pinned copy can, because the reference lives outside the
+   * record. Per-version, so later legitimate work does not disturb it.
+   *
+   *   versionDigest  sha-256 of the sealed version record (the contractual artifact)
+   *   head / events  the log's digest and length at the moment that version sealed
+   *
+   * @returns the anchor, or null when the version is not in the log at all
+   */
+  publishAnchor(version) {
+    const publishes = this.#log.read().filter((r) => r.event.kind === "package.published");
+    const record = publishes[version - 1];
+    if (!record) return null;
+    let sealed;
+    try {
+      sealed = this.#gate.getVersion(version);
+    } catch {
+      return null;
+    }
+    return {
+      courseId: this.meta.courseId,
+      owner: this.meta.owner,
+      title: this.meta.title,
+      version,
+      versionDigest: digestOf(sealed),
+      head: record.digest,
+      events: record.seq,
     };
   }
 

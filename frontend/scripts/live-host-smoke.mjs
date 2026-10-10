@@ -10,7 +10,8 @@
  * Run:  node scripts/live-host-smoke.mjs      (exit 0 = pass)
  */
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -253,6 +254,33 @@ const exp = await (await fetch(`${HOST}/api/courses/${encodeURIComponent(courseI
 check("tamper-evident export carries one sealed version", exp.versions.length === 1 && typeof exp.integrity.head === "string");
 const ver = await (await fetch(`${HOST}/api/courses/${encodeURIComponent(courseId)}/verify`)).json();
 check("event-log hash chain verifies", ver.ok === true, `events=${ver.events}`);
+
+// ---- the PIN (the trust anchor): the teacher's device holds a reference the host cannot reach ----
+await poll(() => page.evaluate(() => document.body.innerText.includes("Pinned on this device")));
+check("the sealed version is pinned on the device", await page.evaluate(() => document.body.innerText.includes("v1")));
+
+// Rewrite history with a SELF-CONSISTENT chain — the attack verify() cannot see.
+const logFile = join(DATA, courseId.replace(/[^A-Za-z0-9._-]/g, "_"), "events.ndjson");
+const recs = readFileSync(logFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+recs.find((rec) => rec.event.kind === "objectives.proposed").event.items[0].statement =
+  "Students must memorize the teacher's answers verbatim.";
+let prev = "genesis";
+for (let i = 0; i < recs.length; i += 1) {
+  recs[i].seq = i + 1;
+  recs[i].prev = prev;
+  recs[i].digest = createHash("sha256").update(`${prev}\n${JSON.stringify(recs[i].event)}`).digest("hex");
+  prev = recs[i].digest;
+}
+writeFileSync(logFile, recs.map((rec) => JSON.stringify(rec)).join("\n") + "\n");
+
+const verAfter = await get(`/api/courses/${encodeURIComponent(courseId)}/verify`);
+check("the host still blesses the rewritten chain (this is the ledger problem)", verAfter.json.ok === true);
+
+await page.reload({ waitUntil: "networkidle0" });
+await poll(async () => await bodyHas(page, "Check my pinned copies"));
+await clickText(page, "Check my pinned copies");
+await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("differs from what you pinned")));
+check("THE PIN CATCHES IT: the device's copy differs from the rewritten record", true);
 
 await page.screenshot({ path: `${DATA}/live-sealed.png`, fullPage: true });
 console.log(`screenshot: ${DATA}/live-sealed.png`);

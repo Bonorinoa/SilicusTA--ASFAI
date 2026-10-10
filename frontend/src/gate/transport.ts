@@ -7,6 +7,7 @@
  * mints provenance, and never decides anything locally — a refusal comes back as
  * an error carrying the gate's own code/message.
  */
+import type { CourseAnchor } from "./pin";
 import type {
   LessonPlanView, ObjectiveCiteView, PackageVersionView, PlanInvalidationView,
   ProposalView, PublishStatusView, TimelineEvent,
@@ -114,6 +115,8 @@ export const host = {
     call("POST", `/courses/${enc(id)}/checkpoints`, b),
   intake: (id: string) => call<IntakeStatus>("GET", `/courses/${enc(id)}/intake`),
   answerIntake: (id: string, b: { text: string }) => call<IntakeStatus>("POST", `/courses/${enc(id)}/intake/answer`, b),
+  anchor: (id: string, version: number) =>
+    call<{ anchor: CourseAnchor | null }>("GET", `/courses/${enc(id)}/anchor/${version}`),
   archiveCourse: (id: string, ref?: string) =>
     call<{ saved: boolean; verified: boolean; ref: string; digest: string }>("POST", `/courses/${enc(id)}/archive`, { ref }),
   archives: () => call<{ refs: string[] }>("GET", "/archives"),

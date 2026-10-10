@@ -221,3 +221,37 @@ unanswered clarification round cannot reach the plan or publish gates.
   `confirm_objectives`, `propose_lesson_plan`, `confirm_lesson_plan`,
   `get_course`/`export_course`). This module is the host-side protocol beneath it — it does
   not add tools.
+
+## 9. The host's durable record — event log + replay (Sprint 1)
+
+§8 says durable course state lives in Silicus. This section fixes *how*: the hosting
+process appends every mutation to a per-course event log and rebuilds the live gate by
+replaying it. The log is the source of record; `get_course` / `export_course` are views
+over it.
+
+- **One mutation = one event**: `checkpoint.confirmed`, `objectives.proposed`,
+  `objectives.decided`, `plan.proposed`, `plan.confirmed`, `package.published`. An event
+  that requires a teacher turn carries the inbound message text it was recorded from.
+- **Replay must be exact**, which means local ids and timestamps must be reproducible.
+  `ConfirmGate` therefore takes an injectable `idFactory` (it already took an injectable
+  `clock`); a replaying host uses `deterministicIdFactory(seed)` with one fixed timestamp
+  per event. Proof and falsification: `test/persistence.test.mjs` — a recorded log
+  replayed with the default random ids cannot resolve its own decisions
+  (`UNKNOWN_PROPOSAL`). Idempotency keys are unchanged (§6), so replay re-applies
+  idempotently.
+- **The transport, not the caller, supplies provenance.** A replaying host mints the
+  `TeacherChannel` inside its inbound-message hook exactly as a live host does; a client
+  API must never accept a turn reference, a channel, or a timestamp. This is what keeps
+  §2 true once the gate runs server-side rather than in a UI process.
+- **Integrity is tamper-evidence, not tamper-proofing** (extends §8). A chained
+  `digest = sha256(prev + newline + canonical(event))` detects any edit, reorder or
+  deletion *relative to a known head*. It carries no signature and no proof of
+  authorship: a writer with access to the record directory can rewrite history and
+  recompute a self-consistent chain. The head digest is therefore meaningful only once
+  recorded somewhere else. **The provenance check is "a second host reloads the export
+  and reaches the same record", not the local chain check alone.**
+- **Fails closed on read.** The hosting process recomputes the chain before serving a
+  course and *refuses* a record that does not verify (naive edit, mid-log deletion)
+  rather than replaying it; it exposes no ledger or gate object to its own callers, so
+  the inbound hook stays the only route to a teacher turn. A self-consistent rewrite
+  (recompute the chain) remains undetectable in principle and is not claimed otherwise.

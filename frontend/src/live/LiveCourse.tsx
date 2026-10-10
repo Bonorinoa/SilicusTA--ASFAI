@@ -1,0 +1,297 @@
+/**
+ * LiveCourse.tsx — the one-teacher story over the REAL host.
+ *
+ * Everything here is a thin client of the Silicus host: it reads a course view
+ * and posts intents. It never constructs a gate, never mints provenance, and
+ * never decides anything locally — a refusal surfaces the gate's own message.
+ * The AI's moves (propose) are labelled as the assistant's; the teacher's moves
+ * (accept / rename / drop / add / confirm / publish) all go through the host's
+ * inbound-message hook, which is the only place a teacher turn can be recorded.
+ */
+import { useEffect, useState } from "react";
+import { DecisionCard } from "../components/DecisionCard";
+import { PlanCard } from "../components/PlanCard";
+import { PublishCard } from "../components/PublishCard";
+import { TimelineCard } from "../components/TimelineCard";
+import { describeIntent } from "../gate/harness";
+import { host, type HostView } from "../gate/transport";
+import type { DecisionIntent } from "../gate/types";
+import styles from "./LiveCourse.module.css";
+
+const OWNER = "teacher:tk-1";
+const COURSE_TITLE = "Lesson 3 · AI literacy";
+const CHECKPOINT_LABEL: Record<string, string> = {
+  files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
+};
+const SEED_ITEMS = [
+  { kind: "local", statement: "Students can explain what an algorithm is, in their own words." },
+  { kind: "public", publicId: "mt_alpha", statement: "Learners can find the claim in an AI answer." },
+  { kind: "public", publicId: "mt_beta", statement: "Learners can ask one question about how the tool works." },
+];
+const SEED_SOURCES = ["from your slides p.4", "suggested match", "suggested match"];
+
+function planSpec(view: HostView) {
+  const ids = view.objectives.map((o) => o.id);
+  if (ids.length === 0) return null;
+  const earlier = ids.slice(0, Math.max(1, ids.length - 1));
+  const last = ids[ids.length - 1];
+  return {
+    title: "Seeing the claim: how AI answers are built",
+    audience: { ageRangeStart: 8, ageRangeEnd: 10 },
+    activities: [
+      { title: "Spotting the claim", minutes: 20, objectiveIds: earlier,
+        learnerDoes: "Read one AI answer and mark the sentence that makes a claim.",
+        teacherDoes: "Ask what would count as evidence for it.", evidenceIfAny: "observation" },
+      { title: "Ask one honest question", minutes: 20, objectiveIds: [last],
+        learnerDoes: "Write one question about how the tool reached its answer.",
+        teacherDoes: "Collect the questions for the next lesson.", evidenceIfAny: "work-product" },
+    ],
+  };
+}
+
+export function LiveCourse() {
+  const [view, setView] = useState<HostView | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [offline, setOffline] = useState(false);
+
+  // Discover an existing course on load. NEVER writes on load.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { courses } = await host.listCourses();
+        if (courses.length > 0) {
+          setCourseId(courses[0].courseId);
+          setView(await host.getCourse(courses[0].courseId));
+        }
+      } catch {
+        setOffline(true);
+      }
+    })();
+  }, []);
+
+  const reload = async (id = courseId) => { if (id) setView(await host.getCourse(id)); };
+  const run = (fn: () => Promise<void>) => {
+    setBusy(true);
+    fn()
+      .catch((e) => setNotice(e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  };
+
+  const cp = view?.checkpoints ?? {};
+  const is = (id: string, status: string) => cp[id]?.status === status;
+
+  const startCourse = () => run(async () => {
+    const created = await host.createCourse({ owner: OWNER, title: COURSE_TITLE });
+    setCourseId(created.courseId);
+    setView(created.view);
+    setNotice("Course created. Confirm the material list to begin.");
+  });
+
+  const confirm = (id: "files" | "outline") => run(async () => {
+    await host.confirmCheckpoint(courseId!, { id, text: id === "files" ? "Confirm the material list." : "Confirm the outline." });
+    await reload();
+  });
+
+  const proposeObjectives = () => run(async () => {
+    await host.proposeObjectives(courseId!, { items: SEED_ITEMS, sources: SEED_SOURCES, assistantText: `Proposed ${SEED_ITEMS.length} objectives.` });
+    await reload();
+    setNotice("The assistant proposed objectives — your decisions are required.");
+  });
+
+  const dispatch = (intent: DecisionIntent) => {
+    void run(async () => {
+      try {
+        await host.decide(courseId!, { decisions: [intent], text: describeIntent(intent) });
+      } catch (e) {
+        setNotice(`Refused by the confirm-gate: ${(e as Error).message}`);
+      } finally {
+        await reload();
+      }
+    });
+  };
+
+  const draftPlan = () => run(async () => {
+    const spec = planSpec(view!);
+    if (!spec) return;
+    await host.proposePlan(courseId!, { spec, assistantText: "Drafted a lesson plan." });
+    await reload();
+  });
+
+  const confirmPlan = () => run(async () => {
+    await host.confirmPlan(courseId!, { text: "Confirm this lesson plan." });
+    await reload();
+  });
+
+  const publish = () => {
+    void run(async () => {
+      try {
+        const r = await host.publish(courseId!, { text: "Publish the course package." });
+        setNotice(`Version ${r.version.version} sealed.`);
+      } catch (e) {
+        setNotice(`Refused by the confirm-gate: ${(e as Error).message}`);
+      } finally {
+        await reload();
+      }
+    });
+  };
+
+  const exportPackage = () => run(async () => {
+    const pkg = await host.exportCourse(courseId!);
+    const url = URL.createObjectURL(new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `silicus-course-${view?.versions.at(-1)?.version ?? 0}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setNotice("Exported the course package (tamper-evident JSON).");
+  });
+
+  const verifyLog = () => run(async () => {
+    const r = await host.verify(courseId!);
+    setNotice(r.ok ? `Event log verified — ${r.events} events, chain intact.` : "The event log does NOT verify.");
+  });
+
+  if (offline) {
+    return (
+      <div className={styles.live}>
+        <p className={styles.offline}>
+          The Silicus host is not reachable. Start it with{" "}
+          <code>cd host && npm start</code> (listens on 127.0.0.1:8787), then reload.
+        </p>
+      </div>
+    );
+  }
+
+  if (!view) {
+    return (
+      <div className={styles.live}>
+        <header className={styles.intro}>
+          <h1 className={styles.title}>One teacher, one course, over the real host</h1>
+          <p className={styles.lede}>
+            The teacher decides; the assistant only proposes. Every action below is
+            posted to the Silicus host, which records the teacher turn and runs the
+            confirm-gate. Nothing is decided in this browser.
+          </p>
+        </header>
+        <button type="button" className={styles.primaryButton} onClick={startCourse} disabled={busy}>
+          Start a course
+        </button>
+        {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+      </div>
+    );
+  }
+
+  const plan = view.plan;
+  const published = view.versions.at(-1) ?? null;
+  const objectives = view.objectives;
+
+  return (
+    <div className={styles.live}>
+      <header className={styles.stageHeader}>
+        <div>
+          <h1 className={styles.title}>{view.course.title}</h1>
+          <p className={styles.sub}>
+            host · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {view.integrity.events} events
+          </p>
+        </div>
+        <ol className={styles.chips} aria-label="Checkpoints">
+          {["files", "outline", "objectives", "plan", "publish"].map((id) => (
+            <li key={id} className={styles.chip} data-status={cp[id]?.status ?? "pending"}>
+              <span className={styles.chipLabel}>{CHECKPOINT_LABEL[id]}</span>
+              <span className={styles.chipState}>{cp[id]?.status ?? "pending"}</span>
+            </li>
+          ))}
+        </ol>
+      </header>
+
+      <div className={styles.actions}>
+        {is("files", "pending") || is("files", "open") ? (
+          <button type="button" className={styles.primaryButton} onClick={() => confirm("files")} disabled={busy}>
+            Confirm the material list
+          </button>
+        ) : null}
+        {is("files", "confirmed") && (is("outline", "pending") || is("outline", "open")) ? (
+          <button type="button" className={styles.primaryButton} onClick={() => confirm("outline")} disabled={busy}>
+            Confirm the outline
+          </button>
+        ) : null}
+        {is("outline", "confirmed") && view.proposals.length === 0 ? (
+          <button type="button" className={styles.ghostButton} onClick={proposeObjectives} disabled={busy}>
+            Ask the assistant to propose objectives
+          </button>
+        ) : null}
+        {is("objectives", "confirmed") && !plan ? (
+          <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
+            Ask the assistant to draft the lesson plan
+          </button>
+        ) : null}
+        {plan && plan.status === "draft" ? (
+          <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
+            Confirm the lesson plan
+          </button>
+        ) : null}
+        {plan && plan.status === "invalidated" ? (
+          <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
+            Re-confirm the lesson plan
+          </button>
+        ) : null}
+        <button type="button" className={styles.textButton} onClick={verifyLog} disabled={busy}>
+          Verify the event log
+        </button>
+      </div>
+
+      <div className={styles.grid}>
+        <DecisionCard
+          rows={view.proposals}
+          onDispatch={dispatch}
+          checkpointStatus={cp.objectives?.status}
+          courseLabel={view.course.title}
+          notice={notice}
+        />
+      </div>
+
+      {plan ? (
+        <div className={styles.grid}>
+          <PlanCard
+            plan={plan}
+            objectives={objectives}
+            teacher={{ name: view.course.owner, confirmedAt: cp.plan?.status === "confirmed" ? new Date() : undefined }}
+            onPrint={() => window.print()}
+            invalidation={view.invalidation}
+          />
+        </div>
+      ) : null}
+
+      <div className={styles.grid}>
+        <PublishCard
+          courseLabel={view.course.title}
+          courseId={view.course.courseId}
+          title={plan?.title ?? view.course.title}
+          status={view.publish}
+          objectives={objectives}
+          activities={plan?.activities ?? []}
+          totalMinutes={(plan?.activities ?? []).reduce((n, a) => n + a.minutes, 0)}
+          plan={plan}
+          published={published}
+          unpublishedChanges={cp.publish?.status === "pending" && published !== null}
+          teacherName={view.course.owner}
+          onPublish={publish}
+          onExport={exportPackage}
+          notice={notice}
+        />
+      </div>
+
+      {view.timeline.length > 0 ? (
+        <div className={styles.grid}>
+          <TimelineCard events={view.timeline} courseLabel={view.course.title} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default LiveCourse;

@@ -1,0 +1,11 @@
+{
+  "name": "silicus-host",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Silicus TA 3.0 host: the real transport (server-side ledger + confirm-gate) over an append-only event log.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  }
+}

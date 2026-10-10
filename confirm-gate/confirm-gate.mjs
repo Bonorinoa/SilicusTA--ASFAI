@@ -197,6 +197,26 @@ function mintLocalId() {
 }
 
 /**
+ * A DETERMINISTIC local-id factory for hosts that persist an append-only event
+ * log and rebuild gate state by replay. Given the same seed and the same
+ * sequence of mint calls it yields identical `urn:uuid`-shaped ids, so a
+ * replayed course reproduces the original ids, decisions and versions exactly.
+ * (Random ids — the default — are deliberately NOT replayable.)
+ *
+ * @param {string} seed  Stable per-course seed; store it with the course record.
+ * @returns {() => string}
+ */
+export function deterministicIdFactory(seed) {
+  requireText(seed, "seed", "BAD_SEED");
+  let n = 0;
+  return () => {
+    n += 1;
+    const h = createHash("sha256").update(`${seed}:${n}`).digest("hex");
+    return `urn:uuid:${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+  };
+}
+
+/**
  * @param {unknown} v
  * @param {string} what
  * @returns {string}
@@ -247,6 +267,8 @@ function hashStatement(statement) {
  * @property {import("./host-guard.mjs").ResidualRuleGuard} [hostGuard]  Optional; enforces PR #15 composition at the outline checkpoint.
  * @property {readonly object[]} [materials]  MaterialVersion records (checkpoint 1 input).
  * @property {() => number} [clock]
+ * @property {() => string} [idFactory]  Local-id minting. Defaults to random `urn:uuid` ids;
+ *   inject {@link deterministicIdFactory} to make state exactly replayable from an event log.
  */
 
 /**
@@ -280,9 +302,11 @@ export class ConfirmGate {
   #history = [];
   #nextVersion = 1;
   #dirty = false;
+  /** @type {() => string} */
+  #idFactory;
 
   /** @param {ConfirmGateOptions} options */
-  constructor({ courseId, owner, title = "", description = "", ledger = new TurnLedger(), hostGuard = null, materials = [], clock = () => Date.now() }) {
+  constructor({ courseId, owner, title = "", description = "", ledger = new TurnLedger(), hostGuard = null, materials = [], clock = () => Date.now(), idFactory = mintLocalId }) {
     this.#courseId = requireText(courseId, "courseId");
     this.#owner = requireText(owner, "owner");
     this.#title = title;
@@ -291,6 +315,7 @@ export class ConfirmGate {
     this.#hostGuard = hostGuard;
     this.#materials = Object.freeze([...materials]);
     this.#clock = clock;
+    this.#idFactory = idFactory;
   }
 
   /** @returns {TurnLedgerType} */
@@ -486,7 +511,7 @@ export class ConfirmGate {
     /** @type {ObjectiveRecord[]} */
     const created = [];
     for (const item of items) {
-      const id = mintLocalId();
+      const id = this.#idFactory();
       /** @type {ObjectiveRecord} */
       let record;
       if (item.kind === "public") {
@@ -591,7 +616,7 @@ export class ConfirmGate {
       const key = `add:${prov.turnRef}:${hashStatement(statement)}`;
       const existing = this.#decisionsByKey.get(key);
       if (existing) return existing; // idempotent replay: no second mint.
-      const id = mintLocalId();
+      const id = this.#idFactory();
       if (MT_ID_RE.test(id)) {
         // Defensive: local ids must never look like Marble ids.
         throw new ConfirmGateError("minted local id collides with mt_ id space", "BAD_STATE");
@@ -759,7 +784,7 @@ export class ConfirmGate {
   #recordDecision(spec) {
     /** @type {DecisionRecord} */
     const record = Object.freeze({
-      id: mintLocalId(),
+      id: this.#idFactory(),
       key: spec.key,
       verb: spec.verb,
       proposalId: spec.proposalId,
@@ -827,7 +852,7 @@ export class ConfirmGate {
         );
       }
       return Object.freeze({
-        id: raw.id ? requireText(raw.id, "activity.id") : mintLocalId(),
+        id: raw.id ? requireText(raw.id, "activity.id") : this.#idFactory(),
         title: requireText(raw.title, "activity.title", "BAD_PLAN"),
         minutes: Number.isFinite(raw.minutes) ? raw.minutes : 0,
         objectiveIds: Object.freeze(objectiveIds),
@@ -839,7 +864,7 @@ export class ConfirmGate {
       });
     });
 
-    const id = mintLocalId();
+    const id = this.#idFactory();
     const record = {
       id,
       courseId: this.#courseId,
@@ -885,7 +910,7 @@ export class ConfirmGate {
     }
     entry.record.status = "confirmed";
     entry.invalidationReason = null;
-    entry.confirmation = { key, provenance: prov, decisionId: mintLocalId(), boundCourseVersion: this.#nextVersion };
+    entry.confirmation = { key, provenance: prov, decisionId: this.#idFactory(), boundCourseVersion: this.#nextVersion };
     const cp = this.#checkpoints.get("plan");
     cp.status = "confirmed";
     cp.provenance = prov;

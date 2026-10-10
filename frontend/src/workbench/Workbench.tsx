@@ -4,6 +4,7 @@ import { PrintIcon } from "../components/icons";
 import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
+import { LiveCourse } from "../live/LiveCourse";
 import { colorTokens, spacingScale, typeScale } from "../design/tokens";
 import { buildAuditedScenario, buildPlanScenario, seedProposals } from "../gate/demo";
 import { ConfirmGateHarness } from "../gate/harness";
@@ -20,9 +21,10 @@ import styles from "./Workbench.module.css";
  * see README.md.)
  */
 
-type TabId = "decision" | "plan" | "publish" | "audit" | "tokens";
+type TabId = "live" | "decision" | "plan" | "publish" | "audit" | "tokens";
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: "live", label: "Live course" },
   { id: "decision", label: "Decision card" },
   { id: "plan", label: "Plan card" },
   { id: "publish", label: "Publish" },
@@ -70,6 +72,7 @@ export function Workbench() {
       </header>
 
       <main className={styles.stage}>
+        {tab === "live" ? <LiveCourse /> : null}
         {tab === "decision" ? <DecisionDemo /> : null}
         {tab === "plan" ? <PlanDemo /> : null}
         {tab === "publish" ? <PublishDemo /> : null}

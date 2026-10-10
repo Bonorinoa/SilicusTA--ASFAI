@@ -55,7 +55,8 @@ Zero dependencies: plain ES modules + JSDoc types. No `npm install`, no `package
 cd /Users/bonorinoa/Hermes/Projects/silicus-asfai-handoff/confirm-gate && node --test
 ```
 
-(Node ≥ 18 required; developed and verified on Node 22. Expected: 21 tests, 0 fail.)
+(Node ≥ 18 required; developed and verified on Node 22. Expected: 26 tests, 0 fail —
+the 22 gate/ledger cases plus 4 in `test/persistence.test.mjs` covering the replay seam.)
 
 ## Usage sketch
 

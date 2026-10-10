@@ -24,6 +24,17 @@ export default defineConfig({
       // The confirm-gate core lives one directory up; allow the dev server to read it.
       allow: [here, path.resolve(here, "..")],
     },
+    // The GUI is a sidecar: every real course action goes to the Silicus host,
+    // same-origin, so the client never needs credentials or CORS.
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8787", changeOrigin: false },
+    },
+  },
+  preview: {
+    // The built app is served the same way: one origin, /api proxied to the host.
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8787", changeOrigin: false },
+    },
   },
   test: {
     environment: "jsdom",

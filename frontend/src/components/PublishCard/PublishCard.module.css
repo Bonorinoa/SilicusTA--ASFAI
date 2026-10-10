@@ -1,0 +1,433 @@
+/* PublishCard — checkpoint 5: preview the exact export, then seal it.
+   Every value is a token from src/design/tokens.css; no colors live here.
+
+   Follows the same ledger conventions as DecisionCard (one accent wash for the
+   decisive action, ghost for the safe choice, in-flow confirm bar) and
+   PlanCard (the 6rem label gutter for every label/value pair). Sealing is
+   significant but NOT destructive: it uses the accent line, never the danger
+   colour. The preview embeds PlanCard — the same typeset sheet that prints. */
+
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  max-width: 46rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-bottom: var(--space-5);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-md);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+  text-wrap: pretty;
+}
+
+/* 'Sealed' is ordinary ink doing its own work; 'Not ready' asks for action. */
+.statusChip {
+  margin: 0;
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+.statusChip[data-status="blocked"] {
+  color: var(--color-renamed);
+}
+
+.subhead {
+  margin: var(--space-3) 0 0;
+  max-width: 34rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+/* The preview is the PlanCard sheet itself — no extra card chrome on card. */
+.preview {
+  margin-top: var(--space-6);
+}
+
+.empty {
+  margin: var(--space-8) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+/* The gate's own blocker reasons, word for word — reachable, not hidden. */
+.blockers {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  border-left: 2px solid var(--color-border-control);
+  background: var(--color-sunken);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--color-ink-soft);
+}
+
+.blockers li + li {
+  margin-top: var(--space-2);
+}
+
+/* ------------------------------ confirm bar ------------------------------- */
+
+/* In FLOW, not sticky (user ruling): the bar is the ledger's foot, bleeds to
+   the card edges, and never overlays the preview it is about. */
+.confirmBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin: var(--space-6) calc(-1 * var(--space-8)) 0;
+  padding: var(--space-4) var(--space-8);
+  border-top: 1px solid var(--color-rule-strong);
+  background: var(--color-paper);
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+
+.confirmBar[data-armed="true"] {
+  background: var(--color-accent-soft);
+  animation: settle var(--duration-slow) var(--ease-settle);
+}
+
+.confirmStatus {
+  margin: 0;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.confirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.confirmHint {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.confirmHint[data-flash="true"] {
+  color: var(--color-dropped);
+  font-weight: var(--weight-medium);
+}
+
+.confirmButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-border-control);
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    color var(--duration-quick) var(--ease-standard);
+}
+
+.confirmButton[data-armed="true"] {
+  background: var(--color-accent);
+  color: var(--color-paper-raised);
+  border-color: var(--color-accent);
+}
+
+.confirmButton[data-armed="true"]:hover {
+  background: var(--color-accent-strong);
+}
+
+.confirmButton[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.confirmButton:focus-visible,
+.exportButton:focus-visible,
+.sealKeepButton:focus-visible,
+.sealPublishButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------- seal confirm (A1 pattern) ---------------------- */
+
+/* Significant but not destructive: the accent line, not the danger colour. */
+.sealConfirm {
+  margin-top: var(--space-4);
+  max-width: 36rem;
+  padding: var(--space-4) var(--space-5);
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-xs);
+}
+
+.sealConfirmText {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.sealConfirmTitle {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink);
+}
+
+.sealConfirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* The safe choice is ghost and focused by default; the acting control wears
+   the one filled accent. */
+.sealKeepButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-border-control);
+  color: var(--color-ink-soft);
+}
+
+.sealKeepButton:hover {
+  background: var(--color-sunken);
+  color: var(--color-ink);
+}
+
+.sealPublishButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-paper-raised);
+}
+
+.sealPublishButton:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+/* ------------------------------ sealed panel ------------------------------ */
+
+/* The sealed record reads as a document, not a widget: raised paper, a
+   measured gutter, mono for machine keys. */
+.sealPanel {
+  margin-top: var(--space-6);
+  padding: var(--space-6);
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.sealHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-md);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+}
+
+.sealHeading:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.sealLead {
+  margin: var(--space-2) 0 0;
+  max-width: 30rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+/* The ONE gutter style for every label/value pair (PlanCard law, 6rem). */
+.sealRows {
+  margin: var(--space-5) 0 0;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 0;
+  max-width: 30rem;
+}
+
+.lineLabel {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.lineText {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  color: var(--color-ink);
+  text-wrap: pretty;
+}
+
+/* Machine keys on their own quiet line — never in the reading path. */
+.colophon {
+  margin: var(--space-5) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-micro);
+  color: var(--color-ink-muted);
+}
+
+.monoId {
+  white-space: nowrap;
+}
+
+.exportRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-rule);
+}
+
+.exportButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-paper-raised);
+}
+
+.exportButton:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+.exportHint {
+  margin: 0;
+  max-width: 22rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+/* --------------------------------- misc ---------------------------------- */
+
+.notice {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--color-dropped);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes settle {
+  from {
+    transform: translateY(3px);
+    opacity: 0.65;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirmBar,
+  .sealConfirm {
+    animation: none;
+    transition: none;
+  }
+}

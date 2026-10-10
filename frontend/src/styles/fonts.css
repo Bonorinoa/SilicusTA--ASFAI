@@ -1,0 +1,26 @@
+/* Source Serif 4 — self-hosted (SIL Open Font License 1.1; see
+   ../assets/fonts/OFL.txt). Self-hosting is the fix, not a preference: the
+   previous display stack named Iowan Old Style and Palatino, neither of which
+   exists on ChromeOS, so every serif decision silently fell back to Times with
+   faux-bold on the actual target hardware.
+
+   Fonts served by Google Fonts are true VARIABLE files when the request names a
+   weight range (400 and 600 requests return separate static files; a 200..900
+   request returns one file covering the whole axis), so one file per style gives
+   us a real 600 without synthesis. */
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("../assets/fonts/source-serif-4-variable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("../assets/fonts/source-serif-4-variable-italic.woff2") format("woff2");
+}

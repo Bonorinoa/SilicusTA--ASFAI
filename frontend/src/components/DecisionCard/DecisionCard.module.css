@@ -1,0 +1,584 @@
+/* DecisionCard — "a considered ledger" of objective proposals.
+   Every value is a token from src/design/tokens.css; no colors live here.
+
+   A2 (design review): the ledger's structure must survive cheap Chromebook
+   panels, so the rule ladder is raised and card separation comes from shadow;
+   the type scale is collapsed (10/12/15/17/21/34) so the decision verbs are no
+   longer the quietest thing on screen; state is ONE accent wash (not four hue
+   washes); the destructive verb is visually separated and text-only. */
+
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  max-width: 44rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-bottom: var(--space-5);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-md);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+}
+
+.subhead {
+  margin: var(--space-3) 0 0;
+  max-width: 34rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.empty {
+  margin: var(--space-8) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+/* --------------------------------- rows ---------------------------------- */
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  border-top: 1px solid var(--color-rule);
+}
+
+.row:first-child {
+  border-top: none;
+}
+
+.rowInner {
+  display: grid;
+  grid-template-columns: var(--space-10) 1fr;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-4) 0;
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+
+/* Undecided rows answer the pointer, so the ledger feels alive under the hand. */
+.row[data-status="proposed"]:hover .rowInner {
+  background: var(--color-sunken);
+}
+
+/* One accent wash for every decided state (green/amber/purple washes read as a
+   dashboard; the glyph + label already carry the meaning). */
+.row[data-status="accepted"] .rowInner,
+.row[data-status="renamed"] .rowInner,
+.row[data-status="added"] .rowInner {
+  background: var(--color-accent-soft);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-4);
+  animation: settle var(--duration-slow) var(--ease-settle);
+}
+
+/* Dropped leaves the ledger's colour world entirely. */
+.row[data-status="dropped"] .rowInner {
+  background: transparent;
+  border-left: 2px solid var(--color-border-control);
+  padding-left: var(--space-4);
+  animation: settle var(--duration-slow) var(--ease-settle);
+}
+
+@keyframes settle {
+  from {
+    transform: translateY(3px);
+    opacity: 0.65;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.index {
+  margin: 0;
+  padding-top: 2px;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  /* Numerals align to the status label's cap height, not to the statement. */
+  line-height: var(--leading-xs);
+  font-variant-numeric: oldstyle-nums;
+  color: var(--color-ink-muted);
+}
+
+.content {
+  min-width: 0;
+}
+
+.statusLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.statusLabel[data-status="accepted"],
+.statusLabel[data-status="renamed"],
+.statusLabel[data-status="added"] {
+  color: var(--color-ink-soft);
+}
+
+.statusLabel[data-status="dropped"] {
+  color: var(--color-dropped);
+}
+
+.statement {
+  margin: 0;
+  max-width: 32rem;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-lg);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+  text-wrap: pretty;
+  orphans: 2;
+  widows: 2;
+}
+
+/* Reserve two lines ONLY where a rename could still open the editor. Decided
+   rows can no longer be renamed, so their statements keep natural height and
+   don't sit in a dead zone. */
+.row[data-status="proposed"] .statement {
+  min-height: calc(2 * var(--leading-lg));
+}
+
+/* Motion only where it means something: a rename re-sets the wording. */
+.statement[data-renamed="true"] {
+  animation: swap var(--duration-base) var(--ease-settle);
+}
+
+@keyframes swap {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.row[data-status="dropped"] .statement {
+  color: var(--color-ink-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-rule-strong);
+  text-decoration-thickness: 1px;
+}
+
+.renamedFrom {
+  margin: var(--space-2) 0 0;
+  max-width: 32rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+/* Provenance: the teacher-facing words on line 1; the machine key demoted to a
+   mono line beneath it, out of the scan path but present for audit. */
+.provenance {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+.dot {
+  color: var(--color-rule-strong);
+}
+
+/* The Marble key is audit content, not decoration: it gets the 12px floor and
+   ink-soft, because 10px mono at muted ink is below comfortable legibility. */
+.alignmentKey {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  letter-spacing: var(--tracking-micro);
+  color: var(--color-ink-soft);
+}
+
+.droppedNote,
+.decidedNote {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+/* -------------------------------- actions -------------------------------- */
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  border-radius: var(--radius-xs);
+}
+
+.actions:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.verbButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  /* Touch floor: 44px tall — these controls carry irreversible consequences. */
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    border-color var(--duration-quick) var(--ease-standard),
+    color var(--duration-quick) var(--ease-standard);
+}
+
+/* ACCEPT — the one filled control: the constructive act wears the accent. */
+.verbButton[data-verb="accept"] {
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-paper-raised);
+}
+
+.verbButton[data-verb="accept"]:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+/* RENAME — ghost: present, quiet, obviously not the primary act. */
+.verbButton[data-verb="rename"] {
+  background: transparent;
+  border: 1px solid var(--color-border-control);
+  color: var(--color-ink-soft);
+}
+
+.verbButton[data-verb="rename"]:hover {
+  background: var(--color-sunken);
+  color: var(--color-ink);
+}
+
+/* SAVE (inside the editor) — the commit action carries the same primary fill as
+   Accept, so the hierarchy doesn't invert the moment the teacher starts typing. */
+.verbButton[data-verb="save"] {
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-paper-raised);
+}
+
+.verbButton[data-verb="save"]:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+/* DROP / REVOKE — text-only and set apart: the destructive verb never sits
+   shoulder-to-shoulder with the constructive one in identical chrome. */
+.verbButton[data-verb="drop"] {
+  margin-left: var(--space-6);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-dropped);
+}
+
+.verbButton[data-verb="drop"]:hover {
+  background: var(--color-dropped-bg);
+  border-color: var(--color-dropped-bg);
+}
+
+/* Every control carries the same focus ring (never the UA default). */
+.verbButton:focus-visible,
+.quietButton:focus-visible,
+.confirmButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.quietButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  text-transform: none;
+  color: var(--color-ink-soft);
+  background: transparent;
+  border: 1px dashed var(--color-border-control);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  transition: background-color var(--duration-quick) var(--ease-standard);
+}
+
+.quietButton:hover {
+  background: var(--color-sunken);
+  color: var(--color-ink);
+}
+
+/* --------------------------- drop / revoke confirm ------------------------- */
+
+.dropConfirm {
+  margin-top: var(--space-4);
+  max-width: 32rem;
+  padding: var(--space-4) var(--space-5);
+  border-left: 2px solid var(--color-dropped);
+  background: var(--color-sunken);
+  border-radius: var(--radius-xs);
+}
+
+.dropConfirmText {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.dropConfirmTitle {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink);
+}
+
+.dropConfirm .actions {
+  justify-content: flex-start;
+  margin-top: var(--space-3);
+}
+
+/* ------------------------------ inline editor ----------------------------- */
+
+/* The editor replaces the statement in place: the wording never shrinks, and the
+   block reserves the same height so rows below never jump. */
+.editor {
+  margin-top: 0;
+  max-width: 32rem;
+  min-height: 5.5rem;
+}
+
+.editorInput {
+  display: block;
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+.editorInput::placeholder {
+  color: var(--color-ink-muted);
+  font-style: italic;
+}
+
+.editorInput:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  border-color: var(--color-accent);
+}
+
+.editorBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.editorHint {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+.editorBar .actions {
+  margin-top: 0;
+}
+
+.addRow {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-rule);
+}
+
+/* ------------------------------ confirm bar ------------------------------- */
+
+/* Full-bleed and pinned: the rule runs edge to edge and the CTA stays reachable
+   without scrolling past six objectives on a 768px Chromebook. */
+.confirmBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  /* FLOW, not sticky: the ledger's foot. Nothing here is a conversion event, so
+     the bar takes its place in the document and never overlays a row. Bleeds to
+     the card's side edges so the rule has no inset seam. */
+  margin: var(--space-6) calc(-1 * var(--space-8)) 0;
+  padding: var(--space-4) var(--space-8);
+  border-top: 1px solid var(--color-rule-strong);
+  background: var(--color-paper);
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+
+.confirmBar[data-armed="true"] {
+  background: var(--color-accent-soft);
+  animation: settle var(--duration-slow) var(--ease-settle);
+}
+
+.confirmStatus {
+  margin: 0;
+  /* The counter is one line: 'nothing decided yet' + '— 0 of 3' must never
+     wrap into a ragged three-line stack in a cramped flex row. */
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.confirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.confirmHint {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.confirmHint[data-flash="true"] {
+  color: var(--color-dropped);
+  font-weight: var(--weight-medium);
+}
+
+.readyMark {
+  color: var(--color-accent-strong);
+  font-weight: var(--weight-semibold);
+}
+
+.confirmButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-border-control);
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    color var(--duration-quick) var(--ease-standard);
+}
+
+.confirmButton[data-armed="true"] {
+  background: var(--color-accent);
+  color: var(--color-paper-raised);
+  border-color: var(--color-accent);
+}
+
+.confirmButton[data-armed="true"]:hover {
+  background: var(--color-accent-strong);
+}
+
+/* Not-yet state: aria-disabled keeps it focusable so the reason is reachable. */
+.confirmButton[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.notice {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--color-dropped);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row[data-status] .rowInner,
+  .statement,
+  .confirmBar {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* --------------------------------- print ---------------------------------- */
+
+@media print {
+  .card {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    max-width: none;
+  }
+
+  .confirmBar,
+  .addRow,
+  .actions {
+    display: none !important;
+  }
+}

@@ -1,0 +1,475 @@
+/* Workbench chrome. Tokens only — no colors live here either. */
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chrome {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-8);
+  border-bottom: 1px solid var(--color-rule-strong);
+  background: var(--color-paper);
+}
+
+.brandName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  color: var(--color-ink);
+}
+
+.brandNote {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tab {
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  transition: background-color var(--duration-quick) var(--ease-standard);
+}
+
+.tab:hover {
+  background: var(--color-sunken);
+}
+
+.tab[data-current="true"] {
+  color: var(--color-ink);
+  border-color: var(--color-border-control);
+  background: var(--color-paper-raised);
+}
+
+.stage {
+  flex: 1;
+  padding: var(--space-10) var(--space-8) var(--space-16);
+}
+
+.demoGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 44rem) minmax(0, 20rem);
+  gap: var(--space-8);
+  align-items: start;
+  justify-content: center;
+}
+
+/* ------------------------------ gate panel -------------------------------- */
+
+.gatePanel {
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.gateHeading {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.gateSubheading {
+  margin: var(--space-5) 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.gateNote {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-ink-muted);
+}
+
+.gateNote code,
+.tokens code {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.gateTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+}
+
+.gateTable th,
+.gateTable td {
+  text-align: left;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-rule);
+  font-weight: var(--weight-regular);
+  color: var(--color-ink-soft);
+}
+
+.gateTable td span[data-status="confirmed"] {
+  color: var(--color-accepted);
+  font-weight: var(--weight-semibold);
+}
+
+.gateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-ink-soft);
+}
+
+.gateList li {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-rule);
+  overflow-wrap: anywhere;
+}
+
+.gateList span[data-verb="accept"] {
+  color: var(--color-accepted);
+}
+.gateList span[data-verb="rename"] {
+  color: var(--color-renamed);
+}
+.gateList span[data-verb="drop"] {
+  color: var(--color-dropped);
+}
+.gateList span[data-verb="add"] {
+  color: var(--color-added);
+}
+
+.turnRef {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-ink-muted);
+}
+
+.decisionStatement {
+  font-family: var(--font-display);
+  color: var(--color-ink);
+}
+
+/* ----------------------------- plan toolbar ------------------------------- */
+
+.planToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  max-width: 46rem;
+  margin: 0 auto var(--space-6);
+}
+
+.planToolbar .gateNote {
+  margin: 0;
+  max-width: 24rem;
+}
+
+.printButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-paper-raised);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background-color var(--duration-quick) var(--ease-standard);
+}
+
+.printButton:hover {
+  background: var(--color-accent-strong);
+}
+
+/* --------------------------- demo review flow (D) ------------------------- */
+
+.demoControl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.demoControlLabel {
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.demoSelect {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--color-ink-soft);
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  cursor: pointer;
+  max-width: 22rem;
+}
+
+.demoSelect:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* The re-confirm surface sits under the sheet, in flow (never overlays it). */
+.reconfirmBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: 46rem;
+  margin: var(--space-6) auto 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-sunken);
+  border-left: 2px solid var(--color-dropped);
+  border-radius: var(--radius-xs);
+}
+
+.reconfirmStatus {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.reconfirmConfirm {
+  margin-top: var(--space-3);
+  max-width: 34rem;
+}
+
+.reconfirmText {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.reconfirmTitle {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink);
+}
+
+.reconfirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reconfirmBar .reconfirmActions {
+  flex-shrink: 0;
+}
+
+.ghostButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-border-control);
+  color: var(--color-ink-soft);
+}
+
+.ghostButton:hover {
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+}
+
+.primaryButton {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-paper-raised);
+}
+
+.primaryButton:hover {
+  background: var(--color-accent-strong);
+}
+
+.primaryButton:focus-visible,
+.ghostButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.notice {
+  margin: var(--space-3) 0 0;
+  max-width: 46rem;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--color-dropped);
+}
+
+/* ------------------------- what changed per version ------------------------ */
+
+.versionDiff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.versionDiffHead {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-micro);
+  color: var(--color-ink-muted);
+}
+
+.versionDiffLine {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------ tokens sheet ------------------------------ */
+
+.tokens {
+  max-width: 46rem;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-2);
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-ink-soft);
+}
+
+.chip {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-rule-strong);
+  flex-shrink: 0;
+}
+
+.hex {
+  color: var(--color-ink-muted);
+  margin-left: auto;
+}
+
+.specimen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.specimen li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-rule);
+  padding-bottom: var(--space-2);
+  color: var(--color-ink);
+}
+
+.spacing {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.spacing li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.spaceBar {
+  display: inline-block;
+  height: var(--space-2);
+  min-width: 1px;
+  background: var(--color-accent);
+  border-radius: var(--radius-xs);
+}
+
+/* --------------------------------- print ---------------------------------- */
+
+@media print {
+  .chrome,
+  .planToolbar,
+  .gatePanel {
+    display: none !important;
+  }
+
+  .stage {
+    padding: 0;
+  }
+}

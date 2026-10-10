@@ -1,0 +1,140 @@
+/* ---------------------------------------------------------------------------
+ * tokens.css — Silicus TA 3.0 design tokens (the only place colors live).
+ *
+ * "A considered ledger": warm paper neutrals, ink-dark text, exactly ONE accent
+ * hue (fountain-pen ink blue), muted semantic state colors. Every component
+ * stylesheet consumes these variables; nothing hard-codes a color.
+ *
+ * Mirrored 1:1 in ./tokens.ts (asserted by src/design/tokens.test.ts) and every
+ * documented text pair is WCAG AA (>= 4.5:1) — also asserted in that test.
+ *
+ * A2 (design review) changes, all measurement-driven:
+ *  - Rule ladder raised so ledger structure survives cheap Chromebook panels:
+ *    the previous hairlines measured 1.17–1.34:1 and dissolved into the paper.
+ *  - Card/page separation moved from border contrast to shadow depth.
+ *  - Type scale rebuilt on a 4px grid with explicit paired leadings; the old
+ *    11/12/13px near-duplicates are collapsed (--text-2xs is now 10px, and the
+ *    dead --text-3xl specimen step is gone).
+ *  - On-screen state is ONE accent wash, not four competing hue washes (the
+ *    muted state hues survive for icon fills and print).
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* ---- surfaces (warm paper) ------------------------------------------------ */
+  --color-canvas: #efe9dc; /* the desk: page background behind cards            */
+  --color-paper: #fbf8f1; /* the sheet: card / document surface                 */
+  --color-paper-raised: #fffdf8; /* raised sheet (editors, print page)          */
+  --color-sunken: #eae3d3; /* inset wells, hover fills                          */
+
+  /* ---- text (ink) ----------------------------------------------------------- */
+  --color-ink: #221f1a; /* headlines, statements                                */
+  --color-ink-soft: #4e4941; /* body, secondary, provenance on washes          */
+  --color-ink-muted: #6b6459; /* micro-labels, meta (AA at 5.5:1 on paper)      */
+
+  /* ---- rules (hairlines) ---------------------------------------------------- */
+  --color-rule: #cfc3a8; /* separators that must stay visible on cheap panels   */
+  --color-rule-strong: #b3a586; /* masthead / section rules                      */
+  --color-border-card: #d5cab3; /* card + page edges (structure, not control)   */
+  --color-border-control: #8a8170; /* interactive control boundaries (>= 3:1)    */
+
+  /* ---- accent: the one hue (fountain-pen ink blue) -------------------------- */
+  --color-accent: #2c4a66;
+  --color-accent-strong: #223b53;
+  --color-accent-soft: #e6ebf0; /* accent wash — the only on-screen state wash  */
+  --color-accent-line: #a9bacb;
+
+  /* ---- state (muted, semantic; icon fills + print; NEVER color-only) -------- */
+  --color-accepted: #4a6642;
+  --color-accepted-bg: #e9efe3;
+  --color-renamed: #7a5c22;
+  --color-renamed-bg: #f2ebd9;
+  --color-dropped: #87473c;
+  --color-dropped-bg: #f3e6e1;
+  --color-added: #6a4a63;
+  --color-added-bg: #efe6ed;
+  --color-proposed: #6b6459; /* awaiting decision: ink-muted, deliberately quiet */
+  --color-proposed-bg: #eae3d3;
+
+  /* ---- typography ----------------------------------------------------------- */
+  --font-display: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Book Antiqua", Georgia, ui-serif, serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Scale on a 4px grid; each step has a paired leading (below). */
+  --text-2xs: 0.625rem; /* 10px — tracked micro-labels (tracking: 0.14em)       */
+  --text-xs: 0.75rem; /* 12px — meta, provenance, status labels                 */
+  --text-sm: 0.8125rem; /* 13px — legacy step; prefer base for controls        */
+  --text-base: 0.9375rem; /* 15px — UI body, controls, verbs                  */
+  --text-md: 1.0625rem; /* 17px — activity titles                                */
+  --text-lg: 1.3125rem; /* 21px — statements, card headings                     */
+  --text-xl: 2.125rem; /* 34px — plan title (screen)                            */
+  --text-2xl: 2.5rem; /* 40px — display moment                                  */
+
+  /* Paired leadings (px values land on the 4px grid). */
+  --leading-2xs: 0.875rem; /* 14px */
+  --leading-xs: 1.125rem; /* 18px */
+  --leading-sm: 1.25rem; /* 20px */
+  --leading-base: 1.5rem; /* 24px */
+  --leading-md: 1.75rem; /* 28px */
+  --leading-lg: 2rem; /* 32px */
+  --leading-xl: 2.5rem; /* 40px */
+  --leading-2xl: 3rem; /* 48px */
+
+  /* Ratio leadings retained for long-form sets (PlanCard body copy). */
+  --leading-tight: 1.12;
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  --tracking-label: 0.14em;
+  --tracking-micro: 0.06em;
+  --tracking-display: -0.01em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* ---- spacing (4px rhythm, editorial pauses at the top end) ---------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+
+  /* ---- radii (restraint: near-square, printed feel) ------------------------- */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* ---- elevation (rules do the lines; shadows do the depth) ----------------- */
+  --shadow-hairline: 0 0 0 1px var(--color-border-card);
+  --shadow-card: 0 1px 1px rgba(34, 31, 26, 0.04), 0 8px 20px -8px rgba(34, 31, 26, 0.16);
+  --shadow-page: 0 1px 2px rgba(34, 31, 26, 0.08), 0 18px 36px -18px rgba(34, 31, 26, 0.22);
+  --shadow-lift: 0 2px 6px rgba(34, 31, 26, 0.08);
+
+  /* ---- motion (only where it explains state; 150–250ms) --------------------- */
+  --duration-quick: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Reduced motion: durations collapse so state changes are instant. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-quick: 0.01ms;
+    --duration-base: 0.01ms;
+    --duration-slow: 0.01ms;
+  }
+}

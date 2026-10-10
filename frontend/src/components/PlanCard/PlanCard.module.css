@@ -1,0 +1,419 @@
+/* PlanCard — a lesson plan set like a printed syllabus handout.
+   Every value is a token from src/design/tokens.css; no colors live here.
+
+   A3 (design review): the label gutter was arithmetically too small for its own
+   labels (a 32px column cannot hold 'LEARNERS' at 10px/0.14em ≈ 56–68px, so the
+   labels collided with the body copy on screen AND in print). The gutter is now
+   5.5rem, every label/value pair uses ONE label style, the reading measure is
+   capped, and the print block uses physical units instead of rem (a rem value
+   carried into print fights the pt scale and produced ~105ch A4 lines).
+   @page lives in src/styles/print.css — CSS Modules cannot scope at-rules. */
+
+.page {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-page);
+  padding: var(--space-12) var(--space-12) var(--space-10);
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-bottom: var(--space-3);
+}
+
+/* ONE micro-label style for every label on the page (eyebrow, status, meta, key
+   heading, gutter labels). The old mix of 11px/600 shouts and sentence-case
+   variants made the labels out-voice the content they label. */
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* 'Confirmed' is ordinary ink with its word doing the work — no green text on
+   screen. Draft and invalidated keep muted semantic hues: those are states a
+   teacher has to act on. */
+.statusChip {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+.statusChip[data-status="draft"] {
+  color: var(--color-renamed);
+}
+
+.statusChip[data-status="invalidated"] {
+  color: var(--color-dropped);
+}
+
+/* The document's display moment: this sheet gets printed and handed over. */
+.title {
+  margin: var(--space-6) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-xl);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+  max-width: 34rem;
+  text-wrap: pretty;
+}
+
+.meta {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.metaDot {
+  color: var(--color-rule-strong);
+}
+
+/* ------------------------------- activities ------------------------------- */
+
+.activities {
+  list-style: none;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  counter-reset: activity;
+}
+
+.activity {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-rule);
+  padding: var(--space-6) 0;
+  break-inside: avoid;
+}
+
+/* Numerals sit on the title's first baseline and never out-shout it. */
+.activityNumber {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  line-height: var(--leading-md);
+  font-variant-numeric: oldstyle-nums;
+  color: var(--color-ink-muted);
+}
+
+.activityHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.activityTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-md);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+}
+
+.minutes {
+  margin: 0;
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-md);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* The label/value list: ONE gutter for every pair, wide enough for its own
+   labels. 5.5rem was 2px short of 'NOT EVIDENCE' (≈90px at 10px/0.14em) and the
+   printed PDF proved it by wrapping the label — 6rem. */
+.line {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 0;
+  max-width: 30rem;
+}
+
+.lineLabel {
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.lineText {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  color: var(--color-ink);
+  text-wrap: pretty;
+  orphans: 2;
+  widows: 2;
+}
+
+.cite {
+  display: inline-block;
+  margin-left: var(--space-1);
+  vertical-align: super;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-accent-line);
+}
+
+.cite:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+/* ---------------------------- objectives key ------------------------------ */
+
+.key {
+  border-top: 1px solid var(--color-rule-strong);
+  margin-top: var(--space-4);
+  padding-top: var(--space-5);
+}
+
+.keyHeading {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.keyList {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+/* Items avoid splitting; the key as a whole may flow, so a long key never jumps
+   a page or overflows one. */
+.keyItem {
+  display: grid;
+  grid-template-columns: var(--space-6) 1fr;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  max-width: 30rem;
+  break-inside: avoid;
+}
+
+.keyNumber {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-accent);
+}
+
+.keyStatement {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  color: var(--color-ink);
+}
+
+/* Metadata garnish: the wording in serif italic, the raw id in mono and
+   non-italic, so machine data stops masquerading as prose. */
+.garnish {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+.garnishId {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-style: normal;
+  letter-spacing: var(--tracking-micro);
+}
+
+/* ------------------------------- invalidated ------------------------------ */
+
+/* Action-required state: the danger rule and a sunken ground, consistent with
+   the drop-confirm block. It prints — a sheet handed to a colleague must not
+   hide the fact that it is invalid. */
+.invalidated {
+  margin-top: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-left: 2px solid var(--color-dropped);
+  background: var(--color-sunken);
+  border-radius: var(--radius-xs);
+  break-inside: avoid;
+}
+
+.invalidatedTitle {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-dropped);
+}
+
+.invalidatedLine {
+  margin: var(--space-1) 0 0;
+  max-width: 30rem;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  color: var(--color-ink);
+  text-wrap: pretty;
+}
+
+.invalidatedNote {
+  margin: var(--space-2) 0 0;
+  max-width: 30rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--color-ink-soft);
+}
+
+/* --------------------------------- footer --------------------------------- */
+
+.footer {
+  border-top: 1px solid var(--color-rule);
+  margin-top: var(--space-8);
+  padding-top: var(--space-4);
+  break-inside: avoid;
+}
+
+/* The page's closing contract line — one step above body, so it closes the page
+   instead of trailing off. */
+.honesty {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-style: italic;
+  color: var(--color-ink-soft);
+}
+
+.colophon {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-micro);
+  color: var(--color-ink-muted);
+}
+
+/* Identifiers break at the spaces between fields, never inside a urn. */
+.monoId {
+  white-space: nowrap;
+}
+
+.printHint {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+/* --------------------------------- print ---------------------------------- */
+/* Physical units belong here: the sheet is measured in mm/pt, and a rem value
+   carried into print fights the point scale (that mismatch produced ~105ch A4
+   lines). Page geometry itself is in src/styles/print.css. */
+
+@media print {
+  .page {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
+
+  .title {
+    font-size: 26pt;
+    line-height: 30pt;
+    max-width: 140mm;
+  }
+
+  .activityTitle {
+    font-size: 12pt;
+    line-height: 16pt;
+  }
+
+  .lineText,
+  .keyStatement {
+    font-size: 10.5pt;
+    line-height: 15pt;
+  }
+
+  .honesty {
+    font-size: 11pt;
+    line-height: 16pt;
+  }
+
+  .line {
+    grid-template-columns: 26mm 1fr;
+    gap: 4mm;
+    max-width: 150mm;
+  }
+
+  .keyItem {
+    max-width: 150mm;
+  }
+
+  .cite {
+    color: var(--color-accent);
+    border-bottom: none;
+  }
+
+  /* Break control: a heading never ends a page, an activity never splits. */
+  .masthead,
+  .activityHead,
+  .keyHeading {
+    break-after: avoid;
+  }
+
+  .activity,
+  .keyItem {
+    break-inside: avoid-page;
+  }
+
+  .footer {
+    break-inside: avoid;
+  }
+}

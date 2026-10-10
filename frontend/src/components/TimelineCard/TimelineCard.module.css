@@ -1,0 +1,199 @@
+/* TimelineCard — the append-only audit trail as one quiet spine.
+   Every value is a token from src/design/tokens.css; no colors live here.
+
+   The spine does the separating (hairline rule), the markers carry kind
+   (glyph for decisions, dot for checkpoints/seals), and machine keys live on
+   their own mono line below the human story (A2). Sealing is the one
+   milestone, so the publish dot is the accent; everything else stays muted. */
+
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  max-width: 40rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-bottom: var(--space-5);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-md);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+}
+
+.subhead {
+  margin: var(--space-3) 0 0;
+  max-width: 34rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--color-ink-soft);
+}
+
+.empty {
+  margin: var(--space-8) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+/* --------------------------------- spine ---------------------------------- */
+
+.spine {
+  list-style: none;
+  margin: var(--space-5) 0 0;
+  padding: 0;
+}
+
+.event {
+  display: grid;
+  grid-template-columns: var(--space-6) 1fr;
+  gap: var(--space-3);
+  position: relative;
+  padding-bottom: var(--space-5);
+}
+
+/* The rule runs through the markers' column so the spine reads continuous. */
+.event::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 12px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-rule);
+}
+
+.event:last-child::before {
+  display: none;
+}
+
+.marker {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
+  color: var(--color-ink-muted);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--color-rule-strong);
+}
+
+/* Sealing is the milestone: the one accent moment on the spine. */
+.dot[data-kind="publish"] {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.body {
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.time {
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-muted);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-base);
+  color: var(--color-ink);
+}
+
+.label[data-kind="publish"] {
+  color: var(--color-accent-strong);
+}
+
+.label[data-kind="decision"][data-verb="drop"] {
+  color: var(--color-dropped);
+}
+
+.detail {
+  margin: var(--space-1) 0 0;
+  max-width: 30rem;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  color: var(--color-ink);
+  text-wrap: pretty;
+  orphans: 2;
+  widows: 2;
+}
+
+.before {
+  margin: var(--space-1) 0 0;
+  max-width: 30rem;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-style: italic;
+  line-height: var(--leading-sm);
+  color: var(--color-ink-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-rule-strong);
+  text-decoration-thickness: 1px;
+}
+
+.source {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+}
+
+/* Machine keys demoted out of the reading path, on their own mono line. */
+.meta {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-2xs);
+  letter-spacing: var(--tracking-micro);
+  color: var(--color-ink-muted);
+}
+
+.monoId {
+  white-space: nowrap;
+}

@@ -1,0 +1,13 @@
+/* Global print layer.
+ *
+ * Page geometry (the @page at-rule) lives here because CSS Modules scope
+ * SELECTORS, not at-rules: the PlanCard module's @page was silently governing
+ * every print in the app, including surfaces that have nothing to do with the
+ * plan. One app-wide sheet geometry, in physical units (print output is
+ * measured in millimetres and points, not rem).
+ */
+
+@page {
+  size: A4;
+  margin: 20mm 22mm 22mm;
+}

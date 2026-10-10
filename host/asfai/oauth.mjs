@@ -18,11 +18,11 @@ const b64url = (buf) => Buffer.from(buf).toString("base64url");
 const PENDING_TTL_MS = 10 * 60 * 1000;
 
 export class AsfaiOAuth {
-  #fetch; #prmUrl; #redirectUri; #store; #now; #allowInsecure;
+  #fetch; #prmUrl; #resource; #redirectUri; #store; #now; #allowInsecure;
   #meta = null; #pending = new Map(); #refreshing = null;
 
-  constructor({ prmUrl, redirectUri, tokenStore, fetchImpl = fetch, now = Date.now, allowInsecure = false }) {
-    this.#prmUrl = prmUrl; this.#redirectUri = redirectUri; this.#store = tokenStore;
+  constructor({ prmUrl, resource = null, redirectUri, tokenStore, fetchImpl = fetch, now = Date.now, allowInsecure = false }) {
+    this.#prmUrl = prmUrl; this.#resource = resource; this.#redirectUri = redirectUri; this.#store = tokenStore;
     this.#fetch = fetchImpl; this.#now = now; this.#allowInsecure = allowInsecure;
   }
 
@@ -57,7 +57,7 @@ export class AsfaiOAuth {
     if (meta.issuer !== issuer) throw new AsfaiAuthError("ISSUER_MISMATCH", "metadata issuer does not match the protected resource's issuer");
     if (!meta.code_challenge_methods_supported?.includes("S256")) throw new AsfaiAuthError("NO_PKCE", "issuer does not support PKCE S256");
     for (const k of ["authorization_endpoint", "token_endpoint", "registration_endpoint"]) this.#checkEndpoint(meta[k], issuer);
-    this.#meta = { issuer, scope: prm.json.scopes_supported?.join(" ") ?? "asfai", ...meta };
+    this.#meta = { resource: this.#resource ?? prm.json.resource, issuer, scope: prm.json.scopes_supported?.join(" ") ?? "asfai", ...meta };
     return this.#meta;
   }
 
@@ -88,7 +88,7 @@ export class AsfaiOAuth {
     const u = new URL(m.authorization_endpoint);
     u.search = new URLSearchParams({
       response_type: "code", client_id: client.client_id, redirect_uri: this.#redirectUri,
-      scope: m.scope, state, code_challenge: b64url(createHash("sha256").update(verifier).digest()), code_challenge_method: "S256",
+      scope: m.scope, resource: m.resource, state, code_challenge: b64url(createHash("sha256").update(verifier).digest()), code_challenge_method: "S256",
     }).toString();
     return { authorizeUrl: u.toString() };
   }
@@ -104,7 +104,7 @@ export class AsfaiOAuth {
     if (iss !== undefined && iss !== m.issuer) throw new AsfaiAuthError("ISS_MISMATCH", "callback iss does not match the issuer");
     if (!code) throw new AsfaiAuthError("NO_CODE", "callback carried no code");
     const client = await this.#client();
-    await this.#tokenRequest({ grant_type: "authorization_code", code, redirect_uri: this.#redirectUri, client_id: client.client_id, code_verifier: p.verifier });
+    await this.#tokenRequest({ grant_type: "authorization_code", code, redirect_uri: this.#redirectUri, client_id: client.client_id, code_verifier: p.verifier, resource: m.resource });
     return this.status();
   }
 
@@ -115,7 +115,9 @@ export class AsfaiOAuth {
     });
     if (!r.ok || !r.json?.access_token) {
       if (params.grant_type === "refresh_token") this.#store.clearTokens(); // a dead refresh token is not "connected"
-      throw new AsfaiAuthError("TOKEN_REFUSED", "the token endpoint refused the request");
+      // status + the RFC 6749 error code are diagnostics, not secrets
+      const why = r.json?.error ? `${r.status} ${String(r.json.error).slice(0, 40)}` : String(r.status);
+      throw new AsfaiAuthError("TOKEN_REFUSED", `the token endpoint refused the request (${why})`);
     }
     const prev = this.#store.tokens();
     this.#store.saveTokens({
@@ -135,7 +137,7 @@ export class AsfaiOAuth {
     if (!this.#refreshing) {
       this.#refreshing = (async () => {
         const client = await this.#client();
-        await this.#tokenRequest({ grant_type: "refresh_token", refresh_token: t.refreshToken, client_id: client.client_id });
+        await this.#tokenRequest({ grant_type: "refresh_token", refresh_token: t.refreshToken, client_id: client.client_id, resource: (await this.discover()).resource });
       })().finally(() => { this.#refreshing = null; });
     }
     try { await this.#refreshing; } catch { throw new AsfaiAuthError("AUTH_REQUIRED", "the ASFAI session expired; reconnect"); }

@@ -33,11 +33,18 @@ test("consent flow: PKCE + state, tokens land in a 0600 file, status never shows
   assert.equal(q.get("code_challenge_method"), "S256");
   assert.equal(q.get("redirect_uri"), REDIRECT);
   assert.equal(q.get("response_type"), "code");
+  // RFC 8707: the live issuer rejects the request (invalid_target) without the resource indicator
+  assert.equal(q.get("resource"), `${s.mock.origin}/education/api/mcp`);
+  const probe = await fetch(authorizeUrl);
+  assert.equal(probe.status, 200, "the issuer accepts an authorize request that names its resource");
+  const bare = new URL(authorizeUrl); bare.searchParams.delete("resource");
+  assert.equal((await fetch(bare)).status, 400, "…and refuses one that does not (what the live server did)");
   const st = await connect(s);
   assert.equal(st.connected, true);
   assert.equal(JSON.stringify(st).includes("at-"), false, "no token value in the public view");
   assert.equal(statSync(join(s.dir, "asfai-tokens.json")).mode & 0o777, 0o600);
   assert.equal(s.mock.st.registered, 1);
+  assert.equal(s.mock.st.tokenRequests.at(-1).resource, `${s.mock.origin}/education/api/mcp`, "the token request names the resource too");
   await connect(s); // second consent reuses the registered client
   assert.equal(s.mock.st.registered, 1);
 });

@@ -9,7 +9,16 @@
 import { AsfaiAuthError } from "./oauth.mjs";
 
 export class AsfaiCallError extends Error {
-  constructor(code, message) { super(message); this.code = code; this.name = "AsfaiCallError"; }
+  constructor(code, message, extra = {}) { super(message); this.code = code; this.name = "AsfaiCallError"; Object.assign(this, extra); }
+}
+
+/** ASFAI reports schema rejections as a JSON array of {path, message} issues inside an isError result. */
+function schemaIssues(text) {
+  try {
+    const arr = JSON.parse(text);
+    if (!Array.isArray(arr) || !arr.every((i) => i && typeof i === "object" && "message" in i)) return null;
+    return arr.slice(0, 20).map((i) => `${Array.isArray(i.path) && i.path.length ? i.path.join(".") + ": " : ""}${String(i.message).slice(0, 160)}`);
+  } catch { return null; }
 }
 
 function parseBody(contentType, text, id) {
@@ -69,7 +78,11 @@ export class AsfaiClient {
   async callTool(name, args) {
     await this.#init();
     const r = await this.#rpc("tools/call", { name, arguments: args });
-    if (r.isError) throw new AsfaiCallError("TOOL_ERROR", String(r.content?.[0]?.text ?? "tool error").slice(0, 200));
+    if (r.isError) {
+      const text = String(r.content?.[0]?.text ?? "tool error");
+      const issues = schemaIssues(text);
+      throw new AsfaiCallError(issues ? "SCHEMA_REJECTED" : "TOOL_ERROR", issues ? issues.join("; ").slice(0, 300) : text.slice(0, 200), { issues });
+    }
     if (r.structuredContent) return r.structuredContent;
     const text = r.content?.find((c) => c.type === "text")?.text;
     try { return JSON.parse(text); } catch { throw new AsfaiCallError("BAD_RESULT", "tool result was not JSON"); }

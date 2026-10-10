@@ -146,9 +146,11 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       if (parts[2] === "callback" && method === "GET") {
         const q = Object.fromEntries(url.searchParams);
         try {
+          console.error(`[asfai] callback received: params=${Object.keys(q).sort().join(",")}`);
           await asfaiSvc.oauth.handleCallback({ code: q.code, state: q.state, iss: q.iss, error: q.error });
           return { status: 200, html: "<!doctype html><meta charset=utf-8><title>Connected</title><body style='font:18px Georgia;max-width:32rem;margin:4rem auto'><p>ASFAI is connected. You can close this tab and return to Silicus.</p>" };
         } catch (e) {
+          console.error(`[asfai] callback refused: ${e.code ?? "error"} — ${String(e.message).slice(0, 160)}`);
           return { status: 400, html: `<!doctype html><meta charset=utf-8><title>Not connected</title><body style='font:18px Georgia;max-width:32rem;margin:4rem auto'><p>ASFAI was not connected (${String(e.code ?? "error").replace(/[^A-Z_]/g, "")}). Close this tab and start again from Silicus.</p>` };
         }
       }

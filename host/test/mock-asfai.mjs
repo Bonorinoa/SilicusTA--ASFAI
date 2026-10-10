@@ -23,8 +23,13 @@ export async function startMockAsfai({ sse = false, issuerOverride = null, offOr
         code_challenge_methods_supported: ["S256"], scopes_supported: ["asfai"],
       });
     if (u.pathname === "/education/oauth/register") { st.registered += 1; return send(201, { client_id: `cid-${st.registered}` }); }
+    if (u.pathname === "/education/oauth/authorize") {
+      // the real issuer answers invalid_target when the RFC 8707 resource is missing or wrong
+      return send(u.searchParams.get("resource") === `${origin}/education/api/mcp` ? 200 : 400, { error: u.searchParams.get("resource") ? "ok" : "invalid_target" });
+    }
     if (u.pathname === "/education/oauth/token") {
       const p = new URLSearchParams(raw); st.tokenRequests.push(Object.fromEntries(p));
+      if (p.get("resource") !== `${origin}/education/api/mcp`) return send(400, { error: "invalid_target" });
       if (p.get("grant_type") === "authorization_code") {
         const c = st.codes.get(p.get("code"));
         const ok = c && createHash("sha256").update(p.get("code_verifier") ?? "").digest("base64url") === c.challenge;
@@ -45,12 +50,21 @@ export async function startMockAsfai({ sse = false, issuerOverride = null, offOr
       if (m.method === "initialize") result = { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "mock-asfai", version: "0" } };
       else if (m.method === "tools/list") result = { tools: [{ name: "asfai_lesson" }, { name: "asfai_graph" }] };
       else if (m.method === "tools/call") {
-        const a = m.params.arguments; st.toolArgs = st.toolArgs ?? []; st.toolArgs.push(a);
+        const a = m.params.arguments;
+        if (!a || typeof a.action !== "string" || (a.payload !== undefined && typeof a.payload !== "object")) {
+          return send(200, { jsonrpc: "2.0", id: m.id, error: { code: -32602, message: "Input validation error" } });
+        } st.toolArgs = st.toolArgs ?? []; st.toolArgs.push(a);
         if (m.params.name === "asfai_lesson" && a.action === "prepare_outline") {
           const full = a.payload?.topic && a.payload?.course && a.payload?.learningOutcomes;
           result = { content: [{ type: "text", text: JSON.stringify((full ? FX.ready_to_draft : FX.clarifying).response) }] };
         } else if (m.params.name === "asfai_lesson" && a.action === "validate_outline") {
-          result = { content: [{ type: "text", text: JSON.stringify({ valid: true, issues: [], echoedSections: a.outline?.sections?.length ?? null, echoedOutcomes: a.outline?.learningOutcomes ?? null }) }] };
+          const o = a.payload?.outline;
+          const bad = [];
+          if (typeof o?.id !== "string") bad.push({ path: ["id"], message: "Invalid input: expected string, received undefined" });
+          if (!["draft", "reviewed"].includes(o?.status)) bad.push({ path: ["status"], message: "Invalid option: expected one of \"draft\"|\"reviewed\"" });
+          for (const k of ["createdAt", "updatedAt"]) if (typeof o?.[k] !== "string") bad.push({ path: [k], message: "Invalid input: expected string, received undefined" });
+          if (bad.length) return send(200, { jsonrpc: "2.0", id: m.id, result: { isError: true, content: [{ type: "text", text: JSON.stringify(bad) }] } });
+          result = { content: [{ type: "text", text: JSON.stringify({ valid: true, issues: [], echoedSections: a.payload?.outline?.sections?.length ?? null, echoedOutcomes: a.payload?.outline?.learningOutcomes ?? null }) }] };
         } else result = { isError: true, content: [{ type: "text", text: "unknown" }] };
       } else return send(200, { jsonrpc: "2.0", id: m.id, error: { code: -32601, message: "no such method" } });
       const body = { jsonrpc: "2.0", id: m.id, result };

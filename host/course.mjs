@@ -91,6 +91,7 @@ export class CourseSession {
   #gate;
   #intake;
   #validations = [];
+  #planAt = null;
   /** @type {string[]} proposal ids in the order the AI proposed them */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
@@ -201,6 +202,7 @@ export class CourseSession {
           this.#ledger.recordAssistantTurn(event.assistantText, { channel: "model", at: event.at });
         }
         this.#gate.proposeLessonPlan(event.spec);
+        this.#planAt = event.at;
         return;
       }
       case "plan.confirmed": {
@@ -273,6 +275,11 @@ export class CourseSession {
       planId: plan.id,
       outline: {
         schemaVersion: "0.1", kind: "lesson-outline", version: 1, status: "draft",
+        id: `lesson-outline.${String(this.meta.courseId).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}.${String(plan.id).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+        // ISO stamps come from the LOGGED event time, never the wall clock: the same log must always
+        // yield the same outline (replay), and a fresh Date.now() would make validation unrepeatable.
+        createdAt: new Date(this.#planAt ?? this.meta.createdAt).toISOString(),
+        updatedAt: new Date(this.#planAt ?? this.meta.createdAt).toISOString(),
         course: this.meta.title, topic: plan.title ?? this.meta.title, audience: "teacher-authored course",
         learningOutcomes: outcomes,
         sections: (plan.activities ?? []).map((a, i) => ({

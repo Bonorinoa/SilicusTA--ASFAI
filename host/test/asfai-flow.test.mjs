@@ -87,7 +87,7 @@ test("validate_outline is a SIGNAL: it records a verdict but cannot confirm a pl
   session.proposeLessonPlan({ spec: { title: "Seeing the claim", activities: [{ title: "Spot it", minutes: 20, objectiveIds: [p1], learnerDoes: "Mark it.", teacherDoes: "Ask.", evidenceIfAny: "observation" }] }, at: 5000 });
   const v = await svc.validate(session);
   assert.equal(v.valid, true);
-  const sent = mock.st.toolArgs.find((a) => a.action === "validate_outline").outline;
+  const sent = mock.st.toolArgs.find((a) => a.action === "validate_outline").payload.outline;
   assert.equal(sent.kind, "lesson-outline");
   assert.deepEqual(sent.learningOutcomes, ["Students can explain what an algorithm is."]);
   assert.ok(sent.sections.every((s) => s.purpose));
@@ -96,6 +96,33 @@ test("validate_outline is a SIGNAL: it records a verdict but cannot confirm a pl
   // and it survives a restart (replay)
   const again = CourseSession.load(store, session.courseId).view().validations;
   assert.deepEqual(again, [v]);
+});
+
+test("a schema rejection from ASFAI is recorded as a 'not valid' verdict with reasons, not a crash", async () => {
+  const { svc, session, mock } = await fresh();
+  await svc.runIntake(session);
+  session.answerIntake({ text: "answers", answers: ANSWERS, at: 2000 });
+  await svc.runIntake(session);
+  session.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 2500 });
+  session.proposeObjectives({ items: [{ kind: "local", statement: "Students can explain what an algorithm is." }], at: 3000 });
+  const [p1] = session.view().proposals.map((r) => r.id);
+  session.decideObjectives({ decisions: [{ verb: "accept", proposalId: p1 }], text: "Accept it.", at: 4000 });
+  session.proposeLessonPlan({ spec: { title: "T", activities: [{ title: "A", minutes: 5, objectiveIds: [p1], learnerDoes: "x", teacherDoes: "y", evidenceIfAny: "observation" }] }, at: 5000 });
+  const sent = mock.st.toolArgs; // the real server demands an id + a draft|reviewed status; the host must send both
+  const v = await svc.validate(session);
+  assert.equal(v.valid, true);
+  const outline = sent.find((a) => a.action === "validate_outline").payload.outline;
+  assert.equal(typeof outline.id, "string"); assert.equal(outline.status, "draft");
+  // the live server also demands createdAt/updatedAt as strings; they must be deterministic (from the log, not the wall clock)
+  assert.equal(outline.createdAt, new Date(5000).toISOString());
+  assert.equal(outline.updatedAt, outline.createdAt);
+  assert.deepEqual(session.outlineForValidation().outline, session.outlineForValidation().outline, "same log, same outline");
+  // force a rejection: a status ASFAI does not accept
+  const orig = session.outlineForValidation.bind(session);
+  session.outlineForValidation = () => { const b = orig(); b.outline.status = "nonsense"; return b; };
+  const bad = await svc.validate(session);
+  assert.equal(bad.valid, false);
+  assert.ok(bad.issues.some((i) => /status/.test(i)), bad.issues.join("|"));
 });
 
 test("ASFAI outage: a clear 502, and the course keeps working locally", async () => {

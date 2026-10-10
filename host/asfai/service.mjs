@@ -35,7 +35,14 @@ export class AsfaiService {
   async validate(session) {
     const built = session.outlineForValidation();
     if (!built.ok) { const e = new Error(built.reason); e.code = built.code; throw e; }
-    const r = await this.client.callTool("asfai_lesson", { action: "validate_outline", outline: built.outline });
+    let r;
+    try {
+      r = await this.client.callTool("asfai_lesson", { action: "validate_outline", payload: { outline: built.outline } });
+    } catch (e) {
+      // ASFAI rejecting the outline's shape IS a verdict ("not valid, here is why"), not an outage.
+      if (e.code !== "SCHEMA_REJECTED") throw e;
+      return session.recordValidation({ planId: built.planId, valid: false, issues: e.issues ?? [e.message] });
+    }
     return session.recordValidation({
       planId: built.planId,
       valid: r?.valid === true,

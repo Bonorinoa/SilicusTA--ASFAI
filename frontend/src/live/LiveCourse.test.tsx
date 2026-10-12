@@ -61,7 +61,7 @@ function stubView(): HostView {
 
 interface Call { url: string; body: Record<string, unknown> | undefined }
 
-function mockHost(view: HostView | null): { calls: Call[] } {
+function mockHost(view: HostView | null, { workerConfigured = true }: { workerConfigured?: boolean } = {}): { calls: Call[] } {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
     const url = String(input);
@@ -71,6 +71,7 @@ function mockHost(view: HostView | null): { calls: Call[] } {
       return ok({ courses: view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1 }] : [] });
     }
     if (url === "/api/asfai/status") return ok({ connected: true, expiresAt: 9, scope: "asfai", canRefresh: true });
+    if (url === "/api/worker/status") return ok({ configured: workerConfigured });
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
     if (url.startsWith("/api/courses/")) return ok(view);
     return ok({});
@@ -178,6 +179,65 @@ describe("LiveCourse — thin client of the host", () => {
     const body = calls.find((c) => c.url === "/api/courses" && c.body !== undefined)!.body as Record<string, unknown>;
     expect(body).toEqual({ owner: "Ada Lovelace", title: "Seeing the claim", materials: [] });
     expect(JSON.stringify(body)).not.toMatch(/topic|learningOutcomes|payload/);
+  });
+
+  it("tells the teacher that ASFAI's outcomes field reads one outcome per line", async () => {
+    // ASFAI asks this as ONE open field, but the host reads it as a list (and sends
+    // learningOutcomes as an array). The field has to say so, or a teacher who writes a
+    // paragraph gets one objective covering several outcomes.
+    const fresh = stubView();
+    fresh.checkpoints.outline.status = "pending";   // the intake panel shows while the outline is open
+    fresh.intake = {
+      ...fresh.intake,
+      questions: [
+        { id: "topic", prompt: "What topic should this lesson cover?", reason: "The outline needs a subject." },
+        { id: "course", prompt: "Which course is this part of?", reason: "Course context sets scope and sequencing." },
+        { id: "learning_outcomes", prompt: "What should learners be able to do by the end?", reason: "An observable outcome anchors the outline." },
+      ],
+      answers: { topic: "how AI answers are built", course: "AI literacy, ages 8-10" },
+    };
+    mockHost(fresh);
+    render(<LiveCourse />);
+
+    expect(await screen.findByLabelText(/what should learners be able to do by the end/i)).toBeInTheDocument();
+    expect(screen.getByText(/one outcome per line/i)).toBeInTheDocument();
+  });
+
+  it("proposes objectives without the browser sending any statement", async () => {
+    const fresh = stubView();
+    fresh.proposals = [];
+    const { calls } = mockHost(fresh);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+
+    await user.click(await screen.findByRole("button", { name: /propose objectives from your answers/i }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/objectives"))).toBe(true));
+    // THE property: the host derives them from its own record. The browser sends nothing.
+    expect(calls.find((c) => c.url.endsWith("/objectives"))!.body).toEqual({});
+  });
+
+  it("drafts the plan without the browser sending any spec", async () => {
+    const fresh = stubView();
+    fresh.checkpoints.objectives.status = "confirmed";
+    const { calls } = mockHost(fresh);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+
+    await user.click(await screen.findByRole("button", { name: /draft the plan from your confirmed objectives/i }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/plan"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/plan"))!.body as Record<string, unknown>;
+    expect(body).toEqual({});
+    expect(JSON.stringify(body)).not.toMatch(/spec|activities|learnerDoes/);
+  });
+
+  it("says plainly when no drafting worker is configured, and offers no draft button", async () => {
+    const fresh = stubView();
+    fresh.checkpoints.objectives.status = "confirmed";
+    mockHost(fresh, { workerConfigured: false });
+    render(<LiveCourse />);
+
+    expect(await screen.findByText(/no drafting worker is configured/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /draft the plan/i })).not.toBeInTheDocument();
   });
 
   it("treats a materials list as names and 'none' as an empty list", () => {

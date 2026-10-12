@@ -367,6 +367,51 @@ export class CourseSession {
     return this.view().decisions;
   }
 
+  /**
+   * Checkpoint 4's real path: the WORKER drafts from the teacher's CONFIRMED
+   * objectives. The worker proposes, the gate validates, the teacher confirms.
+   *
+   * Unlike a derived objective proposal, a model really did write this, so an
+   * assistant turn IS recorded — the ledger says so honestly. The worker's output
+   * was already validated against the gate's rules before it got here.
+   */
+  async draftPlanFromObjectives({ worker, at } = {}) {
+    const confirmed = this.#gate.confirmedObjectives();
+    if (confirmed.length === 0) {
+      return {
+        ok: false,
+        code: "NO_CONFIRMED_OBJECTIVES",
+        reason: "there are no teacher-confirmed objectives to draft from",
+      };
+    }
+    if (!worker) {
+      return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };
+    }
+    const objectives = confirmed.map((o) => ({ id: o.id, statement: this.wording(o.id) }));
+    const materials = (this.meta.materials ?? [])
+      .map((m) => (m && typeof m === "object" && typeof m.name === "string" ? m.name : null))
+      .filter(Boolean);
+    const topic = String(this.#intake.answers()?.topic ?? "");
+
+    let spec;
+    try {
+      spec = await worker.draft({ objectives, topic, materials });
+    } catch (e) {
+      return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
+    }
+
+    const a = at ?? Date.now();
+    const event = {
+      kind: "plan.proposed",
+      spec,
+      assistantText: "Drafted a lesson plan from your confirmed objectives.",
+      at: a,
+    };
+    this.#apply(event);
+    this.#append(event);
+    return { ok: true, plan: this.view().plan };
+  }
+
   /** Checkpoint 4: the AI proposes the lesson plan draft. */
   proposeLessonPlan({ spec, assistantText = null, at } = {}) {
     const a = at ?? Date.now();

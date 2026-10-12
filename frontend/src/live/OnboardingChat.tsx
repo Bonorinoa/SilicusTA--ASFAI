@@ -267,7 +267,11 @@ export function OnboardingChat({
               <span className={styles.who}>ASFAI</span>
               <label className={styles.prompt} htmlFor={`intake-${openQuestion.id}`}>{openQuestion.prompt}</label>
               {openQuestion.reason ? <p className={styles.kept}>{openQuestion.reason}</p> : null}
-              <p className={styles.kept} id={hintId}>Recorded on this course. Sent only when you send the round.</p>
+              <p className={styles.kept} id={hintId}>
+                {openQuestion.id === "learning_outcomes"
+                  ? "One outcome per line — each line becomes an objective you confirm. Recorded on this course; sent only when you send the round."
+                  : "Recorded on this course. Sent only when you send the round."}
+              </p>
               <textarea
                 id={`intake-${openQuestion.id}`}
                 ref={box as RefObject<HTMLTextAreaElement>}

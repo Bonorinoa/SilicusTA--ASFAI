@@ -26,7 +26,7 @@
  *   POST /api/courses/:id/checkpoints        {id:"files"|"outline", text, note?}
  *   POST /api/courses/:id/objectives         no body: the HOST derives them from the teacher's recorded answers
  *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides)
- *   POST /api/courses/:id/plan               {spec, assistantText?}                    (AI drafts)
+ *   POST /api/courses/:id/plan               no body: the OSS WORKER drafts from the confirmed objectives
  *   POST /api/courses/:id/plan/confirm       {text, planId?}                           (teacher confirms)
  *   POST /api/courses/:id/publish            {text, note?}                             (teacher publishes)
  */
@@ -38,6 +38,7 @@ import { CourseStore } from "./store.mjs";
 import { CourseSession } from "./course.mjs";
 import { LocalArchive } from "./archive.mjs";
 import { TokenStore } from "./asfai/tokens.mjs";
+import { PlanWorker } from "./worker.mjs";
 import { AsfaiOAuth } from "./asfai/oauth.mjs";
 import { AsfaiClient } from "./asfai/mcp.mjs";
 import { AsfaiService } from "./asfai/service.mjs";
@@ -48,6 +49,13 @@ const ASFAI_PRM_URL = process.env.SILICUS_ASFAI_PRM_URL ?? "https://constitution
 const MAX_BODY = 1 << 20;
 
 /** The teacher's words: their text, or their per-question answers rendered as text. */
+/** A worker state maps to an honest status: not configured is 501, an outage or bad output is 502. */
+function planStatus(code) {
+  if (code === "WORKER_NOT_CONFIGURED") return 501;
+  if (code === "NO_CONFIRMED_OBJECTIVES") return 409;
+  return 502;
+}
+
 function answerText(b) {
   if (typeof b.text === "string" && b.text.trim()) return b.text;
   if (b.answers && typeof b.answers === "object") {
@@ -87,7 +95,7 @@ class HttpError extends Error {
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -101,6 +109,13 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     return new AsfaiService({ oauth, client: new AsfaiClient({ oauth, url: ASFAI_MCP_URL }) });
   })();
   const archives = new LocalArchive(join(dataDir, "archives"));
+  // The OSS worker that drafts a plan. OFF unless url+model are configured: the host
+  // runs, and the suite passes, with no model at all. Its output is validated in worker.mjs.
+  const planWorker = worker ?? new PlanWorker({
+    url: process.env.SILICUS_WORKER_URL ?? null,
+    model: process.env.SILICUS_WORKER_MODEL ?? null,
+    apiKey: process.env.SILICUS_WORKER_API_KEY ?? null,
+  });
 
   /**
    * Load per request. The event log is the source of record, so a fresh verified
@@ -152,6 +167,10 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     guardRequest(req, allowedOrigins, url.pathname);
 
     if (parts[1] === "health" && method === "GET") return { status: 200, json: { ok: true, courses: store.list().length } };
+    // Whether a drafting worker is configured. Config, never a credential.
+    if (parts[1] === "worker" && parts[2] === "status" && method === "GET") {
+      return { status: 200, json: { configured: planWorker.enabled } };
+    }
     if (parts[1] === "asfai") {
       if (parts[2] === "status" && method === "GET") return { status: 200, json: asfaiSvc.status() };
       if (parts[2] === "connect" && method === "POST") return { status: 200, json: await asfaiSvc.oauth.beginAuthorization() };
@@ -238,7 +257,13 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
           return { status: 200, json: { proposals: r.proposals } };
         }
         case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
-        case "plan":         return { status: 200, json: s.proposeLessonPlan({ spec: b.spec, assistantText: b.assistantText ?? null }) };
+        case "plan": {
+          // The WORKER drafts from the confirmed objectives. The body is read and ignored:
+          // a client cannot supply a plan any more than it can supply an objective.
+          const r = await s.draftPlanFromObjectives({ worker: planWorker });
+          if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
+          return { status: 200, json: r.plan };
+        }
         case "plan/confirm": return { status: 200, json: s.confirmLessonPlan({ text: b.text, planId: b.planId ?? null }) };
         case "publish":      return { status: 200, json: { version: s.publish({ text: b.text, note: b.note ?? null }) } };
         default: throw new HttpError(404, "NOT_FOUND", `no route: ${url.pathname}`);

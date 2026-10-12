@@ -17,10 +17,26 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 import { startMockAsfai } from "../../host/test/mock-asfai.mjs";
+import { startMockWorker } from "../../host/test/mock-worker.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));      // frontend/
 const REPO = join(HERE, "..");
+
+/** A plan worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
+const echoingWorker = ({ prompt }) => {
+  const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  return {
+    title: "Seeing the claim: how AI answers are built",
+    audience: { ageRangeStart: 8, ageRangeEnd: 10 },
+    activities: ids.map((id, i) => ({
+      title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
+      learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation",
+    })),
+  };
+};
+
 const MOCK = await startMockAsfai();   // the host calls this over real HTTP; no network, no real teacher data
+const WORKER = await startMockWorker({ reply: echoingWorker });   // the OSS plan drafter, stubbed
 const DATA = mkdtempSync(join(tmpdir(), "silicus-live-"));
 const HOST_PORT = 8787;
 const APP_PORT = 5173;
@@ -95,6 +111,7 @@ bg(process.execPath, ["server.mjs"], {
   env: {
     ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT),
     SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
+    SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
   },
 });
 bg("npm", ["run", "preview", "--", "--port", String(APP_PORT), "--strictPort"], { cwd: HERE });
@@ -199,10 +216,10 @@ await poll(async () => (await getView(courseId)).checkpoints.outline.status === 
 check("outline confirmed IN THE HOST after the real intake round", true);
 
 // AI proposes (no teacher turn required)
-await poll(async () => await bodyHas(page, "Ask the assistant to propose objectives"));
-await clickText(page, "Ask the assistant to propose objectives");
-await poll(async () => (await getView(courseId)).proposals.length === 3);
-check("assistant proposed 3 objectives on the host", true);
+await poll(async () => await bodyHas(page, "Propose objectives from your answers"));
+await clickText(page, "Propose objectives from your answers");
+await poll(async () => (await getView(courseId)).proposals.length === 2);
+check("the host proposed 2 objectives, one per recorded outcome line", true);
 
 // teacher decides: accept every awaiting proposal through the UI. State-driven,
 // because each accept triggers an async reload and re-render.
@@ -217,14 +234,14 @@ const decided = await poll(async () => {
   await sleep(400);
   return null;
 }, 25000);
-check("three teacher decisions recorded in the host", decided.decisions.length >= 3, `decisions=${decided.decisions.length}`);
+check("one teacher decision recorded per derived objective", decided.decisions.length === 2, `decisions=${decided.decisions.length}`);
 check("objectives checkpoint auto-confirmed", decided.checkpoints.objectives.status === "confirmed");
 check("every decision cites a real teacher turn",
   decided.decisions.every((d) => d.provenance && /^urn:turn:\d+$/.test(d.provenance.turnRef)));
 
 // AI drafts the plan
-await poll(async () => await bodyHas(page, "Ask the assistant to draft the lesson plan"));
-await clickText(page, "Ask the assistant to draft the lesson plan");
+await poll(async () => await bodyHas(page, "Draft the plan from your confirmed objectives"));
+await clickText(page, "Draft the plan from your confirmed objectives");
 await poll(async () => (await getView(courseId)).plan?.status === "draft");
 check("plan drafted on the host", true);
 await poll(async () => await bodyHas(page, "Seeing the claim: how AI answers are built"));

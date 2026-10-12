@@ -11,6 +11,8 @@ import { join } from "node:path";
 import { after } from "node:test";
 import { createApp } from "../server.mjs";
 import { connectedAsfai, ANSWERS } from "./asfai-fixture.mjs";
+import { PlanWorker } from "../worker.mjs";
+import { startMockWorker } from "./mock-worker.mjs";
 
 // A failing assertion skips the test's own stop(), which leaves a listening
 // server and makes the test process hang at exit. Force-close everything.
@@ -28,18 +30,33 @@ const CLARIFY = [
   { id: "course", prompt: "Which course is this part of?", kind: "open" },
   { id: "learning_outcomes", prompt: "What should learners be able to do by the end?", kind: "open" },
 ];
-const ITEMS = [
-  { kind: "local", statement: "Students can explain what an algorithm is." },
-  { kind: "public", publicId: "mt_alpha", statement: "Learners can find the claim in an AI answer." },
-];
 
 const MOCKS = [];
 after(() => MOCKS.forEach((m) => m.close()));
 
-async function start(dataDir, { asfai } = {}) {
+/** A plan worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
+const echoingWorker = ({ prompt }) => {
+  const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  return {
+    title: "Seeing the claim",
+    audience: { ageRangeStart: 8, ageRangeEnd: 10 },
+    activities: ids.map((id, i) => ({
+      title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
+      learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation",
+    })),
+  };
+};
+
+async function start(dataDir, { asfai, worker } = {}) {
   let svc = asfai;
   if (svc === undefined) { const c = await connectedAsfai(); MOCKS.push(c.mock); svc = c.svc; }
-  const app = createApp({ dataDir, asfai: svc });
+  let w = worker;
+  if (w === undefined) {
+    const wm = await startMockWorker({ reply: echoingWorker });
+    MOCKS.push(wm);
+    w = new PlanWorker({ url: wm.url, model: "test-model" });
+  }
+  const app = createApp({ dataDir, asfai: svc, worker: w });
   APPS.push(app);
   await new Promise((r) => app.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${app.address().port}`;
@@ -68,15 +85,6 @@ async function start(dataDir, { asfai } = {}) {
   };
 }
 
-const planSpec = (p1, p2) => ({
-  title: "Seeing the claim",
-  audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-  activities: [
-    { title: "Spotting the claim", minutes: 20, objectiveIds: [p1, p2],
-      learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation" },
-  ],
-});
-
 /** Drive the whole flow over HTTP. Returns ids + the fixtures. */
 async function driveHttp({ post }, owner = OWNER) {
   const created = await post("/api/courses", { owner, title: "Lesson 3 | AI literacy" });
@@ -88,7 +96,8 @@ async function driveHttp({ post }, owner = OWNER) {
   await post(`/api/courses/${courseId}/intake/answer`, { answers: ANSWERS });
   await post(`/api/courses/${courseId}/intake/call`, {});
   await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
-  const proposed = await post(`/api/courses/${courseId}/objectives`, { items: ITEMS, sources: ["from your slides p.4", "suggested match"] });
+  // The host DERIVES these from the teacher's recorded answers; the client sends nothing.
+  const proposed = await post(`/api/courses/${courseId}/objectives`, {});
   const [p1, p2] = proposed.json.proposals.map((r) => r.id);
   const decided = await post(`/api/courses/${courseId}/decisions`, {
     decisions: [
@@ -99,7 +108,7 @@ async function driveHttp({ post }, owner = OWNER) {
     text: "Decide the proposals.",
   });
   assert.equal(decided.status, 200);
-  await post(`/api/courses/${courseId}/plan`, { spec: planSpec(p1, p2) });
+  await post(`/api/courses/${courseId}/plan`, {});   // the worker drafts from the confirmed objectives
   await post(`/api/courses/${courseId}/plan/confirm`, { text: "Confirm the lesson plan." });
   const pub = await post(`/api/courses/${courseId}/publish`, { text: "Publish the course package.", note: "first version" });
   assert.equal(pub.status, 200);

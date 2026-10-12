@@ -22,25 +22,6 @@ import styles from "./LiveCourse.module.css";
 const CHECKPOINT_LABEL: Record<string, string> = {
   files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
 };
-function planSpec(view: HostView) {
-  const ids = view.objectives.map((o) => o.id);
-  if (ids.length === 0) return null;
-  const earlier = ids.slice(0, Math.max(1, ids.length - 1));
-  const last = ids[ids.length - 1];
-  return {
-    title: "Seeing the claim: how AI answers are built",
-    audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-    activities: [
-      { title: "Spotting the claim", minutes: 20, objectiveIds: earlier,
-        learnerDoes: "Read one AI answer and mark the sentence that makes a claim.",
-        teacherDoes: "Ask what would count as evidence for it.", evidenceIfAny: "observation" },
-      { title: "Ask one honest question", minutes: 20, objectiveIds: [last],
-        learnerDoes: "Write one question about how the tool reached its answer.",
-        teacherDoes: "Collect the questions for the next lesson.", evidenceIfAny: "work-product" },
-    ],
-  };
-}
-
 export function LiveCourse() {
   const [view, setView] = useState<HostView | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
@@ -48,6 +29,7 @@ export function LiveCourse() {
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
+  const [worker, setWorker] = useState<{ configured: boolean } | null>(null);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
 
@@ -72,6 +54,7 @@ export function LiveCourse() {
     try { setAsfai(await host.asfaiStatus()); } catch { /* an old host: leave unknown */ }
   };
   useEffect(() => { void host.asfaiStatus().then(setAsfai).catch(() => {}); }, []);
+  useEffect(() => { void host.workerStatus().then(setWorker).catch(() => {}); }, []);
   const run = (fn: () => Promise<void>) => {
     setBusy(true);
     fn()
@@ -180,11 +163,15 @@ export function LiveCourse() {
     });
   };
 
+  /** The WORKER drafts from the teacher's CONFIRMED objectives; the UI supplies no content. */
   const draftPlan = () => run(async () => {
-    const spec = planSpec(view!);
-    if (!spec) return;
-    await host.proposePlan(courseId!, { spec, assistantText: "Drafted a lesson plan." });
-    await reload();
+    try {
+      await host.proposePlan(courseId!);
+    } catch (e) {
+      setNotice(`No plan was drafted: ${(e as Error).message}`);
+    } finally {
+      await reload();
+    }
   });
 
   const confirmPlan = () => run(async () => {
@@ -319,9 +306,16 @@ export function LiveCourse() {
           </button>
         ) : null}
         {is("objectives", "confirmed") && !plan ? (
-          <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
-            Ask the assistant to draft the lesson plan
-          </button>
+          worker && !worker.configured ? (
+            <p className={styles.notice}>
+              No drafting worker is configured on this host, so the plan cannot be drafted here.
+              Everything else still works.
+            </p>
+          ) : (
+            <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
+              Draft the plan from your confirmed objectives
+            </button>
+          )
         ) : null}
         {plan && plan.status === "draft" ? (
           <>

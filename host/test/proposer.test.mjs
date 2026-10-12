@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { objectivesFromAnswers, SOURCE_FROM_ANSWERS } from "../proposer.mjs";
+import { objectivesFromAnswers, outcomeSentences, SOURCE_FROM_ANSWERS } from "../proposer.mjs";
 
 test("each teacher outcome sentence becomes one local proposal, verbatim", () => {
   const items = objectivesFromAnswers({
@@ -52,4 +52,26 @@ test("the teacher's wording is preserved: no trimming inside, no rewriting", () 
     learning_outcomes: ["  Students can explain what an algorithm is, in their own words.  "],
   });
   assert.equal(items[0].statement, "Students can explain what an algorithm is, in their own words.");
+});
+
+test("outcomeSentences is THE split rule: array in, string in, junk out", () => {
+  assert.deepEqual(outcomeSentences(["a", " b ", "", "   "]), ["a", "b"]);
+  assert.deepEqual(outcomeSentences("a\n b \n\n"), ["a", "b"]);
+  assert.deepEqual(outcomeSentences(null), []);
+  assert.deepEqual(outcomeSentences(undefined), []);
+  assert.deepEqual(outcomeSentences({}), []);
+  assert.deepEqual(outcomeSentences(42), [], "a number is not an answer to an open question");
+  assert.deepEqual(outcomeSentences(["  keep  the  inside  spacing  "]), ["keep  the  inside  spacing"]);
+});
+
+test("the proposals derive from the same list intake.mjs sends ASFAI — one rule, one home", () => {
+  // If these ever disagree the teacher confirms a course ASFAI never saw. The rule lives
+  // in outcomeSentences; intake.cleanAnswers calls the same function to build
+  // learningOutcomes. This test fails the moment someone forks it.
+  const raw = "First outcome.\n\n  Second outcome.  \n";
+  assert.deepEqual(outcomeSentences(raw), ["First outcome.", "Second outcome."]);
+  assert.deepEqual(
+    objectivesFromAnswers({ learning_outcomes: raw }).map((o) => o.statement),
+    outcomeSentences(raw),
+  );
 });

@@ -139,8 +139,10 @@ export const host = {
     call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives`, {}),
   decide: (id: string, b: { decisions: unknown[]; text: string }) =>
     call<{ decisions: unknown[] }>("POST", `/courses/${enc(id)}/decisions`, b),
-  proposePlan: (id: string, b: { spec: unknown; assistantText?: string }) =>
-    call("POST", `/courses/${enc(id)}/plan`, b),
+  /** The OSS WORKER drafts the plan from the teacher's confirmed objectives; the UI sends no body. */
+  proposePlan: (id: string) => call("POST", `/courses/${enc(id)}/plan`, {}),
+  /** Is a drafting worker configured? Config only, never a credential. */
+  workerStatus: () => call<{ configured: boolean }>("GET", "/worker/status"),
   confirmPlan: (id: string, b: { text: string; planId?: string }) =>
     call("POST", `/courses/${enc(id)}/plan/confirm`, b),
   publish: (id: string, b: { text: string; note?: string }) =>

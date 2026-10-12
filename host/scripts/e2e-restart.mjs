@@ -12,13 +12,29 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startMockAsfai } from "../test/mock-asfai.mjs";
+import { startMockWorker } from "../test/mock-worker.mjs";
 
 const PORT = 8791;
 const DATA = mkdtempSync(join(tmpdir(), "silicus-e2e-"));
 const BASE = `http://127.0.0.1:${PORT}`;
 const OWNER = "teacher:tk-1";
 
+
+/** A plan worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
+const echoingWorker = ({ prompt }) => {
+  const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  return {
+    title: "Seeing the claim: how AI answers are built",
+    audience: { ageRangeStart: 8, ageRangeEnd: 10 },
+    activities: ids.map((id, i) => ({
+      title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
+      learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation",
+    })),
+  };
+};
+
 const mock = await startMockAsfai();   // the host calls THIS, over real HTTP, never the network
+const worker = await startMockWorker({ reply: echoingWorker });   // the OSS plan drafter, stubbed
 const results = [];
 const check = (name, ok, extra = "") => results.push(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? " — " + extra : ""}`);
 
@@ -27,6 +43,7 @@ function startHost() {
     env: {
       ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(PORT),
       SILICUS_ASFAI_MCP_URL: mock.mcpUrl, SILICUS_ASFAI_PRM_URL: mock.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
+      SILICUS_WORKER_URL: worker.url, SILICUS_WORKER_MODEL: "test-model",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -56,10 +73,6 @@ const get = async (p) => {
 };
 const stop = (child) => new Promise((r) => { child.once("exit", r); child.kill("SIGTERM"); });
 
-const ITEMS = [
-  { kind: "local", statement: "Students can explain what an algorithm is." },
-  { kind: "public", publicId: "mt_alpha", statement: "Learners can find the claim in an AI answer." },
-];
 
 const h1 = startHost();
 check("host process boots and answers /api/health", await waitHealthy());
@@ -81,11 +94,12 @@ const again = await post(`/api/courses/${courseId}/intake/call`, {});
 check("the host cannot go again before the teacher answers", again.status === 409 && again.json.code === "AWAITING_TEACHER_REPLY");
 await post(`/api/courses/${courseId}/intake/answer`, { answers: {
   topic: "how AI answers are built", course: "AI literacy, ages 8-10",
-  learning_outcomes: ["Students can explain what an algorithm is."] } });
+  learning_outcomes: ["Students can explain what an algorithm is.", "Learners can find the claim in an AI answer."] } });
 const r2 = await post(`/api/courses/${courseId}/intake/call`, {});
 check("the second call, built from the teacher's answers, reaches ready_to_draft", r2.json.observedState === "ready_to_draft" && r2.json.outlineAuthorized === true);
 await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
-const proposed = await post(`/api/courses/${courseId}/objectives`, { items: ITEMS, sources: ["from your slides p.4", "suggested match"] });
+// The host DERIVES the objectives from the teacher's recorded answers; the client sends nothing.
+const proposed = await post(`/api/courses/${courseId}/objectives`, {});
 const [p1, p2] = proposed.json.proposals.map((r) => r.id);
 const decided = await post(`/api/courses/${courseId}/decisions`, {
   decisions: [
@@ -98,14 +112,8 @@ const decided = await post(`/api/courses/${courseId}/decisions`, {
 check("teacher decisions applied through the gate", decided.status === 200);
 
 const addedId = decided.json.decisions.find((d) => d.verb === "add").targetId;
-await post(`/api/courses/${courseId}/plan`, { spec: {
-  title: "Seeing the claim: how AI answers are built",
-  audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-  activities: [
-    { title: "Spotting the claim", minutes: 20, objectiveIds: [p1, p2], learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation" },
-    { title: "Ask one honest question", minutes: 20, objectiveIds: [addedId], learnerDoes: "Write one question.", teacherDoes: "Collect them.", evidenceIfAny: "work-product" },
-  ],
-} });
+// The OSS worker drafts from the confirmed objectives; the client sends no spec.
+await post(`/api/courses/${courseId}/plan`, {});
 await post(`/api/courses/${courseId}/plan/confirm`, { text: "Confirm the lesson plan." });
 const pub = await post(`/api/courses/${courseId}/publish`, { text: "Publish the course package.", note: "first version" });
 check("package sealed as version 1", pub.status === 200 && pub.json.version.version === 1);

@@ -11,6 +11,8 @@ import { join } from "node:path";
 import { CourseStore } from "../store.mjs";
 import { CourseSession } from "../course.mjs";
 import { connectedAsfai, ANSWERS } from "./asfai-fixture.mjs";
+import { PlanWorker } from "../worker.mjs";
+import { startMockWorker } from "./mock-worker.mjs";
 import { createApp } from "../server.mjs";
 
 const MOCKS = []; const APPS = [];
@@ -255,4 +257,149 @@ test("a client cannot reach the objectives checkpoint without the teacher's answ
   const view = await (await fetch(`${base}/api/courses/${encodeURIComponent(courseId)}`)).json();
   assert.equal(view.proposals.length, 0, "nothing was proposed");
   assert.equal(view.checkpoints.objectives.status, "pending", "the checkpoint did not move");
+});
+
+/** Boot an app + mock and drive a course to the plan checkpoint: objectives proposed AND confirmed. */
+async function appAtConfirmedObjectives({ worker = null } = {}) {
+  const c = await connectedAsfai(); MOCKS.push(c.mock);
+  const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "silicus-flow-")), asfai: c.svc, worker }); APPS.push(app);
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const post = async (p, b) => {
+    const r = await fetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) });
+    return { status: r.status, json: await r.json() };
+  };
+  const getView = async (id) => await (await fetch(`${base}/api/courses/${encodeURIComponent(id)}`)).json();
+  const { json: { courseId } } = await post("/api/courses", { owner: "teacher:tk-1", title: "AI literacy" });
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/intake/answer`, { text: "my answers", answers: ANSWERS });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  await post(`/api/courses/${courseId}/objectives`, {});
+  const proposed = await getView(courseId);
+  const decisions = proposed.proposals.map((p) => ({ verb: "accept", proposalId: p.id }));
+  await post(`/api/courses/${courseId}/decisions`, { decisions, text: "Accept them all." });
+  return { post, getView, courseId };
+}
+
+/** A worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
+const echoingWorker = () => async ({ prompt }) => {
+  const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  return {
+    title: "Seeing the claim: how AI answers are built",
+    audience: { ageRangeStart: 8, ageRangeEnd: 10 },
+    activities: ids.map((id, i) => ({
+      title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
+      learnerDoes: "Read one AI answer and mark the sentence that makes a claim.",
+      teacherDoes: "Ask what would count as evidence for it.",
+      evidenceIfAny: "observation",
+    })),
+  };
+};
+
+test("the plan is drafted from the CONFIRMED objectives; a client cannot supply activities", async () => {
+  const wm = await startMockWorker({ reply: echoingWorker() }); MOCKS.push(wm);
+  const { post, getView, courseId } = await appAtConfirmedObjectives({ worker: new PlanWorker({ url: wm.url, model: "test" }) });
+
+  const r = await post(`/api/courses/${courseId}/plan`, { spec: { title: "pwn", activities: [{ title: "pwn" }] }, assistantText: "pwn" });
+  assert.equal(r.status, 200);
+
+  const view = await getView(courseId);
+  assert.equal(JSON.stringify(view.plan).includes("pwn"), false, "a client cannot supply the plan");
+  assert.equal(view.plan.title, "Seeing the claim: how AI answers are built");
+  assert.equal(view.plan.activities.length, ANSWERS.learning_outcomes.length, "one activity per confirmed objective");
+  // the worker saw the teacher's own confirmed wording
+  assert.ok(wm.st.lastPrompt.includes(ANSWERS.learning_outcomes[0]), wm.st.lastPrompt);
+  assert.ok(wm.st.lastPrompt.includes(ANSWERS.topic));
+  // every cited id is a real confirmed objective
+  const confirmedIds = view.objectives.map((o) => o.id);
+  for (const a of view.plan.activities) for (const id of a.objectiveIds) assert.ok(confirmedIds.includes(id), id);
+  assert.equal(view.plan.status, "draft", "a drafted plan is never confirmed");
+});
+
+test("no worker configured: the plan step refuses with 501 and the course is untouched", async () => {
+  const { post, getView, courseId } = await appAtConfirmedObjectives({ worker: new PlanWorker({}) });
+  const r = await post(`/api/courses/${courseId}/plan`, {});
+  assert.equal(r.status, 501);
+  assert.equal(r.json.code, "WORKER_NOT_CONFIGURED");
+  assert.equal((await getView(courseId)).plan, null, "nothing was written");
+});
+
+test("a worker that misbehaves is a 502 refusal, never a half-written plan", async () => {
+  const wm = await startMockWorker({ reply: { title: "T", activities: [{ title: "A", objectiveIds: ["urn:uuid:ghost"], learnerDoes: "x", teacherDoes: "y" }] } });
+  MOCKS.push(wm);
+  const { post, getView, courseId } = await appAtConfirmedObjectives({ worker: new PlanWorker({ url: wm.url, model: "test" }) });
+  const r = await post(`/api/courses/${courseId}/plan`, {});
+  assert.equal(r.status, 502);
+  assert.equal(r.json.code, "WORKER_BAD_OUTPUT");
+  assert.equal((await getView(courseId)).plan, null, "the course was left alone");
+});
+
+test("a plan cannot be drafted before the teacher has confirmed an objective", async () => {
+  const wm = await startMockWorker({ reply: echoingWorker() }); MOCKS.push(wm);
+  const c = await connectedAsfai(); MOCKS.push(c.mock);
+  const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "silicus-flow-")), asfai: c.svc, worker: new PlanWorker({ url: wm.url, model: "test" }) });
+  APPS.push(app);
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const post = async (p, b) => {
+    const r = await fetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) });
+    return { status: r.status, json: await r.json() };
+  };
+  const { json: { courseId } } = await post("/api/courses", { owner: "teacher:tk-1", title: "t" });
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/intake/answer`, { text: "my answers", answers: ANSWERS });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  // objectives proposed but NOT decided
+  await post(`/api/courses/${courseId}/objectives`, {});
+  const r = await post(`/api/courses/${courseId}/plan`, {});
+  assert.equal(r.status, 409);
+  assert.equal(r.json.code, "NO_CONFIRMED_OBJECTIVES");
+  assert.equal(wm.st.calls, 0, "the worker was never called for an unconfirmed course");
+});
+
+test("the objectives the teacher confirms are byte-identical to what ASFAI was told", async () => {
+  // The invariant that keeps the two halves of the product honest. The host sends ASFAI
+  // a `learningOutcomes` list and proposes objectives from that same list. If the two ever
+  // diverge, the teacher confirms a course ASFAI never saw — so pin them together here.
+  const c = await connectedAsfai(); MOCKS.push(c.mock);
+  const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "silicus-flow-")), asfai: c.svc }); APPS.push(app);
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const post = async (p, b) => {
+    const r = await fetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) });
+    return { status: r.status, json: await r.json() };
+  };
+  const getView = async (id) => await (await fetch(`${base}/api/courses/${encodeURIComponent(id)}`)).json();
+  const { json: { courseId } } = await post("/api/courses", { owner: "teacher:tk-1", title: "AI literacy" });
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  // ONE free-text answer, exactly how the live `kind: "open"` question arrives: a teacher
+  // typing into a textarea. A blank line must not become an empty objective.
+  await post(`/api/courses/${courseId}/intake/answer`, {
+    text: "my answers",
+    answers: {
+      topic: "how AI answers are built",
+      course: "AI literacy, ages 8-10",
+      learning_outcomes:
+        "Students can explain what an algorithm is.\nLearners can find the claim in an AI answer.\n\nStudents can ask one honest question.",
+    },
+  });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  await post(`/api/courses/${courseId}/objectives`, {});
+
+  const sent = c.mock.st.toolArgs.find((a) => a.action === "prepare_outline" && a.payload?.learningOutcomes)?.payload.learningOutcomes;
+  assert.ok(Array.isArray(sent), "ASFAI received a list, not one long string");
+  assert.equal(sent.length, 3, "the blank line is dropped, not turned into an empty outcome");
+
+  const view = await getView(courseId);
+  assert.deepEqual(
+    view.proposals.map((p) => p.statement),
+    sent,
+    "the objectives the teacher confirms ARE the outcomes ASFAI was told",
+  );
 });

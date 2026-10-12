@@ -22,6 +22,7 @@
  * what that call returned and what the teacher answered. It never invents a field.
  */
 import { ResidualRuleGuard } from "../confirm-gate/host-guard.mjs";
+import { outcomeSentences } from "./proposer.mjs";
 
 export class LessonIntake {
   #guard;
@@ -180,6 +181,7 @@ export class LessonIntake {
 }
 
 const MAX_FIELD = 2000;
+const MAX_OUTCOMES = 12;
 const KNOWN = new Set(["topic", "course", "learning_outcomes"]);
 
 /** Only keys ASFAI actually asked about survive; values are trimmed teacher words, bounded. */
@@ -191,7 +193,10 @@ function cleanAnswers(raw, asked) {
     if (!KNOWN.has(key) || !askedIds.has(key)) continue; // an answer to a question nobody asked is ignored
     const v = raw[key];
     if (key === "learning_outcomes") {
-      const list = (Array.isArray(v) ? v : String(v ?? "").split("\n")).map((x) => String(x).trim()).filter(Boolean).slice(0, 12);
+      // The split rule lives in proposer.outcomeSentences and NOWHERE else: the same
+      // function builds the objectives the teacher confirms, so the list ASFAI is told
+      // and the list the teacher confirms cannot drift apart. Bounds are applied here.
+      const list = outcomeSentences(v).slice(0, MAX_OUTCOMES);
       if (list.length) out[key] = list.map((x) => x.slice(0, MAX_FIELD));
     } else if (typeof v === "string" && v.trim()) {
       out[key] = v.trim().slice(0, MAX_FIELD);

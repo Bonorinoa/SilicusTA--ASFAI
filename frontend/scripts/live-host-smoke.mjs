@@ -118,9 +118,23 @@ await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
 await page.waitForFunction(() => document.querySelector("button") !== null);
 
 check("Live tab reaches the host (not the offline notice)",
-  !(await bodyHas(page, "host is not reachable")) && (await bodyHas(page, "Start a course")));
+  !(await bodyHas(page, "host is not reachable")) && (await bodyHas(page, "What should we call this course")));
 
-await clickText(page, "Start a course");
+const reply = async (text, button) => {
+  await page.waitForSelector("#onboarding-reply");
+  await page.evaluate((text) => {
+    const el = document.querySelector("#onboarding-reply");
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set;
+    setter.call(el, text);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, text);
+  await clickText(page, button);
+};
+await reply("Lesson 3 · AI literacy", "Record the course title");
+await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+await reply("Ada Lovelace", "Record the label");
+await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+await clickText(page, "No materials");
 const courseId = await poll(async () => (await listCourses())[0]?.courseId);
 check("a course exists on the host after Start", typeof courseId === "string" && courseId.startsWith("urn:uuid:"));
 
@@ -163,9 +177,13 @@ const fill = (id, text) => page.evaluate((id, text) => {
   ta.dispatchEvent(new Event("input", { bubbles: true }));
 }, id, text);
 await fill("topic", "how AI answers are built");
+await clickText(page, "Record this answer");
+await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
 await fill("course", "AI literacy, ages 8-10");
+await clickText(page, "Record this answer");
+await poll(() => page.evaluate(() => !!document.querySelector("#intake-learning_outcomes")));
 await fill("learning_outcomes", "Students can explain what an algorithm is.\nLearners can find the claim in an AI answer.");
-await clickText(page, "Record my answers");
+await clickText(page, "Record this answer");
 await poll(async () => (await getView(courseId)).intake.roundAnswered === true);
 check("the teacher's answers are recorded on the host and arm the round", true);
 

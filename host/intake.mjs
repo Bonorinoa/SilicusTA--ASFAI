@@ -18,10 +18,8 @@
  * residual rule exists to block); an armed receipt is single-use on echo; and a
  * draftAuthorization, if a future server emits one, authorizes on its own.
  *
- * The host does not call the MCP itself yet (no in-process OAuth client). The
- * runtime asks `status()` -> `mayCallPrepareOutline`, makes the real call, and
- * reports what it got here. That mirrors host-guard's design: the guard observes
- * tool results, it never executes them.
+ * The host calls the MCP itself (`host/asfai/`). This module still only records
+ * what that call returned and what the teacher answered. It never invents a field.
  */
 import { ResidualRuleGuard } from "../confirm-gate/host-guard.mjs";
 
@@ -77,7 +75,12 @@ export class LessonIntake {
    */
   answer({ viaChannel, text, answers = null, at }) {
     this.#roundAnswered = true;
-    this.#answers = cleanAnswers(answers, this.#questions);
+    // A conversation answers one question at a time. A later reply adds a key;
+    // it must not erase the ones already recorded. A blank reply leaves them.
+    const cleaned = cleanAnswers(answers, this.#questions);
+    if (cleaned && Object.keys(cleaned).length) {
+      this.#answers = { ...(this.#answers ?? {}), ...cleaned };
+    }
     return this.#guard.onTeacherReply(text, { via: viaChannel, at });
   }
 
@@ -95,6 +98,12 @@ export class LessonIntake {
     const a = this.#answers;
     if (!a || Object.keys(a).length === 0) {
       return { allowed: false, code: "NO_TEACHER_ANSWERS", reason: "the teacher's reply carried no answers to the questions; nothing may be sent on their behalf" };
+    }
+    // A partial round must not go out. The teacher has not answered every question
+    // ASFAI asked that this host knows how to forward.
+    const missing = this.#questions.map((q) => q.id).filter((id) => KNOWN.has(id) && !hasAnswer(a, id));
+    if (missing.length) {
+      return { allowed: false, code: "INCOMPLETE_ANSWERS", reason: `still waiting for the teacher's answer to: ${missing.join(", ")}` };
     }
     return {
       allowed: true,
@@ -152,6 +161,7 @@ export class LessonIntake {
       roundAnswered: this.#roundAnswered,
       questions: this.#questions,
       answeredKeys: this.#answers ? Object.keys(this.#answers) : [],
+      answers: publicAnswers(this.#answers),
       draftAuthorization: this.#guard.hasDraftAuthorization(),
       outlineAuthorized: this.outlineAuthorized(),
       mayCallPrepareOutline: call.allowed,
@@ -178,5 +188,18 @@ function cleanAnswers(raw, asked) {
       out[key] = v.trim().slice(0, MAX_FIELD);
     }
   }
+  return out;
+}
+
+function hasAnswer(a, id) {
+  const v = a?.[id];
+  return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v.length > 0;
+}
+
+/** A copy. Callers must not be able to mutate the recorded answers. */
+function publicAnswers(a) {
+  if (!a) return {};
+  const out = { ...a };
+  if (Array.isArray(out.learning_outcomes)) out.learning_outcomes = [...out.learning_outcomes];
   return out;
 }

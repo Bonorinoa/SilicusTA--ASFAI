@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HostView } from "../gate/transport";
 import { LiveCourse } from "./LiveCourse";
+import { parseMaterials } from "./OnboardingChat";
 
 const COURSE_ID = "urn:uuid:11111111-2222-3333-4444-555555555555";
 const STATEMENT = "Students can explain what an algorithm is, in their own words.";
@@ -132,14 +133,15 @@ describe("LiveCourse — thin client of the host", () => {
     // The gate's refusal reason is surfaced.
     expect(screen.getByText(/clarifying questions and the teacher has not answered/i)).toBeInTheDocument();
 
-    // One answer per question ASFAI asked; the teacher's own words are the only thing that is sent.
+    // One open question. The reply is posted under that id only — the browser does not
+    // map free prose onto the other questions, and it does not build the ASFAI call.
     await user.type(screen.getByLabelText("What topic should this lesson cover?"), "how AI answers are built");
-    await user.type(screen.getByLabelText("Which course is this part of?"), "AI literacy, ages 8-10");
-    await user.click(screen.getByRole("button", { name: "Record my answers" }));
+    expect(screen.queryByLabelText("Which course is this part of?")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Record this answer" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/answer"))).toBe(true));
-    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as { answers: Record<string, string> };
-    expect(body.answers).toEqual({ topic: "how AI answers are built", course: "AI literacy, ages 8-10" });
-    // The browser never builds the ASFAI call: asking carries no body at all.
+    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as { answers: Record<string, string>; text: string };
+    expect(body.answers).toEqual({ topic: "how AI answers are built" });
+    expect(body.text).toBe("how AI answers are built");
     expect(JSON.stringify(body)).not.toMatch(/payload|learningOutcomes|mode/);
   });
 
@@ -155,18 +157,32 @@ describe("LiveCourse — thin client of the host", () => {
     expect(calls.find((c) => c.url.endsWith("/intake/call"))!.body).toEqual({});
   });
 
-  it("offers to start a course and writes NOTHING on load", async () => {
+  it("names the course in the correspondence and writes NOTHING on load", async () => {
     const { calls } = mockHost(null);
     const user = userEvent.setup();
     render(<LiveCourse />);
 
-    expect(await screen.findByRole("button", { name: "Start a course" })).toBeInTheDocument();
-    // Only the discovery read happened — no POST.
+    expect(await screen.findByLabelText("What should we call this course?")).toBeInTheDocument();
+    expect(screen.getByText("On this device only. Not sent to ASFAI.")).toBeInTheDocument();
     expect(calls.every((c) => c.body === undefined)).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "Start a course" }));
-    await waitFor(() => {
-      expect(calls.some((c) => c.body !== undefined && c.url === "/api/courses")).toBe(true);
-    });
+    await user.type(screen.getByLabelText("What should we call this course?"), "Seeing the claim");
+    await user.click(screen.getByRole("button", { name: "Record the course title" }));
+    await user.type(await screen.findByLabelText("What label should your copy of this record carry?"), "Ada Lovelace");
+    await user.click(screen.getByRole("button", { name: "Record the label" }));
+    expect(calls.every((c) => c.body === undefined)).toBe(true);
+    expect(screen.getAllByText("Not sent to ASFAI.").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "No materials" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/api/courses" && c.body !== undefined)).toBe(true));
+    const body = calls.find((c) => c.url === "/api/courses" && c.body !== undefined)!.body as Record<string, unknown>;
+    expect(body).toEqual({ owner: "Ada Lovelace", title: "Seeing the claim", materials: [] });
+    expect(JSON.stringify(body)).not.toMatch(/topic|learningOutcomes|payload/);
+  });
+
+  it("treats a materials list as names and 'none' as an empty list", () => {
+    expect(parseMaterials("none")).toEqual([]);
+    expect(parseMaterials("None yet.")).toEqual([]);
+    expect(parseMaterials("slides.pdf\n a worksheet ")).toEqual([{ name: "slides.pdf" }, { name: "a worksheet" }]);
   });
 });

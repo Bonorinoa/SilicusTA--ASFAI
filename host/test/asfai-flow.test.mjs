@@ -157,3 +157,24 @@ test("not connected: 401 AUTH_REQUIRED and an honest status", async () => {
   const bad = await fetch(base + "/api/asfai/callback?state=forged&code=x");
   assert.equal(bad.status, 400);
 });
+
+test("a partial reply is kept and not sent; the second call waits until every asked question has an answer", async () => {
+  const { svc, mock, session, store } = await fresh();
+  await svc.runIntake(session);
+  session.answerIntake({ text: "how AI answers are built", answers: { topic: "how AI answers are built" }, at: 2000 });
+  await assert.rejects(svc.runIntake(session), { code: "INCOMPLETE_ANSWERS" });
+  assert.equal(prepareCalls(mock).length, 1, "a partial round never reached ASFAI");
+  session.answerIntake({ text: "AI literacy, ages 8-10", answers: { course: "AI literacy, ages 8-10" }, at: 2100 });
+  session.answerIntake({ text: "explain an algorithm", answers: { learning_outcomes: "explain an algorithm" }, at: 2200 });
+  const st = session.intakeStatus();
+  assert.equal(st.answers.topic, "how AI answers are built", "a later reply must not erase the earlier one");
+  assert.equal(st.answers.course, "AI literacy, ages 8-10");
+  await svc.runIntake(session);
+  const sent = prepareCalls(mock)[1].payload;
+  assert.equal(sent.topic, "how AI answers are built");
+  assert.equal(sent.course, "AI literacy, ages 8-10");
+  assert.deepEqual(sent.learningOutcomes, ["explain an algorithm"]);
+  const again = CourseSession.load(store, session.courseId).intakeStatus().answers;
+  assert.equal(again.topic, "how AI answers are built");
+  assert.equal(again.course, "AI literacy, ages 8-10");
+});

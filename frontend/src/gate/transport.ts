@@ -49,6 +49,8 @@ export interface IntakeStatus {
   roundAnswered: boolean;
   questions: { id: string; prompt: string; reason: string | null }[];
   answeredKeys?: string[];
+  /** Teacher words already recorded, keyed by the question id ASFAI asked. */
+  answers?: Record<string, string | string[]>;
   draftAuthorization: boolean;
   outlineAuthorized: boolean;
   mayCallPrepareOutline: boolean;
@@ -111,7 +113,7 @@ const enc = encodeURIComponent;
 export const host = {
   health: () => call<{ ok: boolean; courses: number }>("GET", "/health"),
   listCourses: () => call<{ courses: { courseId: string; owner: string; title: string; createdAt: number }[] }>("GET", "/courses"),
-  createCourse: (b: { owner: string; title: string; description?: string }) =>
+  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[] }) =>
     call<{ ok: true; courseId: string; view: HostView }>("POST", "/courses", b),
   getCourse: (id: string) => call<HostView>("GET", `/courses/${enc(id)}`),
   exportCourse: (id: string) => call<Record<string, unknown>>("GET", `/courses/${enc(id)}/export`),

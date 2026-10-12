@@ -10,7 +10,7 @@
  */
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 
 export const GENESIS = "genesis";
 
@@ -93,11 +93,25 @@ export class CourseStore {
   }
 
   #dir(courseId) {
-    return join(this.root, this.#slug(courseId));
+    const dir = join(this.root, this.#slug(courseId));
+    const rel = relative(this.root, dir);
+    // `.` and `..` survive the slug filter (dots are legal in ids) and join() would
+    // resolve them OUT of the data directory. Refuse anything that is not a child.
+    if (!rel || rel === "." || rel === ".." || rel.startsWith("../") || rel.startsWith("..\\") || isAbsolute(rel)) {
+      const e = new Error("course id escapes the data directory");
+      e.code = "BAD_COURSE_ID";
+      throw e;
+    }
+    return dir;
   }
 
   has(courseId) {
-    return existsSync(join(this.#dir(courseId), "meta.json"));
+    try {
+      return existsSync(join(this.#dir(courseId), "meta.json"));
+    } catch (e) {
+      if (e.code === "BAD_COURSE_ID") return false; // a traversal id is "not a course", not a crash
+      throw e;
+    }
   }
 
   /** Create the course record (meta.json) and open its log. Throws if it exists. */

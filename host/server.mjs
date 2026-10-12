@@ -131,6 +131,18 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     });
   }
 
+  // One in-flight mutation per course. Two requests that both load the same log head
+  // and then append (the intake call awaits ASFAI in between) would each write seq N+1
+  // and leave a chain verify() rejects — the course becomes unreadable. The lock makes
+  // the second request load AFTER the first has landed.
+  const courseLocks = new Map();
+  function withCourse(courseId, fn) {
+    const prev = courseLocks.get(courseId) ?? Promise.resolve();
+    const run = prev.then(fn, fn);
+    courseLocks.set(courseId, run.then(() => {}, () => {}));
+    return run;
+  }
+
   async function route(req) {
     const url = new URL(req.url, "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean); // ["api","courses",id,...]
@@ -179,6 +191,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       }
 
       const courseId = decodeURIComponent(parts[2]);
+      return withCourse(courseId, async () => {
       const s = session(courseId);
       const tail = parts.slice(3).join("/");
 
@@ -211,8 +224,11 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
         case "intake/answer":
           return { status: 200, json: s.answerIntake({ text: answerText(b), answers: b.answers ?? null }) };
         case "plan/validate":   return { status: 200, json: { validation: await asfaiSvc.validate(s) } };
-        case "archive":
-          return { status: 200, json: archives.save(b.ref ?? s.courseId, s.export()) };
+        case "archive": {
+          // save() carries the absolute path for in-process callers. It must not leave over HTTP.
+          const { path: _path, ...saved } = archives.save(b.ref ?? s.courseId, s.export());
+          return { status: 200, json: saved };
+        }
         case "objectives":   return { status: 200, json: { proposals: s.proposeObjectives({ items: b.items, sources: b.sources ?? [], assistantText: b.assistantText ?? null }) } };
         case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
         case "plan":         return { status: 200, json: s.proposeLessonPlan({ spec: b.spec, assistantText: b.assistantText ?? null }) };
@@ -220,6 +236,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
         case "publish":      return { status: 200, json: { version: s.publish({ text: b.text, note: b.note ?? null }) } };
         default: throw new HttpError(404, "NOT_FOUND", `no route: ${url.pathname}`);
       }
+      });
     }
     throw new HttpError(404, "NOT_FOUND", "not found");
   }

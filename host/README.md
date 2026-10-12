@@ -57,8 +57,12 @@ cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
 | `GET /api/courses/:id/export` | — | tamper-evident JSON export |
 | `GET /api/courses/:id/verify` | — | recompute the event-log chain |
 | `GET /api/courses/:id/intake` | — | checkpoint 2's gate: consult BEFORE `prepare_outline` |
-| `POST /api/courses/:id/intake/observe` | state, questions?, draftAuthorization?, receipt? | report an OBSERVED `prepare_outline` result |
-| `POST /api/courses/:id/intake/answer` | text | the teacher's reply (a real turn; arms the round) |
+| `GET /api/asfai/status` | — | connected? never a token |
+| `POST /api/asfai/connect` | — | consent URL; the teacher's click completes it |
+| `GET /api/asfai/callback` | — | OAuth redirect (single-use state) |
+| `POST /api/courses/:id/intake/call` | — | the HOST calls `prepare_outline`; a body cannot add fields |
+| `POST /api/courses/:id/intake/answer` | text?, answers? | the teacher's reply (a real turn; arms the round) |
+| `POST /api/courses/:id/plan/validate` | — | the HOST calls `validate_outline` (a signal, not a confirmation) |
 | `POST /api/courses/:id/archive` | ref? | save the export (atomic + read-back verified) |
 | `GET /api/courses/:id/anchor/:version` | — | the anchor a client PINS on the teacher's device |
 | `GET /api/courses/:id/archive/:ref` | — | load and re-verify an archived export |
@@ -163,10 +167,10 @@ happened instead:
 
 > an **observed** `ready_to_draft` **and** a teacher turn landing after the questions.
 
-- The host does not call the MCP yet (no in-process OAuth client). The runtime asks
-  `GET /intake`, makes the real call, and reports the result to
-  `POST /intake/observe`. That mirrors host-guard's design: the guard observes tool
-  results; it never executes them.
+- The host calls the MCP itself (`host/asfai/`, its own OAuth, never Hermes' token
+  file). `POST /intake/call` builds the payload from the teacher's recorded answers
+  and nothing else, then records what the server actually returned. There is no
+  report-back route: a client cannot supply a `prepare_outline` result.
 - `POST /intake/answer` records the teacher's reply through the same inbound hook as
   every other teacher action. That is what arms the round.
 - Reporting `ready_to_draft` **without** an answer does not authorize. host-guard's

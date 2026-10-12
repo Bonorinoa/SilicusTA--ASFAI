@@ -144,6 +144,15 @@ export class LessonIntake {
     );
   }
 
+  /**
+   * The teacher's recorded answers, keyed by the question id ASFAI asked. A copy:
+   * a caller may read them, never mutate them. This is what checkpoint 3 derives
+   * its proposals from.
+   */
+  answers() {
+    return publicAnswers(this.#answers);
+  }
+
   /** The gate's older shape, kept so either contract can authorize. */
   hasDraftAuthorization() {
     return this.#guard.hasDraftAuthorization();
@@ -161,7 +170,7 @@ export class LessonIntake {
       roundAnswered: this.#roundAnswered,
       questions: this.#questions,
       answeredKeys: this.#answers ? Object.keys(this.#answers) : [],
-      answers: publicAnswers(this.#answers),
+      answers: this.answers(),
       draftAuthorization: this.#guard.hasDraftAuthorization(),
       outlineAuthorized: this.outlineAuthorized(),
       mayCallPrepareOutline: call.allowed,

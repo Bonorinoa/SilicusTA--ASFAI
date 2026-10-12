@@ -24,6 +24,7 @@ import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gat
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { CourseStore } from "./store.mjs";
 import { LessonIntake } from "./intake.mjs";
+import { objectivesFromAnswers, SOURCE_FROM_ANSWERS } from "./proposer.mjs";
 import { digestOf } from "./archive.mjs";
 
 const CHANNEL = "silicus-ui";
@@ -307,6 +308,45 @@ export class CourseSession {
   /** The intake state to consult before/after every prepare_outline call. */
   intakeStatus() {
     return this.#intake.status();
+  }
+
+  /**
+   * Checkpoint 3's real path: derive the proposals from the teacher's OWN recorded
+   * answers, so no objective statement crosses the API. A client therefore cannot
+   * inject one, and with nothing of the teacher's on record the host refuses
+   * rather than inventing a sentence to clear the checkpoint.
+   *
+   * `assistantText` is null on purpose: the system quoted the teacher, so the
+   * ledger must not record a model turn claiming authorship.
+   */
+  proposeObjectivesFromAnswers({ at } = {}) {
+    if (this.#proposalIds.length > 0) {
+      return {
+        ok: false,
+        code: "ALREADY_PROPOSED",
+        reason: "objectives have already been proposed for this course",
+      };
+    }
+    const items = objectivesFromAnswers(this.#intake.answers());
+    if (items.length === 0) {
+      return {
+        ok: false,
+        code: "NO_TEACHER_OUTCOMES",
+        reason:
+          "the teacher has not answered ASFAI's outcomes question, so there is nothing of theirs to propose",
+      };
+    }
+    const a = at ?? Date.now();
+    const event = {
+      kind: "objectives.proposed",
+      items,
+      sources: items.map(() => SOURCE_FROM_ANSWERS),
+      assistantText: null,
+      at: a,
+    };
+    this.#apply(event);
+    this.#append(event);
+    return { ok: true, proposals: this.view().proposals };
   }
 
   /** Checkpoint 3: the AI proposes objectives (never confirmed here). */

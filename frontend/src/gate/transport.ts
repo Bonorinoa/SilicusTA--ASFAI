@@ -134,8 +134,9 @@ export const host = {
   archiveCourse: (id: string, ref?: string) =>
     call<{ saved: boolean; verified: boolean; ref: string; digest: string }>("POST", `/courses/${enc(id)}/archive`, { ref }),
   archives: () => call<{ refs: string[] }>("GET", "/archives"),
-  proposeObjectives: (id: string, b: { items: unknown[]; sources?: string[]; assistantText?: string }) =>
-    call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives`, b),
+  /** The HOST derives the objectives from the teacher's recorded answers; the UI sends no body. */
+  proposeObjectives: (id: string) =>
+    call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives`, {}),
   decide: (id: string, b: { decisions: unknown[]; text: string }) =>
     call<{ decisions: unknown[] }>("POST", `/courses/${enc(id)}/decisions`, b),
   proposePlan: (id: string, b: { spec: unknown; assistantText?: string }) =>

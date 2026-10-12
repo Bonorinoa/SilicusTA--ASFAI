@@ -22,13 +22,6 @@ import styles from "./LiveCourse.module.css";
 const CHECKPOINT_LABEL: Record<string, string> = {
   files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
 };
-const SEED_ITEMS = [
-  { kind: "local", statement: "Students can explain what an algorithm is, in their own words." },
-  { kind: "public", publicId: "mt_alpha", statement: "Learners can find the claim in an AI answer." },
-  { kind: "public", publicId: "mt_beta", statement: "Learners can ask one question about how the tool works." },
-];
-const SEED_SOURCES = ["from your slides p.4", "suggested match", "suggested match"];
-
 function planSpec(view: HostView) {
   const ids = view.objectives.map((o) => o.id);
   if (ids.length === 0) return null;
@@ -164,10 +157,15 @@ export function LiveCourse() {
     }
   });
 
+  /** The HOST derives the proposals from the teacher's own recorded answers; the UI sends nothing. */
   const proposeObjectives = () => run(async () => {
-    await host.proposeObjectives(courseId!, { items: SEED_ITEMS, sources: SEED_SOURCES, assistantText: `Proposed ${SEED_ITEMS.length} objectives.` });
-    await reload();
-    setNotice("The assistant proposed objectives — your decisions are required.");
+    try {
+      await host.proposeObjectives(courseId!);
+    } catch (e) {
+      setNotice(`Nothing to propose: ${(e as Error).message}`);
+    } finally {
+      await reload();
+    }
   });
 
   const dispatch = (intent: DecisionIntent) => {
@@ -317,7 +315,7 @@ export function LiveCourse() {
         ) : null}
         {is("outline", "confirmed") && view.proposals.length === 0 ? (
           <button type="button" className={styles.ghostButton} onClick={proposeObjectives} disabled={busy}>
-            Ask the assistant to propose objectives
+            Propose objectives from your answers
           </button>
         ) : null}
         {is("objectives", "confirmed") && !plan ? (

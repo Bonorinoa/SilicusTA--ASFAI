@@ -24,7 +24,7 @@
  *   GET  /api/courses/:id/anchor/:version    the anchor a client pins on the teacher's device
  *   GET  /api/archives                       list archive refs
  *   POST /api/courses/:id/checkpoints        {id:"files"|"outline", text, note?}
- *   POST /api/courses/:id/objectives         {items:[...], sources?, assistantText?}   (AI proposes)
+ *   POST /api/courses/:id/objectives         no body: the HOST derives them from the teacher's recorded answers
  *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides)
  *   POST /api/courses/:id/plan               {spec, assistantText?}                    (AI drafts)
  *   POST /api/courses/:id/plan/confirm       {text, planId?}                           (teacher confirms)
@@ -229,7 +229,14 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
           const { path: _path, ...saved } = archives.save(b.ref ?? s.courseId, s.export());
           return { status: 200, json: saved };
         }
-        case "objectives":   return { status: 200, json: { proposals: s.proposeObjectives({ items: b.items, sources: b.sources ?? [], assistantText: b.assistantText ?? null }) } };
+        case "objectives": {
+          // The host DERIVES from its own record of the teacher's answers. The request
+          // body is read and ignored: a client cannot supply an objective statement, so
+          // no objective content is forgeable — the same narrowness as intake/call.
+          const r = s.proposeObjectivesFromAnswers({});
+          if (!r.ok) throw new HttpError(409, r.code, r.reason);
+          return { status: 200, json: { proposals: r.proposals } };
+        }
         case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
         case "plan":         return { status: 200, json: s.proposeLessonPlan({ spec: b.spec, assistantText: b.assistantText ?? null }) };
         case "plan/confirm": return { status: 200, json: s.confirmLessonPlan({ text: b.text, planId: b.planId ?? null }) };

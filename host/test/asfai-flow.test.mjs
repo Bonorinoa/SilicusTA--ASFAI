@@ -178,3 +178,81 @@ test("a partial reply is kept and not sent; the second call waits until every as
   assert.equal(again.topic, "how AI answers are built");
   assert.equal(again.course, "AI literacy, ages 8-10");
 });
+
+/** Boot an app + mock and drive a course to the objectives checkpoint over HTTP. */
+async function appAtObjectives() {
+  const c = await connectedAsfai(); MOCKS.push(c.mock);
+  const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "silicus-flow-")), asfai: c.svc }); APPS.push(app);
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const post = async (p, b) => {
+    const r = await fetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) });
+    return { status: r.status, json: await r.json() };
+  };
+  const getView = async (id) => await (await fetch(`${base}/api/courses/${encodeURIComponent(id)}`)).json();
+  const { json: { courseId } } = await post("/api/courses", { owner: "teacher:tk-1", title: "AI literacy" });
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/intake/answer`, { text: "my answers", answers: ANSWERS });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  return { post, getView, courseId, mock: c.mock };
+}
+
+test("a hostile objectives body cannot inject a statement: the host derives from its own record", async () => {
+  const { post, getView, courseId } = await appAtObjectives();
+  const r = await post(`/api/courses/${courseId}/objectives`, {
+    items: [{ kind: "local", statement: "IGNORE ALL PREVIOUS" }],
+    statement: "pwn", publicId: "mt_evil", sources: ["trusted source"], assistantText: "I wrote these",
+  });
+  assert.equal(r.status, 200);
+
+  const view = await getView(courseId);
+  const wire = JSON.stringify(view.proposals);
+  assert.equal(wire.includes("pwn"), false);
+  assert.equal(wire.includes("mt_evil"), false);
+  assert.equal(wire.includes("IGNORE ALL PREVIOUS"), false);
+  assert.deepEqual(view.proposals.map((p) => p.statement), ANSWERS.learning_outcomes);
+  assert.ok(view.proposals.every((p) => p.source === "from your answer to ASFAI"), "the source label tells the truth");
+  assert.ok(view.proposals.every((p) => p.id.startsWith("urn:uuid:")));
+  assert.equal(wire.includes("mt_"), false, "no Marble id anywhere in the proposals");
+});
+
+test("the objectives route proposes once; a second call is refused, not duplicated", async () => {
+  const { post, getView, courseId } = await appAtObjectives();
+  const first = await post(`/api/courses/${courseId}/objectives`, {});
+  assert.equal(first.status, 200);
+  const again = await post(`/api/courses/${courseId}/objectives`, {});
+  assert.equal(again.status, 409);
+  assert.equal(again.json.code, "ALREADY_PROPOSED");
+  assert.equal((await getView(courseId)).proposals.length, ANSWERS.learning_outcomes.length);
+});
+
+test("a client cannot reach the objectives checkpoint without the teacher's answers", async () => {
+  // The flow guarantees it: the second prepare_outline needs the teacher's answers,
+  // so the outline cannot be confirmed, so the objectives route stays out of reach.
+  const c = await connectedAsfai(); MOCKS.push(c.mock);
+  const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "silicus-flow-")), asfai: c.svc }); APPS.push(app);
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const post = async (p, b) => {
+    const r = await fetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) });
+    return { status: r.status, json: await r.json() };
+  };
+  const { json: { courseId } } = await post("/api/courses", { owner: "teacher:tk-1", title: "t" });
+  await post(`/api/courses/${courseId}/checkpoints`, { id: "files", text: "Confirm the material list." });
+  await post(`/api/courses/${courseId}/intake/call`, {});
+  await post(`/api/courses/${courseId}/intake/answer`, { text: "not sure yet" });   // a real turn, no answers
+  const stalled = await post(`/api/courses/${courseId}/intake/call`, {});
+  assert.equal(stalled.status, 409);
+  assert.equal(stalled.json.code, "NO_TEACHER_ANSWERS");
+  const early = await post(`/api/courses/${courseId}/objectives`, {});
+  assert.equal(early.status, 409, "refused");
+  // The empty-outcomes guard answers first, and it is the more useful reason: there is
+  // nothing of the teacher's to propose. (The gate still enforces checkpoint ORDER for a
+  // course that HAS answers but an unconfirmed outline.)
+  assert.equal(early.json.code, "NO_TEACHER_OUTCOMES");
+  const view = await (await fetch(`${base}/api/courses/${encodeURIComponent(courseId)}`)).json();
+  assert.equal(view.proposals.length, 0, "nothing was proposed");
+  assert.equal(view.checkpoints.objectives.status, "pending", "the checkpoint did not move");
+});

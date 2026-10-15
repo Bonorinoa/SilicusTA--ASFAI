@@ -26,6 +26,11 @@ export interface PlanCardProps {
   onPrint?: () => void;
   /** WHY the plan is invalidated (D), derived by the parent from gate state. */
   invalidation?: PlanInvalidationView | null;
+  /**
+   * Show the worker's alignment suggestions. They are NOT part of a sealed package, so a surface
+   * that previews "exactly what will be published" must pass false, or it would imply they are.
+   */
+  showAlignment?: boolean;
 }
 
 const EVIDENCE_VALUE: Record<LessonPlanView["activities"][number]["evidenceIfAny"], string> = {
@@ -42,7 +47,13 @@ const RELATIONSHIP_LABEL: Record<string, string> = {
 
 const AUDIENCE_BAND_LABEL = "Ages";
 
-export function PlanCard({ plan, objectives, teacher, onPrint, invalidation }: PlanCardProps) {
+/** What a teacher sees for a knowledge source. An unknown source falls back to its own id. */
+const SOURCE_LABEL: Record<string, string> = {
+  "asfai-graph": "ASFAI's skill map",
+  "local-ontology": "your ontology file",
+};
+
+export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, showAlignment = true }: PlanCardProps) {
   const citedIds = plan.activities.flatMap((a) => a.objectiveIds);
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
@@ -172,6 +183,31 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation }: P
           ))}
         </ol>
       </section>
+
+      {showAlignment && plan.citations && plan.citations.length > 0 ? (
+        <section className={styles.key} aria-label="Suggested alignment">
+          <h2 className={styles.keyHeading}>Suggested alignment</h2>
+          <p className={styles.alignmentNote}>
+            References the drafting assistant suggested. They are not requirements, not objectives, and
+            not part of the sealed package; you decide whether any of them fits.
+          </p>
+          <ul className={styles.keyList}>
+            {plan.citations.map((c) => (
+              <li key={c.ref} className={styles.keyItem}>
+                <span className={styles.keyNumber} aria-hidden="true">·</span>
+                <span className={styles.keyStatement}>
+                  {c.label}
+                  <span className={styles.garnish}>
+                    {` · from ${SOURCE_LABEL[c.source] ?? c.source}`}
+                    {c.verified ? ` · checked against ${SOURCE_LABEL[c.source] ?? c.source}` : " · not independently checked"}
+                    {` · activit${c.activityIndexes.length === 1 ? "y" : "ies"} ${c.activityIndexes.map((i) => i + 1).join(", ")}`}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <footer className={styles.footer}>
         <p className={styles.honesty}>Asking the assistant a question is not evidence.</p>

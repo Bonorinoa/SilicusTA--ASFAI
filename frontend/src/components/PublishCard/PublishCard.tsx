@@ -183,6 +183,7 @@ export function PublishCard({
             plan={plan}
             objectives={objectives}
             teacher={teacherName ? { name: teacherName } : undefined}
+            showAlignment={false}
           />
         </div>
       ) : (

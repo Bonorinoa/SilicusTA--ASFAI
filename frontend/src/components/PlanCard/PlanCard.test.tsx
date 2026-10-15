@@ -161,4 +161,60 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
     expect(fonts).toMatch(/font-weight:\s*200 900/);
     expect(fonts).toMatch(/font-display:\s*swap/);
   });
+
+  describe("suggested alignment", () => {
+    const withCitations = (citations: NonNullable<typeof scenario.plan.citations>) => ({ ...scenario.plan, citations });
+
+    it("labels an alignment by its source and says it is a suggestion, not a requirement", () => {
+      render(
+        <PlanCard
+          plan={withCitations([
+            { ref: "asfai:mt_0007", label: "Following Steps (ages 8–10)", source: "asfai-graph", activityIndexes: [0, 2], verified: true },
+            { ref: "local:algo.sequence", label: "Algorithms as step-by-step instructions", source: "local-ontology", activityIndexes: [1], verified: true },
+          ])}
+          objectives={scenario.objectives}
+        />,
+      );
+      const region = screen.getByRole("region", { name: "Suggested alignment" });
+      expect(within(region).getByText(/not requirements, not objectives, and not part of the sealed package/i)).toBeInTheDocument();
+      expect(within(region).getByText(/Following Steps \(ages 8–10\)/)).toBeInTheDocument();
+      expect(within(region).getByText(/from ASFAI's skill map/)).toBeInTheDocument();
+      expect(within(region).getByText(/from your ontology file/)).toBeInTheDocument();
+      expect(within(region).getByText(/activities 1, 3/)).toBeInTheDocument();
+      expect(within(region).getByText(/activity 2/)).toBeInTheDocument();
+    });
+
+    it("never claims a citation was checked when its source did not check it", () => {
+      render(
+        <PlanCard
+          plan={withCitations([{ ref: "nv:1", label: "Some node", source: "some-other-source", activityIndexes: [0], verified: false }])}
+          objectives={scenario.objectives}
+        />,
+      );
+      const region = screen.getByRole("region", { name: "Suggested alignment" });
+      expect(within(region).getByText(/not independently checked/)).toBeInTheDocument();
+      expect(within(region).queryByText(/checked against/)).not.toBeInTheDocument();
+      expect(within(region).getByText(/from some-other-source/)).toBeInTheDocument();
+    });
+
+    it("can be told not to show alignment: the publish preview must not imply suggestions are in the package", () => {
+      render(
+        <PlanCard
+          plan={withCitations([{ ref: "local:a", label: "A node", source: "local-ontology", activityIndexes: [0], verified: true }])}
+          objectives={scenario.objectives}
+          showAlignment={false}
+        />,
+      );
+      expect(screen.queryByRole("region", { name: "Suggested alignment" })).not.toBeInTheDocument();
+      expect(screen.queryByText("A node")).not.toBeInTheDocument();
+    });
+
+    it("renders a plan with no citations exactly as before: no alignment section at all", () => {
+      const { container, rerender } = render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
+      expect(screen.queryByRole("region", { name: "Suggested alignment" })).not.toBeInTheDocument();
+      const before = container.innerHTML;
+      rerender(<PlanCard plan={{ ...scenario.plan, citations: [] }} objectives={scenario.objectives} />);
+      expect(container.innerHTML).toBe(before);
+    });
+  });
 });

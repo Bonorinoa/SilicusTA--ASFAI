@@ -71,6 +71,21 @@ export interface ActivityView {
   notEvidence?: string;
 }
 
+/**
+ * An alignment SUGGESTION the drafting worker cited: a reference to a node in a knowledge
+ * source, never a claim and never part of the sealed package. The host keeps refs and labels
+ * only (not the retrieved text). `verified` is true only when the source actually checked it.
+ */
+export interface PlanCitationView {
+  ref: string;
+  label: string;
+  /** Machine id of the source, e.g. "asfai-graph" or "local-ontology". */
+  source: string;
+  /** Zero-based indexes into the plan's activities. */
+  activityIndexes: readonly number[];
+  verified: boolean;
+}
+
 /** A `LessonPlanRecord` from the gate, structurally. */
 export interface LessonPlanView {
   id: string;
@@ -82,6 +97,8 @@ export interface LessonPlanView {
   activities: readonly ActivityView[];
   proposedBy: "ai";
   proposedAt: number;
+  /** Alignment suggestions the worker cited (host metadata; absent when it cited none). */
+  citations?: readonly PlanCitationView[];
 }
 
 /** A confirmed objective as cited by plan activities. */

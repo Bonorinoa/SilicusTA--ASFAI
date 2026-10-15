@@ -327,4 +327,30 @@ describe("LiveCourse — thin client of the host", () => {
     expect(screen.queryByText(/recommended/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /use ASFAI's questionnaire/i })).not.toBeInTheDocument();
   });
+
+  it("shows the host's cited alignment on the plan as a suggestion, and nothing when there is none", async () => {
+    const withPlan = (citations?: NonNullable<HostView["plan"]>["citations"]): HostView => {
+      const v = stubView();
+      v.checkpoints.objectives.status = "confirmed";
+      v.proposals = [];
+      v.objectives = [{ id: "urn:uuid:aaaa", kind: "local", statement: STATEMENT, publicId: undefined }];
+      v.plan = {
+        id: "plan-1", courseId: COURSE_ID, courseVersion: 1, title: "Seeing the claim", status: "draft", proposedBy: "ai", proposedAt: 1,
+        activities: [{ id: "act-1", title: "Spot it", minutes: 20, objectiveIds: ["urn:uuid:aaaa"], materialVersionIds: [], learnerDoes: "Mark it.", teacherDoes: "Ask.", evidenceIfAny: "observation" }],
+        ...(citations ? { citations } : {}),
+      } as HostView["plan"];
+      return v;
+    };
+    mockHost(withPlan([{ ref: "local:ai.claims", label: "Finding the claim in an AI answer", source: "local-ontology", activityIndexes: [0], verified: true }]));
+    const first = render(<LiveCourse />);
+    const region = await screen.findByRole("region", { name: "Suggested alignment" });
+    expect(within(region).getByText(/Finding the claim in an AI answer/)).toBeInTheDocument();
+    expect(within(region).getByText(/not requirements/i)).toBeInTheDocument();
+    first.unmount();
+
+    mockHost(withPlan());
+    render(<LiveCourse />);
+    expect((await screen.findAllByRole("heading", { level: 1, name: "Seeing the claim" })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("region", { name: "Suggested alignment" })).not.toBeInTheDocument();
+  });
 });

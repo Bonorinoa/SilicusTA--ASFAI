@@ -247,6 +247,17 @@
   color: var(--color-ink);
 }
 
+/* The one-line reminder that alignment is a suggestion. Quiet, not a warning. */
+.alignmentNote {
+  margin: var(--space-2) 0 0;
+  max-width: 30rem;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-style: italic;
+  line-height: var(--leading-md);
+  color: var(--color-ink-muted);
+}
+
 /* Metadata garnish: the wording in serif italic, the raw id in mono and
    non-italic, so machine data stops masquerading as prose. */
 .garnish {

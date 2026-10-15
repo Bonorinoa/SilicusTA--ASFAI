@@ -35,6 +35,19 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
     expect(screen.getByText("Confirmed by R. Okonkwo")).toBeInTheDocument();
   });
 
+  it("uses the singular 'minute' when the plan totals one minute, and never '1 minutes'", () => {
+    // A one-minute plan is a modelled, reachable state: the round's own PublishCard test builds one.
+    const oneMinute = {
+      ...scenario.plan,
+      activities: [{ ...scenario.plan.activities[0], minutes: 1 }],
+    };
+    render(<PlanCard plan={oneMinute} objectives={scenario.objectives} />);
+
+    expect(screen.getByText("1 minute")).toBeInTheDocument();
+    expect(screen.queryByText("1 minutes")).not.toBeInTheDocument();
+    expect(screen.getByText("1 activity")).toBeInTheDocument();
+  });
+
   it("renders every activity: title, minutes, learnerDoes, teacherDoes, evidence", () => {
     render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
 

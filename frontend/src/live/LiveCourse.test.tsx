@@ -604,4 +604,27 @@ describe("LiveCourse — thin client of the host", () => {
     await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
     expect(within(row).queryByText(/lesson plan cites it/)).not.toBeInTheDocument();
   });
+
+  it("shows what changed between published versions, read-only, and says so when there is only one", async () => {
+    const mk = (n: number, statement: string) => ({
+      courseId: COURSE_ID, version: n, previousVersion: n > 1 ? n - 1 : null, title: "AI literacy", owner: "Ada", status: "published" as const,
+      objectiveRefs: [{ id: "o", kind: "local" as const, statement }], lessonPlan: null, publishedAt: n, note: null,
+      provenance: { turnRef: "t", decidedBy: "Ada", channel: "c", decidedAt: 1 },
+    });
+    const one = stubView();
+    one.versions = [mk(1, STATEMENT)];
+    mockHost(one);
+    const first = render(<LiveCourse />);
+    expect(await screen.findByText("Nothing to compare yet: this is version 1.")).toBeInTheDocument();
+    first.unmount();
+
+    const two = stubView();
+    two.versions = [mk(1, STATEMENT), mk(2, "Students can explain an algorithm.")];
+    const { calls } = mockHost(two);
+    render(<LiveCourse />);
+    expect(await screen.findByRole("heading", { name: "What changed between versions" })).toBeInTheDocument();
+    expect(screen.getByText("Reworded")).toBeInTheDocument();
+    expect(screen.getByText("Students can explain an algorithm.")).toBeInTheDocument();
+    expect(calls.filter((c) => c.body !== undefined)).toEqual([]);   // computing a diff writes nothing
+  });
 });

@@ -70,6 +70,13 @@ live browser 50/50):
   prompt; it now goes through the same one rule (one line, 2,000 characters, control and bidi blanked).
   **Not built:** rewording a *confirmed* objective in place (the gate's rename is terminal; it needs a gate
   verb, so a failing test first), and a worker-free way to re-plan after revoking a cited objective.
+- **Version diff, non-AI and read-only.** With two or more published versions, the course page shows what changed
+  between any two (default: the latest against the one before it): objectives added, removed or reworded
+  (matched by id only, never by guessing from similar wording), plan activities added, removed or changed (title,
+  minutes, what learners and the teacher do, evidence, which objectives and materials they cite), and the title,
+  audience and publish note. Each change is labelled in words. It is computed in the browser from the sealed
+  records already in the course view (`frontend/src/live/versionDiff.ts`); it calls no model and writes nothing.
+  Known limit: a re-drafted plan gets new activity ids, so its activities show as removed and added.
 - **Sprint 8, a student can use the package.** Answers come only from the latest *sealed* version, must
   cite it, or fall back to "ask your teacher". It records nothing and accepts no student identity.
   The teacher tries it from the course page ("Try it as a student").

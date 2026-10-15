@@ -525,6 +525,59 @@ describe("LiveCourse — thin client of the host", () => {
     expect(screen.getByRole("button", { name: "Download student handout" })).toBeInTheDocument();
   });
 
+  it("Edit wording on a confirmed objective sends ONLY a reword intent; the reworded plan is flagged, not invalidated, and re-confirming is the teacher's own click", async () => {
+    const AFTER = "Students can explain what an algorithm is, with an example.";
+    const v = publishedView({
+      sealedVersion: 1, nextVersion: 2, drafting: true,
+      changes: { objectivesAdded: [], objectivesRemoved: [], objectivesReworded: [{ id: "urn:uuid:aaaa", before: STATEMENT, after: AFTER }], plan: "same", planStatus: "confirmed" },
+      notInPlan: [],
+    });
+    v.proposals[0] = { ...v.proposals[0], statement: AFTER, reworded: true };
+    v.objectives = [{ id: "urn:uuid:aaaa", kind: "local", statement: AFTER }];
+    v.plan = { id: "urn:uuid:plan", courseId: COURSE_ID, courseVersion: 1, title: "Steps", status: "confirmed", proposedBy: "ai", proposedAt: 1,
+      activities: [{ id: "act1", title: "Warm-up", minutes: 10, objectiveIds: ["urn:uuid:aaaa"], materialVersionIds: [], learnerDoes: "Do.", teacherDoes: "Ask.", evidenceIfAny: "none" }] };
+    v.planWording = { stale: true, objectives: [{ id: "urn:uuid:aaaa", before: STATEMENT, after: AFTER }] };
+    const { calls } = mockHost(v);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+
+    // The plan is still confirmed and says it was written from the old wording; the revision panel lists the reword.
+    const notice = await screen.findByRole("region", { name: "Objectives reworded since this plan was written" });
+    expect(within(notice).getByText(`The plan was written from: “${STATEMENT}”`)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Why this plan was invalidated" })).not.toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Changes since version 1" })).toHaveTextContent(`Reworded: “${STATEMENT}” became “${AFTER}”`);
+    expect(screen.getByText(/Version 1 is published and unchanged; you are drafting version 2\./)).toBeInTheDocument();
+    expect(screen.getByText("Reworded by you")).toBeInTheDocument();
+
+    // Editing sends the intent only.
+    const row = (await screen.findByRole("heading", { name: AFTER })).closest("li") as HTMLElement;
+    await user.click(within(row).getByRole("button", { name: /Edit the wording of objective 1/ }));
+    await user.type(within(row).getByRole("textbox"), " Really.");
+    await user.click(within(row).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/decisions"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/decisions"))!.body as { decisions: unknown[]; text: string };
+    expect(body.decisions).toEqual([{ verb: "reword", proposalId: "urn:uuid:aaaa", statement: `${AFTER} Really.` }]);
+    expect(typeof body.text).toBe("string");
+    for (const key of ["turnRef", "provenance", "decidedBy", "channel", "targetId", "mt_"]) expect(JSON.stringify(body)).not.toContain(key);
+
+    // Nothing re-confirms the plan by itself: only the teacher's own click does, and it sends no content.
+    expect(calls.some((c) => c.url.endsWith("/plan/confirm"))).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Confirm the plan as it reads" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/plan/confirm"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/plan/confirm"))!.body).toEqual({ text: "Confirm this lesson plan." });
+  });
+
+  it("a host that does not report planWording shows no reword notice and no extra button", async () => {
+    const v = publishedView(UNCHANGED);
+    v.plan = { id: "urn:uuid:plan", courseId: COURSE_ID, courseVersion: 1, title: "Steps", status: "confirmed", proposedBy: "ai", proposedAt: 1,
+      activities: [{ id: "act1", title: "Warm-up", minutes: 10, objectiveIds: ["urn:uuid:aaaa"], materialVersionIds: [], learnerDoes: "Do.", teacherDoes: "Ask.", evidenceIfAny: "none" }] };
+    mockHost(v);
+    render(<LiveCourse />);
+    await screen.findByText("Version 1 is published and unchanged.");
+    expect(screen.queryByRole("region", { name: /reworded since/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm the plan as it reads" })).not.toBeInTheDocument();
+  });
+
   it("does not offer revision before anything is sealed, or on a host that does not report it", async () => {
     mockHost(stubView());
     const first = render(<LiveCourse />);

@@ -427,11 +427,18 @@ export class CourseSession {
   /** Checkpoint 3: the teacher decides the proposals. The caller supplies NO provenance. */
   decideObjectives({ decisions, text, at } = {}) {
     const a = at ?? Date.now();
-    // The wording the teacher types (add, rename) is untrusted input: one line, bounded, control and bidi
+    // The wording the teacher types (add, rename, reword) is untrusted input: one line, bounded, control and bidi
     // characters blanked by the SAME rule that cleans an outcome (proposer.teacherStatement). It reaches the
     // log, the sealed package and every later prompt only after this, so a revision cannot smuggle a line in.
+    // A reword carries exactly the intent (the verb, the objective id, the new statement) and nothing else, so a
+    // client's extra keys (a provenance block, ids, a kind, an mt_* alignment) never reach the log. They would be
+    // inert (the gate ignores them), but the log is hash-chained and permanent: it keeps only what the host used.
     const cleaned = Array.isArray(decisions)
-      ? decisions.map((d) => (d && typeof d === "object" && (d.verb === "add" || d.verb === "rename") ? { ...d, statement: teacherStatement(d.statement) } : d))
+      ? decisions.map((d) => {
+          if (!d || typeof d !== "object") return d;
+          if (d.verb === "reword") return { verb: "reword", proposalId: d.proposalId, statement: teacherStatement(d.statement) };
+          return d.verb === "add" || d.verb === "rename" ? { ...d, statement: teacherStatement(d.statement) } : d;
+        })
       : decisions;
     const event = { kind: "objectives.decided", decisions: cleaned, text: requireMsg(text, "text"), at: a };
     this.#apply(event);
@@ -552,7 +559,7 @@ export class CourseSession {
   wording(id) {
     const latest = [...this.#gate.decisions()]
       .reverse()
-      .find((d) => d.statement && (d.verb === "rename" || d.verb === "add") && (d.proposalId === id || d.targetId === id));
+      .find((d) => d.statement && (d.verb === "rename" || d.verb === "add" || d.verb === "reword") && (d.proposalId === id || d.targetId === id));
     if (latest?.statement) return latest.statement;
     const proposal = this.#gate.getProposal(id);
     if (proposal?.statement) return proposal.statement;
@@ -582,15 +589,17 @@ export class CourseSession {
           : mine.some((d) => d.verb === "accept")
             ? "accepted"
             : "proposed";
-      const rename = [...mine].reverse().find((d) => d.verb === "rename");
+      // The teacher's latest wording: a rename of the proposal, or a later reword of the confirmed objective.
+      const worded = [...mine].reverse().find((d) => d.verb === "rename" || d.verb === "reword");
       const confirmed = status === "proposed" ? null : this.#gate.getObjective(id);
       const alignmentSource = confirmed?.alignment ?? proposal.alignment;
       rows.push({
         id,
         kind: proposal.kind,
         status,
-        statement: rename?.statement ?? proposal.statement ?? proposal.publicId ?? "",
+        statement: worded?.statement ?? proposal.statement ?? proposal.publicId ?? "",
         originalStatement: proposal.statement ?? null,
+        reworded: mine.some((d) => d.verb === "reword"),
         source: this.#sources.get(id) ?? null,
         alignment: alignmentSource
           ? { publicId: alignmentSource.publicId, relationship: alignmentSource.relationship, suggested: !alignmentSource.confirmedByEducator }
@@ -606,8 +615,10 @@ export class CourseSession {
         id: d.targetId,
         kind: "local",
         status: "added",
-        statement: d.statement ?? this.#gate.getObjective(d.targetId)?.statement ?? "",
-        originalStatement: null,
+        statement: this.wording(d.targetId),
+        // Only a reworded objective has an "original" to show: the wording it was added with.
+        originalStatement: decisions.some((x) => x.verb === "reword" && x.targetId === d.targetId) ? d.statement ?? null : null,
+        reworded: decisions.some((x) => x.verb === "reword" && x.targetId === d.targetId),
         source: this.#sources.get(d.targetId) ?? "your own objective",
         alignment: null,
         by: "teacher",
@@ -637,6 +648,11 @@ export class CourseSession {
     const said = (o) => ({ id: o.id, statement: o.statement ?? o.publicId ?? o.id });
     const objectivesAdded = confirmed.filter((o) => !sealedIds.has(o.id)).map((o) => ({ id: o.id, statement: this.wording(o.id) }));
     const objectivesRemoved = sealed.objectiveRefs.filter((o) => !liveIds.has(o.id)).map(said);
+    // Same id, different statement: the teacher reworded it since the seal. Matched by id only, never by similarity.
+    const sealedById = new Map(sealed.objectiveRefs.map((o) => [o.id, o]));
+    const objectivesReworded = confirmed
+      .filter((o) => sealedById.has(o.id) && said(sealedById.get(o.id)).statement !== said(o).statement)
+      .map((o) => ({ id: o.id, before: said(sealedById.get(o.id)).statement, after: said(o).statement }));
     // The plan against the sealed one: the same confirmed plan, a different confirmed plan, or one still waiting on the teacher.
     const planState = !plan || plan.status !== "confirmed" ? "unconfirmed" : plan.id !== sealed.lessonPlan?.id ? "replaced" : "same";
     const cited = this.#citedByPlan();
@@ -644,10 +660,20 @@ export class CourseSession {
     return {
       sealedVersion: sealed.version,
       nextVersion: sealed.version + 1,
-      drafting: objectivesAdded.length > 0 || objectivesRemoved.length > 0 || planState !== "same",
-      changes: { objectivesAdded, objectivesRemoved, plan: planState, planStatus: plan?.status ?? null },
+      drafting: objectivesAdded.length > 0 || objectivesRemoved.length > 0 || objectivesReworded.length > 0 || planState !== "same",
+      changes: { objectivesAdded, objectivesRemoved, objectivesReworded, plan: planState, planStatus: plan?.status ?? null },
       notInPlan,
     };
+  }
+
+  /**
+   * Cited objectives the teacher reworded since the plan was last drafted or confirmed. The plan is NOT
+   * invalidated (its cited ids are unchanged) and nothing is re-confirmed for the teacher: this is the notice
+   * that the plan text was written from the old wording. `before` is the wording the plan was written from.
+   */
+  #planWording() {
+    const objectives = this.#gate.rewordedSincePlan().map((r) => ({ id: r.objectiveId, before: r.before, after: r.after }));
+    return { stale: objectives.length > 0, objectives };
   }
 
   /** The current plan, plus the alignment suggestions it cited (only when there are some). */
@@ -677,8 +703,8 @@ export class CourseSession {
     for (const d of this.#gate.decisions()) {
       const sourceKey = d.verb === "add" ? d.targetId : d.proposalId;
       events.push({ id: d.id, kind: "decision", verb: d.verb, at: d.provenance.decidedAt,
-        label: { accept: "Accepted", rename: "Renamed", drop: "Dropped", add: "Added" }[d.verb],
-        detail: d.statement ?? null, before: d.renamedFrom?.originalStatement ?? null,
+        label: { accept: "Accepted", rename: "Renamed", drop: "Dropped", add: "Added", reword: "Reworded" }[d.verb],
+        detail: d.statement ?? null, before: d.renamedFrom?.originalStatement ?? d.rewordedFrom?.previousStatement ?? null,
         source: sourceKey ? this.#sources.get(sourceKey) ?? null : null,
         version: d.boundCourseVersion, turnRef: d.provenance.turnRef,
         decidedBy: d.provenance.decidedBy, channel: d.provenance.channel });
@@ -707,6 +733,7 @@ export class CourseSession {
       objectives: this.#objectiveView(),
       decisions: this.#gate.decisions(),
       plan: this.#planView(),
+      planWording: this.#planWording(),
       invalidation: this.planInvalidation(),
       publish: this.#gate.publishStatus(),
       revision: this.#revision(),

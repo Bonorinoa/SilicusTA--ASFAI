@@ -9,7 +9,7 @@ Host-side reference implementation of two rules the ASFAI MCP cannot enforce for
    it waited for a *human*.)
 2. **The teacher-confirm gate** (`confirm-gate.mjs`) — proposals (objectives, then the
    lesson plan) enter a published `CoursePackage` only through explicit teacher decisions
-   (`accept` / `rename` / `drop` / `add`) with recorded provenance; publishing with any
+   (`accept` / `rename` / `drop` / `add`, and `reword` for an already confirmed objective) with recorded provenance; publishing with any
    unconfirmed objective in the plan is blocked; AI self-confirmation is structurally
    impossible (no code path from model output to a teacher turn or a confirmation).
 
@@ -36,7 +36,7 @@ Zero dependencies: plain ES modules + JSDoc types. No `npm install`, no `package
 |---|---|---|
 | 1 **Files** | teacher turn provenance for the file-list confirmation | `confirmCheckpoint("files", provenance)` |
 | 2 **Outline** | residual rule around `prepare_outline`; arms receipts; observes `draftAuthorization` | `confirmCheckpoint("outline", provenance)` — refused (`MISSING_DRAFT_AUTHORIZATION`) until the guard has seen a `draftAuthorization` |
-| 3 **Objectives** | teacher turn provenance behind every decision | `proposeObjectives` (proposals, `confirmedByEducator: false`), `confirmObjectives` (accept/rename/drop/add); checkpoint auto-confirms when every proposal is decided, reopens on new proposals |
+| 3 **Objectives** | teacher turn provenance behind every decision | `proposeObjectives` (proposals, `confirmedByEducator: false`), `confirmObjectives` (accept/rename/drop/add/reword; `rewordedSincePlan` reports cited objectives reworded since the plan); checkpoint auto-confirms when every proposal is decided, reopens on new proposals |
 | 4 **Plan** | teacher turn provenance behind the plan confirmation | `proposeLessonPlan`, `confirmLessonPlan`; invalidated + reopened when a cited objective is dropped |
 | 5 **Publish** | teacher turn provenance behind the publish action | `publishStatus` (preview), `publish` (version bump, immutable history); blocked while any cited objective is unconfirmed |
 

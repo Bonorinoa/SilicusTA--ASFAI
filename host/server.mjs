@@ -28,7 +28,7 @@
  *   POST /api/courses/:id/objectives         no body: the HOST derives them from the teacher's recorded answers
  *   POST /api/courses/:id/materials/propose  {materials:[{name,text}|{url}]} the WORKER proposes objectives from the teacher's material (nothing is stored but names, digests, sizes)
  *   POST /api/courses/:id/student/ask        {question, history?} a student asks about the PUBLISHED package; read-only, grounded or "ask your teacher", records nothing
- *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides; also how a PUBLISHED course is revised: add / revoke, then re-plan and publish the next version)
+ *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides; also how a PUBLISHED course is revised: add / revoke / reword, then publish the next version)
  *   POST /api/courses/:id/plan               no body: the OSS WORKER drafts from the confirmed objectives
  *   POST /api/courses/:id/plan/confirm       {text, planId?}                           (teacher confirms)
  *   POST /api/courses/:id/publish            {text, note?}                             (teacher publishes)

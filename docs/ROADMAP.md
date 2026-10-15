@@ -68,8 +68,20 @@ live browser 50/50):
   Revoking an objective the plan cites says what it costs before it is done. Found on the way: the add and
   rename text was not cleaned like an outcome, so a line break could forge an objective line in the drafting
   prompt; it now goes through the same one rule (one line, 2,000 characters, control and bidi blanked).
-  **Not built:** rewording a *confirmed* objective in place (the gate's rename is terminal; it needs a gate
-  verb, so a failing test first), and a worker-free way to re-plan after revoking a cited objective.
+  **Not built:** a worker-free way to re-plan after revoking a cited objective.
+- **Reword a confirmed objective in place.** A new gate decision verb, `reword`, changes the statement of an
+  accepted, renamed or added objective and keeps its id, so the lesson plan's citations survive (rename stays
+  terminal; a proposal, a revoked objective and an unknown id are refused with their own codes, and the same
+  statement is a no-op refusal). The teacher's text goes through the same one-line, 2,000-character, control-and-bidi
+  rule as add and rename, through the same `/decisions` route, and the host (never the client) supplies the
+  provenance. The plan **stays confirmed and publishable** (nothing is invalidated or re-confirmed for the teacher),
+  but because it was written from the old wording the course page marks "reworded since this plan was confirmed",
+  with the wording it was written from; a new draft or the teacher's own re-confirmation clears it. Sealed versions
+  never change: students and the handout keep reading the last sealed wording, publishing seals version N+1, and
+  the revision panel counts a reword as drafting version N+1 and lists it with before and after. It works with the AI
+  worker off, which is what makes revising usable without one. In the page: **Edit wording** on a confirmed row, shown
+  as "Reworded by you" with the original visible. Also: the invalidated-plan note no longer suggests that
+  re-confirming a plan as it reads would make it publishable.
 - **Version diff, non-AI and read-only.** With two or more published versions, the course page shows what changed
   between any two (default: the latest against the one before it): objectives added, removed or reworded
   (matched by id only, never by guessing from similar wording), plan activities added, removed or changed (title,

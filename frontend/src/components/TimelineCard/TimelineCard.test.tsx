@@ -106,4 +106,20 @@ describe("TimelineCard", () => {
       screen.getByText(/nothing recorded yet — decisions and seals will appear here\./i),
     ).toBeInTheDocument();
   });
+
+  it("a reword reads as a reword: the wording it replaced is 'was', not 'as proposed'", () => {
+    render(
+      <TimelineCard
+        events={[{
+          id: "dec-9", kind: "decision", verb: "reword", at: t(new Date("2026-10-11T08:00:00Z")), label: "Reworded",
+          detail: "Students can explain, with an example, what an algorithm is.", before: "Students can explain what an algorithm is.",
+          version: 2, turnRef: "urn:turn:12", decidedBy: "teacher:tk-1", channel: "silicus-ui",
+        }]}
+      />,
+    );
+    expect(screen.getByText("Reworded")).toBeInTheDocument();
+    expect(screen.getByText("was: “Students can explain what an algorithm is.”")).toBeInTheDocument();
+    expect(screen.queryByText(/as proposed/)).not.toBeInTheDocument();
+    expect(screen.getByText(/binds to version 2/)).toBeInTheDocument();
+  });
 });

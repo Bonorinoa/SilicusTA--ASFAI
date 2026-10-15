@@ -24,6 +24,7 @@ const VERB_TO_STATUS = {
   rename: "renamed",
   drop: "dropped",
   add: "added",
+  reword: "renamed",
 } as const;
 
 const TIME_FORMAT: Intl.DateTimeFormatOptions = {
@@ -81,7 +82,7 @@ function EventNode({ event }: { event: TimelineEvent }) {
         </p>
 
         {event.before ? (
-          <p className={styles.before}>as proposed: “{event.before}”</p>
+          <p className={styles.before}>{event.verb === "reword" ? "was" : "as proposed"}: “{event.before}”</p>
         ) : null}
         {event.detail && event.detail !== event.before ? (
           <p className={styles.detail}>{event.detail}</p>

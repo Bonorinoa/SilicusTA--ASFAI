@@ -475,6 +475,26 @@ check("revise: version 2 is sealed by a teacher turn, linked to version 1, and v
     && sealedV2.ledger.find((t) => t.id === sealedV2.versions[1].provenance.turnRef)?.role === "teacher");
 check("revise: the log still verifies and the UI now reports version 2", (await get(`/api/courses/${encodeURIComponent(course2)}/verify`)).json.ok === true
   && await poll(async () => await bodyHas(page, "Version 2 is published and unchanged.")));
+// ---- reword a CONFIRMED objective in place, in the browser: same id, the plan keeps citing it, v2 untouched ----
+const beforeReword = await getView(course2);
+const rewordTarget = beforeReword.proposals.find((r) => r.status === "accepted");
+await clickText(page, "Edit the wording of objective 1");
+await poll(() => page.evaluate(() => document.activeElement?.tagName === "TEXTAREA"));
+await page.keyboard.type(" with one example.");
+await page.keyboard.press("Enter");
+const reworded = await poll(async () => { const v = await getView(course2); return v.decisions.some((d) => d.verb === "reword") ? v : null; });
+const rwRow = reworded.proposals.find((r) => r.id === rewordTarget.id);
+check("reword: the UI sent a reword and the host kept the objective's id, kind and status",
+  rwRow.reworded === true && rwRow.status === "accepted" && rwRow.statement === `${rewordTarget.statement} with one example.` && rwRow.originalStatement === rewordTarget.originalStatement);
+check("reword: the plan is still confirmed and publishable, and the host says it was written from the old wording",
+  reworded.plan.status === "confirmed" && reworded.publish.canPublish === true && reworded.planWording.stale === true);
+check("reword: version 2 is byte-identical and the host reads the record as drafting version 3",
+  JSON.stringify(reworded.versions[1]) === JSON.stringify(sealedV2.versions[1]) && reworded.revision.drafting === true && reworded.revision.nextVersion === 3
+    && reworded.revision.changes.objectivesReworded.length === 1);
+await poll(async () => await bodyHas(page, "Reworded by you"));
+check("reword: the page says 'Reworded by you' with the original visible, and flags the plan without invalidating it",
+  (await bodyHas(page, "you reworded it; the objective id is unchanged")) && (await bodyHas(page, "reworded since this plan was confirmed")) && !(await bodyHas(page, "Why this plan is invalidated")));
+check("reword: the log still verifies", (await get(`/api/courses/${encodeURIComponent(course2)}/verify`)).json.ok === true);
 check("local: not one request reached ASFAI during the whole local story", MOCK.st.calls.length === asfaiRequestsBefore,
   `before=${asfaiRequestsBefore} after=${MOCK.st.calls.length}`);
 

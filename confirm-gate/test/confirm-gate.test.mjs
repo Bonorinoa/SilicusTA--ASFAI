@@ -88,7 +88,7 @@ function activity(objectiveIds) {
 test("checkpoint order is enforced: Files → Outline → Objectives → Plan → Publish", () => {
   const ctx = makeCtx();
   assert.deepEqual([...CHECKPOINTS], ["files", "outline", "objectives", "plan", "publish"]);
-  assert.deepEqual([...VERBS], ["accept", "rename", "drop", "add"]);
+  assert.deepEqual([...VERBS], ["accept", "rename", "drop", "add", "reword"]); // reword: see reword.test.mjs
 
   assert.throws(
     () => ctx.gate.proposeObjectives([{ kind: "local", statement: "Too early." }]),

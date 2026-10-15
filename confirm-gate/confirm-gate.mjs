@@ -3,7 +3,8 @@
  *
  * Proposals (objectives, then a lesson plan) only enter a published
  * CoursePackage through explicit teacher decisions — verbs `accept`, `rename`,
- * `drop`, `add` — each recorded with provenance that cites a real teacher turn
+ * `drop`, `add`, plus `reword` for an already confirmed objective (same id, new
+ * statement) — each recorded with provenance that cites a real teacher turn
  * in the shared {@link TurnLedger}. There is NO code path that sets
  * `confirmedByEducator` or publishes without such a decision record; AI
  * self-confirmation is structurally impossible because every mutating
@@ -91,11 +92,12 @@ import { TurnLedger } from "./host-guard.mjs";
  * @typedef {Object} DecisionRecord
  * @property {string} id
  * @property {string} key            Idempotency key.
- * @property {"accept"|"rename"|"drop"|"add"} verb
- * @property {string|null} proposalId
- * @property {string|null} targetId  Confirmed-set objective id (accept/rename/add).
- * @property {string} [statement]    Teacher-written statement (rename/add).
+ * @property {"accept"|"rename"|"drop"|"add"|"reword"} verb
+ * @property {string|null} proposalId  For `reword`: the confirmed objective's id.
+ * @property {string|null} targetId  Confirmed-set objective id (accept/rename/add/reword).
+ * @property {string} [statement]    Teacher-written statement (rename/add/reword: the AFTER).
  * @property {{proposalId: string, originalStatement: string|null, originalKind: string, publicId: string|null}} [renamedFrom]
+ * @property {{objectiveId: string, previousStatement: string|null, originalStatement: string|null, kind: string, publicId: string|null}} [rewordedFrom]  `reword` only: the BEFORE (immediate previous wording) and the original.
  * @property {ValidatedProvenance} provenance
  * @property {number} boundCourseVersion  CoursePackage version this decision binds to.
  */
@@ -134,7 +136,11 @@ import { TurnLedger } from "./host-guard.mjs";
 export const CHECKPOINTS = Object.freeze(["files", "outline", "objectives", "plan", "publish"]);
 
 /** Teacher decision verbs (checkpoint 3). */
-export const VERBS = Object.freeze(["accept", "rename", "drop", "add"]);
+/**
+ * `reword` is the only verb that acts on an already CONFIRMED objective: it changes the statement and keeps
+ * the id (so plan citations survive). `rename` stays terminal and applies to a proposal only.
+ */
+export const VERBS = Object.freeze(["accept", "rename", "drop", "add", "reword"]);
 
 /** Allowed public-alignment relationships. */
 export const RELATIONSHIPS = Object.freeze(["closeMatch", "relatedTo", "exactMatch"]);
@@ -293,8 +299,10 @@ export class ConfirmGate {
   #decisionsByKey = new Map();
   /** @type {DecisionRecord[]} */
   #decisions = [];
-  /** @type {Map<string, {record: LessonPlanRecord & {status: string}, confirmation: {provenance: ValidatedProvenance, decisionId: string}|null, invalidationReason: string|null}>} */
+  /** @type {Map<string, {record: LessonPlanRecord & {status: string}, confirmation: {provenance: ValidatedProvenance, decisionId: string}|null, invalidationReason: string|null, wordingMark: number}>} */
   #plans = new Map();
+  /** @type {{objectiveId: string, decisionId: string, before: string|null, after: string}[]} every reword, in order */
+  #rewords = [];
   #latestPlanId = null;
   /** @type {Map<string, {id: string, status: "pending"|"open"|"confirmed", provenance: ValidatedProvenance|null, note: string|null}>} */
   #checkpoints = new Map(CHECKPOINTS.map((id) => [id, { id, status: "pending", provenance: null, note: null }]));
@@ -579,6 +587,8 @@ export class ConfirmGate {
    *    original proposal; the proposal record itself is never mutated.
    *  - `drop`  — removed from (or kept out of) the confirmed set; any confirmed
    *    plan citing it is invalidated and publish re-blocks.
+   *  - `reword` — the ONE verb for an already CONFIRMED objective: a new teacher-written statement, same id and
+   *    kind, before/after on the decision. Plan citations survive (see {@link ConfirmGate#rewordedSincePlan}).
    *  - `add`   — mints a new LOCAL objective (`urn:uuid:...`, never `mt_*`)
    *    from a teacher-written statement; confirmed immediately (the teacher IS
    *    the decision).
@@ -586,7 +596,7 @@ export class ConfirmGate {
    * Idempotent: replaying the exact same call returns the original decision
    * records without re-applying. Conflicting re-decisions throw ALREADY_DECIDED.
    *
-   * @param {{provenance: TeacherProvenance, decisions: readonly {verb: "accept"|"rename"|"drop"|"add", proposalId?: string, statement?: string, alignment?: AlignmentRef}[]}} batch
+   * @param {{provenance: TeacherProvenance, decisions: readonly {verb: "accept"|"rename"|"drop"|"add"|"reword", proposalId?: string, statement?: string, alignment?: AlignmentRef}[]}} batch
    * @returns {readonly DecisionRecord[]}
    */
   confirmObjectives({ provenance, decisions }) {
@@ -622,6 +632,8 @@ export class ConfirmGate {
     if (!VERBS.includes(verb)) {
       throw new ConfirmGateError(`verb must be one of ${VERBS.join("|")}, got: ${String(verb)}`, "BAD_VERB");
     }
+
+    if (verb === "reword") return this.#applyReword(decision, prov);
 
     if (verb === "add") {
       const statement = requireText(decision.statement, "statement (verb: add)", "BAD_STATEMENT");
@@ -790,7 +802,118 @@ export class ConfirmGate {
   }
 
   /**
-   * @param {{key: string, verb: string, proposalId: string|null, targetId: string, statement?: string, renamedFrom?: object, provenance: ValidatedProvenance}} spec
+   * `reword`: the teacher's new wording for an objective that is ALREADY confirmed. The id and kind never
+   * change, so every plan citation stays valid; the decision records before/after and the teacher turn, and
+   * the original proposal record is never touched. Refusals (each its own code, nothing recorded):
+   *   UNKNOWN_OBJECTIVE   no such id (an mt_* id is never an objective id)
+   *   NOT_CONFIRMED       still a proposal: decide it first (accept / rename / drop)
+   *   OBJECTIVE_REVOKED   dropped: revoked objectives cannot be revived
+   *   BAD_STATEMENT       no new statement
+   *   STATEMENT_UNCHANGED the new statement is the current one (a no-op)
+   *
+   * @param {{proposalId?: string, statement?: string}} decision
+   * @param {ValidatedProvenance} prov
+   * @returns {DecisionRecord}
+   */
+  #applyReword(decision, prov) {
+    const id = typeof decision.proposalId === "string" ? decision.proposalId.trim() : "";
+    const entry = id ? this.#registry.get(id) : undefined;
+    if (!entry) {
+      throw new ConfirmGateError(`unknown objective: ${id || "(no id given)"}`, "UNKNOWN_OBJECTIVE");
+    }
+    const statement = requireText(decision.statement, "statement (verb: reword)", "BAD_STATEMENT");
+
+    // Idempotent replay of the LATEST reword of this objective in this turn. An older identical key (A→B→A in
+    // one turn) is a real change back and must apply, so it is not treated as a replay.
+    const key = `reword:${id}:${prov.turnRef}:${hashStatement(statement)}`;
+    const existing = this.#decisionsByKey.get(key);
+    if (existing && this.#rewords.findLast((r) => r.objectiveId === id)?.decisionId === existing.id) return existing;
+
+    if (entry.status === "proposed") {
+      throw new ConfirmGateError(
+        `objective ${id} is still a proposal — accept, rename or drop it first; reword changes a confirmed objective`,
+        "NOT_CONFIRMED",
+      );
+    }
+    const current = this.#confirmed.get(id);
+    if (entry.status === "dropped" || !current) {
+      throw new ConfirmGateError(`objective ${id} was revoked — a revoked objective cannot be reworded`, "OBJECTIVE_REVOKED");
+    }
+    if (prov.decidedAt < entry.record.proposedAt) {
+      throw new FabricatedConfirmationError(
+        "confirmation rejected: the decision predates the objective it decides",
+        "TIME_TRAVEL",
+      );
+    }
+    const previous = current.statement ?? null;
+    if (previous !== null && statement === previous) {
+      throw new ConfirmGateError("reword statement is identical to the current wording — nothing to change", "STATEMENT_UNCHANGED");
+    }
+    const originalStatement = entry.record.statement ?? null;
+    const decisionRecord = this.#recordDecision({
+      key,
+      verb: "reword",
+      proposalId: id,
+      targetId: id,
+      statement,
+      rewordedFrom: {
+        objectiveId: id,
+        previousStatement: previous,
+        originalStatement,
+        kind: current.kind,
+        publicId: current.publicId ?? null,
+      },
+      provenance: prov,
+    });
+    // Same id, same kind, new statement. The objective's own confirmation (decisionId/provenance: who accepted,
+    // renamed or added it) is kept; the reword's act lives on `rewordedFrom` and on the decision.
+    this.#confirmed.set(
+      id,
+      Object.freeze({
+        ...current,
+        statement,
+        rewordedFrom: Object.freeze({
+          decisionId: decisionRecord.id,
+          previousStatement: previous,
+          originalStatement,
+          provenance: prov,
+        }),
+      }),
+    );
+    entry.decisionIds.push(decisionRecord.id);
+    this.#rewords.push({ objectiveId: id, decisionId: decisionRecord.id, before: previous, after: statement });
+    this.#markDirty();
+    return decisionRecord;
+  }
+
+  /**
+   * THE honest rule for a plan whose cited objectives were reworded. The plan stays what it was (confirmed or a
+   * draft, publishable): the cited ids did not change, so nothing is invalidated and nothing is re-confirmed on
+   * the teacher's behalf. But the plan was drafted from the OLD wording, so this reports every cited objective
+   * reworded since the plan was last drafted or confirmed — `before` is the wording at that point, `after` the
+   * current one. A new draft or a teacher re-confirmation (made with this report in view) clears it; a later
+   * reword raises it again. An invalidated plan has its own re-confirmation story and reports nothing here.
+   *
+   * @param {string} [planId]  defaults to the current plan.
+   * @returns {readonly {objectiveId: string, before: string|null, after: string, decisionId: string}[]}
+   */
+  rewordedSincePlan(planId) {
+    const id = planId ?? this.#latestPlanId;
+    const entry = id ? this.#plans.get(id) : null;
+    if (!entry || entry.record.status === "invalidated") return Object.freeze([]);
+    const cited = new Set(entry.record.activities.flatMap((a) => a.objectiveIds));
+    /** @type {Map<string, {objectiveId: string, before: string|null, after: string, decisionId: string}>} */
+    const out = new Map();
+    for (const r of this.#rewords.slice(entry.wordingMark)) {
+      if (!cited.has(r.objectiveId)) continue;
+      const seen = out.get(r.objectiveId);
+      out.set(r.objectiveId, { objectiveId: r.objectiveId, before: seen ? seen.before : r.before, after: r.after, decisionId: r.decisionId });
+    }
+    return Object.freeze([...out.values()].filter((r) => r.before !== r.after).map((r) => Object.freeze(r)));
+  }
+
+  /**
+   * @param {{key: string, verb: string, proposalId: string|null, targetId: string, statement?: string, renamedFrom?: object, rewordedFrom?: object, provenance: ValidatedProvenance}} spec
    * @returns {DecisionRecord}
    */
   #recordDecision(spec) {
@@ -803,6 +926,7 @@ export class ConfirmGate {
       targetId: spec.targetId,
       statement: spec.statement,
       renamedFrom: spec.renamedFrom ? Object.freeze({ ...spec.renamedFrom }) : undefined,
+      rewordedFrom: spec.rewordedFrom ? Object.freeze({ ...spec.rewordedFrom }) : undefined,
       provenance: spec.provenance,
       boundCourseVersion: this.#nextVersion,
     });
@@ -888,7 +1012,7 @@ export class ConfirmGate {
       proposedBy: "ai",
       proposedAt: this.#clock(),
     };
-    this.#plans.set(id, { record, confirmation: null, invalidationReason: null });
+    this.#plans.set(id, { record, confirmation: null, invalidationReason: null, wordingMark: this.#rewords.length });
     this.#latestPlanId = id;
     // A new plan proposal supersedes any prior plan confirmation.
     if (this.#checkpoints.get("plan").status === "confirmed") {
@@ -923,6 +1047,7 @@ export class ConfirmGate {
     entry.record.status = "confirmed";
     entry.invalidationReason = null;
     entry.confirmation = { key, provenance: prov, decisionId: this.#idFactory(), boundCourseVersion: this.#nextVersion };
+    entry.wordingMark = this.#rewords.length; // a deliberate re-confirmation is made with any reword notice in view
     const cp = this.#checkpoints.get("plan");
     cp.status = "confirmed";
     cp.provenance = prov;

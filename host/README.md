@@ -69,7 +69,7 @@ cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
 | `GET /api/archives` | — | list archive refs |
 | `POST /api/courses/:id/checkpoints` | id (files\|outline), text, note? | checkpoints 1–2 |
 | `POST /api/courses/:id/objectives` | items, sources?, assistantText? | AI proposes; nothing is confirmed |
-| `POST /api/courses/:id/decisions` | decisions, text | checkpoints 3 (teacher); also how a published course is revised |
+| `POST /api/courses/:id/decisions` | decisions, text | checkpoints 3 (teacher); also how a published course is revised (add, revoke, reword) |
 | `POST /api/courses/:id/plan` | spec, assistantText? | AI drafts |
 | `POST /api/courses/:id/plan/confirm` | text, planId? | checkpoint 4 (teacher) |
 | `POST /api/courses/:id/publish` | text, note? | checkpoint 5 (teacher) |
@@ -193,22 +193,57 @@ What the audit found, with the worker off or on:
 | `add` an objective | allowed; the plan does not cite it yet; version 2 can seal |
 | `drop` an objective | allowed; if the plan cites it, the plan is invalidated and publish is blocked |
 | `rename` / `accept` a confirmed objective | refused, `ALREADY_DECIDED` (a content decision is terminal) |
+| `reword` a confirmed objective | allowed: same id and kind, new statement; the plan keeps its citations; version 2 can seal with no worker (see below) |
 | `POST /plan` (re-draft) | needs the worker (`501 WORKER_NOT_CONFIGURED` without it) |
 | `publish` with nothing changed | returns version N unchanged, seals nothing |
 
 `view.revision` is a read of the record (writes nothing, takes nothing from a client):
-`{sealedVersion, nextVersion, drafting, changes: {objectivesAdded, objectivesRemoved, plan: same|replaced|unconfirmed,
-planStatus}, notInPlan}`. `drafting` is true only when the record differs from the sealed version. Rows also
-carry `citedByPlan`. Students (`/student/ask`) and the handout read `latestSealedVersion()`, never the draft.
+`{sealedVersion, nextVersion, drafting, changes: {objectivesAdded, objectivesRemoved, objectivesReworded:
+[{id, before, after}], plan: same|replaced|unconfirmed, planStatus}, notInPlan}`. `drafting` is true only when the
+record differs from the sealed version (a reword and a reword back is not a difference). Rows also carry
+`citedByPlan` and `reworded`. Students (`/student/ask`) and the handout read `latestSealedVersion()`, never the draft.
 
-Statements typed for `add` and `rename` are untrusted: `proposer.teacherStatement` applies the same rule as
+### Rewording a confirmed objective: the `reword` verb
+
+`{verb: "reword", proposalId: <the objective's id>, statement}` through the same `POST .../decisions` (no new route,
+and the client sends only those three things plus the teacher's text: provenance, ids, `kind`, `alignment` and any
+`mt_*` key are not read, and a reword's extra keys are not even written to the log). The gate keeps the objective's
+id and kind, takes the statement, and records the decision with `rewordedFrom: {previousStatement, originalStatement}`
+(the before, and the proposal's own wording) and the host-minted teacher provenance, as every decision does.
+
+| Refusal | Code | Status |
+|---|---|---|
+| unknown id, an `mt_*` id, another course's id, no id | `UNKNOWN_OBJECTIVE` | 409 |
+| still a proposal (decide it first) | `NOT_CONFIRMED` | 409 |
+| dropped / revoked | `OBJECTIVE_REVOKED` | 409 |
+| same statement as now (after trimming) | `STATEMENT_UNCHANGED` | 409 |
+| empty, not text / more than one line / over 2,000 characters | `BAD_STATEMENT` / `STATEMENT_NOT_ONE_LINE` / `STATEMENT_TOO_LONG` | 422 |
+
+The statement goes through `proposer.teacherStatement`, the one rule `add` and `rename` use, before anything is
+recorded. A refused reword writes nothing, and a batch is all or nothing.
+
+**What a reword does to the lesson plan** (the rule, and why). The plan stays what it was: confirmed, and publishable.
+Its cited ids did not change, so nothing is invalidated and nothing is re-confirmed on the teacher's behalf. But the
+plan was written from the OLD wording, so the host does not pretend it is current: `view.planWording` is
+`{stale, objectives: [{id, before, after}]}`, the cited objectives reworded since the plan was last drafted or
+confirmed (`ConfirmGate.rewordedSincePlan()`; `before` is the wording the plan was written from). The UI shows it on the
+plan and in the revision panel. It is cleared only by the teacher: a new draft (built from the current wording) or a
+`POST /plan/confirm` made after the reword, with the notice in view. A later reword raises it again. A plan that is
+already invalidated reports nothing here (it has its own re-confirmation story). It never blocks publishing: a teacher
+with no worker can still seal the next version with the plan as it reads.
+
+A sealed version never changes: students and the handout keep reading the last sealed wording, and publishing after a
+reword seals version N+1 (`previousVersion` N) with the new statement and `rewordedFrom` on the reworded objective.
+
+Statements typed for `add`, `rename` and `reword` are untrusted: `proposer.teacherStatement` applies the same rule as
 `outcomeSentences` (control and bidi characters blanked) to ONE sentence, refuses a line break
 (`STATEMENT_NOT_ONE_LINE`), empty text (`BAD_STATEMENT`) and more than 2,000 characters
 (`STATEMENT_TOO_LONG`, the intake bound), all `422`, with nothing recorded.
 
-Known gaps: a confirmed objective cannot be reworded in place (that needs a gate verb); revoking a
-cited objective with no worker leaves the course unable to seal the next version until one is configured;
-over the 1 MiB body cap the connection is cut before the `413` is sent.
+Known gaps: revoking a cited objective with no worker leaves the course unable to seal the next version until one is
+configured (a reword does not: that is what `reword` is for); over the 1 MiB body cap the connection is cut before
+the `413` is sent; `add` and `rename` still write a client's extra decision keys into the log verbatim (inert, the gate
+ignores them; only `reword` is reduced to its three fields).
 
 ## Archive (Sprint 2a)
 

@@ -395,6 +395,13 @@ export function LiveCourse() {
             Re-confirm the lesson plan
           </button>
         ) : null}
+        {/* A reword keeps the plan valid but leaves its text older than the wording: reading it again and
+            confirming is the teacher's own act, never automatic. */}
+        {plan && plan.status === "confirmed" && view.planWording?.stale ? (
+          <button type="button" className={styles.ghostButton} onClick={confirmPlan} disabled={busy}>
+            Confirm the plan as it reads
+          </button>
+        ) : null}
         {/* An invalidated plan cites a revoked objective, and a revoked objective cannot come back: the way
             forward is a new plan. (Once a version is sealed the revision panel carries this button instead.) */}
         {plan && plan.status === "invalidated" && !published && worker?.configured !== false ? (
@@ -447,6 +454,7 @@ export function LiveCourse() {
         <RevisionPanel
           revision={view.revision}
           workerConfigured={worker?.configured !== false}
+          planReworded={view.planWording?.objectives ?? []}
           busy={busy}
           onDraftPlan={draftPlan}
         />
@@ -471,6 +479,7 @@ export function LiveCourse() {
             teacher={{ name: view.course.owner, confirmedAt: cp.plan?.status === "confirmed" ? new Date() : undefined }}
             onPrint={() => window.print()}
             invalidation={view.invalidation}
+            rewordedSince={view.planWording?.objectives}
           />
         </div>
       ) : null}

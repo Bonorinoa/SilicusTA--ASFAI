@@ -16,11 +16,13 @@ export interface RevisionPanelProps {
   revision: RevisionView;
   /** Can the drafting worker write a new plan on this host? */
   workerConfigured: boolean;
+  /** Cited objectives reworded since the plan was drafted or confirmed (host-derived; empty when none). */
+  planReworded?: readonly { id: string; before: string | null; after: string }[];
   busy: boolean;
   onDraftPlan: () => void;
 }
 
-export function RevisionPanel({ revision, workerConfigured, busy, onDraftPlan }: RevisionPanelProps) {
+export function RevisionPanel({ revision, workerConfigured, planReworded = [], busy, onDraftPlan }: RevisionPanelProps) {
   const sealed = revision.sealedVersion;
   const [choice, setChoice] = useState<boolean | null>(null);
   const [focusAfter, setFocusAfter] = useState<"tools" | "open" | null>(null);
@@ -41,6 +43,9 @@ export function RevisionPanel({ revision, workerConfigured, busy, onDraftPlan }:
   const changes = revision.changes;
   const planInvalidated = changes?.planStatus === "invalidated";
   const needsPlan = planInvalidated || revision.notInPlan.length > 0;
+  // A reword keeps the plan valid, so it is never "needed": a re-draft is the teacher's option, not a requirement.
+  const planOlderThanWording = !planInvalidated && planReworded.length > 0;
+  const reworded = changes?.objectivesReworded ?? [];
   const nothingChanged = !revision.drafting;
 
   const planLine =
@@ -87,6 +92,7 @@ export function RevisionPanel({ revision, workerConfigured, busy, onDraftPlan }:
             <ul className={styles.changes} aria-label={`Changes since version ${sealed}`}>
               {changes?.objectivesAdded.map((o) => <li key={`a${o.id}`}>Added: “{o.statement}”</li>)}
               {changes?.objectivesRemoved.map((o) => <li key={`r${o.id}`}>Revoked: “{o.statement}”</li>)}
+              {reworded.map((o) => <li key={`w${o.id}`}>Reworded: “{o.before}” became “{o.after}”</li>)}
               {planLine ? <li>{planLine}</li> : null}
               {revision.notInPlan.map((o) => <li key={`n${o.id}`}>Not in the lesson plan yet: “{o.statement}”</li>)}
             </ul>
@@ -106,15 +112,30 @@ export function RevisionPanel({ revision, workerConfigured, busy, onDraftPlan }:
                 {planInvalidated ? " Until one is, version " + next + " cannot be published." : null}
               </p>
             )
+          ) : planOlderThanWording ? (
+            workerConfigured ? (
+              <div className={styles.row}>
+                <button type="button" className={styles.actionButton} onClick={onDraftPlan} disabled={busy}>
+                  Draft a new lesson plan from your confirmed objectives
+                </button>
+                <span className={styles.hint}>Optional. The AI drafts; you still read and confirm the plan yourself.</span>
+              </div>
+            ) : (
+              <p className={styles.line}>
+                The lesson plan was written from the earlier wording of {planReworded.length === 1 ? "an objective" : "objectives"} you reworded. It is still valid
+                and version {next} can be published with it as it reads; no drafting worker is configured, so it cannot be re-drafted here.
+              </p>
+            )
           ) : null}
 
           <ol className={styles.steps}>
-            <li>Change the objectives below: add one of your own, or revoke one. A revoked objective cannot be restored.</li>
-            <li>If the objectives changed, draft a new lesson plan and confirm it.</li>
+            <li>Change the objectives below: add one of your own, edit the wording of a confirmed one, or revoke one. A revoked objective cannot be restored.</li>
+            <li>If you added or revoked objectives, draft a new lesson plan and confirm it. Rewording one keeps the plan valid.</li>
             <li>Review and publish version {next} at the end of the page. Version {sealed} stays exactly as published.</li>
           </ol>
           <p className={styles.hint}>
-            A confirmed objective&rsquo;s wording cannot be edited in place yet. To change it, revoke it and add the new wording as your own objective.
+            Editing a confirmed objective&rsquo;s wording keeps its id, so the lesson plan still cites it and version {sealed} is not touched.
+            The plan was written from the old wording: you will be told, and you choose whether to re-draft it.
           </p>
 
           <button

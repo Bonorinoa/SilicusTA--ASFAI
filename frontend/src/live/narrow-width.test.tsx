@@ -78,7 +78,7 @@ describe("narrow widths — the stylesheet contract", () => {
 
   it("no control sets its own minimum width, so nothing pushes past the viewport", () => {
     const pairs: [string, string, string[]][] = [
-      ["OnboardingChat", intake, [".box", ".send", ".quiet", ".fileInput"]],
+      ["OnboardingChat", intake, [".box", ".send", ".quiet"]],
       ["LiveCourse", live, [".primaryButton"]],
       ["CourseLibrary", library, [".open"]],
     ];
@@ -87,9 +87,19 @@ describe("narrow widths — the stylesheet contract", () => {
         expect(rule(css, selector), `${name} ${selector}`).toMatch(/max-width:\s*100%/);
       }
     }
-    // A text field and the file chooser both take the column's width instead of their default.
+    // A text field takes the column's width instead of its own ~20-character default.
     expect(rule(intake, ".box")).toMatch(/width:\s*100%/);
-    expect(narrowBlock(intake)).toMatch(/\.fileInput\s*\{[^}]*width:\s*100%/);
+  });
+
+  it("the file chooser is a house-styled button, so no width can truncate its status text", () => {
+    // Chrome renders the native control's "No file chosen" and truncates it to "N...n" in a narrow
+    // column. The browser's own control is out of the layout and driven by a quiet label, the way
+    // the record band's Import is.
+    expect(rule(intake, ".fileHidden")).toMatch(/position:\s*absolute/);
+    expect(rule(intake, ".fileHidden")).toMatch(/width:\s*1px/);
+    expect(intake).toMatch(/\.fileHidden:focus-visible\s*\+\s*\.quiet/);
+    // A label used as a button must be a box for its 44px minimum to mean anything.
+    expect(rule(intake, ".quiet")).toMatch(/display:\s*inline-flex/);
   });
 
   it("a card that can sit in a row of buttons is allowed to shrink", () => {
@@ -129,6 +139,14 @@ describe("narrow widths — the honesty copy is untouched", () => {
   it("without zero retention the panel says the plain truth, not the claim", () => {
     render(<MaterialsPanel busy={false} zdr={null} onPropose={() => {}} />);
     expect(pageText()).toContain("under that provider's normal data-retention terms (not zero-retention), so use public material or material you may share");
+  });
+
+  it("the material panel's file chooser is still a labelled, reachable control", () => {
+    render(<MaterialsPanel busy={false} zdr onPropose={() => {}} />);
+    const chooser = screen.getByLabelText("A text file");
+    expect(chooser).toBe(document.querySelector('input[type="file"]'));
+    // The quiet label that drives it is on the page and names the act.
+    expect(screen.getByText("Choose a file")).toBeInTheDocument();
   });
 
   it("the student chat still says an answer is not evidence of learning", () => {

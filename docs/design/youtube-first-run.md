@@ -94,7 +94,7 @@ the prompt, `host/worker.mjs:353–366`). That is the honesty line of this whole
 > The video answers *what could learners do*. The teacher answers *what should this lesson be.*
 
 The intake never lets the material answer a question about the teacher. This is the existing rule, made
-explicit: the host never fills topic / course / outcomes itself (`host/intake.mjs:106–114`).
+explicit: the host never fills topic / course / outcomes itself (`host/intake.mjs:102–105`).
 
 ### 1.4 The one new question: scope
 
@@ -181,7 +181,7 @@ keeps one sealed package per lesson, honestly labelled as such.
 | | |
 |---|---|
 | **Label change (copy only)** | Call a per-video course record "a lesson" in the UI's words. The library groups records by the course answer with a heading like "Physics 101 · 3 lessons". The student side stays N sealed packages with N links — **"a course of lessons" for a student is a page of links, and the copy says so**. |
-| **Small build** | (1) The read step and its row (§4.2). (2) The scope question and the caption clip (§1.4, §7). (3) A recorded teacher turn for the scope (§2.4). (4) "Start the next lesson in this course": a quiet button that pre-fills the three opening questions and the course intake answer from the teacher's own last run in that course — **as text in the boxes, never as recorded answers**; the Record click is what records, so the host still never fills an answer itself (`host/intake.mjs:106–114`). (5) The library grouping heading (the library exists — `docs/ROADMAP.md:56–61`). |
+| **Small build** | (1) The read step and its row (§4.2). (2) The scope question and the caption clip (§1.4, §7). (3) A recorded teacher turn for the scope (§2.4). (4) "Start the next lesson in this course": a quiet button that pre-fills the three opening questions and the course intake answer from the teacher's own last run in that course — **as text in the boxes, never as recorded answers**; the Record click is what records, so the host still never fills an answer itself (`host/intake.mjs:102–105`). (5) The library grouping heading (the library exists — `docs/ROADMAP.md:56–61`). |
 | **Not built (stated, not faked)** | One video → N lessons. Playlists as intake — a playlist link is read as one video today (`youtubeVideoId` takes the `v` parameter, `host/materials-core.mjs:90`, and the rest of the playlist is ignored). Auto-sequencing. A course-level student view (one package over many lessons). |
 
 ### 2.4 Where the scope turn is recorded
@@ -218,7 +218,7 @@ the read-result row, the scope question if the video is long, and the same propo
 ### 3.2 Online app: the refusal, and the paste path that actually works
 
 The live refusal (every word kept — these strings are asserted in tests, `browserHost.test.ts:359–361`
-and `BrowserMode.test.tsx:78`):
+and `BrowserMode.test.tsx:79, 82`):
 
 > *YouTube captions can only be read by the local Silicus app. Paste the transcript as text instead.*
 > (the note on add, `MaterialsPanel.tsx:57`; the field hint, `MaterialsPanel.tsx:99`; the API's own
@@ -341,7 +341,7 @@ screen says it. The read step makes it visible *before* the propose:
 > once. Choose just part of the video above, or the first part will be used.
 
 (the caps, `host/materials-core.mjs:26–27`). And the receipt gains the missing clause — today it says
-only "Drawn from 1 material (60,000 characters read)" (`model.ts:171`); proposed:
+only "Drawn from 1 material (60,000 characters read)" (`model.ts:172`); proposed:
 
 > Drawn from 1 material (22,000 of 118,000 characters read — the part you chose, 0:00 to 18:30).
 
@@ -350,7 +350,7 @@ the receipt never claims a total it does not have.
 
 ### 4.5 More than one video
 
-Up to 8 materials is today's limit (`host/materials-core.mjs:25`; `MaterialsPanel.tsx:15, 45`). Two
+Up to 8 materials is today's limit (`host/materials-core.mjs:26`; `MaterialsPanel.tsx:15, 45`). Two
 videos in one request make **one lesson that draws on both** — honestly, because the plan cites both
 material names (`model.ts:94`; the worker's `from` names, `host/worker.mjs:359–360`). One line, said
 once, early — at the top of the panel for a two-video list:
@@ -497,6 +497,8 @@ fallback states.
 10. **(live prompt, new first line)** "Give me the material and I will propose the objectives."
     (`MaterialsPanel.tsx:73`) + **(new)** "Bringing a video? Paste its link. Silicus reads the captions
     on this machine and proposes the objectives; you confirm every one." (§4.1).
+    The online host gets the other variant of that same line: **(new)** "Bringing a video? This site
+    cannot read YouTube captions; paste the transcript instead." (§4.1).
 11. **(new)** read-card eyebrow: "Reading your link · nothing is sent to the model yet".
 12. **(new)** read-card title / done title: "Reading the captions of your link" / "Read the captions of
     your link".
@@ -505,6 +507,8 @@ fallback states.
 14. **(live)** the "taking longer than usual" line — `AiWaiting.tsx:159–163`, reused unchanged.
 15. **(new)** read-card disclosure, in place of the sent-items list: "Nothing. This step only reads your
     link. The captions are read again when you propose, and only the part this lesson covers goes on."
+    The waiting card's link line, reworded for a video: **(new)** "The captions are read first, then
+    handed to the model as text." (`model.ts:116`, §4.2).
 16. **(new)** read-card receipt: "Read about 40,000 characters of captions (about 47 minutes). Nothing
     has been sent to the model yet."
 17. **(new)** read-result row: "About 47 minutes · captions found (English) · about 40,000 characters";
@@ -519,7 +523,7 @@ fallback states.
     `OnboardingChat.tsx:208–209`).
 23. **(live)** "Propose objectives from my materials" — `MaterialsPanel.tsx:118`. Unchanged.
 24. **(new)** propose-receipt clause, only when clipped: "Drawn from 1 material (22,000 of 118,000
-    characters read — the part you chose, 0:00 to 18:30)." — extends `model.ts:171`.
+    characters read — the part you chose, 0:00 to 18:30)." — extends `model.ts:172`.
 25. **(live)** the rest of the run: objective decisions, "Confirm the objectives", "Draft the plan from
     your confirmed objectives", "Confirm the lesson plan", publish, "Try it as a student". Unchanged.
 
@@ -574,7 +578,7 @@ fallback states.
 5. **The receipt strings** — the read-step receipt and the truncation clause (`model.ts:161–175`), and
    the one-word fix to the link line (`model.ts:116`: "the captions are read first" for a video link).
 6. **The online copy** (§3.2) and the paste placeholder. Note: the live refusal strings are asserted in
-   tests (`browserHost.test.ts:359–361`, `BrowserMode.test.tsx:78`); any changed string needs its
+   tests (`browserHost.test.ts:359–361`, `BrowserMode.test.tsx:79, 82`); any changed string needs its
    assertion updated in the same change — this spec changes no assertion.
 7. **"Start the next lesson in this course"** — the empty-state button that pre-fills the teacher's own
    previous answers as editable text (§2.3), and the library grouping heading.
@@ -601,7 +605,8 @@ fallback states.
   run, so this design never needs it.
 - Non-English captions (`host/materials.mjs:209` picks the English track).
 - The hosting decision (`docs/ROADMAP.md:164–176`) — the online/local split is respected, not solved.
-- PDF and OCR (`docs/ROADMAP.md:179–180`).
+- PDF extraction (`docs/ROADMAP.md:180`) and OCR — deferred with file intake, its own sprint
+  (`.hermes/plans/2026-10-12_011537-sprint-6-general-worker.md:384–386`).
 
 ---
 
@@ -617,7 +622,7 @@ fallback states.
 - No new string claims a number the read step did not read: duration from the page, characters counted
   from the captions actually fetched (§1.5).
 - The pre-fill never records an answer: the boxes hold the teacher's own words; only the Record click
-  posts them (§2.3; the host's rule, `host/intake.mjs:106–114`).
+  posts them (§2.3; the host's rule, `host/intake.mjs:102–105`).
 - Any gate change arrives with a failing test first (`docs/ROADMAP.md:191`).
 - AA contrast for every text pair the read card and the scope block set (the house rule,
   `waiting-experience.md:146–147`).

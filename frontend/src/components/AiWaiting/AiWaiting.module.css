@@ -110,7 +110,8 @@ ol.items li::before { content: counter(n) "."; position: absolute; right: 100%; 
 /* Below the shell's narrow breakpoint the greeked lines of type are wider than the card
    (measured: content 283px vs a 189px box at 320, 249px at 380) and would be cut off at
    its edge. They are aria-hidden decoration carrying no information, so below 40rem they
-   rest instead of clipping — the wording and the clock carry the state, not the ink. */
+   are removed (display: none) rather than clipped — the wording and the clock carry the
+   state, not the ink. */
 @media (max-width: 40rem) {
   .ink { display: none; }
 }

@@ -73,9 +73,10 @@ product owner's report was about the surfaces a course opens up.*
 ## What changed
 
 One breakpoint throughout the shell's sheets — `40rem`, the project's own — across `Workbench.module.css`
-(the shell), `LiveCourse.module.css` (stage header, pins, hero), `OnboardingChat.module.css` (the shared
-intake sheet used by the onboarding card, the material panel and the student chat) and
-`CourseLibrary.module.css`. (The cards round that merged on top of this one switches its own sheets at
+(the shell), `LiveCourse.module.css` (stage header, pins, hero) and `OnboardingChat.module.css` (the shared
+intake sheet used by the onboarding card, the material panel and the student chat). `CourseLibrary.module.css`
+needs no breakpoint: its only change is an all-width `max-width: 100%` on its two buttons and `min-width: 0` on
+the row's text column. (The cards round that merged on top of this one switches its own sheets at
 `34rem`; see the note under the table.)
 
 **The masthead keeps its promise.** The `display: none` is gone; the masthead wraps, and below 40rem the
@@ -128,8 +129,9 @@ measure inside the card and a ~224px column on the page instead of spending 60% 
 
 On the merged branch the page never scrolls sideways, at any width, and the shell's own surfaces report zero
 overflowing elements everywhere. What `narrow-shell.mjs` still marks `(not mine)` is the cards' sheets at
-**320px only** — TimelineCard's and DecisionCard's inner rows (14 elements on the full-course and record-band
-views, which share the same card stack) whose own box is narrower than the content it holds. That is the
+**320px only** — TimelineCard's and DecisionCard's inner rows — 34 elements in all on this branch, matching the harness's
+`NOTE: 34`: 14 each on the full-course and record-band views (which share the same card stack), 4 on the
+materials panel and 2 on the intake question — whose own box is narrower than the content it holds. That is the
 harness's broadest predicate: any element whose `scrollWidth` exceeds its `clientWidth`, whether or not it
 hides the overflow. The smoke's stricter predicate — content hidden by `overflow`, or a clipped control
 label — reports zero there, and the page never gains a sideways scroll. At 380px and up the cards are clean

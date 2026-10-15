@@ -193,11 +193,12 @@ const clickText = (text) => page.evaluate((t) => {
   return true;
 }, text);
 /** Click, then wait for the consequence; re-click if React replaced the node between find and click (a real flake). */
-async function clickAndWait(text, predicate, attempts = 3) {
+async function clickAndWait(text, predicate, attempts = 3, perAttemptMs = 6000) {
   let last = null;
   for (let i = 0; i < attempts; i++) {
     try { await clickText(text); } catch (e) { last = e; }
-    try { return await poll(predicate); } catch (e) { last = e; await sleep(400); }
+    // Per-attempt budget, so a genuinely dead control fails in ~18 s, not 3 x the 20 s poll default.
+    try { return await poll(predicate, perAttemptMs); } catch (e) { last = e; await sleep(400); }
   }
   throw last ?? new Error(`clickAndWait failed: ${text}`);
 }
@@ -325,6 +326,8 @@ async function story(label, narrow) {
   if (narrow) await checkNarrow("passcode pause, waiting card held");
   await page.type('[role="dialog"] input[type="password"]', PASSCODE);
   await clickText("Continue");
+  // No race: the card is already running before Continue (it held its clock through the passcode pause, asserted
+  // above), and the mocked proposal takes PROPOSE_MS more after the click.
   await page.waitForSelector('section[data-phase="running"]', { timeout: 5000 });
   if (narrow) await checkNarrow("waiting card, proposing objectives");
   await poll(async () => kinds(await stored()).includes("objectives.proposed"), 15000);

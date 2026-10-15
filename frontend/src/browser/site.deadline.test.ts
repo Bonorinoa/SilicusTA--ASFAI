@@ -79,4 +79,24 @@ describe("the site's deadline starts when the request leaves, not when the teach
     expect((err as Error).message).not.toMatch(/signal/i);
     expect(seen.filter((s) => s.url.endsWith("/api/fetch"))[0].signalAborted).toBe(false);
   });
+
+  it("a status check that hangs is bounded too, and the AI step still ends with a plain message (verifier finding)", async () => {
+    let statusSignal: AbortSignal | undefined;
+    const hangingStatus = (async (input: string | URL, init: RequestInit = {}) => {
+      const url = String(input);
+      const signal = init.signal ?? undefined;
+      if (url.endsWith("/api/worker/status")) statusSignal = signal;
+      return await new Promise<Response>((_, reject) => {
+        signal?.addEventListener("abort", () => reject(new DOMException("signal timed out", "TimeoutError")), { once: true });
+      });
+    }) as typeof fetch;
+    const keeper = slowTeacher(0); keeper.set("right-passcode");
+    const site = createSite({ origin: ORIGIN, fetchImpl: hangingStatus, passcode: keeper, requestTimeoutMs: 60, statusTimeoutMs: 40 });
+    expect(await site.status()).toMatchObject({ configured: false });
+    expect(statusSignal).toBeDefined();
+    const err = await site.workerFetch(`${ORIGIN}/api/worker`, { method: "POST", body: "{}" }).then(() => null, (e) => e);
+    expect(err).toBeInstanceOf(WorkerError);
+    expect((err as Error).message).not.toMatch(/signal/i);
+  });
 });
+

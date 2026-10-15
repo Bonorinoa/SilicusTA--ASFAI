@@ -38,6 +38,8 @@ export const MESSAGES = {
 
 /** The site's own deadline for one network attempt (the model proxy itself gives up upstream at 55 s). */
 export const REQUEST_TIMEOUT_MS = 60_000;
+/** The status check is tiny; if it does not answer quickly the site is treated as not set up (and asked again next time). */
+export const STATUS_TIMEOUT_MS = 10_000;
 
 /** The request left the page and did not come back in time. */
 class SiteTimeout extends Error {}
@@ -68,13 +70,15 @@ export interface Site {
   resolveUrl(url: string): Promise<{ text: string; title: string; kind: string }>;
 }
 
-export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQUEST_TIMEOUT_MS }: { origin: string; fetchImpl: typeof fetch; passcode: PasscodeKeeper; requestTimeoutMs?: number }): Site {
+export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQUEST_TIMEOUT_MS, statusTimeoutMs = STATUS_TIMEOUT_MS }: { origin: string; fetchImpl: typeof fetch; passcode: PasscodeKeeper; requestTimeoutMs?: number; statusTimeoutMs?: number }): Site {
   let known: SiteStatus | null = null;
 
   async function status(): Promise<SiteStatus> {
     if (known) return known;
     try {
-      const res = await fetchImpl(`${origin}/api/worker/status`, { method: "GET" });
+      // Bounded like every other request (verifier finding): a hung status check must not hang the AI step behind it.
+      // The signal also covers reading the body below.
+      const res = await fetchImpl(`${origin}/api/worker/status`, { method: "GET", signal: AbortSignal.timeout(statusTimeoutMs) });
       if (!res.ok) return { ...NOT_SET_UP };
       const j = (await res.json()) as Partial<SiteStatus>;
       known = {

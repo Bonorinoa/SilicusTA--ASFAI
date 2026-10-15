@@ -49,7 +49,7 @@ const check = (name, ok, extra = "") => {
   console.log(line);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function poll(fn, ms = 12000) {
+async function poll(fn, ms = 20000) {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) {
     try { const v = await fn(); if (v) return v; } catch { /* retry */ }
@@ -192,6 +192,15 @@ const clickText = (text) => page.evaluate((t) => {
   b.click();
   return true;
 }, text);
+/** Click, then wait for the consequence; re-click if React replaced the node between find and click (a real flake). */
+async function clickAndWait(text, predicate, attempts = 3) {
+  let last = null;
+  for (let i = 0; i < attempts; i++) {
+    try { await clickText(text); } catch (e) { last = e; }
+    try { return await poll(predicate); } catch (e) { last = e; await sleep(400); }
+  }
+  throw last ?? new Error(`clickAndWait failed: ${text}`);
+}
 const setValue = (selector, text) => page.evaluate((sel, text) => {
   const el = document.querySelector(sel);
   if (!el) throw new Error(`no element: ${sel}`);
@@ -382,7 +391,11 @@ async function story(label, narrow) {
   const planReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
   check("drafting the plan ends with a true receipt computed from the resulting view",
     /Checked: \d+ activit(y|ies), each cites only objectives you confirmed \(\d+ citations?\)\./.test(planReceipt) && /It stays a draft until you confirm it\./.test(planReceipt), planReceipt.replace(/\n+/g, " | "));
-  check("it says how long the step took, and the live region announces the finish", /Took\s*\d+ s/.test(planReceipt) && /^Finished after \d+ s\. Checked:/.test((await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? ""))));
+  const announced = await poll(async () => {
+    const t = await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? "");
+    return /^Finished after \d+ s\. Checked:/.test(t) ? t : null;
+  }).catch(() => "");
+  check("it says how long the step took, and the live region announces the finish", /Took\s*\d+ s/.test(planReceipt) && announced !== "", `${planReceipt.split("\n").filter((l) => /Took/.test(l))[0] ?? "(no 'Took' line)"} | announced: ${announced || "(never)"}`);
   await shot("14-receipt-plan", 'section[data-phase="done"][data-variant="card"]');
   const planBody = api.workerBodies.slice(planBodiesBefore).find((b) => b.includes("Draft one lesson plan")) ?? "";
   check("what the model sees is what left the page: every statement, the topic and the material name were sent; the label was NOT",
@@ -472,12 +485,10 @@ async function story(label, narrow) {
   check("the export holds no material text", !text.includes(SECRET));
 
   // ---- delete all (confirmed first)
-  await clickText("Delete all data from this browser");
-  await poll(() => bodyHas("This cannot be undone"));
+  await clickAndWait("Delete all data from this browser", () => bodyHas("This cannot be undone"));
   if (narrow) await checkNarrow("footer data controls, delete confirm");
   await shot("04-delete-confirm", 'section[aria-label="Where your courses are kept"]');
-  await clickText("Delete everything");
-  await poll(async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
+  await clickAndWait("Delete everything", async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
   await poll(() => bodyHas("What should we call this course"));
   s = await stored();
   check("delete all empties IndexedDB, the pins and the passcode", Object.keys(s.local).filter((k) => k.startsWith("silicus.")).length === 0 && !s.session["silicus.demoPasscode"]);

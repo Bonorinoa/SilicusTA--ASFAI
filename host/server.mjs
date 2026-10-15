@@ -98,6 +98,8 @@ export function workerFromEnv(env) {
     // The OpenRouter preset is zero-data-retention unless explicitly switched off (SILICUS_WORKER_ZDR=0).
     // Every other setup is opt-in, so nothing claims a guarantee it was not asked for.
     zdr: openrouter ? env.SILICUS_WORKER_ZDR !== "0" : env.SILICUS_WORKER_ZDR === "1",
+    // The operator hint lives here, in the Node host, not in the worker module the browser bundle shares.
+    configHint: "set SILICUS_WORKER_URL and SILICUS_WORKER_MODEL, or SILICUS_WORKER_PROVIDER=openrouter",
   });
 }
 

@@ -100,6 +100,15 @@ if (!exe) throw new Error("no system chrome found");
 const browser = await puppeteer.launch({ executablePath: exe, headless: "new", args: ["--no-sandbox"] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
+// No server configuration in the public bundle (verifier finding MED-1): no env-variable or key names, nothing key-shaped.
+{
+  const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);
+  const text = walk(OUT).filter((f) => /\.(js|html|css|map)$/.test(f)).map((f) => readFileSync(f, "utf8")).join("\n");
+  const names = [...new Set(text.match(/\b(SILICUS_[A-Z_]+|OPENROUTER_API_KEY|ANTHROPIC_API_KEY)\b/g) ?? [])];
+  check("the built bundle names no server env variable or key", names.length === 0, names.join(", "));
+  check("the built bundle holds nothing key-shaped", !/sk-(or-)?(v1-)?[A-Za-z0-9]{20,}/.test(text));
+}
+
 const DOWNLOADS = mkdtempSync(join(tmpdir(), "silicus-downloads-"));
 const cdp = await page.createCDPSession();
 await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS });

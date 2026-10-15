@@ -325,7 +325,8 @@ export async function ytdlpTranscript(id, { cmd, runImpl = defaultRun, tmpRoot =
 
 /* ------------------------------- preparing a request ------------------------------- */
 
-const cleanName = (n) => String(n ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/g, " ").trim().slice(0, LIMITS.maxName);
+/** One clean, bounded line for a material name. Exported for api/_lib/fetch.mjs (the Vercel fetch function). */
+export const cleanName = (n) => String(n ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/g, " ").trim().slice(0, LIMITS.maxName);
 
 /**
  * Resolve the teacher's items into named plain texts. An item is `{name, text}` (they gave us the

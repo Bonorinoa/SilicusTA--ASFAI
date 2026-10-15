@@ -151,6 +151,9 @@ export class PlanWorker {
     try {
       res = await this.#fetch(this.#url, { method: "POST", headers, body: JSON.stringify(body), signal });
     } catch (e) {
+      // A fetchImpl that refuses with its own WorkerError (the browser host's passcode-carrying fetch maps the
+      // site function's "no credits" / "busy" / "not set up" to one) keeps its code and words.
+      if (e instanceof WorkerError) throw e;
       throw new WorkerError("WORKER_UNREACHABLE", `the drafting worker could not be reached: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (!res.ok) throw new WorkerError("WORKER_UNREACHABLE", `the drafting worker answered ${res.status}`);

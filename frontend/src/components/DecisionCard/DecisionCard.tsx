@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { BROWSER_MODE } from "../../gate/mode";
 import type { DecisionIntent, ProposalView } from "../../gate/types";
 import { PlusIcon, StateIcon } from "../icons";
 import styles from "./DecisionCard.module.css";
@@ -366,7 +367,9 @@ function ProposalRow({
     dropIsRevoke && row.citedByPlan
       ? canRedraftPlan
         ? "The current lesson plan cites it, so that plan becomes invalid and a new one must be drafted and confirmed before you can publish."
-        : "The current lesson plan cites it, so that plan becomes invalid — and no drafting worker is configured on this host, so you could not publish again until one is."
+        : BROWSER_MODE
+          ? "The current lesson plan cites it, so that plan becomes invalid — and AI drafting is not set up on this site, so you could not publish again until it is."
+          : "The current lesson plan cites it, so that plan becomes invalid — and no drafting worker is configured on this host, so you could not publish again until one is."
       : null;
 
   const actionsArea = () => {

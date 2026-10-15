@@ -22,10 +22,9 @@
 import { randomUUID } from "node:crypto";
 import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gate.mjs";
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
-import { CourseStore } from "./store.mjs";
 import { LessonIntake } from "./intake.mjs";
 import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, teacherStatement } from "./proposer.mjs";
-import { digestOf } from "./archive.mjs";
+import { digestOf } from "./digest.mjs";
 import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 
 const CHANNEL = "silicus-ui";
@@ -840,4 +839,3 @@ function requireMsg(text, what) {
   return text.trim();
 }
 
-export { CourseStore };

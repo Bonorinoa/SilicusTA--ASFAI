@@ -8,6 +8,7 @@
  * and this panel says that every time.
  */
 import { useEffect, useRef, useState } from "react";
+import { BROWSER_MODE } from "../gate/mode";
 import type { RevisionView } from "../gate/transport";
 import styles from "./RevisionPanel.module.css";
 
@@ -108,7 +109,9 @@ export function RevisionPanel({ revision, workerConfigured, planReworded = [], b
               </div>
             ) : (
               <p className={styles.line}>
-                No drafting worker is configured on this host, so a new lesson plan cannot be drafted here.
+                {BROWSER_MODE
+                  ? "AI drafting is not set up on this site, so a new lesson plan cannot be drafted here."
+                  : "No drafting worker is configured on this host, so a new lesson plan cannot be drafted here."}
                 {planInvalidated ? " Until one is, version " + next + " cannot be published." : null}
               </p>
             )

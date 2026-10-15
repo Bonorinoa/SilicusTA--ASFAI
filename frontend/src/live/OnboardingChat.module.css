@@ -80,6 +80,28 @@
   overflow-wrap: anywhere;
 }
 .step { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
+
+/* Where you are in the intake, and what is left: named steps, a glyph per state, no bar and no percent. */
+.rail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.railItem { display: flex; align-items: center; gap: var(--space-1); }
+.railItem[data-state="done"]::before { content: "✓"; color: var(--color-accent); }
+.railItem[data-state="todo"]::before { content: "○"; color: var(--color-rule-strong); }
+.railItem[data-state="current"] { color: var(--color-ink); }
+.railItem[data-state="current"]::before { content: "▸"; color: var(--color-accent); }
+.railNote { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); }
 .kept {
   margin: 0;
   font-family: var(--font-ui);

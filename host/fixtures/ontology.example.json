@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "nodes": [
+    { "id": "algo.sequence", "title": "Algorithms as step-by-step instructions", "statement": "Follow and write a short sequence of steps that solves a problem.", "relatedTo": ["algo.debug"] },
+    { "id": "algo.debug", "title": "Debugging a procedure", "statement": "Find the step in a procedure that does not do what was intended and fix it.", "relatedTo": ["algo.sequence"] },
+    { "id": "ai.claims", "title": "Finding the claim in an AI answer", "statement": "Identify the sentence in a generated answer that asserts something checkable.", "relatedTo": [] },
+    { "id": "stats.mle", "title": "Maximum likelihood estimation", "statement": "Choose the parameter value that makes the observed data most probable.", "relatedTo": [] }
+  ]
+}

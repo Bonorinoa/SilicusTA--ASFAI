@@ -5,6 +5,23 @@ import { readFileSync } from "node:fs";
 
 const FX = JSON.parse(readFileSync(new URL("../fixtures/lesson-intake.json", import.meta.url), "utf8"));
 
+/**
+ * A tiny stand-in for Marble. Shapes follow the partner source (register-asfai-tools.ts): a
+ * result is an array of topics, `payload` is STRICT (an unknown key is a schema rejection, as on
+ * the live server), and get_objective answers a tool error "No objective '<id>'." for a stranger.
+ * The data is deliberately Marble-like: a children's node that LOOKS like a match for a
+ * university topic ("Likelihood Language", ages 9-10) is the documented live behavior.
+ */
+export const GRAPH = [
+  { id: "mt_0007", type: "skill", subject: "Computer Science", domain: "Algorithms", name: "Following Steps", description: "Follow and explain a short sequence of instructions to get a result.", ageRangeStart: 8, ageRangeEnd: 10, centrality: 0.4, evidence: ["follows a recipe"], assessmentPrompt: "Explain the steps.", standards: ["CSTA:1A-AP-08"] },
+  { id: "mt_0042", type: "skill", subject: "Computer Science", domain: "Data", name: "Finding the Claim", description: "Pick out the sentence in a text that says something that could be checked.", ageRangeStart: 9, ageRangeEnd: 11, centrality: 0.3, evidence: ["marks the claim"], assessmentPrompt: "Which sentence is the claim?", standards: [] },
+  { id: "mt_0100", type: "skill", subject: "Math", domain: "Probability", name: "Likelihood Language", description: "Say whether an event is certain, likely, unlikely or impossible.", ageRangeStart: 9, ageRangeEnd: 10, centrality: 0.2, evidence: [], assessmentPrompt: "Is it likely?", standards: [] },
+];
+const lexical = (q) => {
+  const terms = String(q).toLowerCase().match(/[a-z0-9]+/g)?.filter((t) => t.length > 3) ?? [];
+  return GRAPH.filter((t) => terms.some((w) => `${t.name} ${t.domain} ${t.description}`.toLowerCase().includes(w)));
+};
+
 export async function startMockAsfai({ sse = false, issuerOverride = null, offOriginTokenEndpoint = false } = {}) {
   const st = { codes: new Map(), access: new Set(), refresh: new Set(), calls: [], registered: 0, expiresIn: 3600, tokenRequests: [] };
   let origin = "";
@@ -65,6 +82,16 @@ export async function startMockAsfai({ sse = false, issuerOverride = null, offOr
           for (const k of ["createdAt", "updatedAt"]) if (typeof o?.[k] !== "string") bad.push({ path: [k], message: "Invalid input: expected string, received undefined" });
           if (bad.length) return send(200, { jsonrpc: "2.0", id: m.id, result: { isError: true, content: [{ type: "text", text: JSON.stringify(bad) }] } });
           result = { content: [{ type: "text", text: JSON.stringify({ valid: true, issues: [], echoedSections: a.payload?.outline?.sections?.length ?? null, echoedOutcomes: a.payload?.outline?.learningOutcomes ?? null }) }] };
+        } else if (m.params.name === "asfai_graph" && a.action === "search_objectives") {
+          const bad = Object.keys(a.payload ?? {}).filter((k) => !["query", "limit"].includes(k));
+          if (typeof a.payload?.query !== "string" || !a.payload.query || bad.length)
+            return send(200, { jsonrpc: "2.0", id: m.id, result: { isError: true, content: [{ type: "text", text: JSON.stringify([{ path: [], message: bad.length ? `Unrecognized key: ${bad[0]}` : "query required" }]) }] } });
+          if (st.graphDown) return send(503, { error: "down" });
+          result = { content: [{ type: "text", text: JSON.stringify(lexical(a.payload.query).slice(0, a.payload.limit ?? 20)) }] };
+        } else if (m.params.name === "asfai_graph" && a.action === "get_objective") {
+          if (st.graphDown) return send(503, { error: "down" });
+          const t = GRAPH.find((x) => x.id === a.payload?.id);
+          result = t ? { content: [{ type: "text", text: JSON.stringify(t) }] } : { isError: true, content: [{ type: "text", text: `No objective '${a.payload?.id}'.` }] };
         } else result = { isError: true, content: [{ type: "text", text: "unknown" }] };
       } else return send(200, { jsonrpc: "2.0", id: m.id, error: { code: -32601, message: "no such method" } });
       const body = { jsonrpc: "2.0", id: m.id, result };

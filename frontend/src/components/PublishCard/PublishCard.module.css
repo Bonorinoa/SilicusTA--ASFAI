@@ -130,11 +130,14 @@
 
 .confirmStatus {
   margin: 0;
-  white-space: nowrap;
+  /* WRAP, never widen the card: the ready sentence and its counts are long, and
+     `nowrap` was pushing the bar past the card edge at a narrow width. */
+  min-width: 0;
   font-family: var(--font-ui);
   font-size: var(--text-base);
   line-height: var(--leading-base);
   color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
 }
 
 .confirmActions {
@@ -167,6 +170,10 @@
   background: transparent;
   color: var(--color-ink-muted);
   border: 1px solid var(--color-border-control);
+  /* The label wraps rather than clipping behind the button's own edge. */
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   transition:
     background-color var(--duration-quick) var(--ease-standard),
     color var(--duration-quick) var(--ease-standard);
@@ -337,6 +344,7 @@
   line-height: var(--leading-md);
   color: var(--color-ink);
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 
 /* Machine keys on their own quiet line — never in the reading path. */
@@ -350,7 +358,9 @@
 }
 
 .monoId {
-  white-space: nowrap;
+  /* See PlanCard: a single urn token must break rather than widen the page. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .exportRow {
@@ -389,6 +399,7 @@
   font-size: var(--text-xs);
   line-height: var(--leading-xs);
   color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
 }
 
 /* --------------------------------- misc ---------------------------------- */
@@ -429,5 +440,67 @@
   .sealConfirm {
     animation: none;
     transition: none;
+  }
+}
+
+/* ------------------------------ narrow window ----------------------------- */
+
+/* 34rem (544px), the app's narrow breakpoint. The title and its status chip stop
+   sharing a row, the confirm bar stacks, and every action takes the full width so
+   its label never clips. */
+@media (max-width: 34rem) {
+  .titleRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .heading {
+    /* A long course title must wrap, not push the status chip off the card. */
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .confirmBar {
+    flex-direction: column;
+    align-items: stretch;
+    /* The negative insets bleed to the card edges; they overhang a narrow window. */
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .confirmActions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    flex-shrink: 1;
+  }
+
+  .confirmHint {
+    /* The hint sits above the action it explains, not beside a squeezed button. */
+    order: -1;
+  }
+
+  .confirmButton {
+    width: 100%;
+  }
+
+  .sealConfirmActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sealKeepButton,
+  .sealPublishButton {
+    width: 100%;
+  }
+
+  .sealConfirm {
+    /* Keep the confirm step inside the card, with its own gutter. */
+    max-width: none;
+  }
+
+  .exportButton {
+    width: 100%;
   }
 }

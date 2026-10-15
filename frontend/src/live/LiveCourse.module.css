@@ -13,6 +13,7 @@
 .title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin: 0; color: var(--color-ink); }
 .lede { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); margin: 0; }
 .sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; }
+.title, .heroTitle, .intakeTitle, .pinTitle, .offlineTitle, .sub { overflow-wrap: anywhere; }
 
 .stageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }
 
@@ -29,6 +30,8 @@
 .primaryButton, .ghostButton, .textButton {
   font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold);
   border-radius: var(--radius-sm); min-height: 44px; padding: 0 var(--space-4); cursor: pointer;
+  /* A long label wraps inside the button rather than pushing the row wider. */
+  max-width: 100%; white-space: normal; overflow-wrap: anywhere;
 }
 .primaryButton { background: var(--color-accent); border: 1px solid var(--color-accent); color: var(--color-paper-raised); }
 .primaryButton:hover { background: var(--color-accent-strong); }
@@ -94,4 +97,15 @@
 .moves { display: flex; flex-wrap: wrap; gap: var(--space-1) 0; list-style: none; margin: var(--space-2) 0 0; padding: var(--space-4) 0; border-top: 1px solid var(--color-rule); font-family: var(--font-display); font-size: var(--text-base); font-style: italic; color: var(--color-ink-soft); }
 .moves li + li::before { content: "\2192"; font-style: normal; font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-accent); margin: 0 var(--space-3); position: relative; top: -0.06em; }
 .assure { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
-@media (max-width: 40rem) { .heroTitle { font-size: var(--text-xl); line-height: var(--leading-xl); } }
+
+/* ---- narrow window (34rem, the app's breakpoint) ---- */
+/* The stage keeps a gutter on a phone-sized window, the checkpoint chips stop
+   stacking into a tall column, and the pinned-copy row stops being a 4-column
+   grid it cannot hold. */
+@media (max-width: 34rem) {
+  .live { padding: var(--space-5) var(--space-4) var(--space-6); gap: var(--space-4); }
+  .heroTitle { font-size: var(--text-xl); line-height: var(--leading-xl); }
+  .chip { min-width: 4.5rem; }
+  .pinRow { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-1); }
+  .actions { gap: var(--space-2); }
+}

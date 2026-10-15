@@ -256,12 +256,12 @@ async function story(label, narrow) {
   // ---- name the course (checkpoint 1)
   const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
   await reply("How plants eat", "Record the course title");
-  await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+  await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
   if (narrow) await checkNarrow("onboarding step 2: name the label");
-  await reply("Ada Lovelace", "Record the label");
+  await reply("Ada Lovelace", "Record this name");
   await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
   if (narrow) await checkNarrow("onboarding step 3: name the materials");
-  await reply("Lesson notes", "Record the materials");
+  await reply("Lesson notes", "Record these names");
   await poll(async () => (await stored()).metas.length === 1);
   check("the course is recorded in IndexedDB (not on a server)", true);
   check("no /api/courses request ever left the page", !api.calls.some((c) => c.path.startsWith("/api/courses")));
@@ -298,7 +298,7 @@ async function story(label, narrow) {
 
   if (narrow) await checkNarrow("material panel");
   // ---- material -> propose (the passcode is asked for)
-  await poll(() => bodyHas("Give me the material"));
+  await poll(() => bodyHas("Add your material here"));
   check("the material panel says YouTube needs the local app", await bodyHas("YouTube captions need the local Silicus app"));
   check("zero-retention is claimed only because the site's status says zdr: true", await bodyHas("zero-data-retention providers only"));
   await page.evaluate(() => {

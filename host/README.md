@@ -20,6 +20,24 @@ npm start                                        # 127.0.0.1:8787, data in ~/.si
 SILICUS_HOST_DATA=/tmp/silicus SILICUS_HOST_PORT=8787 npm start
 ```
 
+`npm start` reads `process.env` only, so it runs with the drafting worker OFF and every AI step
+reports "not configured". To run with AI drafting, name one env file holding the worker variables and
+start through the launcher:
+
+```sh
+npm run start:worker                                    # reads host/.env.worker (gitignored)
+node scripts/with-worker-env.mjs ~/.silicus/worker.env  # or point it at any named file
+SILICUS_WORKER_ENV_FILE=~/.silicus/worker.env npm run start:worker
+```
+
+At minimum that file holds `SILICUS_WORKER_PROVIDER=openrouter` and `OPENROUTER_API_KEY=...` (the key
+is never in the repo: the file is gitignored via `.env.*`). The launcher forwards **only**
+`SILICUS_WORKER_*` and the key names (`OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY`) from that file, so
+pointing it at a file that also holds unrelated secrets — `~/.hermes/.env`, say — does not hand those
+to the host. Other host settings (`SILICUS_HOST_PORT`, `SILICUS_HOST_DATA`, `SILICUS_YTDLP`,
+`SILICUS_TYPICAL_SECONDS`) still come from the shell as before. With no credential it refuses to start
+with one line naming the exact fix, rather than run silently with AI off.
+
 The GUI is a sidecar: it reaches this host through a same-origin `/api` proxy
 (`vite.config.ts`, both dev and preview), so the client needs no credentials.
 
@@ -326,8 +344,12 @@ endpoints. The Anthropic API is under Anthropic's normal API data-retention term
 has a zero-retention agreement, which the host cannot see. The material panel says which applies. Use public
 material (a public lecture) or material you are allowed to share until that is settled.
 
-Default (OpenRouter, zero-retention): 
+Default (OpenRouter, zero-retention) — put these two lines in `host/.env.worker`, then `npm run start:worker`:
 
-    SILICUS_WORKER_PROVIDER=openrouter OPENROUTER_API_KEY=... SILICUS_YTDLP=$HOME/.local/bin/yt-dlp npm start
+    SILICUS_WORKER_PROVIDER=openrouter
+    OPENROUTER_API_KEY=...
+
+The one-off form still works:
+`SILICUS_WORKER_PROVIDER=openrouter OPENROUTER_API_KEY=... SILICUS_YTDLP=$HOME/.local/bin/yt-dlp npm start`.
 
 Claude Sonnet 5.5 is available instead with `SILICUS_WORKER_PROVIDER=anthropic ANTHROPIC_API_KEY=...`.

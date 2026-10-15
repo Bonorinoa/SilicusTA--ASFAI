@@ -4,6 +4,14 @@ Branch `fix/narrow-shell`. The product owner opened `#/live` in a narrow window 
 broken": elements squeeze onto one line, text and buttons clip at the edges. This branch is the shell, the
 landing and the intake surfaces; the decision / plan / publish cards are a parallel round.
 
+> **Merged, and re-measured.** This page began as the shell round (`fix/narrow-shell`). The cards round
+> (`fix/narrow-cards` — DecisionCard, PlanCard, PublishCard, TimelineCard) landed on top of it, so the
+> shipped artifact is the merge. The **before** column below is unchanged and still reproduces on `main`
+> (`e33844f`). The **after** column, the defect/after table and the paragraph under them were re-measured on
+> the merged branch with `node frontend/scripts/narrow-shell.mjs`, and the numbers changed: the merged page
+> does not scroll sideways anywhere. The two rounds also happen to use **different** narrow breakpoints —
+> `40rem` in the shell's sheets, `34rem` in the cards' — which is stated in full under the table.
+
 ![Before, 380px: the masthead without its promise](img/narrow-380-shell-header-before-landing.png)
 
 *Before. Below 640px the header was the wordmark and nothing else — the promise line had been hidden by a
@@ -64,9 +72,11 @@ product owner's report was about the surfaces a course opens up.*
 
 ## What changed
 
-One breakpoint throughout — `40rem`, the project's own — and four sheets: `Workbench.module.css` (the shell),
-`LiveCourse.module.css` (stage header, pins, hero), `OnboardingChat.module.css` (the shared intake sheet used
-by the onboarding card, the material panel and the student chat) and `CourseLibrary.module.css`.
+One breakpoint throughout the shell's sheets — `40rem`, the project's own — across `Workbench.module.css`
+(the shell), `LiveCourse.module.css` (stage header, pins, hero), `OnboardingChat.module.css` (the shared
+intake sheet used by the onboarding card, the material panel and the student chat) and
+`CourseLibrary.module.css`. (The cards round that merged on top of this one switches its own sheets at
+`34rem`; see the note under the table.)
 
 **The masthead keeps its promise.** The `display: none` is gone; the masthead wraps, and below 40rem the
 tagline takes its own line under the wordmark at `--text-sm`. A promise is not chrome.
@@ -105,21 +115,31 @@ measure inside the card and a ~224px column on the page instead of spending 60% 
 | State | Width | `scrollWidth` vs `clientWidth` | Overflowing on my surfaces |
 |---|---|---|---|
 | landing + onboarding | 320 | 320 / 320 → 320 / 320 | 0 → **0** |
-| onboarding, intake question | 320 | 971 / 320 → 967 / 320 | 4 → **0** |
-| materials panel | 320 | 971 / 320 → 967 / 320 | 25 → **0** |
-| materials panel | 380 | 971 / 380 → 967 / 380 | 0 → **0** |
-| full live course | 320 | 600 / 320 → 596 / 320 | 6 → **0** |
-| full live course | 380 | 600 / 380 → 596 / 380 | 2 → **0** |
-| full live course | 480 | 600 / 480 → 596 / 480 | 0 → **0** |
+| onboarding, intake question | 320 | 971 / 320 → 320 / 320 | 4 → **0** |
+| materials panel | 320 | 971 / 320 → 320 / 320 | 25 → **0** |
+| materials panel | 380 | 971 / 380 → 380 / 380 | 0 → **0** |
+| full live course | 320 | 600 / 320 → 320 / 320 | 6 → **0** |
+| full live course | 380 | 600 / 380 → 380 / 380 | 2 → **0** |
+| full live course | 480 | 600 / 480 → 480 / 480 | 0 → **0** |
 | full live course | 768 | 768 / 768 | 0 → **0** |
 | full live course | 1440 | 1440 / 1440 | 0 → **0** |
-| record band, delete confirm | 320 | 600 / 320 → 596 / 320 | 6 → **0** |
-| record band, delete confirm | 380 | 600 / 380 → 596 / 380 | 2 → **0** |
+| record band, delete confirm | 320 | 600 / 320 → 320 / 320 | 6 → **0** |
+| record band, delete confirm | 380 | 600 / 380 → 380 / 380 | 2 → **0** |
 
-The remaining `scrollWidth` above `clientWidth` at 320–480px is **inside the cards** (DecisionCard, PlanCard,
-PublishCard, TimelineCard) — the parallel round's fence. The harness reports those lines as `(not mine)` and
-counts them separately, so the shell's own gate is not masked by them. The landing, where the whole page is
-this round's, never scrolls sideways at any width.
+On the merged branch the page never scrolls sideways, at any width, and the shell's own surfaces report zero
+overflowing elements everywhere. What `narrow-shell.mjs` still marks `(not mine)` is the cards' sheets at
+**320px only** — TimelineCard's and DecisionCard's inner rows (14 elements on the full-course and record-band
+views, which share the same card stack) whose own box is narrower than the content it holds. That is the
+harness's broadest predicate: any element whose `scrollWidth` exceeds its `clientWidth`, whether or not it
+hides the overflow. The smoke's stricter predicate — content hidden by `overflow`, or a clipped control
+label — reports zero there, and the page never gains a sideways scroll. At 380px and up the cards are clean
+under both.
+
+The two rounds chose different narrow breakpoints and the merged page keeps both: the shell's sheets
+(`Workbench`, `LiveCourse`, `OnboardingChat`) switch at `40rem`; the cards' (`DecisionCard`, `PlanCard`,
+`PublishCard`, `AiWaiting`) at `34rem`; and the waiting card adds a `40rem` rule of its own so its greeked
+lines of type rest rather than clip. Nothing depends on the two values agreeing — the cards are narrower than
+the page, so their content re-sets a little earlier — and the wide design is untouched above `40rem`.
 
 ## Proof (380px, cropped to the surface)
 

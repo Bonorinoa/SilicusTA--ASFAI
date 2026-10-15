@@ -111,7 +111,7 @@ export function DecisionCard({
     announce(
       landed.join(" ") +
         (allDecided
-          ? ` All ${proposals.length} proposals decided — every objective carries your decision.`
+          ? ` All ${plural(proposals.length, "proposal")} decided — every objective carries your decision.`
           : ""),
     );
   }, [rows, allDecided, proposals.length]);
@@ -129,7 +129,7 @@ export function DecisionCard({
           ? `Nothing decided yet — 0 of ${proposals.length}.`
           : awaiting > 0
             ? `${decided} of ${proposals.length} decided · ${awaiting} awaiting your decision.`
-            : `All ${proposals.length} proposals decided — every objective carries your decision.`;
+            : `All ${plural(proposals.length, "proposal")} decided — every objective carries your decision.`;
 
   const statusLine =
     checkpointStatus === "confirmed"

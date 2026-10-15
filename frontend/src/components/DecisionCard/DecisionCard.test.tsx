@@ -262,6 +262,23 @@ describe("DecisionCard, bound to a real ConfirmGate", () => {
     ).toBeInTheDocument();
   });
 
+  it("says 'All 1 proposal decided', never 'All 1 proposals', in the bar and the live region", async () => {
+    const user = userEvent.setup();
+    const harness = new ConfirmGateHarness();
+    harness.propose([{ statement: "Alpha objective." }]);
+    const { container } = render(<BoundCard harness={harness} />);
+
+    await user.click(screen.getByRole("button", { name: /^accept objective/i }));
+
+    // The milestone text is the same string family as the one the product owner reported.
+    expect(screen.getAllByText(/All 1 proposal decided — every objective carries your decision\./).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/All 1 proposals/)).not.toBeInTheDocument();
+    // …and the single live region announces the same singular wording.
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toMatch(
+      /All 1 proposal decided — every objective carries your decision\./,
+    );
+  });
+
   it("tab order: accept → rename → drop per row, then Add, then Confirm", async () => {
     const user = userEvent.setup();
     const harness = new ConfirmGateHarness();

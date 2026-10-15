@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BROWSER_MODE } from "../../gate/mode";
 import type { DecisionIntent, ProposalView } from "../../gate/types";
+import { plural } from "../../lib/plural";
 import { PlusIcon, StateIcon } from "../icons";
 import styles from "./DecisionCard.module.css";
 
@@ -139,8 +140,8 @@ export function DecisionCard({
     proposals.length === 0
       ? "Confirm objectives"
       : allDecided
-        ? `Confirm ${proposals.length} objectives · build the plan`
-        : `Confirm ${proposals.length} objectives — ${awaiting} decision${awaiting === 1 ? "" : "s"} left`;
+        ? `Confirm ${plural(proposals.length, "objective")} · build the plan`
+        : `Confirm ${plural(proposals.length, "objective")} — ${plural(awaiting, "decision")} left`;
 
   const flashHint = () => {
     setHintFlash(true);

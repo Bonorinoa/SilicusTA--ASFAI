@@ -7,6 +7,7 @@
  * anywhere in this file because the page cannot measure any.
  */
 import type { HostView } from "../../gate/transport";
+import { plural } from "../../lib/plural";
 
 export type StepKind = "objectives" | "plan" | "answer";
 export type Range = readonly [number, number];
@@ -43,7 +44,7 @@ export function formatElapsed(totalSeconds: number): string {
   return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`;
 }
 
-const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+export { plural };
 
 /** "two minutes", "a minute", else "N seconds" */
 export function spokenLimit(seconds: number): string {

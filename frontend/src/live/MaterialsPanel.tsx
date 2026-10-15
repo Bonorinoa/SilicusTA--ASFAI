@@ -17,7 +17,10 @@ export function MaterialsPanel({
   busy, zdr, onPropose,
 }: {
   busy: boolean;
-  /** Is the worker told to use zero-data-retention endpoints only? Config, from the host. */
+  /**
+   * Is the worker told to use zero-data-retention endpoints only? Config, from the host. Only an
+   * explicit true earns the zero-retention sentence: anything else says the plain truth.
+   */
   zdr: boolean | null;
   onPropose: (materials: MaterialInput[]) => void;
 }) {
@@ -58,7 +61,9 @@ export function MaterialsPanel({
       <p className={styles.kept}>
         Paste text, add a text file, or paste a link to a public web page or a YouTube video. You decide every
         objective afterwards. The material stays in this tab only: it is not saved, and it is sent once to the
-        drafting worker{zdr ? ", which is set to zero-data-retention providers only" : ""}. Reload and it is gone.
+        drafting worker{zdr === true
+          ? ", which is set to zero-data-retention providers only"
+          : ", under that provider's normal data-retention terms (not zero-retention), so use public material or material you may share"}. Reload and it is gone.
       </p>
 
       {items.length > 0 ? (

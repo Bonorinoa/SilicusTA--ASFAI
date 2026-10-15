@@ -50,6 +50,7 @@ export class PlanWorker {
   #zdr;
   #maxTokens;
   #timeoutMs;
+  #provider;
 
   /**
    * `zdr` asks the router to use ONLY zero-data-retention endpoints (OpenRouter's
@@ -58,9 +59,20 @@ export class PlanWorker {
    * `maxTokens` bounds the reply, which also bounds what the router reserves against the account.
    *
    * @param {{url?: string|null, model?: string|null, apiKey?: string|null, fetchImpl?: typeof fetch,
-   *          zdr?: boolean, maxTokens?: number, timeoutMs?: number}} [config]
+   *          zdr?: boolean, maxTokens?: number, timeoutMs?: number, provider?: "openai"|"anthropic"}} [config]
+   *
+   * `provider` is the wire format: "openai" (chat completions: OpenRouter, vLLM, Ollama, ...) or
+   * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
+   * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = 60_000 } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = 60_000, provider = "openai" } = {}) {
+    if (provider !== "openai" && provider !== "anthropic") {
+      throw new WorkerError("WORKER_BAD_CONFIG", `unknown worker provider: ${String(provider)}`);
+    }
+    if (provider === "anthropic" && zdr === true) {
+      throw new WorkerError("WORKER_BAD_CONFIG", "zero-data-retention routing is not available on the Anthropic API wire; unset SILICUS_WORKER_ZDR or use an OpenRouter worker");
+    }
+    this.#provider = provider;
     this.#url = url ? assertUsableUrl(url) : null;
     this.#model = model ? String(model) : null;
     this.#apiKey = apiKey ? String(apiKey) : null;
@@ -70,6 +82,11 @@ export class PlanWorker {
     // A model that never answers must not hold a course hostage: every request to a course runs behind
     // one lock, so an unbounded wait here would freeze the whole course. The deadline covers the body too.
     this.#timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 60_000;
+  }
+
+  /** Which wire format the worker speaks. Config, never a credential. */
+  get provider() {
+    return this.#provider;
   }
 
   /** Is the router told to use zero-data-retention endpoints only? Config, never a credential. */
@@ -114,6 +131,7 @@ export class PlanWorker {
    * WorkerError with a code. What comes back is UNTRUSTED and the caller validates it.
    */
   async #json(prompt) {
+    const anthropic = this.#provider === "anthropic";
     const body = {
       model: this.#model,
       messages: [{ role: "user", content: prompt }],
@@ -121,7 +139,12 @@ export class PlanWorker {
       ...(this.#zdr ? { provider: { zdr: true, data_collection: "deny" } } : {}),
     };
     const headers = { "content-type": "application/json" };
-    if (this.#apiKey) headers.authorization = `Bearer ${this.#apiKey}`;
+    if (anthropic) {
+      headers["anthropic-version"] = "2023-06-01";
+      if (this.#apiKey) headers["x-api-key"] = this.#apiKey;
+    } else if (this.#apiKey) {
+      headers.authorization = `Bearer ${this.#apiKey}`;
+    }
 
     const signal = AbortSignal.timeout(this.#timeoutMs);
     let res;
@@ -139,8 +162,11 @@ export class PlanWorker {
       if (signal.aborted) throw new WorkerError("WORKER_UNREACHABLE", "the drafting worker did not answer in time");
       throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's response was not JSON");
     }
-    const content = payload?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no message content");
+    // OpenAI wire: choices[0].message.content. Anthropic wire: content is a list of typed blocks.
+    const content = anthropic
+      ? (Array.isArray(payload?.content) ? payload.content.filter((b) => b?.type === "text" && typeof b.text === "string").map((b) => b.text).join("") : undefined)
+      : payload?.choices?.[0]?.message?.content;
+    if (typeof content !== "string" || (anthropic && content === "")) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no message content");
     try {
       return JSON.parse(stripFence(content));
     } catch {

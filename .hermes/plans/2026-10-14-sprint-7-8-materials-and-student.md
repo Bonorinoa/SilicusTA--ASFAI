@@ -9,7 +9,7 @@ Prototype checkpoint target: end of October.
 
 ## Decisions (settled)
 
-1. **Worker = OpenRouter `deepseek/deepseek-v4-flash-0731`, zero-data-retention enforced.**
+1. **Worker (amended 2026-10-14: Claude Sonnet 5.5 via the native Anthropic wire for now; ZDR below is the OpenRouter option, still built, selectable by `SILICUS_WORKER_PROVIDER`).** Originally: OpenRouter `deepseek/deepseek-v4-flash-0731`, zero-data-retention enforced.
    The request carries `provider: {zdr: true, data_collection: "deny"}`; OpenRouter then routes only to
    ZDR endpoints (20 exist for this model) and fails the call otherwise. A ZDR failure is a refusal
    (502), never a silent fallback to a retaining provider. Config: `SILICUS_WORKER_URL`,

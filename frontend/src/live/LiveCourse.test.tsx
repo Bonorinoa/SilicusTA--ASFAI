@@ -88,7 +88,7 @@ interface Call { url: string; body: Record<string, unknown> | undefined }
 
 function mockHost(
   view: HostView | null,
-  { workerConfigured = true, asfaiConnected = true, studentReply }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown } = {},
+  { workerConfigured = true, asfaiConnected = true, studentReply, zdr = true }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown; zdr?: boolean } = {},
 ): { calls: Call[] } {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
@@ -99,7 +99,7 @@ function mockHost(
       return ok({ courses: view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1 }] : [] });
     }
     if (url === "/api/asfai/status") return ok({ connected: asfaiConnected, expiresAt: asfaiConnected ? 9 : null, scope: asfaiConnected ? "asfai" : null, canRefresh: asfaiConnected });
-    if (url === "/api/worker/status") return ok({ configured: workerConfigured, zdr: true });
+    if (url === "/api/worker/status") return ok({ configured: workerConfigured, zdr, provider: zdr ? "openai" : "anthropic" });
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
     if (url.endsWith("/materials/propose")) return ok({ proposals: [], materials: [], skipped: [] });
     if (url.endsWith("/student/ask")) return ok(studentReply ?? { answer: "x", grounded: false, cites: [], note: "n" });
@@ -427,5 +427,16 @@ describe("LiveCourse — thin client of the host", () => {
     await user.type(await screen.findByLabelText("Your question"), "Who won in 1966?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
     expect(await screen.findByText(/Not covered by this course\./)).toBeInTheDocument();
+  });
+
+  it("never claims zero-retention when the worker is not set to it: it says the provider's normal terms apply", async () => {
+    const v = stubView();
+    v.proposals = [];
+    v.intake = { ...v.intake, questionsFrom: "local", answers: { topic: "t", course: "c", outcomes_from: "materials" } };
+    mockHost(v, { zdr: false });
+    render(<LiveCourse />);
+    expect(await screen.findByText(/stays in this tab only/i)).toBeInTheDocument();
+    expect(screen.queryByText(/is set to zero-data-retention providers only/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/normal data-retention terms \(not zero-retention\)/i)).toBeInTheDocument();
   });
 });

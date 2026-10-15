@@ -102,6 +102,30 @@ class HttpError extends Error {
   }
 }
 
+/**
+ * The drafting worker from environment config. OFF unless a model is configured.
+ *   SILICUS_WORKER_PROVIDER  "openai" (default; OpenRouter, vLLM, Ollama...) or "anthropic" (native Messages API)
+ *   SILICUS_WORKER_URL       the endpoint (anthropic defaults to https://api.anthropic.com/v1/messages)
+ *   SILICUS_WORKER_MODEL     the model (anthropic defaults to claude-sonnet-5-5)
+ *   SILICUS_WORKER_API_KEY   the credential (anthropic also reads ANTHROPIC_API_KEY)
+ *   SILICUS_WORKER_ZDR=1     zero-data-retention routing: OpenRouter only. Asking for it on the Anthropic wire
+ *                            refuses to start, because the host must not claim a guarantee it cannot make.
+ */
+export function workerFromEnv(env) {
+  const provider = env.SILICUS_WORKER_PROVIDER === "anthropic" ? "anthropic" : "openai";
+  const anthropic = provider === "anthropic";
+  const key = anthropic
+    ? (env.SILICUS_WORKER_API_KEY || env.ANTHROPIC_API_KEY || null)
+    : (env.SILICUS_WORKER_API_KEY || null);
+  return new PlanWorker({
+    provider,
+    url: env.SILICUS_WORKER_URL || (anthropic ? "https://api.anthropic.com/v1/messages" : null),
+    model: env.SILICUS_WORKER_MODEL || (anthropic ? "claude-sonnet-5-5" : null),
+    apiKey: key,
+    zdr: env.SILICUS_WORKER_ZDR === "1",
+  });
+}
+
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
 export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
@@ -119,12 +143,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
   const archives = new LocalArchive(join(dataDir, "archives"));
   // The OSS worker that drafts a plan. OFF unless url+model are configured: the host
   // runs, and the suite passes, with no model at all. Its output is validated in worker.mjs.
-  const planWorker = worker ?? new PlanWorker({
-    url: process.env.SILICUS_WORKER_URL ?? null,
-    model: process.env.SILICUS_WORKER_MODEL ?? null,
-    zdr: process.env.SILICUS_WORKER_ZDR === "1",
-    apiKey: process.env.SILICUS_WORKER_API_KEY ?? null,
-  });
+  const planWorker = worker ?? workerFromEnv(process.env);
 
   // Knowledge sources the worker may draw on: CONFIG, never a request field. ASFAI's graph first
   // (recommended; on unless SILICUS_SOURCE_ASFAI=0), then a local ontology file if one is named.
@@ -186,7 +205,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     if (parts[1] === "health" && method === "GET") return { status: 200, json: { ok: true, courses: store.list().length } };
     // Whether a drafting worker is configured. Config, never a credential.
     if (parts[1] === "worker" && parts[2] === "status" && method === "GET") {
-      return { status: 200, json: { configured: planWorker.enabled, zdr: planWorker.zdr } };
+      return { status: 200, json: { configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider } };
     }
     // Which knowledge sources are in play. Config and capability only: no URL, no path, no credential.
     if (parts[1] === "knowledge" && parts[2] === "status" && method === "GET") {

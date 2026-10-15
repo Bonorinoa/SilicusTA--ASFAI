@@ -22,8 +22,8 @@ const DEFAULT_PLAN = {
   ],
 };
 
-export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200 } = {}) {
-  const st = { calls: 0, lastPrompt: null, lastAuth: null, lastBody: null };
+export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200, shape = "openai" } = {}) {
+  const st = { calls: 0, lastPrompt: null, lastAuth: null, lastBody: null, lastHeaders: null };
 
   const srv = createServer(async (req, res) => {
     const raw = await new Promise((r) => {
@@ -33,6 +33,7 @@ export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200 } = {
     });
     st.calls += 1;
     st.lastAuth = req.headers.authorization ?? null;
+    st.lastHeaders = req.headers;
     try {
       st.lastBody = JSON.parse(raw || "{}");
       st.lastPrompt = st.lastBody?.messages?.[0]?.content ?? null;
@@ -50,7 +51,10 @@ export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200 } = {
       content = typeof reply === "string" ? reply : JSON.stringify(reply);
     }
     res.writeHead(status, { "content-type": "application/json" });
-    res.end(JSON.stringify({ choices: [{ message: { content } }] }));
+    // "anthropic" speaks the Messages API: typed content blocks (a thinking block may precede the text).
+    res.end(JSON.stringify(shape === "anthropic"
+      ? { id: "msg_test", type: "message", role: "assistant", content: [{ type: "thinking", thinking: "..." }, { type: "text", text: content }], stop_reason: "end_turn" }
+      : { choices: [{ message: { content } }] }));
   });
 
   await new Promise((r) => srv.listen(0, "127.0.0.1", r));

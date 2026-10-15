@@ -256,7 +256,7 @@ test("the whole story with NO typed outcomes and NO ASFAI: material -> proposals
   assert.equal((await get(`${c}/verify`)).json.ok, true);
 });
 
-test("the worker status reports capability only: configured and zdr, never a key or a URL", async () => {
+test("the worker status reports capability only: configured, zdr and provider, never a key or a URL", async () => {
   const { get } = await boot();
-  assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true });
+  assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true, provider: "openai" });
 });

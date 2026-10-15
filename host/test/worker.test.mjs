@@ -9,6 +9,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { PlanWorker, WorkerError } from "../worker.mjs";
+import { workerFromEnv } from "../server.mjs";
 import { startMockWorker } from "./mock-worker.mjs";
 
 const MOCKS = [];
@@ -297,4 +298,58 @@ test("a student answer must cite the package; unknown ids are dropped, and no va
   assert.deepEqual(await w2.answerStudent({ question: "q", items }), { answer: "Because.", cites: [] });
   const { worker: w3 } = await workerWith({ answer: "   " });
   await assert.rejects(w3.answerStudent({ question: "q", items }), { code: "WORKER_BAD_OUTPUT" });
+});
+
+/* ---- the Anthropic wire (Claude Sonnet 5.5), selectable by config ---- */
+
+test("the Anthropic wire: x-api-key + version header, Messages body, typed content blocks parsed (thinking skipped)", async () => {
+  const mock = await startMockWorker({ reply: goodPlan(), shape: "anthropic" }); MOCKS.push(mock);
+  const w = new PlanWorker({ url: mock.url, model: "claude-sonnet-5-5", apiKey: "sk-test-key", provider: "anthropic" });
+  assert.equal(w.provider, "anthropic");
+  const spec = await w.draft({ objectives: OBJECTIVES });
+  assert.equal(spec.title, "Seeing the claim", "the text block is the answer; a thinking block before it is ignored");
+  assert.equal(mock.st.lastHeaders["x-api-key"], "sk-test-key");
+  assert.equal(mock.st.lastHeaders["anthropic-version"], "2023-06-01");
+  assert.equal(mock.st.lastHeaders.authorization, undefined, "no bearer header on this wire");
+  assert.equal(mock.st.lastBody.model, "claude-sonnet-5-5");
+  assert.equal(mock.st.lastBody.max_tokens, 4000);
+  assert.equal("provider" in mock.st.lastBody, false, "no router hint on this wire");
+  assert.deepEqual(mock.st.lastBody.messages, [{ role: "user", content: mock.st.lastPrompt }]);
+});
+
+test("the Anthropic wire serves every worker call: objectives and student answers too, with the same validation", async () => {
+  const mock = await startMockWorker({ reply: { objectives: [{ statement: "Students can do x.", from: ["a.txt"] }] }, shape: "anthropic" }); MOCKS.push(mock);
+  const w = new PlanWorker({ url: mock.url, model: "claude-sonnet-5-5", provider: "anthropic" });
+  assert.deepEqual(await w.draftObjectives({ materials: [{ name: "a.txt", text: "hello" }] }), [{ statement: "Students can do x.", from: ["a.txt"] }]);
+  const bad = await startMockWorker({ reply: { objectives: [{ statement: "Students can do x.", from: ["ghost.txt"] }] }, shape: "anthropic" }); MOCKS.push(bad);
+  await assert.rejects(new PlanWorker({ url: bad.url, model: "m", provider: "anthropic" }).draftObjectives({ materials: [{ name: "a.txt", text: "hello" }] }), { code: "WORKER_BAD_OUTPUT" });
+});
+
+test("the Anthropic wire refuses to claim zero-data-retention, and an unknown provider is a configuration error", () => {
+  assert.throws(() => new PlanWorker({ url: "https://api.anthropic.com/v1/messages", model: "m", provider: "anthropic", zdr: true }), (e) => e.code === "WORKER_BAD_CONFIG" && /not available on the Anthropic API/.test(e.message));
+  assert.throws(() => new PlanWorker({ provider: "carrier-pigeon" }), { code: "WORKER_BAD_CONFIG" });
+  assert.equal(new PlanWorker({ url: "https://api.anthropic.com/v1/messages", model: "m", provider: "anthropic" }).zdr, false);
+});
+
+test("an Anthropic error body or an empty reply is a refusal, not a plan", async () => {
+  for (const reply of ["", { error: "x" }]) {
+    const mock = await startMockWorker({ reply, shape: "anthropic", status: 200 }); MOCKS.push(mock);
+    // an empty text block / a non-plan JSON both fail validation
+    await assert.rejects(new PlanWorker({ url: mock.url, model: "m", provider: "anthropic" }).draft({ objectives: OBJECTIVES }), { code: "WORKER_BAD_OUTPUT" });
+  }
+  const down = await startMockWorker({ reply: goodPlan(), shape: "anthropic", status: 529 }); MOCKS.push(down);   // overloaded
+  await assert.rejects(new PlanWorker({ url: down.url, model: "m", provider: "anthropic" }).draft({ objectives: OBJECTIVES }), { code: "WORKER_UNREACHABLE" });
+});
+
+test("workerFromEnv: Anthropic defaults (URL, model, ANTHROPIC_API_KEY), OpenRouter stays the default wire, and ZDR on Anthropic refuses to start", () => {
+  const a = workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "k" });
+  assert.equal(a.enabled, true);
+  assert.equal(a.provider, "anthropic");
+  assert.equal(a.zdr, false);
+  assert.equal(workerFromEnv({}).enabled, false, "nothing configured is off");
+  assert.equal(workerFromEnv({}).provider, "openai");
+  const o = workerFromEnv({ SILICUS_WORKER_URL: "https://openrouter.ai/api/v1/chat/completions", SILICUS_WORKER_MODEL: "deepseek/deepseek-v4-flash-0731", SILICUS_WORKER_ZDR: "1" });
+  assert.equal(o.zdr, true);
+  assert.throws(() => workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "k", SILICUS_WORKER_ZDR: "1" }), { code: "WORKER_BAD_CONFIG" });
+  assert.equal(workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic" }).enabled, true, "enabled means url + model; the key is only needed when a call is made");
 });

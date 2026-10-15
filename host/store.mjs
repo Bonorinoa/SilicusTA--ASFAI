@@ -6,78 +6,30 @@
  * reordering or dropping a past event is detectable (`verify()`), and an export
  * can carry the head digest as a sealed fingerprint.
  *
- * Zero dependencies: node:fs + node:crypto only.
+ * Zero dependencies: node:fs + node:crypto (via chain.mjs) only.
  */
-import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
+import { ChainedLog, GENESIS } from "./chain.mjs";
 
-export const GENESIS = "genesis";
+export { GENESIS };
 
-/** Deterministic digest over (prevDigest, event). */
-function linkDigest(prev, event) {
-  return createHash("sha256").update(`${prev}\n${JSON.stringify(event)}`).digest("hex");
-}
-
-/** One course's append-only event log. */
-export class EventLog {
+/**
+ * One course's append-only event log, kept as an NDJSON file. The chain rule (digest, verify) is
+ * chain.mjs's, shared with the browser host; this class only says where the records live.
+ */
+export class EventLog extends ChainedLog {
   /** @param {string} path absolute path to the course's events.ndjson */
   constructor(path) {
+    const readRecords = () => {
+      if (!existsSync(path)) return [];
+      return readFileSync(path, "utf8")
+        .split("\n")
+        .filter((l) => l.trim().length > 0)
+        .map((l) => JSON.parse(l));
+    };
+    super({ readRecords, writeRecord: (record) => appendFileSync(path, JSON.stringify(record) + "\n") });
     this.path = path;
-    this.#head = 0;
-    this.#digest = GENESIS;
-    if (existsSync(path)) {
-      const records = this.read();
-      if (records.length) {
-        this.#head = records[records.length - 1].seq;
-        this.#digest = records[records.length - 1].digest;
-      }
-    }
-  }
-
-  #head;
-  #digest;
-
-  /** @returns {readonly object[]} parsed records in order (no verification). */
-  read() {
-    if (!existsSync(this.path)) return [];
-    return readFileSync(this.path, "utf8")
-      .split("\n")
-      .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l));
-  }
-
-  /** Append one event; returns {seq, digest}. */
-  append(event) {
-    const seq = this.#head + 1;
-    const prev = this.#digest;
-    const digest = linkDigest(prev, event);
-    appendFileSync(this.path, JSON.stringify({ seq, prev, digest, event }) + "\n");
-    this.#head = seq;
-    this.#digest = digest;
-    return { seq, digest };
-  }
-
-  /** Recompute the whole chain from disk and report integrity. */
-  verify() {
-    let prev = GENESIS;
-    let n = 0;
-    for (const r of this.read()) {
-      n += 1;
-      if (r.seq !== n) return { ok: false, reason: `sequence gap at record ${n}` };
-      if (r.prev !== prev) return { ok: false, reason: `broken link at record ${n}` };
-      if (linkDigest(prev, r.event) !== r.digest) return { ok: false, reason: `digest mismatch at record ${n}` };
-      prev = r.digest;
-    }
-    return { ok: true, events: n, head: prev };
-  }
-
-  get count() {
-    return this.#head;
-  }
-
-  get headDigest() {
-    return this.#digest;
   }
 }
 

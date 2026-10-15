@@ -19,11 +19,12 @@
  * file-capable store (a connected Pod) and its field names must be confirmed
  * against the live server before any code depends on them. Not invented here.
  */
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const digestOf = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+import { digestOf } from "./digest.mjs";
+
+export { digestOf };
 
 export class ArchiveError extends Error {
   constructor(code, message) {

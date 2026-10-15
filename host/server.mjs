@@ -38,12 +38,11 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { CourseStore } from "./store.mjs";
-import { CourseSession } from "./course.mjs";
 import { LocalArchive } from "./archive.mjs";
+import { createHandler, HttpError, MAX_BODY } from "./handler.mjs";
 import { TokenStore } from "./asfai/tokens.mjs";
 import { PlanWorker } from "./worker.mjs";
-import { prepareMaterials, MaterialError } from "./materials.mjs";
-import { askStudent, packageOf, StudentError } from "./student.mjs";
+import { prepareMaterials } from "./materials.mjs";
 import { AsfaiOAuth } from "./asfai/oauth.mjs";
 import { AsfaiClient } from "./asfai/mcp.mjs";
 import { AsfaiService } from "./asfai/service.mjs";
@@ -52,25 +51,6 @@ import { LocalOntologySource } from "./sources/local-ontology.mjs";
 
 const ASFAI_MCP_URL = process.env.SILICUS_ASFAI_MCP_URL ?? "https://constitution.asfai.org/education/api/mcp";
 const ASFAI_PRM_URL = process.env.SILICUS_ASFAI_PRM_URL ?? "https://constitution.asfai.org/education/.well-known/oauth-protected-resource";
-
-const MAX_BODY = 1 << 20;
-
-/** The teacher's words: their text, or their per-question answers rendered as text. */
-/** A worker state maps to an honest status: not configured is 501, an outage or bad output is 502. */
-function planStatus(code) {
-  if (code === "WORKER_NOT_CONFIGURED") return 501;
-  if (code === "NO_CONFIRMED_OBJECTIVES" || code === "ALREADY_PROPOSED") return 409;
-  if (code === "NO_MATERIALS") return 422;
-  return 502;
-}
-
-function answerText(b) {
-  if (typeof b.text === "string" && b.text.trim()) return b.text;
-  if (b.answers && typeof b.answers === "object") {
-    return Object.entries(b.answers).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join("; ") : v}`).join("\n");
-  }
-  return b.text;
-}
 
 /**
  * The host holds an ASFAI credential and answers on loopback, so any web page the teacher has
@@ -90,15 +70,6 @@ function guardRequest(req, allowedOrigins, pathname) {
   if (origin && !allowedOrigins.includes(origin)) throw new HttpError(403, "BAD_ORIGIN", "cross-origin request refused");
   if (req.method === "POST" && !String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
     throw new HttpError(415, "JSON_REQUIRED", "POST bodies must be application/json");
-  }
-}
-
-class HttpError extends Error {
-  constructor(status, code, message, extra = {}) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    Object.assign(this, extra);
   }
 }
 
@@ -157,16 +128,18 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     new LocalOntologySource({ file: process.env.SILICUS_ONTOLOGY_FILE ?? null }),
   ];
 
-  /**
-   * Load per request. The event log is the source of record, so a fresh verified
-   * replay per request IS the correct read — and it means a tampered log is
-   * refused on the very request that would have served it (fail closed) instead
-   * of being masked by an in-memory copy.
-   */
-  function session(courseId) {
-    if (!store.has(courseId)) throw new HttpError(404, "UNKNOWN_COURSE", `no such course: ${courseId}`);
-    return CourseSession.load(store, courseId);
-  }
+  // The API itself — routes, intents-only shapes, the per-course lock, verified replay per request and
+  // the error mapping — is handler.mjs, shared with the browser host. This file is only the node:http
+  // transport around it: the loopback/origin guard, the body reader, and CORS on the way out.
+  const handler = createHandler({
+    store,
+    asfai: asfaiSvc,
+    worker: planWorker,
+    sources: knowledgeSources,
+    archives,
+    prepareMaterials: (items) => prepareMaterials(items, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}), ...(ytdlp ? { ytdlp } : {}), ...(runImpl ? { runImpl } : {}) }),
+    guard: (req, pathname) => guardRequest(req, allowedOrigins, pathname),
+  });
 
   function body(req) {
     return new Promise((resolve, reject) => {
@@ -186,173 +159,6 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     });
   }
 
-  // One in-flight mutation per course. Two requests that both load the same log head
-  // and then append (the intake call awaits ASFAI in between) would each write seq N+1
-  // and leave a chain verify() rejects — the course becomes unreadable. The lock makes
-  // the second request load AFTER the first has landed.
-  const courseLocks = new Map();
-  function withCourse(courseId, fn) {
-    const prev = courseLocks.get(courseId) ?? Promise.resolve();
-    const run = prev.then(fn, fn);
-    courseLocks.set(courseId, run.then(() => {}, () => {}));
-    return run;
-  }
-
-  async function route(req) {
-    const url = new URL(req.url, "http://localhost");
-    const parts = url.pathname.split("/").filter(Boolean); // ["api","courses",id,...]
-    const method = req.method ?? "GET";
-
-    if (parts[0] !== "api") throw new HttpError(404, "NOT_FOUND", "not found");
-    guardRequest(req, allowedOrigins, url.pathname);
-
-    if (parts[1] === "health" && method === "GET") return { status: 200, json: { ok: true, courses: store.list().length } };
-    // Whether a drafting worker is configured. Config, never a credential.
-    if (parts[1] === "worker" && parts[2] === "status" && method === "GET") {
-      return { status: 200, json: { configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider } };
-    }
-    // Which knowledge sources are in play. Config and capability only: no URL, no path, no credential.
-    if (parts[1] === "knowledge" && parts[2] === "status" && method === "GET") {
-      return { status: 200, json: { sources: knowledgeSources.map((k) => ({ id: k.id, label: k.label, enabled: k.enabled, canVerify: k.canVerify })) } };
-    }
-    if (parts[1] === "asfai") {
-      if (parts[2] === "status" && method === "GET") return { status: 200, json: asfaiSvc.status() };
-      if (parts[2] === "connect" && method === "POST") return { status: 200, json: await asfaiSvc.oauth.beginAuthorization() };
-      if (parts[2] === "callback" && method === "GET") {
-        const q = Object.fromEntries(url.searchParams);
-        try {
-          console.error(`[asfai] callback received: params=${Object.keys(q).sort().join(",")}`);
-          await asfaiSvc.oauth.handleCallback({ code: q.code, state: q.state, iss: q.iss, error: q.error });
-          return { status: 200, html: "<!doctype html><meta charset=utf-8><title>Connected</title><body style='font:18px Georgia;max-width:32rem;margin:4rem auto'><p>ASFAI is connected. You can close this tab and return to Silicus.</p>" };
-        } catch (e) {
-          console.error(`[asfai] callback refused: ${e.code ?? "error"} — ${String(e.message).slice(0, 160)}`);
-          return { status: 400, html: `<!doctype html><meta charset=utf-8><title>Not connected</title><body style='font:18px Georgia;max-width:32rem;margin:4rem auto'><p>ASFAI was not connected (${String(e.code ?? "error").replace(/[^A-Z_]/g, "")}). Close this tab and start again from Silicus.</p>` };
-        }
-      }
-      throw new HttpError(404, "NOT_FOUND", "no such asfai route");
-    }
-    if (parts[1] === "archives" && method === "GET") return { status: 200, json: { refs: archives.list() } };
-
-    if (parts[1] === "courses") {
-      // /api/courses
-      if (parts.length === 2) {
-        if (method === "GET") {
-          // The library: enough to choose a course and to see, honestly, which one needs attention.
-          // A course whose record does not verify says so here instead of silently disappearing.
-          const courses = store.list().map((m) => {
-            let progress;
-            try {
-              const v = CourseSession.load(store, m.courseId).view();
-              const cps = Object.values(v.checkpoints);
-              progress = { confirmed: cps.filter((c) => c.status === "confirmed").length, total: cps.length, versions: v.versions.length };
-            } catch (e) {
-              progress = { error: e?.code ?? "UNREADABLE" };
-            }
-            return { courseId: m.courseId, owner: m.owner, title: m.title, createdAt: m.createdAt, progress };
-          }).sort((a, b) => b.createdAt - a.createdAt);
-          return { status: 200, json: { courses } };
-        }
-        if (method === "POST") {
-          const b = await body(req);
-          if (!b.owner || !b.title) throw new HttpError(400, "BAD_INPUT", "owner and title are required");
-          const s = CourseSession.create(store, {
-            owner: String(b.owner), title: String(b.title),
-            description: b.description ? String(b.description) : "",
-            materials: Array.isArray(b.materials) ? b.materials : [],
-          });
-          return { status: 201, json: { ok: true, courseId: s.courseId, view: s.view() } };
-        }
-        throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
-      }
-
-      const courseId = decodeURIComponent(parts[2]);
-
-      // A student asks about the PUBLISHED course. Read-only and outside the course lock: it writes
-      // nothing, and a slow model call must not hold up the teacher. Only {question, history} are read.
-      if (parts[3] === "student" && parts[4] === "ask" && parts.length === 5) {
-        if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
-        const sealed = session(courseId).latestSealedVersion();
-        if (!sealed) throw new HttpError(409, "NOT_PUBLISHED", "this course has not been published yet");
-        return { status: 200, json: await askStudent({ pkg: packageOf(sealed), worker: planWorker, body: await body(req) }) };
-      }
-
-      return withCourse(courseId, async () => {
-      const s = session(courseId);
-      const tail = parts.slice(3).join("/");
-
-      if (!tail && method === "GET") return { status: 200, json: s.view() };
-      if (tail === "export" && method === "GET") return { status: 200, json: s.export() };
-      if (tail === "verify" && method === "GET") return { status: 200, json: s.verifyLog() };
-      // Checkpoint 2's intake gate: consult BEFORE a prepare_outline call, report
-      // the observed result AFTER it, and record the teacher's reply in between.
-      if (tail === "intake" && method === "GET") return { status: 200, json: s.intakeStatus() };
-      // The anchor a client PINS on the teacher's device (see frontend/src/gate/pin.ts).
-      if (tail.startsWith("anchor/") && method === "GET") {
-        const version = Number(tail.slice("anchor/".length));
-        if (!Number.isInteger(version) || version < 1) {
-          throw new HttpError(400, "BAD_VERSION", "an anchor needs a positive integer version");
-        }
-        return { status: 200, json: { anchor: s.publishAnchor(version) } };
-      }
-      if (tail.startsWith("archive/") && method === "GET") {
-        const ref = decodeURIComponent(tail.slice("archive/".length));
-        const record = archives.load(ref);
-        const ver = archives.verify(ref, record.digest);
-        return { status: 200, json: { verified: ver.verified, ref, digest: record.digest, archivedAt: record.archivedAt, export: record.payload } };
-      }
-      if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed for ${tail}`);
-
-      const b = await body(req);
-      switch (tail) {
-        case "checkpoints":  return { status: 200, json: s.confirmCheckpoint({ id: b.id, text: b.text, note: b.note ?? null }) };
-        case "intake/call":     return { status: 200, json: await asfaiSvc.runIntake(s) };
-        case "intake/answer":
-          return { status: 200, json: s.answerIntake({ text: answerText(b), answers: b.answers ?? null }) };
-        case "plan/validate":   return { status: 200, json: { validation: await asfaiSvc.validate(s) } };
-        case "archive": {
-          // save() carries the absolute path for in-process callers. It must not leave over HTTP.
-          const { path: _path, ...saved } = archives.save(b.ref ?? s.courseId, s.export());
-          return { status: 200, json: saved };
-        }
-        case "objectives": {
-          // The host DERIVES from its own record of the teacher's answers. The request
-          // body is read and ignored: a client cannot supply an objective statement, so
-          // no objective content is forgeable — the same narrowness as intake/call.
-          const r = s.proposeObjectivesFromAnswers({});
-          if (!r.ok) throw new HttpError(409, r.code, r.reason);
-          return { status: 200, json: { proposals: r.proposals } };
-        }
-        case "materials/propose": {
-          // Content comes IN here, because material is the teacher's input. Objective TEXT never does:
-          // the proposals are written by the worker from the material, labelled with the names the
-          // teacher supplied, and every one still waits for the teacher. Only `materials` is read.
-          // The text is returned to nobody and kept nowhere; the log gets names, digests and sizes.
-          const prepared = await prepareMaterials(b.materials, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}), ...(ytdlp ? { ytdlp } : {}), ...(runImpl ? { runImpl } : {}) });
-          const r = await s.proposeObjectivesFromMaterials({ worker: planWorker, materials: prepared.materials });
-          if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
-          return { status: 200, json: {
-            proposals: r.proposals,
-            materials: prepared.materials.map(({ name, chars, digest, kind, truncated }) => ({ name, chars, digest, kind, truncated })),
-            skipped: prepared.skipped,
-          } };
-        }
-        case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
-        case "plan": {
-          // The WORKER drafts from the confirmed objectives. The body is read and ignored:
-          // a client cannot supply a plan any more than it can supply an objective.
-          const r = await s.draftPlanFromObjectives({ worker: planWorker, sources: knowledgeSources });
-          if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
-          return { status: 200, json: r.plan };
-        }
-        case "plan/confirm": return { status: 200, json: s.confirmLessonPlan({ text: b.text, planId: b.planId ?? null }) };
-        case "publish":      return { status: 200, json: { version: s.publish({ text: b.text, note: b.note ?? null }) } };
-        default: throw new HttpError(404, "NOT_FOUND", `no route: ${url.pathname}`);
-      }
-      });
-    }
-    throw new HttpError(404, "NOT_FOUND", "not found");
-  }
-
   return createServer(async (req, res) => {
     const send = (status, obj) => {
       const payload = JSON.stringify(obj);
@@ -364,25 +170,10 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       });
       res.end(payload);
     };
-    try {
-      if (req.method === "OPTIONS") return send(204, {});
-      const out = await route(req);
-      if (out.html) { res.writeHead(out.status, { "content-type": "text/html; charset=utf-8" }); return res.end(out.html); }
-      send(out.status, out.json);
-    } catch (err) {
-      if (err instanceof HttpError) return send(err.status, { ok: false, code: err.code, message: err.message, ...(err.blockers ? { blockers: err.blockers } : {}) });
-      if (err && err.name === "PublishBlockedError") return send(409, { ok: false, code: "PUBLISH_BLOCKED", message: err.message, blockers: err.blockers });
-      if (err && err.name === "StatementError") return send(422, { ok: false, code: err.code, message: err.message });
-      if (err && err.name === "FabricatedConfirmationError") return send(403, { ok: false, code: err.code, message: err.message });
-      if (err && err.name === "StudentError") return send(err.code === "NO_QUESTION" ? 422 : err.code === "WORKER_NOT_CONFIGURED" ? 501 : 502, { ok: false, code: err.code, message: err.message });
-      if (err && err.name === "MaterialError") return send(err.code === "URL_UNREACHABLE" ? 502 : 422, { ok: false, code: err.code, message: err.message });
-      if (err && err.name === "AsfaiAuthError") return send(401, { ok: false, code: err.code, message: err.message });
-      if (err && err.name === "AsfaiCallError") return send(502, { ok: false, code: err.code, message: err.message });
-      if (err && err.code) return send(409, { ok: false, code: err.code, message: err.message });
-      // A network failure reaching ASFAI is an outage, not a bug in the host.
-      if (err && err.name === "TypeError" && /fetch/i.test(String(err.message))) return send(502, { ok: false, code: "ASFAI_UNREACHABLE", message: "ASFAI could not be reached; the course still works locally" });
-      send(500, { ok: false, code: "INTERNAL", message: String(err && err.message ? err.message : err) });
-    }
+    if (req.method === "OPTIONS") return send(204, {});
+    const out = await handler.handle({ method: req.method, url: req.url, readBody: () => body(req), raw: req });
+    if (out.html) { res.writeHead(out.status, { "content-type": "text/html; charset=utf-8" }); return res.end(out.html); }
+    send(out.status, out.json);
   });
 }
 

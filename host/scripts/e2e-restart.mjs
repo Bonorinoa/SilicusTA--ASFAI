@@ -133,7 +133,41 @@ const ver = (await get(`/api/courses/${courseId}/verify`)).json;
 check("event-log hash chain verifies", ver.ok === true, `events=${ver.events}`);
 check("sealed version survived restart", v2.versions.length === 1 && v2.versions[0].objectiveRefs.length === 3);
 check("publish still legal after restart", v2.publish.canPublish === true);
+
+// ---- Phase 2 (Sprint 5): a SECOND course on the same data dir, answered locally. ASFAI is
+// connected on this host and the teacher simply never uses it: no MCP tool call may be made.
+const toolCallsBefore = (mock.st.toolArgs ?? []).length;
+const c2 = (await post("/api/courses", { owner: OWNER, title: "Local only" })).json.courseId;
+await post(`/api/courses/${c2}/checkpoints`, { id: "files", text: "Confirm the material list." });
+const i2 = (await get(`/api/courses/${c2}/intake`)).json;
+check("local: a fresh course carries the host's own three questions", i2.questionsFrom === "local" && i2.questions.length === 3 && i2.observedState === null);
+const early2 = await post(`/api/courses/${c2}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+check("local: asking is not answering - the outline is still refused", early2.status === 409 && early2.json.code === "MISSING_DRAFT_AUTHORIZATION");
+await post(`/api/courses/${c2}/intake/answer`, { text: "t", answers: { topic: "how AI answers are built" } });
+await post(`/api/courses/${c2}/intake/answer`, { text: "c", answers: { course: "AI literacy, ages 8-10" } });
+check("local: two of three answers do not authorize the outline", (await get(`/api/courses/${c2}/intake`)).json.outlineAuthorized === false);
+await post(`/api/courses/${c2}/intake/answer`, { text: "o", answers: { learning_outcomes: "explain an algorithm\nfind the claim" } });
+check("local: the last answer authorizes the outline", (await get(`/api/courses/${c2}/intake`)).json.outlineAuthorized === true);
+await post(`/api/courses/${c2}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+const prop2 = await post(`/api/courses/${c2}/objectives`, {});
+check("local: objectives are the teacher's own words, labelled honestly",
+  JSON.stringify(prop2.json.proposals.map((p) => p.statement)) === JSON.stringify(["explain an algorithm", "find the claim"]) &&
+  prop2.json.proposals.every((p) => p.source === "from your answer"));
+await post(`/api/courses/${c2}/decisions`, { decisions: prop2.json.proposals.map((p) => ({ verb: "accept", proposalId: p.id })), text: "Accept." });
+await post(`/api/courses/${c2}/plan`, {});
+await post(`/api/courses/${c2}/plan/confirm`, { text: "Confirm the lesson plan." });
+const pub2 = await post(`/api/courses/${c2}/publish`, { text: "Publish the course package." });
+check("local: sealed as version 1 with no ASFAI", pub2.status === 200 && pub2.json.version.version === 1);
+check("local: not one MCP tool call reached ASFAI", (mock.st.toolArgs ?? []).length === toolCallsBefore, `before=${toolCallsBefore} after=${(mock.st.toolArgs ?? []).length}`);
+const w1 = (await get(`/api/courses/${c2}`)).json;
 await stop(h2);
+const h3 = startHost();
+check("local: host restarts", await waitHealthy());
+const w2 = (await get(`/api/courses/${c2}`)).json;
+check("local: record is byte-identical after restart", JSON.stringify(w2) === JSON.stringify(w1));
+check("local: event-log hash chain verifies", (await get(`/api/courses/${c2}/verify`)).json.ok === true);
+check("the first course is untouched by the second", JSON.stringify((await get(`/api/courses/${courseId}`)).json) === JSON.stringify(v1));
+await stop(h3);
 
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;

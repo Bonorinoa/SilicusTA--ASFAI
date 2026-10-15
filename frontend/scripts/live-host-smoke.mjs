@@ -106,7 +106,7 @@ const clickText = (page, text) => page.evaluate((t) => {
 const bodyHas = (page, t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
 
 // ---------------------------------------------------------------- boot both
-bg(process.execPath, ["server.mjs"], {
+const hostProc1 = bg(process.execPath, ["server.mjs"], {
   cwd: join(REPO, "host"),
   env: {
     ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT),
@@ -114,7 +114,8 @@ bg(process.execPath, ["server.mjs"], {
     SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
   },
 });
-bg("npm", ["run", "preview", "--", "--port", String(APP_PORT), "--strictPort"], { cwd: HERE });
+// Bind IPv4 explicitly: `localhost` can resolve to ::1 only, and this script (and the host proxy) talk to 127.0.0.1.
+bg("npm", ["run", "preview", "--", "--host", "127.0.0.1", "--port", String(APP_PORT), "--strictPort"], { cwd: HERE });
 
 check("Silicus host is up", await waitHttp(`${HOST}/api/health`));
 check("built app is served", await waitHttp(`${APP}/`));
@@ -173,10 +174,14 @@ const consent = MOCK.consent(conn.json.authorizeUrl);
 const cbRes = await fetch(`${HOST}/api/asfai/callback?code=${consent.code}&state=${consent.state}`);
 check("ASFAI consent completes through the host's own callback", cbRes.status === 200);
 await page.reload({ waitUntil: "networkidle0" });
-await poll(async () => await bodyHas(page, "Ask ASFAI for the questions"));
-await clickText(page, "Ask ASFAI for the questions");
-await poll(() => page.evaluate(() => document.body.innerText.includes("What topic should this lesson cover?")));
-check("the host called ASFAI and the questions surface in the UI", true);
+// Sprint 5: the host's own questions were already on screen; connected ASFAI is the RECOMMENDED upgrade.
+await poll(async () => await bodyHas(page, "Use ASFAI's questionnaire"));
+check("connected: ASFAI is recommended, and the host's own questions are live beside it",
+  (await bodyHas(page, "Recommended:")) && (await page.evaluate(() => !!document.querySelector("#intake-topic"))));
+await clickText(page, "Use ASFAI's questionnaire");
+await poll(async () => (await getView(courseId)).intake.questionsFrom === "asfai");
+await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="ASFAI course intake"]')));
+check("the host called ASFAI and its questions surface in the UI, attributed to ASFAI", true);
 
 const premature = await post(`/api/courses/${courseId}/checkpoints`, { id: "outline", text: "Confirm the outline." });
 check(
@@ -327,6 +332,103 @@ await poll(async () => await bodyHas(page, "Check my pinned copies"));
 await clickText(page, "Check my pinned copies");
 await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("differs from what you pinned")));
 check("THE PIN CATCHES IT: the device's copy differs from the rewritten record", true);
+
+
+// ======================================================================================
+// Phase 2 (Sprint 5): a teacher who NEVER connects ASFAI, through the real UI. A second host
+// on a fresh data dir has no ASFAI tokens at all; the mock counts every request that reaches it.
+// ======================================================================================
+await new Promise((r) => { hostProc1.once("exit", r); hostProc1.kill("SIGTERM"); });
+const DATA2 = mkdtempSync(join(tmpdir(), "silicus-live2-"));
+bg(process.execPath, ["server.mjs"], {
+  cwd: join(REPO, "host"),
+  env: {
+    ...process.env, SILICUS_HOST_DATA: DATA2, SILICUS_HOST_PORT: String(HOST_PORT),
+    SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
+    SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
+  },
+});
+check("local: a second host, with no ASFAI credential, is up", await waitHttp(`${HOST}/api/health`));
+const asfaiRequestsBefore = MOCK.st.calls.length;
+await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
+await page.reload({ waitUntil: "networkidle0" });
+await poll(async () => await bodyHas(page, "What should we call this course"));
+await reply("Local only · AI literacy", "Record the course title");
+await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+await reply("Grace Hopper", "Record the label");
+await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+await clickText(page, "No materials");
+const course2 = await poll(async () => (await listCourses())[0]?.courseId);
+await poll(async () => await bodyHas(page, "Confirm the material list"));
+await clickText(page, "Confirm the material list");
+await poll(async () => (await getView(course2)).checkpoints.files.status === "confirmed");
+
+await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Course intake"]') && !!document.querySelector("#intake-topic")));
+check("local: the host's own questions are live with ASFAI unconnected, and are not attributed to ASFAI",
+  (await getView(course2)).intake.questionsFrom === "local" &&
+  !(await page.evaluate(() => [...document.querySelectorAll("span")].some((x) => (x.textContent ?? "").trim() === "ASFAI"))));
+check("local: ASFAI is recommended, not required (Connect ASFAI is offered beside the live questions)",
+  (await bodyHas(page, "Recommended:")) && (await bodyHas(page, "Connect ASFAI")) && (await bodyHas(page, "Nothing waits on it")));
+const premature2 = await post(`/api/courses/${course2}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+check("local: the outline is refused until the teacher has answered", premature2.status === 409 && premature2.json.code === "MISSING_DRAFT_AUTHORIZATION");
+
+await fill("topic", "how AI answers are built");
+await clickText(page, "Record this answer");
+await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
+await fill("course", "AI literacy, ages 8-10");
+await clickText(page, "Record this answer");
+await poll(() => page.evaluate(() => !!document.querySelector("#intake-learning_outcomes")));
+check("local: two of three answers do not open the outline", (await getView(course2)).intake.outlineAuthorized === false);
+await fill("learning_outcomes", "Students can explain what an algorithm is.\nLearners can find the claim in an AI answer.");
+await clickText(page, "Record this answer");
+await poll(async () => (await getView(course2)).intake.outlineAuthorized === true);
+await poll(async () => await bodyHas(page, "Confirm the outline"));
+await clickText(page, "Confirm the outline");
+await poll(async () => (await getView(course2)).checkpoints.outline.status === "confirmed");
+check("local: outline confirmed IN THE HOST on the teacher's own answers", true);
+
+await poll(async () => await bodyHas(page, "Propose objectives from your answers"));
+await clickText(page, "Propose objectives from your answers");
+await poll(async () => (await getView(course2)).proposals.length === 2);
+const labelled = (await getView(course2)).proposals;
+check("local: proposals are the teacher's own sentences, labelled 'from your answer' (not 'to ASFAI')",
+  labelled.every((p) => p.source === "from your answer") && labelled[0].statement === "Students can explain what an algorithm is.");
+const decided2 = await poll(async () => {
+  const v = await getView(course2);
+  if (v.proposals.length > 0 && v.proposals.every((p) => p.status !== "proposed")) return v;
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll("button")].find((x) => (x.getAttribute("aria-label") ?? "").trim().startsWith("Accept objective"));
+    if (b && !b.disabled) b.click();
+  });
+  await sleep(400);
+  return null;
+}, 25000);
+check("local: objectives confirmed through the gate", decided2.checkpoints.objectives.status === "confirmed");
+await poll(async () => await bodyHas(page, "Draft the plan from your confirmed objectives"));
+await clickText(page, "Draft the plan from your confirmed objectives");
+await poll(async () => (await getView(course2)).plan?.status === "draft");
+await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
+await clickText(page, "Confirm the lesson plan");
+await poll(async () => (await getView(course2)).plan?.status === "confirmed");
+const sealOpen2 = await poll(async () => {
+  if (await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'))) return true;
+  await page.evaluate(() => {
+    const sec = document.querySelector('section[aria-label*="Course package"]');
+    const armed = !!sec && /ready to seal/i.test(sec.innerText);
+    const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
+    if (btn && armed) btn.click();
+  });
+  await sleep(250);
+  return null;
+}, 12000);
+check("local: seal confirm step appears", sealOpen2 === true);
+await clickText(page, "Publish version 1");
+const sealed2 = await poll(async () => { const v = await getView(course2); return v.versions.length === 1 ? v : null; });
+check("local: all five checkpoints confirmed and sealed with no ASFAI",
+  ["files", "outline", "objectives", "plan", "publish"].every((k) => sealed2.checkpoints[k].status === "confirmed"));
+check("local: the log verifies", (await get(`/api/courses/${encodeURIComponent(course2)}/verify`)).json.ok === true);
+check("local: not one request reached ASFAI during the whole local story", MOCK.st.calls.length === asfaiRequestsBefore,
+  `before=${asfaiRequestsBefore} after=${MOCK.st.calls.length}`);
 
 await page.screenshot({ path: `${DATA}/live-sealed.png`, fullPage: true });
 console.log(`screenshot: ${DATA}/live-sealed.png`);

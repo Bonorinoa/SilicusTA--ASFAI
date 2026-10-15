@@ -112,3 +112,88 @@ test("the intake survives a restart (it is part of the log)", () => {
   assert.equal(reloaded.intakeStatus().outlineAuthorized, true);
   assert.equal(reloaded.view().checkpoints.outline.status, "confirmed");
 });
+
+/* ---- Sprint 5: ASFAI is recommended, never required. ADDITIVE ONLY: every test above is
+ * unedited, and that is the proof the ASFAI path was not weakened. ------------------- */
+
+test("a fresh course asks the teacher the three questions itself, with no ASFAI", () => {
+  const s = sessionWithFiles();
+  const st = s.intakeStatus();
+  assert.deepEqual(st.questions.map((q) => q.id), ["topic", "course", "learning_outcomes"]);
+  assert.equal(st.questionsFrom, "local");
+  assert.equal(st.observedState, null);
+  assert.equal(st.outlineAuthorized, false, "asking is not answering");
+});
+
+test("the host's own questions are the SAME ids and prompts ASFAI asks, so every derivation is unchanged", () => {
+  const s = sessionWithFiles();
+  const local = s.intakeStatus().questions.map((q) => ({ id: q.id, prompt: q.prompt }));
+  const live = CLARIFY.questions.map((q) => ({ id: q.id, prompt: q.prompt }));
+  assert.deepEqual(local, live);
+});
+
+test("the teacher's own answers authorize checkpoint 2 with no ASFAI at all", () => {
+  const s = sessionWithFiles();
+  // No observeIntake call anywhere in this test: ASFAI is never consulted.
+  s.answerIntake({ text: "how AI answers are built", answers: { topic: "how AI answers are built" }, at: 2000 });
+  assert.equal(s.intakeStatus().outlineAuthorized, false, "one answer is not all of them");
+  s.answerIntake({ text: "AI literacy, ages 8-10", answers: { course: "AI literacy, ages 8-10" }, at: 2100 });
+  assert.equal(s.intakeStatus().outlineAuthorized, false, "two of three is still not all of them");
+  s.answerIntake({ text: "explain an algorithm", answers: { learning_outcomes: "explain an algorithm" }, at: 2200 });
+
+  const st = s.intakeStatus();
+  assert.equal(st.outlineAuthorized, true);
+  assert.equal(st.questionsFrom, "local");
+  assert.equal(st.observedState, null, "ASFAI was never consulted");
+  const cp = s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 3000 });
+  assert.equal(cp.status, "confirmed");
+});
+
+test("BYSS: a teacher turn that carries no answers does not authorize the local path", () => {
+  const s = sessionWithFiles();
+  s.answerIntake({ text: "hmm, not sure yet", at: 2000 });                       // a real turn, no answers
+  s.answerIntake({ text: "x", answers: { unrelated: "poison", topic: "  " }, at: 2100 }); // unasked / blank keys
+  assert.equal(s.intakeStatus().outlineAuthorized, false);
+  assert.throws(
+    () => s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 3000 }),
+    (e) => e.code === "MISSING_DRAFT_AUTHORIZATION",
+  );
+});
+
+test("a locally-authorized course replays: the answers are the evidence, not memory", () => {
+  const store = newStore();
+  const s = CourseSession.create(store, { owner: OWNER, title: "T" });
+  s.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  s.answerIntake({ text: "my answers", answers: { topic: "t", course: "c", learning_outcomes: "o" }, at: 2000 });
+  s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 3000 });
+  const reloaded = CourseSession.load(store, s.courseId);
+  assert.equal(reloaded.intakeStatus().outlineAuthorized, true);
+  assert.equal(reloaded.intakeStatus().questionsFrom, "local");
+  assert.equal(reloaded.view().checkpoints.outline.status, "confirmed");
+});
+
+test("consulting ASFAI does not open checkpoint 2 on the answers alone (the boundary between the two paths)", () => {
+  // Once ASFAI is in the loop, ASFAI's observed outcome governs — even though the
+  // teacher's local answers were already complete.
+  const s = sessionWithFiles();
+  s.answerIntake({ text: "all three", answers: { topic: "t", course: "c", learning_outcomes: "o" }, at: 1500 });
+  assert.equal(s.intakeStatus().outlineAuthorized, true, "local path open before ASFAI is consulted");
+
+  s.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: 2000 });
+  const st = s.intakeStatus();
+  assert.equal(st.questionsFrom, "asfai");
+  assert.equal(st.outlineAuthorized, false, "ASFAI must still finish its round");
+
+  s.answerIntake({ text: ANSWER, at: 3000 });
+  assert.equal(s.intakeStatus().outlineAuthorized, false, "armed is not yet authorized");
+  s.observeIntake({ state: READY.state, at: 4000 });
+  assert.equal(s.intakeStatus().outlineAuthorized, true);
+});
+
+test("an outline already confirmed locally stays confirmed if ASFAI is consulted afterwards", () => {
+  const s = sessionWithFiles();
+  s.answerIntake({ text: "all three", answers: { topic: "t", course: "c", learning_outcomes: "o" }, at: 1500 });
+  s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 2000 });
+  s.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: 3000 });
+  assert.equal(s.view().checkpoints.outline.status, "confirmed", "a teacher's recorded confirmation is not retroactively revoked");
+});

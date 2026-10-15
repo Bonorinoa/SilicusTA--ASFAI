@@ -24,11 +24,24 @@
 import { ResidualRuleGuard } from "../confirm-gate/host-guard.mjs";
 import { outcomeSentences } from "./proposer.mjs";
 
+/**
+ * The questions the HOST asks when ASFAI is not in the loop. Same ids and prompts as the
+ * live asfai_learning questionnaire (fixtures/lesson-intake.json) on purpose: every
+ * downstream derivation keys on these ids (KNOWN, cleanAnswers, objectivesFromAnswers,
+ * the learningOutcomes payload), so "who asked" is the only difference. The ids are field
+ * names, not ASFAI IP. Frozen and module-level so replay is deterministic.
+ */
+export const LOCAL_QUESTIONS = Object.freeze([
+  Object.freeze({ id: "topic", prompt: "What topic should this lesson cover?", reason: "The outline needs a subject." }),
+  Object.freeze({ id: "course", prompt: "Which course is this part of?", reason: "Course context sets scope and sequencing." }),
+  Object.freeze({ id: "learning_outcomes", prompt: "What should learners be able to do by the end?", reason: "An observable outcome anchors the outline." }),
+]);
+
 export class LessonIntake {
   #guard;
   #courseId;
   #observedState = null;
-  #questions = [];
+  #questions = LOCAL_QUESTIONS;
   // The residual rule, at the intake level. host-guard's own
   // onPrepareOutlineResult(ready_to_draft) CLEARS an outstanding clarifying round
   // without requiring that a teacher answered — correct for its contract
@@ -131,13 +144,46 @@ export class LessonIntake {
     return this.#guard.beforePrepareOutline();
   }
 
+  /** Has the host heard from ASFAI at all? Derived, so it replays with no extra event. */
+  #asfaiConsulted() {
+    return this.#observedState !== null;
+  }
+
+  /** Did the teacher's answers go to ASFAI? The honest basis for a source label. */
+  sentToAsfai() {
+    return this.#asfaiConsulted();
+  }
+
   /**
-   * May checkpoint 2 be teacher-confirmed? Yes only for an OBSERVED ready_to_draft
-   * with no outstanding clarifying round (the guard is `ready`, not `clarifying`),
-   * or for an observed draftAuthorization.
+   * Every question the host asked that it knows how to forward has an answer.
+   * `KNOWN` and `hasAnswer` are the same rules `nextCall()` uses for INCOMPLETE_ANSWERS,
+   * so "authorized" and "complete" cannot drift apart. `#answers` is only ever written by
+   * answer(), which needs a session-minted TeacherChannel: the host cannot authorize
+   * itself by merely asking.
+   */
+  #localAnswersComplete() {
+    const asked = this.#questions.filter((q) => KNOWN.has(q.id));
+    return asked.length > 0 && asked.every((q) => hasAnswer(this.#answers, q.id));
+  }
+
+  /**
+   * May checkpoint 2 be teacher-confirmed?
+   *
+   * Two paths, and which one applies is DERIVED, not declared:
+   *
+   *  - ASFAI was never consulted: the host asked its own questions and the teacher
+   *    answered every one of them. The only evidence is their recorded turn — no
+   *    server token is involved, so there is nothing to fabricate.
+   *  - ASFAI was consulted: the existing rule, unchanged. An OBSERVED ready_to_draft
+   *    with no outstanding clarifying round (the guard is `ready`, not `clarifying`),
+   *    or an observed draftAuthorization.
+   *
+   * The ASFAI path is not weakened by the local one: gating local on "never consulted"
+   * means the ASFAI flow behaves exactly as before.
    */
   outlineAuthorized() {
     if (this.#guard.hasDraftAuthorization()) return true;
+    if (!this.#asfaiConsulted()) return this.#localAnswersComplete();
     return (
       this.#observedState === "ready_to_draft" &&
       this.#guard.state !== "clarifying" &&
@@ -167,6 +213,7 @@ export class LessonIntake {
       courseId: this.#courseId,
       guardState: this.#guard.state,
       observedState: this.#observedState,
+      questionsFrom: this.#asfaiConsulted() ? "asfai" : "local",
       roundOpened: this.#roundOpened,
       roundAnswered: this.#roundAnswered,
       questions: this.#questions,

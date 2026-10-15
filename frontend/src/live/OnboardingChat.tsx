@@ -70,11 +70,13 @@ function nextOpen(after: OpeningId, drafts: Partial<Record<OpeningId, string>>):
 }
 
 export function OnboardingChat({
-  view, asfai, busy, onCreate, onConfirmFiles, onAsk, onAnswer, onSendToAsfai, onConnect, onRefresh,
+  view, asfai, busy, workerConfigured = false, onCreate, onConfirmFiles, onAsk, onAnswer, onSendToAsfai, onConnect, onRefresh,
 }: {
   view: HostView | null;
   asfai: AsfaiStatus | null;
   busy: boolean;
+  /** Is a drafting worker configured? Only then can the outcomes be proposed from the materials. */
+  workerConfigured?: boolean;
   onCreate: (b: { owner: string; title: string; materials: NamedMaterial[] }) => void;
   onConfirmFiles: (text: string) => void;
   onAsk: () => void;
@@ -95,7 +97,9 @@ export function OnboardingChat({
   const outlineOpen = !!view && (view.checkpoints.outline?.status === "pending" || view.checkpoints.outline?.status === "open");
   const questions = view?.intake.questions ?? [];
   const recorded = view?.intake.answers ?? {};
-  const openQuestion = questions.find((q) => FORWARDABLE.has(q.id) && !answerText(recorded[q.id]).trim());
+  // "Propose these from my materials" is a recorded answer to the outcomes question, not objective text.
+  const standsIn = (id: string) => id === "learning_outcomes" && recorded.outcomes_from === "materials";
+  const openQuestion = questions.find((q) => FORWARDABLE.has(q.id) && !answerText(recorded[q.id]).trim() && !standsIn(q.id));
   const unforwardable = questions.filter((q) => !FORWARDABLE.has(q.id));
   const roundComplete = questions.some((q) => FORWARDABLE.has(q.id)) && !openQuestion;
   // Who asked. The host's own questions are never attributed to ASFAI.
@@ -190,11 +194,11 @@ export function OnboardingChat({
             ) : null}
           </li>
         ))}
-        {questions.filter((q) => answerText(recorded[q.id]).trim()).map((q) => (
+        {questions.filter((q) => answerText(recorded[q.id]).trim() || standsIn(q.id)).map((q) => (
           <li key={q.id} className={styles.pair}>
             <p className={styles.ask}><span className={styles.who}>{asker}</span>{q.prompt}</p>
             <p className={styles.you}>You</p>
-            <p className={styles.said}>{answerText(recorded[q.id])}</p>
+            <p className={styles.said}>{answerText(recorded[q.id]) || "Propose these from my materials."}</p>
             <p className={styles.kept}>
               {fromAsfai ? "Recorded on this course. Sent only when you send the round." : "Recorded on this course. Not sent to ASFAI."}
             </p>
@@ -303,9 +307,16 @@ export function OnboardingChat({
                 onChange={(e) => setReply(e.target.value)}
                 onKeyDown={(e) => onKeyDown(e, submitAnswer)}
               />
-              <button type="submit" className={styles.send} aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
-                Record this answer
-              </button>
+              <div className={styles.verbs}>
+                <button type="submit" className={styles.send} aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
+                  Record this answer
+                </button>
+                {!fromAsfai && openQuestion.id === "learning_outcomes" && workerConfigured ? (
+                  <button type="button" className={styles.quiet} disabled={busy} onClick={() => onAnswer({ outcomes_from: "materials" })}>
+                    Propose these from my materials instead
+                  </button>
+                ) : null}
+              </div>
             </form>
           ) : null}
           {fromAsfai && roundComplete ? (

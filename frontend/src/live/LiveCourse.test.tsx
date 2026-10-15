@@ -88,7 +88,7 @@ interface Call { url: string; body: Record<string, unknown> | undefined }
 
 function mockHost(
   view: HostView | null,
-  { workerConfigured = true, asfaiConnected = true }: { workerConfigured?: boolean; asfaiConnected?: boolean } = {},
+  { workerConfigured = true, asfaiConnected = true, studentReply }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown } = {},
 ): { calls: Call[] } {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
@@ -99,8 +99,10 @@ function mockHost(
       return ok({ courses: view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1 }] : [] });
     }
     if (url === "/api/asfai/status") return ok({ connected: asfaiConnected, expiresAt: asfaiConnected ? 9 : null, scope: asfaiConnected ? "asfai" : null, canRefresh: asfaiConnected });
-    if (url === "/api/worker/status") return ok({ configured: workerConfigured });
+    if (url === "/api/worker/status") return ok({ configured: workerConfigured, zdr: true });
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
+    if (url.endsWith("/materials/propose")) return ok({ proposals: [], materials: [], skipped: [] });
+    if (url.endsWith("/student/ask")) return ok(studentReply ?? { answer: "x", grounded: false, cites: [], note: "n" });
     if (url.startsWith("/api/courses/")) return ok(view);
     return ok({});
   }));
@@ -352,5 +354,78 @@ describe("LiveCourse — thin client of the host", () => {
     render(<LiveCourse />);
     expect((await screen.findAllByRole("heading", { level: 1, name: "Seeing the claim" })).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: "Suggested alignment" })).not.toBeInTheDocument();
+  });
+
+  it("offers to propose the outcomes from the materials only when a worker exists, as a recorded answer and not objective text", async () => {
+    const v = localView();
+    v.intake = { ...v.intake, answers: { topic: "t", course: "c" } };
+    const { calls } = mockHost(v, { workerConfigured: true, asfaiConnected: false });
+    const user = userEvent.setup();
+    const first = render(<LiveCourse />);
+    await user.click(await screen.findByRole("button", { name: /propose these from my materials instead/i }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/answer"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as { answers: Record<string, string>; text: string };
+    expect(body.answers).toEqual({ outcomes_from: "materials" });
+    expect(body.text).toBe("Propose the outcomes from my materials.");
+    first.unmount();
+
+    mockHost(v, { workerConfigured: false, asfaiConnected: false });
+    render(<LiveCourse />);
+    expect(await screen.findByLabelText(/what should learners be able to do by the end/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /propose these from my materials instead/i })).not.toBeInTheDocument();
+  });
+
+  it("sends the material to the host once, keeps it in memory only, and never sends an objective", async () => {
+    const v = stubView();
+    v.proposals = [];
+    v.intake = { ...v.intake, questionsFrom: "local", answers: { topic: "t", course: "c", outcomes_from: "materials" } };
+    const { calls } = mockHost(v);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    expect(await screen.findByText(/stays in this tab only/i)).toBeInTheDocument();
+    expect(screen.getByText(/zero-data-retention/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /propose objectives from your answers/i })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("A public link"), "https://example.org/ai-intro");
+    await user.click(screen.getByRole("button", { name: "Add this link" }));
+    await user.type(screen.getByLabelText(/or paste text/i), "slides.txt");
+    await user.type(screen.getByLabelText("Pasted text"), "An algorithm is a list of steps.");
+    await user.click(screen.getByRole("button", { name: "Add this text" }));
+    expect(screen.getByRole("list", { name: "Material added" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /propose objectives from my materials/i }));
+
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/materials/propose"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/materials/propose"))!.body as Record<string, unknown>;
+    expect(body).toEqual({ materials: [{ url: "https://example.org/ai-intro" }, { name: "slides.txt", text: "An algorithm is a list of steps." }] });
+    expect(JSON.stringify(body)).not.toMatch(/statement|objective|provenance/);
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it("lets a teacher try the published course as a student: grounded answers show what they rest on, and nothing is saved", async () => {
+    const v = stubView();
+    v.versions = [{ version: 1 } as unknown as HostView["versions"][number]];
+    const { calls } = mockHost(v, { studentReply: { answer: "An algorithm is a list of steps.", grounded: true, cites: [{ id: "objective:1", label: "Objective 1" }], note: "Asking questions here is not evidence of learning." } });
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await user.type(await screen.findByLabelText("Your question"), "What is an algorithm?");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByText("An algorithm is a list of steps.")).toBeInTheDocument();
+    expect(screen.getByText(/From Objective 1\./)).toBeInTheDocument();
+    const body = calls.find((c) => c.url.endsWith("/student/ask"))!.body as Record<string, unknown>;
+    expect(body).toEqual({ question: "What is an algorithm?", history: [] });
+    expect(screen.getByText(/not evidence of learning, and nothing you ask is saved/i)).toBeInTheDocument();
+    expect(window.localStorage.length).toBe(0);
+  });
+
+  it("says plainly when the course does not cover a student's question", async () => {
+    const v = stubView();
+    v.versions = [{ version: 1 } as unknown as HostView["versions"][number]];
+    mockHost(v, { studentReply: { answer: "That isn't in this course yet. Ask your teacher.", grounded: false, cites: [], note: "n" } });
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await user.type(await screen.findByLabelText("Your question"), "Who won in 1966?");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByText(/Not covered by this course\./)).toBeInTheDocument();
   });
 });

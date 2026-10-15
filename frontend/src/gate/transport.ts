@@ -63,6 +63,17 @@ export interface IntakeStatus {
   refusal: { code: string; reason: string } | null;
 }
 
+/** One thing a teacher hands over: their own text (named), or a public link the host fetches. */
+export type MaterialInput = { name: string; text: string } | { url: string; name?: string };
+
+/** A student's answer from the host: grounded in the sealed package, or the fixed "ask your teacher". */
+export interface StudentAnswer {
+  answer: string;
+  grounded: boolean;
+  cites: { id: string; label: string }[];
+  note: string;
+}
+
 /** The host's course view: gate state, derived rows, ledger and log fingerprint. */
 export interface HostView {
   course: HostCourseMeta;
@@ -70,6 +81,8 @@ export interface HostView {
   intake: IntakeStatus;
   validations?: PlanValidation[];
   proposals: ProposalView[];
+  /** The materials the AI's proposals were drawn from: name, digest, size. Never the text. */
+  materialsUsed?: { name: string; digest: string; chars: number }[];
   objectives: ObjectiveCiteView[];
   decisions: unknown[];
   plan: LessonPlanView | null;
@@ -148,7 +161,14 @@ export const host = {
   /** The OSS WORKER drafts the plan from the teacher's confirmed objectives; the UI sends no body. */
   proposePlan: (id: string) => call("POST", `/courses/${enc(id)}/plan`, {}),
   /** Is a drafting worker configured? Config only, never a credential. */
-  workerStatus: () => call<{ configured: boolean }>("GET", "/worker/status"),
+  workerStatus: () => call<{ configured: boolean; zdr?: boolean }>("GET", "/worker/status"),
+  /** The teacher's material goes IN; the WORKER proposes objectives. The host keeps names and digests, never the text. */
+  proposeFromMaterials: (id: string, b: { materials: MaterialInput[] }) =>
+    call<{ proposals: ProposalView[]; materials: { name: string; chars: number; kind: string }[]; skipped: { name: string; reason: string }[] }>(
+      "POST", `/courses/${enc(id)}/materials/propose`, b),
+  /** A student asks about the PUBLISHED package. Read-only: nothing is recorded. */
+  askStudent: (id: string, b: { question: string; history?: { role: "student" | "assistant"; text: string }[] }) =>
+    call<StudentAnswer>("POST", `/courses/${enc(id)}/student/ask`, b),
   confirmPlan: (id: string, b: { text: string; planId?: string }) =>
     call("POST", `/courses/${enc(id)}/plan/confirm`, b),
   publish: (id: string, b: { text: string; note?: string }) =>

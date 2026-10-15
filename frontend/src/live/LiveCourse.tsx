@@ -15,9 +15,11 @@ import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
 import { describeIntent } from "../gate/harness";
 import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
-import { host, type AsfaiStatus, type HostView } from "../gate/transport";
+import { host, type AsfaiStatus, type HostView, type MaterialInput } from "../gate/transport";
 import type { DecisionIntent } from "../gate/types";
 import { OnboardingChat } from "./OnboardingChat";
+import { MaterialsPanel } from "./MaterialsPanel";
+import { StudentChat } from "./StudentChat";
 import styles from "./LiveCourse.module.css";
 const CHECKPOINT_LABEL: Record<string, string> = {
   files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
@@ -29,7 +31,7 @@ export function LiveCourse() {
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
-  const [worker, setWorker] = useState<{ configured: boolean } | null>(null);
+  const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean } | null>(null);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
 
@@ -105,7 +107,10 @@ export function LiveCourse() {
   /** The teacher's reply to the ASFAI clarifying questions, one answer per question. It is what unblocks the outline. */
   const sendAnswer = (given: Record<string, string>) => run(async () => {
     try {
-      await host.answerIntake(courseId!, { text: Object.values(given)[0] ?? "", answers: given });
+      await host.answerIntake(courseId!, {
+        text: given.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(given)[0] ?? "",
+        answers: given,
+      });
     } catch (e) {
       setNotice(`Refused by the intake gate: ${(e as Error).message}`);
     } finally {
@@ -146,6 +151,18 @@ export function LiveCourse() {
       await host.proposeObjectives(courseId!);
     } catch (e) {
       setNotice(`Nothing to propose: ${(e as Error).message}`);
+    } finally {
+      await reload();
+    }
+  });
+
+  /** The material goes to the host once; a WORKER proposes objectives from it. The teacher decides each one. */
+  const proposeFromMaterials = (materials: MaterialInput[]) => run(async () => {
+    try {
+      const r = await host.proposeFromMaterials(courseId!, { materials });
+      setNotice(r.skipped.length ? `Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}` : null);
+    } catch (e) {
+      setNotice(`Nothing was proposed: ${(e as Error).message}`);
     } finally {
       await reload();
     }
@@ -284,6 +301,7 @@ export function LiveCourse() {
           view={view}
           asfai={asfai}
           busy={busy}
+          workerConfigured={worker?.configured === true}
           onCreate={startCourse}
           onConfirmFiles={confirmFiles}
           onAsk={askAsfai}
@@ -300,7 +318,10 @@ export function LiveCourse() {
             Confirm the outline
           </button>
         ) : null}
-        {is("outline", "confirmed") && view.proposals.length === 0 ? (
+        {is("outline", "confirmed") && view.proposals.length === 0 && view.intake.answers?.outcomes_from === "materials" ? (
+          <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} onPropose={proposeFromMaterials} />
+        ) : null}
+        {is("outline", "confirmed") && view.proposals.length === 0 && view.intake.answers?.outcomes_from !== "materials" ? (
           <button type="button" className={styles.ghostButton} onClick={proposeObjectives} disabled={busy}>
             Propose objectives from your answers
           </button>
@@ -415,6 +436,12 @@ export function LiveCourse() {
           notice={notice}
         />
       </div>
+
+      {published ? (
+        <div className={styles.grid}>
+          <StudentChat courseId={view.course.courseId} courseTitle={view.course.title} />
+        </div>
+      ) : null}
 
       {view.timeline.length > 0 ? (
         <div className={styles.grid}>

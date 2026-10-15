@@ -75,7 +75,9 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 const PLAN_MS = Number(process.env.SILICUS_SMOKE_PLAN_MS ?? 2000);
 const STUDENT_MS = 1500;
 /** How long the mocked model "thinks", by the kind of prompt (host/worker.mjs builds each prompt's first line). */
-const modelDelay = (prompt) => prompt.startsWith("Draft one lesson plan") ? PLAN_MS : prompt.startsWith("You are a study helper") ? STUDENT_MS : 0;
+// The propose worker is instant by default; a small delay lets the running waiting card be measured (F5).
+const PROPOSE_MS = Number(process.env.SILICUS_SMOKE_PROPOSE_MS ?? 600);
+const modelDelay = (prompt) => prompt.startsWith("Draft one lesson plan") ? PLAN_MS : prompt.startsWith("You are a study helper") ? STUDENT_MS : prompt.startsWith("Propose learning objectives") ? PROPOSE_MS : 0;
 
 const api = { calls: [], workerBodies: [] };
 const readBody = (req) => new Promise((r) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => r(Buffer.concat(c).toString("utf8"))); });
@@ -216,10 +218,11 @@ const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.pars
 
 async function story(label, narrow) {
   passLabel = label;
-  if (narrow) await checkNarrow("landing");
   // ---- first impression: the BARE url lands on the live course, in the product's own voice
   await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
+  // F5: the landing is measured AFTER navigation — before it, the frame is still about:blank.
+  if (narrow) await checkNarrow("landing");
   const first = await page.evaluate(() => ({
     title: document.title, h1: document.querySelector("h1")?.textContent ?? "", header: document.querySelector("header")?.innerText ?? "",
     icon: document.querySelector('link[rel="icon"]')?.getAttribute("href") ?? "", tabs: document.querySelectorAll('nav[aria-label="Workbench sections"]').length,
@@ -230,27 +233,30 @@ async function story(label, narrow) {
   check("the header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
   check("the component workbench stays reachable through a discreet footer 'Design system' link", first.design.some(([t, h]) => t === "Design system" && h === "#/decision"));
   await shot("00-first-impression");
-  /* NOTE: the design-system workbench route (#/decision) is NOT asserted at 380: it is not owned by the
-     cards in this change's fence, and it overflows on its own (see the report's unfixed list). */
   await page.click('footer a[href="#/decision"]');
   await poll(() => page.evaluate(() => document.querySelector('section[aria-label="Objective proposals"]') !== null));
   check("the Design system link opens the workbench, with a way back to the course", await page.evaluate(() => [...document.querySelectorAll("nav a")].some((a) => a.textContent === "Back to the course")));
+  // F7: the workbench route measures clean at 320 and 380 (there is no "report" claiming otherwise), so check it here.
+  if (narrow) await checkNarrow("design system workbench");
   // The workbench is a detour: set the hash back to the live course and wait for its own first control.
   // (A same-document goto to another hash would leave the app on the workbench route.)
   await page.evaluate(() => { location.hash = "#/live"; });
   await page.waitForSelector("#onboarding-reply");
-  if (narrow) await checkNarrow("onboarding start");
+  if (narrow) await checkNarrow("onboarding step 1: name the course");
   // ---- name the course (checkpoint 1)
   const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
   await reply("How plants eat", "Record the course title");
   await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+  if (narrow) await checkNarrow("onboarding step 2: name the label");
   await reply("Ada Lovelace", "Record the label");
   await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+  if (narrow) await checkNarrow("onboarding step 3: name the materials");
   await reply("Lesson notes", "Record the materials");
   await poll(async () => (await stored()).metas.length === 1);
   check("the course is recorded in IndexedDB (not on a server)", true);
   check("no /api/courses request ever left the page", !api.calls.some((c) => c.path.startsWith("/api/courses")));
   await poll(() => bodyHas("Confirm the material list"));
+  if (narrow) await checkNarrow("onboarding: confirm the material list");
   await clickText("Confirm the material list");
   await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
   check("materials confirmed on the record", true);
@@ -258,6 +264,7 @@ async function story(label, narrow) {
   // ---- checkpoint 2: Silicus's own questions; ASFAI says it needs the local app
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
   await shot("01b-intake");
+  if (narrow) await checkNarrow("intake question 1: topic");
   check("ASFAI says plainly it needs the local app, with no Connect button",
     (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
   const fill = (id, text) => page.evaluate((id, text) => {
@@ -268,10 +275,13 @@ async function story(label, narrow) {
   }, id, text);
   await fill("topic", "Photosynthesis"); await clickText("Record this answer");
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
+  if (narrow) await checkNarrow("intake question 2: course");
   await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
   await poll(() => bodyHas("Propose these from my materials instead"));
+  if (narrow) await checkNarrow("intake question 3: outcomes");
   await clickText("Propose these from my materials instead");
   await poll(() => bodyHas("Confirm the outline"));
+  if (narrow) await checkNarrow("outline confirm");
   await clickText("Confirm the outline");
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
   check("outline confirmed on the record", true);
@@ -303,8 +313,11 @@ async function story(label, narrow) {
   check("while the passcode dialog is open the waiting card holds its clock and says why",
     await page.evaluate(() => /Waiting for your passcode/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? "")));
   await shot("02-passcode", '[role="dialog"]');
+  if (narrow) await checkNarrow("passcode pause, waiting card held");
   await page.type('[role="dialog"] input[type="password"]', PASSCODE);
   await clickText("Continue");
+  await page.waitForSelector('section[data-phase="running"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("waiting card, proposing objectives");
   await poll(async () => kinds(await stored()).includes("objectives.proposed"), 15000);
   const objReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
   check("proposing objectives ends with a true receipt: the proposals, none confirmed, what was read",
@@ -341,6 +354,7 @@ async function story(label, narrow) {
   const planBodiesBefore = api.workerBodies.length;
   await clickText("Draft the plan from your confirmed objectives");
   await page.waitForSelector('section[data-phase="running"][data-variant="card"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("waiting card, drafting the plan");
   const running = () => page.evaluate(() => document.querySelector('section[data-phase="running"][data-variant="card"]')?.innerText ?? "");
   const live = () => page.evaluate(() => [...document.querySelectorAll('section[data-variant="card"] [aria-live="polite"]')].map((n) => n.textContent));
   check("the waiting experience says in plain words what is happening, with the real count",
@@ -376,6 +390,7 @@ async function story(label, narrow) {
   await poll(() => bodyHas("How plants eat"));
   check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
   await poll(() => bodyHas("Confirm the lesson plan"));
+  if (narrow) await checkNarrow("plan card, drafted");
   await clickText("Confirm the lesson plan");
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
   check("plan confirmed on the record", true);
@@ -409,6 +424,7 @@ async function story(label, narrow) {
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   await clickText("Ask");
   await page.waitForSelector('section[data-variant="compact"][data-phase="running"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("student answer, running");
   const compact = await page.evaluate(() => {
     const el = document.querySelector('section[data-variant="compact"][data-phase="running"]');
     const word = el.querySelector("span[style]");
@@ -436,9 +452,11 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Verify the event log"));
   await clickText("Verify the event log");
   await poll(() => bodyHas("chain intact"));
+  if (narrow) await checkNarrow("post-reload event log");
   check("after a reload the record verifies", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
 
   if (narrow) await checkNarrow("published course");
+  if (narrow) await checkNarrow("footer data controls");
   // ---- export all
   await clickText("Export all courses");
   const exported = await poll(() => {
@@ -456,6 +474,7 @@ async function story(label, narrow) {
   // ---- delete all (confirmed first)
   await clickText("Delete all data from this browser");
   await poll(() => bodyHas("This cannot be undone"));
+  if (narrow) await checkNarrow("footer data controls, delete confirm");
   await shot("04-delete-confirm", 'section[aria-label="Where your courses are kept"]');
   await clickText("Delete everything");
   await poll(async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });

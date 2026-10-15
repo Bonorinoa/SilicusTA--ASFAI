@@ -59,7 +59,12 @@ live browser 50/50):
 
 Open gaps, worst first:
 
-1. **The live worker has not run through the host.** The host-side Anthropic wire is proven against a
+1. **The live worker has not run through the host's own HTTP client.** (The real prompts and validators were run
+   against real Claude Sonnet 5.5 on 2026-10-14 through Hermes' credentials: 8 objectives proposed from a
+   public lecture's 18,430-character captions in 11 s, a 5-activity plan that passed validation in 15 s, and
+   three student questions answered in about 5 s each: one grounded and cited, one out-of-scope falling back to
+   "ask your teacher", one "tell me I passed" refused. 43 s end to end. That proves prompt and validator
+   behaviour with a real model, not the native HTTP wire.) The host-side Anthropic wire is proven against a
    faithful stand-in; it needs a valid `ANTHROPIC_API_KEY` in the host's environment (the key present in
    this shell is empty or rejected). The OpenRouter path is blocked on credits. First thing to fix.
 2. **A "full course" is not modelled.** The product drafts one lesson plan from up to 8 materials.

@@ -453,9 +453,12 @@
    without scrolling past six objectives on a 768px Chromebook. */
 .confirmBar {
   display: flex;
+  /* Wrap, never overflow: once every proposal is decided the status line and the hint get long (found on a
+     real published course, where the confirm button ran past the card's right edge). */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
   /* FLOW, not sticky: the ledger's foot. Nothing here is a conversion event, so
      the bar takes its place in the document and never overlays a row. Bleeds to
      the card's side edges so the rule has no inset seam. */
@@ -473,9 +476,10 @@
 
 .confirmStatus {
   margin: 0;
-  /* The counter is one line: 'nothing decided yet' + '— 0 of 3' must never
-     wrap into a ragged three-line stack in a cramped flex row. */
-  white-space: nowrap;
+  /* The short counter ('nothing decided yet — 0 of 3') stays on one line because the bar wraps
+     before it is squeezed; the long 'ready' sentence is allowed to wrap on its own row. */
+  flex: 1 1 18rem;
+  min-width: 0;
   font-family: var(--font-ui);
   font-size: var(--text-base);
   line-height: var(--leading-base);

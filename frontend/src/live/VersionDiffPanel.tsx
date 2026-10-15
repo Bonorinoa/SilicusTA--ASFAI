@@ -175,8 +175,8 @@ function summary(d: VersionDiffData): string {
   const parts: string[] = [];
   const oc = o.added + o.removed + o.reworded + o.changed;
   const ac = a.added + a.removed + a.changed;
-  if (oc) parts.push(`${plural(oc, "objective")} differ`);
-  if (ac) parts.push(`${plural(ac, "activity", "activities")} differ`);
+  if (oc) parts.push(`${plural(oc, "objective")} ${oc === 1 ? "differs" : "differ"}`);
+  if (ac) parts.push(`${plural(ac, "activity", "activities")} ${ac === 1 ? "differs" : "differ"}`);
   if (d.title.status === "changed") parts.push("the title");
   if (d.note.status === "changed") parts.push("the publish note");
   if (d.audience.status === "changed") parts.push("the audience");

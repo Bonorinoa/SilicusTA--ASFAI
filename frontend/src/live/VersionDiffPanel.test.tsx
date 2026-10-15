@@ -173,4 +173,13 @@ describe("VersionDiffPanel", () => {
     render(<VersionDiffPanel versions={[v1, odd]} />);
     expect(screen.getAllByText(/date unknown/).length).toBeGreaterThan(0);
   });
+
+  it("agrees the verb with the count in the summary line", () => {
+    const one = ver(2, { objectiveRefs: [...v1.objectiveRefs, { id: "o3", kind: "local", statement: "Give an example of a bias." }] });
+    const { unmount } = render(<VersionDiffPanel versions={[v1, one]} />);
+    expect(screen.getByText(/Changes: 1 objective differs\./)).toBeInTheDocument();
+    unmount();
+    render(<VersionDiffPanel versions={[v1, v2]} />);
+    expect(screen.getByText(/3 objectives differ/)).toBeInTheDocument();
+  });
 });

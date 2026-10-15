@@ -74,6 +74,26 @@ export interface StudentAnswer {
   note: string;
 }
 
+/**
+ * Where a published course stands against its last sealed version, as the HOST reads the record.
+ * Students read `sealedVersion` and nothing else; `drafting` means the record differs from it.
+ * There is no way to set any of this from the client: it is a reading, not a mode.
+ */
+export interface RevisionView {
+  sealedVersion: number | null;
+  nextVersion: number;
+  drafting: boolean;
+  changes: {
+    objectivesAdded: { id: string; statement: string }[];
+    objectivesRemoved: { id: string; statement: string }[];
+    /** same: the sealed, confirmed plan. replaced: a different confirmed plan. unconfirmed: a draft or invalidated plan. */
+    plan: "same" | "replaced" | "unconfirmed";
+    planStatus: "draft" | "confirmed" | "invalidated" | null;
+  } | null;
+  /** Confirmed objectives the current plan does not cite yet. */
+  notInPlan: { id: string; statement: string }[];
+}
+
 /** The host's course view: gate state, derived rows, ledger and log fingerprint. */
 export interface HostView {
   course: HostCourseMeta;
@@ -88,6 +108,8 @@ export interface HostView {
   plan: LessonPlanView | null;
   invalidation: PlanInvalidationView;
   publish: PublishStatusView;
+  /** Absent on a host that predates revision; the UI then offers no revision tools. */
+  revision?: RevisionView;
   versions: PackageVersionView[];
   timeline: TimelineEvent[];
   ledger: HostLedgerTurn[];

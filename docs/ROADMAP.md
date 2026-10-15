@@ -59,6 +59,17 @@ live browser 50/50):
   course or start a new one (writes nothing until the teacher names it); and a **student handout**: one
   standalone page built from the sealed version (confirmed objectives and what learners do; no teacher
   notes, no script, everything escaped) to print or share. None of it calls a model.
+- **Revising a published course.** The gate already allowed it; what was missing was a way to see and
+  trust it. A published course now says "Version 1 is published and unchanged" and, once the record really
+  differs, "...; you are drafting version 2" (a reading of the record by the host, not a mode a click or a
+  client can set). **Revise this course** opens the tools and writes nothing. A teacher can add or revoke
+  objectives (each a teacher turn), draft a new plan, and seal version 2 (`previousVersion` links back;
+  version 1 stays byte-identical). Students and the handout read the last *sealed* version until then.
+  Revoking an objective the plan cites says what it costs before it is done. Found on the way: the add and
+  rename text was not cleaned like an outcome, so a line break could forge an objective line in the drafting
+  prompt; it now goes through the same one rule (one line, 2,000 characters, control and bidi blanked).
+  **Not built:** rewording a *confirmed* objective in place (the gate's rename is terminal; it needs a gate
+  verb, so a failing test first), and a worker-free way to re-plan after revoking a cited objective.
 - **Sprint 8, a student can use the package.** Answers come only from the latest *sealed* version, must
   cite it, or fall back to "ask your teacher". It records nothing and accepts no student identity.
   The teacher tries it from the course page ("Try it as a student").

@@ -36,6 +36,8 @@ export interface ProposalView {
   source: string | null;
   alignment: AlignmentView | null;
   by: "ai" | "teacher";
+  /** Host-derived: the current lesson plan cites this objective. Revoking it invalidates that plan. */
+  citedByPlan?: boolean;
 }
 
 /**

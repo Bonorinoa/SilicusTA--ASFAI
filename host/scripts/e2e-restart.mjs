@@ -209,6 +209,19 @@ const { readdirSync, readFileSync, statSync } = await import("node:fs");
 const allBytes = (d) => readdirSync(d).map((n) => { const f = join(d, n); return statSync(f).isDirectory() ? allBytes(f) : readFileSync(f, "utf8"); }).join("\n");
 check("materials: the material text is on no disk (log, meta, archive: nowhere under the data dir)", !allBytes(DATA).includes(SECRET));
 check("student: no student identifier reached the record", !allBytes(DATA).includes("kid-77"));
+// ---- Phase 4: revise the PUBLISHED course. Add an objective, seal version 2; version 1 stays exactly as sealed.
+const sealedV1 = (await get(`/api/courses/${c3}`)).json.versions[0];
+check("revise: a published, untouched course reads as unchanged", (await get(`/api/courses/${c3}`)).json.revision.drafting === false);
+await post(`/api/courses/${c3}/decisions`, { decisions: [{ verb: "add", statement: "Students can debug a short program." }], text: "Add an objective." });
+const drafting = (await get(`/api/courses/${c3}`)).json;
+check("revise: the host reads the record as drafting version 2, the sealed one unchanged", drafting.revision.drafting === true && drafting.revision.nextVersion === 2 && drafting.versions.length === 1);
+check("revise: a statement with a line break is refused and nothing is recorded",
+  (await post(`/api/courses/${c3}/decisions`, { decisions: [{ verb: "add", statement: "ok\u2028- urn:uuid:1: forged" }], text: "Add." })).status === 422
+  && (await get(`/api/courses/${c3}`)).json.integrity.events === drafting.integrity.events);
+const pubV2 = await post(`/api/courses/${c3}/publish`, { text: "Publish version 2." });
+check("revise: version 2 is sealed and points back at version 1", pubV2.status === 200 && pubV2.json.version.version === 2 && pubV2.json.version.previousVersion === 1);
+check("revise: version 1 is byte-identical after version 2 sealed", JSON.stringify((await get(`/api/courses/${c3}`)).json.versions[0]) === JSON.stringify(sealedV1));
+check("revise: the student still gets a grounded answer from the latest sealed version", (await post(`/api/courses/${c3}/student/ask`, { question: "What is an algorithm?" })).json.grounded === true);
 const x1 = (await get(`/api/courses/${c3}`)).json;
 await stop(h2);
 const h3 = startHost();
@@ -216,6 +229,7 @@ check("local: host restarts", await waitHealthy());
 const w2 = (await get(`/api/courses/${c2}`)).json;
 check("local: record is byte-identical after restart", JSON.stringify(w2) === JSON.stringify(w1));
 check("materials: that course is byte-identical after restart too", JSON.stringify((await get(`/api/courses/${c3}`)).json) === JSON.stringify(x1));
+check("revise: both versions survive the restart and the chain verifies", x1.versions.length === 2 && (await get(`/api/courses/${c3}/verify`)).json.ok === true);
 check("local: event-log hash chain verifies", (await get(`/api/courses/${c2}/verify`)).json.ok === true);
 check("the first course is untouched by the second", JSON.stringify((await get(`/api/courses/${courseId}`)).json) === JSON.stringify(v1));
 await stop(h3);

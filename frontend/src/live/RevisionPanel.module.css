@@ -1,0 +1,31 @@
+/* RevisionPanel — calm, same tokens as its neighbours; no colour of its own. */
+
+.panel {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  max-width: 44rem; padding: var(--space-4) var(--space-5);
+  background: var(--color-paper-raised); border: 1px solid var(--color-rule); border-radius: var(--radius-sm);
+}
+.panel[data-drafting="true"] { border-left: 2px solid var(--color-accent); }
+
+.title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; margin: 0; color: var(--color-ink); }
+.status { margin: 0; font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-medium); line-height: var(--leading-base); color: var(--color-ink); }
+.readers, .line, .hint { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
+.hint { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+.tools { display: flex; flex-direction: column; gap: var(--space-3); border-top: 1px solid var(--color-rule); padding-top: var(--space-3); }
+.toolsTitle { margin: 0; font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-ink); }
+.toolsTitle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.changes, .steps { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink); }
+
+.reviseButton, .actionButton, .closeButton {
+  font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold);
+  border-radius: var(--radius-sm); min-height: 44px; padding: 0 var(--space-4); cursor: pointer;
+}
+.reviseButton, .actionButton { background: transparent; border: 1px solid var(--color-border-control); color: var(--color-ink-soft); }
+.reviseButton:hover, .actionButton:hover { background: var(--color-sunken); color: var(--color-ink); }
+.closeButton { align-self: flex-start; background: transparent; border: none; color: var(--color-ink-muted); text-decoration: underline; }
+.reviseButton:focus-visible, .actionButton:focus-visible, .closeButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.actionButton:disabled { opacity: 0.55; cursor: default; }

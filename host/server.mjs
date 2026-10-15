@@ -28,7 +28,7 @@
  *   POST /api/courses/:id/objectives         no body: the HOST derives them from the teacher's recorded answers
  *   POST /api/courses/:id/materials/propose  {materials:[{name,text}|{url}]} the WORKER proposes objectives from the teacher's material (nothing is stored but names, digests, sizes)
  *   POST /api/courses/:id/student/ask        {question, history?} a student asks about the PUBLISHED package; read-only, grounded or "ask your teacher", records nothing
- *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides)
+ *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides; also how a PUBLISHED course is revised: add / revoke, then re-plan and publish the next version)
  *   POST /api/courses/:id/plan               no body: the OSS WORKER drafts from the confirmed objectives
  *   POST /api/courses/:id/plan/confirm       {text, planId?}                           (teacher confirms)
  *   POST /api/courses/:id/publish            {text, note?}                             (teacher publishes)
@@ -372,6 +372,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     } catch (err) {
       if (err instanceof HttpError) return send(err.status, { ok: false, code: err.code, message: err.message, ...(err.blockers ? { blockers: err.blockers } : {}) });
       if (err && err.name === "PublishBlockedError") return send(409, { ok: false, code: "PUBLISH_BLOCKED", message: err.message, blockers: err.blockers });
+      if (err && err.name === "StatementError") return send(422, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "FabricatedConfirmationError") return send(403, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "StudentError") return send(err.code === "NO_QUESTION" ? 422 : err.code === "WORKER_NOT_CONFIGURED" ? 501 : 502, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "MaterialError") return send(err.code === "URL_UNREACHABLE" ? 502 : 422, { ok: false, code: err.code, message: err.message });

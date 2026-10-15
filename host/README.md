@@ -69,7 +69,7 @@ cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
 | `GET /api/archives` | — | list archive refs |
 | `POST /api/courses/:id/checkpoints` | id (files\|outline), text, note? | checkpoints 1–2 |
 | `POST /api/courses/:id/objectives` | items, sources?, assistantText? | AI proposes; nothing is confirmed |
-| `POST /api/courses/:id/decisions` | decisions, text | checkpoints 3 (teacher) |
+| `POST /api/courses/:id/decisions` | decisions, text | checkpoints 3 (teacher); also how a published course is revised |
 | `POST /api/courses/:id/plan` | spec, assistantText? | AI drafts |
 | `POST /api/courses/:id/plan/confirm` | text, planId? | checkpoint 4 (teacher) |
 | `POST /api/courses/:id/publish` | text, note? | checkpoint 5 (teacher) |
@@ -178,6 +178,37 @@ happened instead:
   design (SPEC §7), so the intake tracks the round itself. Both the session test and
   an HTTP test pin the bypass.
 - A `draftAuthorization`, if a future server emits one, authorizes on its own.
+
+## Revising a published course
+
+There is no "reopen" route and no revision mode. The gate already reopens by itself: an objective added
+or revoked after a seal marks the publish checkpoint pending, revoking one the plan cites invalidates the
+plan, and `publish` seals the next version with `previousVersion` pointing back. Every act is an ordinary
+teacher turn through `/decisions`, `/plan`, `/plan/confirm` and `/publish`, and replays like any other.
+
+What the audit found, with the worker off or on:
+
+| After version 1 is sealed | Result |
+|---|---|
+| `add` an objective | allowed; the plan does not cite it yet; version 2 can seal |
+| `drop` an objective | allowed; if the plan cites it, the plan is invalidated and publish is blocked |
+| `rename` / `accept` a confirmed objective | refused, `ALREADY_DECIDED` (a content decision is terminal) |
+| `POST /plan` (re-draft) | needs the worker (`501 WORKER_NOT_CONFIGURED` without it) |
+| `publish` with nothing changed | returns version N unchanged, seals nothing |
+
+`view.revision` is a read of the record (writes nothing, takes nothing from a client):
+`{sealedVersion, nextVersion, drafting, changes: {objectivesAdded, objectivesRemoved, plan: same|replaced|unconfirmed,
+planStatus}, notInPlan}`. `drafting` is true only when the record differs from the sealed version. Rows also
+carry `citedByPlan`. Students (`/student/ask`) and the handout read `latestSealedVersion()`, never the draft.
+
+Statements typed for `add` and `rename` are untrusted: `proposer.teacherStatement` applies the same rule as
+`outcomeSentences` (control and bidi characters blanked) to ONE sentence, refuses a line break
+(`STATEMENT_NOT_ONE_LINE`), empty text (`BAD_STATEMENT`) and more than 2,000 characters
+(`STATEMENT_TOO_LONG`, the intake bound), all `422`, with nothing recorded.
+
+Known gaps: a confirmed objective cannot be reworded in place (that needs a gate verb); revoking a
+cited objective with no worker leaves the course unable to seal the next version until one is configured;
+over the 1 MiB body cap the connection is cut before the `413` is sent.
 
 ## Archive (Sprint 2a)
 

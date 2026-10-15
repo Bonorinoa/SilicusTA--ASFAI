@@ -39,6 +39,17 @@ If the passcode is missing, `/api/fetch` answers 503 too. Neither is ever an ope
 
 Changing a variable takes effect on the next deployment.
 
+## Running the local app with the worker
+
+The local app needs the same key, but it is never committed — `.env`/`.env.*` are gitignored, so start it through the launcher, which reads one named file and forwards only the worker variables (never the unrelated secrets that share that file):
+
+```sh
+npm run start:worker                                    # in host/; reads host/.env.worker (gitignored)
+SILICUS_WORKER_ENV_FILE=~/.silicus/worker.env npm run start:worker
+```
+
+With no credential it refuses to start with one line naming the fix; no key is ever printed, logged or served.
+
 ## Why reasoning effort is low
 
 Low is the default because measured runs of the real plan prompt showed that model-default reasoning can spend most of the request budget thinking, while low reasoning kept the output valid and cut latency sharply. The server owns this setting so a browser cannot quietly raise cost or exceed the reply budget.

@@ -70,10 +70,11 @@ export function MaterialsPanel({
   return (
     <section className={styles.composer} aria-label="Course material">
       <span className={styles.who}>Silicus</span>
-      <p className={styles.prompt}>Give me the material and I will propose the objectives.</p>
+      <p className={styles.prompt}>
+        {`Add your material here — paste text, a text file, a web page, or a YouTube link${youtube ? "" : " (YouTube: local app only)"}.`}
+      </p>
       <p className={styles.kept}>
-        Paste text, add a text file, or paste a link to a public web page{youtube ? " or a YouTube video" : ""}. You decide every
-        objective afterwards. The material stays in this tab only: it is not saved, and it is sent once to the
+        You decide every objective afterwards. The material stays in this tab only: it is not saved, and it is sent once to the
         drafting worker{zdr === true
           ? ", which is set to zero-data-retention providers only"
           : ", under that provider's normal data-retention terms (not zero-retention), so use public material or material you may share"}. Reload and it is gone.

@@ -26,16 +26,18 @@ const OPENING = [
   },
   {
     id: "label",
-    prompt: "What label should your copy of this record carry?",
-    hint: "A label for you. Not sent to ASFAI. Not saved yet.",
-    verb: "Record the label",
-    block: "Type a label to continue. Not saved yet.",
+    // Plain language: the teacher is naming their OWN copy, not writing a record field.
+    prompt: "What name should this course show for you?",
+    hint: "A name for your own copy, to tell it apart. Not sent to ASFAI. Not saved yet.",
+    verb: "Record this name",
+    block: "Type a name to continue. Not saved yet.",
   },
   {
     id: "materials",
-    prompt: "Name the materials this course is built from, one per line.",
-    hint: "Nothing is saved until you record this. Not sent to ASFAI.",
-    verb: "Record the materials",
+    // NAMES only: the material ITSELF is the later panel's job (MaterialsPanel owns "Add your material here").
+    prompt: "What is this course built from? Name the materials, one per line.",
+    hint: "Names only — you add the material itself later. Or choose No materials. Not sent to ASFAI.",
+    verb: "Record these names",
     block: "Name the materials, or choose No materials. Not saved yet.",
   },
 ] as const;
@@ -46,6 +48,12 @@ const local = (text: string): string =>
   BROWSER_MODE ? text.replace(/\s*Not sent to ASFAI\.?/g, "").replace(/(Type a [a-z ]+ to continue|choose No materials)\. Not saved yet\./, "$1.").trim() : text;
 
 const ORDER: OpeningId[] = ["title", "label", "materials"];
+/** Plain names for the intake's own three steps, in the order a teacher meets them. */
+const STEP_NAME: Record<OpeningId, string> = {
+  title: "name the course",
+  label: "name your copy",
+  materials: "say what it's built from",
+};
 
 export interface NamedMaterial { name: string }
 
@@ -93,7 +101,7 @@ export function OnboardingChat({
   const [step, setStep] = useState<OpeningId>("title");
   const [drafts, setDrafts] = useState<Partial<Record<OpeningId, string>>>({});
   const [reply, setReply] = useState("");
-  const [live, setLive] = useState("Step 1 of 3. Not saved.");
+  const [live, setLive] = useState("Naming the course. Step 1 of 3. Not saved yet.");
   const box = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const hintId = useId();
 
@@ -136,7 +144,7 @@ export function OnboardingChat({
       return;
     }
     setStep(nxt);
-    setLive(local(`Recorded. Step ${ORDER.indexOf(nxt) + 1} of 3. Not saved. Not sent to ASFAI.`));
+    setLive(local(`Recorded. Step ${ORDER.indexOf(nxt) + 1} of 3 — ${STEP_NAME[nxt]}. Not saved. Not sent to ASFAI.`));
   };
 
   const noMaterials = () => {
@@ -153,7 +161,7 @@ export function OnboardingChat({
       return next;
     });
     setStep(id);
-    setLive(`Editing. Step ${ORDER.indexOf(id) + 1} of 3. Not saved.`);
+    setLive(`Editing. Step ${ORDER.indexOf(id) + 1} of 3 — ${STEP_NAME[id]}. Not saved.`);
   };
 
   const submitAnswer = () => {
@@ -185,6 +193,25 @@ export function OnboardingChat({
     <section className={styles.thread} aria-label="Course onboarding">
       <p className={`${styles.status} ${styles.assurance}`}>{local(view ? "On this device. Not sent to ASFAI." : "On this device only. Not sent to ASFAI.")}</p>
       {view ? null : <p className={styles.step} aria-live="polite">{live}</p>}
+      {view ? null : (
+        <ol className={styles.rail} aria-label="Naming the course">
+          {ORDER.map((id) => (
+            <li
+              key={id}
+              className={styles.railItem}
+              data-state={drafts[id] ? "done" : id === step ? "current" : "todo"}
+              aria-current={id === step ? "step" : undefined}
+            >
+              {STEP_NAME[id]}
+            </li>
+          ))}
+        </ol>
+      )}
+      {view ? null : (
+        <p className={styles.railNote}>
+          After this: the material list, the outline, your objectives, the lesson plan, then publish.
+        </p>
+      )}
       <ol className={styles.turns}>
         {savedLines.map((s) => (
           <li key={s.id} className={styles.pair}>

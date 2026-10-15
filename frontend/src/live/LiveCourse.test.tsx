@@ -199,8 +199,8 @@ describe("LiveCourse — thin client of the host", () => {
 
     await user.type(screen.getByLabelText("What should we call this course?"), "Seeing the claim");
     await user.click(screen.getByRole("button", { name: "Record the course title" }));
-    await user.type(await screen.findByLabelText("What label should your copy of this record carry?"), "Ada Lovelace");
-    await user.click(screen.getByRole("button", { name: "Record the label" }));
+    await user.type(await screen.findByLabelText("What name should this course show for you?"), "Ada Lovelace");
+    await user.click(screen.getByRole("button", { name: "Record this name" }));
     expect(calls.every((c) => c.body === undefined)).toBe(true);
     expect(screen.getAllByText("Not sent to ASFAI.").length).toBeGreaterThan(0);
 

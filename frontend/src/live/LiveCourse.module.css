@@ -9,12 +9,17 @@
   gap: var(--space-5);
 }
 
-.intro { display: flex; flex-direction: column; gap: var(--space-3); max-width: 44rem; }
-.title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin: 0; color: var(--color-ink); }
-.lede { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); margin: 0; }
-.sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; }
+.intro { display: flex; flex-direction: column; gap: var(--space-3); max-width: 44rem; min-width: 0; }
+/* A course title is the teacher's own words: it wraps, and a single long word still breaks. */
+.title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin: 0; color: var(--color-ink); overflow-wrap: anywhere; text-wrap: balance; }
+.lede { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); margin: 0; overflow-wrap: anywhere; }
+/* The meta line carries an unbreakable urn, so it must be allowed to break anywhere. */
+.sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
 
-.stageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }
+.stageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4) var(--space-5); flex-wrap: wrap; }
+/* Without min-width the title's urn-bearing meta line sets the row's minimum width and pushes past a
+   narrow viewport; the chips then take their own line, which is the calm reading order anyway. */
+.stageMeta { min-width: 0; flex: 1 1 16rem; }
 
 .chips { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
 .chip { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper-raised); min-width: 5.5rem; }
@@ -29,6 +34,8 @@
 .primaryButton, .ghostButton, .textButton {
   font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold);
   border-radius: var(--radius-sm); min-height: 44px; padding: 0 var(--space-4); cursor: pointer;
+  /* Long verbs wrap their own words rather than run past the page. */
+  max-width: 100%; text-wrap: balance;
 }
 .primaryButton { background: var(--color-accent); border: 1px solid var(--color-accent); color: var(--color-paper-raised); }
 .primaryButton:hover { background: var(--color-accent-strong); }
@@ -71,11 +78,12 @@
 .pinList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .pinRow { display: grid; grid-template-columns: 3rem 9rem 7rem 1fr; gap: var(--space-3); align-items: baseline; }
 .pinVersion { font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-ink); }
-.pinDigest { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-ink-muted); }
+/* Digests and urns are unbreakable strings: they break anywhere rather than push the row wide. */
+.pinDigest { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
 .pinStatus { font-family: var(--font-ui); font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-label); color: var(--color-ink-soft); }
 .pinRow[data-status="changed"] .pinStatus, .pinRow[data-status="missing"] .pinStatus { color: var(--color-dropped); }
 .pinRow[data-status="ok"] .pinStatus { color: var(--color-accent-strong); }
-.pinDetail { font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); }
+.pinDetail { font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
 
 .grid { display: flex; flex-direction: column; gap: var(--space-4); }
 .notice { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-soft); margin: 0; }
@@ -93,5 +101,28 @@
 .heroLede { margin: 0; font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink-soft); }
 .moves { display: flex; flex-wrap: wrap; gap: var(--space-1) 0; list-style: none; margin: var(--space-2) 0 0; padding: var(--space-4) 0; border-top: 1px solid var(--color-rule); font-family: var(--font-display); font-size: var(--text-base); font-style: italic; color: var(--color-ink-soft); }
 .moves li + li::before { content: "\2192"; font-style: normal; font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-accent); margin: 0 var(--space-3); position: relative; top: -0.06em; }
-.assure { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.assure { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); overflow-wrap: anywhere; }
 @media (max-width: 40rem) { .heroTitle { font-size: var(--text-xl); line-height: var(--leading-xl); } }
+
+/* ---- narrow windows (320px up): same breakpoint as the components, one column, nothing dropped ---- */
+@media (max-width: 40rem) {
+  /* The page gives its width back to the content: tighter gutters, calmer vertical rhythm. */
+  .live { padding: var(--space-5) var(--space-4) var(--space-6); gap: var(--space-4); }
+  .intro, .intake, .pins, .offline, .aside { padding-left: var(--space-4); padding-right: var(--space-4); }
+
+  /* The steps line stops being an arrow chain that wraps mid-phrase and becomes a numbered ledger:
+     the list was always an <ol>, so the numbers are its own order, not a new idea. */
+  .moves { flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; counter-reset: step; }
+  .moves li { display: flex; align-items: baseline; gap: var(--space-3); }
+  .moves li::before,
+  .moves li + li::before {
+    counter-increment: step; content: counter(step);
+    font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-ink-muted);
+    letter-spacing: var(--tracking-micro); margin: 0; position: static;
+  }
+
+  /* A pinned copy reads as two lines: the version and its state, then the digest and what it says. */
+  .pinRow { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+  .pinStatus { margin-left: auto; }
+  .pinDigest, .pinDetail { flex: 1 1 100%; }
+}

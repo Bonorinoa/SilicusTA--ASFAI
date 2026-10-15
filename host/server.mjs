@@ -16,6 +16,7 @@
  *   POST /api/courses/:id/intake/call        the HOST calls asfai_lesson.prepare_outline (built from teacher words only) and observes the result
  *   POST /api/courses/:id/intake/answer      the teacher's reply {text?, answers?} (records a real turn; arms the round)
  *   POST /api/courses/:id/plan/validate      the HOST calls asfai_lesson.validate_outline on the drafted plan (a signal, not a confirmation)
+ *   GET  /api/knowledge/status               which knowledge sources are in play (config + capability, never a path or credential)
  *   GET  /api/asfai/status                   is ASFAI connected (never a token)
  *   POST /api/asfai/connect                  begin the consent flow -> {authorizeUrl} (the teacher's click completes it)
  *   GET  /api/asfai/callback                 the OAuth redirect (state is single-use)
@@ -42,6 +43,8 @@ import { PlanWorker } from "./worker.mjs";
 import { AsfaiOAuth } from "./asfai/oauth.mjs";
 import { AsfaiClient } from "./asfai/mcp.mjs";
 import { AsfaiService } from "./asfai/service.mjs";
+import { AsfaiGraphSource } from "./sources/asfai-graph.mjs";
+import { LocalOntologySource } from "./sources/local-ontology.mjs";
 
 const ASFAI_MCP_URL = process.env.SILICUS_ASFAI_MCP_URL ?? "https://constitution.asfai.org/education/api/mcp";
 const ASFAI_PRM_URL = process.env.SILICUS_ASFAI_PRM_URL ?? "https://constitution.asfai.org/education/.well-known/oauth-protected-resource";
@@ -95,7 +98,7 @@ class HttpError extends Error {
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -116,6 +119,14 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     model: process.env.SILICUS_WORKER_MODEL ?? null,
     apiKey: process.env.SILICUS_WORKER_API_KEY ?? null,
   });
+
+  // Knowledge sources the worker may draw on: CONFIG, never a request field. ASFAI's graph first
+  // (recommended; on unless SILICUS_SOURCE_ASFAI=0), then a local ontology file if one is named.
+  // A source that is not configured or not connected is a state, not an error.
+  const knowledgeSources = sources ?? [
+    ...(process.env.SILICUS_SOURCE_ASFAI === "0" ? [] : [new AsfaiGraphSource({ client: asfaiSvc.client, isConnected: () => asfaiSvc.status().connected === true })]),
+    new LocalOntologySource({ file: process.env.SILICUS_ONTOLOGY_FILE ?? null }),
+  ];
 
   /**
    * Load per request. The event log is the source of record, so a fresh verified
@@ -170,6 +181,10 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     // Whether a drafting worker is configured. Config, never a credential.
     if (parts[1] === "worker" && parts[2] === "status" && method === "GET") {
       return { status: 200, json: { configured: planWorker.enabled } };
+    }
+    // Which knowledge sources are in play. Config and capability only: no URL, no path, no credential.
+    if (parts[1] === "knowledge" && parts[2] === "status" && method === "GET") {
+      return { status: 200, json: { sources: knowledgeSources.map((k) => ({ id: k.id, label: k.label, enabled: k.enabled, canVerify: k.canVerify })) } };
     }
     if (parts[1] === "asfai") {
       if (parts[2] === "status" && method === "GET") return { status: 200, json: asfaiSvc.status() };
@@ -260,7 +275,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
         case "plan": {
           // The WORKER drafts from the confirmed objectives. The body is read and ignored:
           // a client cannot supply a plan any more than it can supply an objective.
-          const r = await s.draftPlanFromObjectives({ worker: planWorker });
+          const r = await s.draftPlanFromObjectives({ worker: planWorker, sources: knowledgeSources });
           if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
           return { status: 200, json: r.plan };
         }

@@ -26,6 +26,7 @@ import { CourseStore } from "./store.mjs";
 import { LessonIntake } from "./intake.mjs";
 import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "./proposer.mjs";
 import { digestOf } from "./archive.mjs";
+import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -97,6 +98,13 @@ export class CourseSession {
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
   #sources = new Map();
+  /**
+   * Alignment suggestions the worker cited, per plan id: references only (ref, label, source,
+   * which activities, whether a source actually checked it). Host metadata, never gate state:
+   * the gate drops unknown plan fields, a citation is a suggestion, and the retrieved TEXT is
+   * never recorded — it is not evidence.
+   */
+  #citations = new Map();
 
   get courseId() { return this.meta.courseId; }
 
@@ -202,7 +210,8 @@ export class CourseSession {
         if (event.assistantText) {
           this.#ledger.recordAssistantTurn(event.assistantText, { channel: "model", at: event.at });
         }
-        this.#gate.proposeLessonPlan(event.spec);
+        const planRecord = this.#gate.proposeLessonPlan(event.spec);
+        if (Array.isArray(event.citations) && event.citations.length > 0) this.#citations.set(planRecord.id, event.citations);
         this.#planAt = event.at;
         return;
       }
@@ -378,7 +387,7 @@ export class CourseSession {
    * assistant turn IS recorded — the ledger says so honestly. The worker's output
    * was already validated against the gate's rules before it got here.
    */
-  async draftPlanFromObjectives({ worker, at } = {}) {
+  async draftPlanFromObjectives({ worker, sources = [], at } = {}) {
     const confirmed = this.#gate.confirmedObjectives();
     if (confirmed.length === 0) {
       return {
@@ -396,23 +405,58 @@ export class CourseSession {
       .filter(Boolean);
     const topic = String(this.#intake.answers()?.topic ?? "");
 
-    let spec;
+    // Retrieval is per request and is NOT written to the log. A source that sends the teacher's
+    // words to ASFAI is consulted only for a course whose answers the teacher has already sent
+    // there: no new egress without the teacher's own act. Every failure degrades to no context.
+    const context = await retrieveAll(sources, {
+      topic, objectives, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
+    });
+
+    let drafted;
     try {
-      spec = await worker.draft({ objectives, topic, materials });
+      drafted = await worker.draft({ objectives, topic, materials, context });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }
+
+    // Split the citations off the spec: the gate ignores them, and the log keeps refs only.
+    const spec = { ...drafted, activities: drafted.activities.map(({ citations: _c, ...rest }) => rest) };
+    const citations = await this.#resolveCitations(drafted, context, sources);
 
     const a = at ?? Date.now();
     const event = {
       kind: "plan.proposed",
       spec,
       assistantText: "Drafted a lesson plan from your confirmed objectives.",
+      ...(citations.length > 0 ? { citations } : {}),
       at: a,
     };
     this.#apply(event);
     this.#append(event);
     return { ok: true, plan: this.view().plan };
+  }
+
+  /**
+   * The model's cited refs → what the record keeps. The label and source come from the context WE
+   * supplied, never from the model; a ref a source reports as unknown is dropped (a citation is
+   * optional, so this costs the draft nothing); `verified` is true only when a source actually
+   * checked it, so the UI cannot over-claim.
+   */
+  async #resolveCitations(drafted, context, sources) {
+    const byRef = new Map(context.map((c) => [c.ref, c]));
+    const cited = [];
+    drafted.activities.forEach((act, i) => {
+      for (const ref of act.citations ?? []) {
+        const c = byRef.get(ref);
+        if (!c) continue;
+        let row = cited.find((x) => x.ref === ref);
+        if (!row) { row = { ref, label: c.label, source: c.source, activityIndexes: [] }; cited.push(row); }
+        row.activityIndexes.push(i);
+      }
+    });
+    if (cited.length === 0) return [];
+    const { verified, unknown } = await verifyCitations(sources, cited);
+    return cited.filter((c) => !unknown.has(c.ref)).map((c) => ({ ...c, verified: verified.has(c.ref) }));
   }
 
   /** Checkpoint 4: the AI proposes the lesson plan draft. */
@@ -505,6 +549,14 @@ export class CourseSession {
     return rows;
   }
 
+  /** The current plan, plus the alignment suggestions it cited (only when there are some). */
+  #planView() {
+    const plan = this.#gate.currentPlan();
+    if (!plan) return plan;
+    const citations = this.#citations.get(plan.id);
+    return citations ? { ...plan, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : plan;
+  }
+
   #objectiveView() {
     return this.#gate.confirmedObjectives().map((o) => ({
       id: o.id, kind: o.kind, statement: o.statement ?? o.publicId ?? "", publicId: o.publicId,
@@ -552,7 +604,7 @@ export class CourseSession {
       proposals: this.#rows(),
       objectives: this.#objectiveView(),
       decisions: this.#gate.decisions(),
-      plan: this.#gate.currentPlan(),
+      plan: this.#planView(),
       invalidation: this.planInvalidation(),
       publish: this.#gate.publishStatus(),
       versions: this.#gate.versions(),
@@ -623,7 +675,7 @@ export class CourseSession {
       intake: this.#intake.status(),
       objectives: this.#gate.confirmedObjectives(),
       decisions: this.#gate.decisions(),
-      plan: this.#gate.currentPlan(),
+      plan: this.#planView(),
       versions: this.#gate.versions(),
       timeline: this.#timeline(),
       integrity: { events: this.#log.count, head: this.#log.headDigest },

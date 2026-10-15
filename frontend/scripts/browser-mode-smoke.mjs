@@ -189,6 +189,7 @@ try {
   await page.waitForFunction(() => document.querySelector("button") !== null);
   check("the Live tab opens with no host (no developer 'host is not reachable' text)", !(await bodyHas("host is not reachable")) && (await bodyHas("What should we call this course")));
   await shot("01-start");
+  check("online, the onboarding never mentions ASFAI it cannot reach (no 'Not sent to ASFAI')", !(await bodyHas("Not sent to ASFAI")));
   check("a quiet notice says this browser keeps the record", (await bodyHas("This browser keeps the record")) && (await bodyHas("stored in this browser only")));
 
   // ---- name the course (checkpoint 1)
@@ -307,7 +308,7 @@ try {
   check("the elapsed readout is a real clock: it has advanced", true);
   if (PLAN_MS > 27000) {
     await poll(async () => /Taking longer than usual/.test(await running()), PLAN_MS);
-    check("past the high end the calm 'taking longer' line appears, and says nothing is lost", /It stops by itself within two minutes, and nothing you have recorded is lost/.test(await running()));
+    check("past the high end the calm 'taking longer' line appears, and says nothing is lost", /If the model does not answer, this step stops by itself, and nothing you have recorded is lost/.test(await running()));
     await shot("13-waiting-longer", 'section[data-phase="running"][data-variant="card"]');
   } else {
     check("before the high end there is no 'taking longer' line", !/Taking longer than usual/.test(await running()));
@@ -360,7 +361,7 @@ try {
     return { text: el.innerText, motion: el.getAttribute("data-motion"), anim: getComputedStyle(word).animationName, live: el.querySelectorAll('[aria-live="polite"]').length };
   });
   check("a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–8 seconds",
-    /Looking in version 1 for an answer/.test(compact.text) && /usually 2\u20138 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
+    /Looking for the answer in this course \(version 1\)/.test(compact.text) && /usually 2\u20138 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
   check("under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation)", compact.motion === "still" && compact.anim === "none", `${compact.motion} / ${compact.anim}`);
   await shot("15-waiting-student", 'section[data-variant="compact"][data-phase="running"]');
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);

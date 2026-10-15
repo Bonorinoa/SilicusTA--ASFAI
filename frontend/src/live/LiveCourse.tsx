@@ -57,6 +57,9 @@ function planStep(view: HostView): WaitingStep {
   };
 }
 
+/** A refusal message as a sentence: capitalised, ending in a full stop. */
+const sentence = (m: string) => { const t = m.trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? "" : ".") : ""; };
+
 export function LiveCourse() {
   const [view, setView] = useState<HostView | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
@@ -234,7 +237,7 @@ export function LiveCourse() {
       ok = true;
       setNotice(r.skipped.length ? `Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}` : null);
     } catch (e) {
-      setNotice(`Nothing was proposed: ${(e as Error).message}`);
+      setNotice(`Nothing was proposed. ${sentence((e as Error).message)}`);
     } finally {
       let fresh: HostView | null = null;
       try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, proposalsReceipt); }

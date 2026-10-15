@@ -12,6 +12,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import type { AsfaiStatus, HostView } from "../gate/transport";
 import styles from "./OnboardingChat.module.css";
+import { BROWSER_MODE } from "../gate/mode";
 
 const FORWARDABLE = new Set(["topic", "course", "learning_outcomes"]);
 
@@ -40,6 +41,10 @@ const OPENING = [
 ] as const;
 
 type OpeningId = (typeof OPENING)[number]["id"];
+/** Online there is no ASFAI to send to, so "Not sent to ASFAI" carries no meaning there; the local app keeps every word. */
+const local = (text: string): string =>
+  BROWSER_MODE ? text.replace(/\s*Not sent to ASFAI\.?/g, "").replace(/(Type a [a-z ]+ to continue|choose No materials)\. Not saved yet\./, "$1.").trim() : text;
+
 const ORDER: OpeningId[] = ["title", "label", "materials"];
 
 export interface NamedMaterial { name: string }
@@ -126,17 +131,17 @@ export function OnboardingChat({
     setReply("");
     const nxt = nextOpen(step, nextDrafts);
     if (nxt === "done") {
-      setLive("Recorded. Saving this course. Not sent to ASFAI.");
+      setLive(local("Recorded. Saving this course. Not sent to ASFAI."));
       finish(nextDrafts, step === "materials" ? text : (nextDrafts.materials ?? ""));
       return;
     }
     setStep(nxt);
-    setLive(`Recorded. Step ${ORDER.indexOf(nxt) + 1} of 3. Not saved. Not sent to ASFAI.`);
+    setLive(local(`Recorded. Step ${ORDER.indexOf(nxt) + 1} of 3. Not saved. Not sent to ASFAI.`));
   };
 
   const noMaterials = () => {
     if (!drafts.title || !drafts.label) return;
-    setLive("Recorded. Saving this course with no materials. Not sent to ASFAI.");
+    setLive(local("Recorded. Saving this course with no materials. Not sent to ASFAI."));
     finish({ ...drafts, materials: "none" }, "none");
   };
 
@@ -155,7 +160,7 @@ export function OnboardingChat({
     const text = reply.trim();
     if (!openQuestion || !text) return;
     setReply("");
-    setLive(fromAsfai ? "Recorded on this course. Sent only when you send the round." : "Recorded on this course. Not sent to ASFAI.");
+    setLive(fromAsfai ? "Recorded on this course. Sent only when you send the round." : local("Recorded on this course. Not sent to ASFAI."));
     onAnswer({ [openQuestion.id]: text });
   };
 
@@ -178,7 +183,7 @@ export function OnboardingChat({
 
   return (
     <section className={styles.thread} aria-label="Course onboarding">
-      <p className={`${styles.status} ${styles.assurance}`}>{view ? "On this device. Not sent to ASFAI." : "On this device only. Not sent to ASFAI."}</p>
+      <p className={`${styles.status} ${styles.assurance}`}>{local(view ? "On this device. Not sent to ASFAI." : "On this device only. Not sent to ASFAI.")}</p>
       {view ? null : <p className={styles.step} aria-live="polite">{live}</p>}
       <ol className={styles.turns}>
         {savedLines.map((s) => (
@@ -186,7 +191,7 @@ export function OnboardingChat({
             <p className={styles.ask}><span className={styles.who}>Silicus</span>{s.prompt}</p>
             <p className={styles.you}>You</p>
             <p className={styles.said}>{s.value}</p>
-            <p className={styles.kept}>Not sent to ASFAI.</p>
+            {BROWSER_MODE ? null : <p className={styles.kept}>Not sent to ASFAI.</p>}
             {!view ? (
               <button type="button" className={styles.edit} aria-label={`Edit: ${s.prompt}`} onClick={() => edit(s.id as OpeningId)}>
                 Edit
@@ -200,7 +205,7 @@ export function OnboardingChat({
             <p className={styles.you}>You</p>
             <p className={styles.said}>{answerText(recorded[q.id]) || "Propose these from my materials."}</p>
             <p className={styles.kept}>
-              {fromAsfai ? "Recorded on this course. Sent only when you send the round." : "Recorded on this course. Not sent to ASFAI."}
+              {fromAsfai ? "Recorded on this course. Sent only when you send the round." : local("Recorded on this course. Not sent to ASFAI.")}
             </p>
           </li>
         ))}
@@ -210,7 +215,7 @@ export function OnboardingChat({
         <form className={styles.composer} onSubmit={(e) => { e.preventDefault(); submitOpening(); }}>
           <span className={styles.who}>Silicus</span>
           <label className={styles.prompt} htmlFor="onboarding-reply">{opening.prompt}</label>
-          <p className={styles.kept} id={hintId}>{canRecord ? opening.hint : opening.block}</p>
+          <p className={styles.kept} id={hintId}>{local(canRecord ? opening.hint : opening.block)}</p>
           {multiline ? (
             <textarea
               id="onboarding-reply"
@@ -301,7 +306,7 @@ export function OnboardingChat({
               {openQuestion.reason ? <p className={styles.kept}>{openQuestion.reason}</p> : null}
               <p className={styles.kept} id={hintId}>
                 {openQuestion.id === "learning_outcomes" ? "One outcome per line — each line becomes an objective you confirm. " : ""}
-                {fromAsfai ? "Recorded on this course; sent only when you send the round." : "Recorded on this course. Not sent to ASFAI."}
+                {fromAsfai ? "Recorded on this course; sent only when you send the round." : local("Recorded on this course. Not sent to ASFAI.")}
               </p>
               <textarea
                 id={`intake-${openQuestion.id}`}

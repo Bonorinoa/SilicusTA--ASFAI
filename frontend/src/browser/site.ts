@@ -28,14 +28,14 @@ export interface SiteStatus {
 const NOT_SET_UP: SiteStatus = { configured: false, zdr: false, provider: "openrouter", passcodeRequired: false };
 
 export const MESSAGES = {
-  noCredits: "The model account has no credits, so the AI cannot draft right now. Everything you have recorded still works.",
-  notSetUp: "AI drafting is not set up on this site.",
+  noCredits: "The AI service is out of credit, so it cannot draft right now. Nothing you have recorded is affected; try again later.",
+  notSetUp: "AI drafting is not switched on for this site, so nothing was sent. Everything else still works.",
   rejected: "The demo passcode was not accepted, so nothing was sent to the model.",
   cancelled: "AI drafting needs the demo passcode. Nothing was sent.",
-  timeout: "The model did not answer in time. Try again.",
-  tooLarge: "That is too much to send to the model at once. Use less material.",
+  timeout: "The model did not answer in time, so the step stopped. Nothing you have recorded is lost; you can try again.",
+  tooLarge: "That is more than the model can take at once. Remove a piece of material, or paste only the part you want used.",
   youtube: "YouTube captions can only be read by the local Silicus app. Paste the transcript as text instead.",
-  wait: (seconds: number | null) => `Too many AI requests just now. Wait ${seconds ? `${seconds} seconds` : "a minute"} and try again.`,
+  wait: (seconds: number | null) => `The AI is busy: too many requests just now. Wait ${seconds ? `about ${seconds} seconds` : "a minute"}, then try again.`,
 } as const;
 
 /** The site's own deadline for one network attempt (the model proxy gives up upstream at 115 s). */

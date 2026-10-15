@@ -53,7 +53,7 @@ describe("AiWaiting — plain words with real numbers", () => {
 
   it("names the published version a student's answer comes from (compact)", () => {
     render(<AiWaiting step={ANSWER_STEP} phase="running" variant="compact" />);
-    expect(screen.getByText("Looking in version 1 for an answer")).toBeInTheDocument();
+    expect(screen.getByText("Looking for the answer in this course (version 1)")).toBeInTheDocument();
   });
 
   it("shows no progress bar and no percentage, ever", () => {
@@ -118,7 +118,7 @@ describe("AiWaiting — taking longer than usual", () => {
     advance(25_000);
     expect(screen.queryByText(/Taking longer than usual/)).not.toBeInTheDocument();
     advance(1_000);
-    expect(screen.getByText(/Taking longer than usual\. It stops by itself within two minutes, and nothing you have recorded is lost\./)).toBeInTheDocument();
+    expect(screen.getByText(/Taking longer than usual\. If the model does not answer, this step stops by itself, and nothing you have recorded is lost\./)).toBeInTheDocument();
   });
 
   it("uses the range it was given for the threshold", () => {
@@ -158,7 +158,7 @@ describe("AiWaiting — what the model sees", () => {
       "How plants eat",
       "Lesson notes", "Slides",
       "Use only these objectives and cite each by its internal id.", "Student chat is never evidence of learning.",
-      "The text of your materials", "Your name or the label on your record", "Nothing else from your record",
+      "The text of your materials", "Your name or the label on your record", "Anything else from your record",
     ]);
     expect(within(panel).getByText("Objectives")).toBeInTheDocument();
     expect(within(panel).getByText("What it never sees")).toBeInTheDocument();

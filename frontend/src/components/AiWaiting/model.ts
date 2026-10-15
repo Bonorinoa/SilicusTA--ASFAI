@@ -18,7 +18,7 @@ export const DEFAULT_TYPICAL: Readonly<Record<StepKind, Range>> = {
   answer: [2, 8],
 };
 
-/** Every step ends by itself within this many seconds (60 s per network attempt, at most a link read plus one model call). */
+/** Kept for callers; the UI no longer promises a number (each request has its own deadline, so a single total would be a guess). */
 export const STOPS_WITHIN_SECONDS = 120;
 
 /** The worker-status field: optional `{objectives, plan, answer}`, each `[lo, hi]` seconds. Anything malformed falls back. */
@@ -79,7 +79,7 @@ export interface StepText {
   never: readonly string[];
 }
 
-const NEVER_BASE = ["Your name or the label on your record", "Nothing else from your record"] as const;
+const NEVER_BASE = ["Your name or the label on your record", "Anything else from your record"] as const;
 
 /** Whether a worker-supplied string is worth showing (the host stores answers as string or string[]). */
 export const answerText = (v: unknown): string => (Array.isArray(v) ? v.join(" ") : typeof v === "string" ? v : "").trim();
@@ -136,7 +136,7 @@ export function describeStep(step: WaitingStep): StepText {
   });
   sends.push({ heading: "Instructions", items: ["Answer only from the package and cite it.", "If the package does not cover the question, say so."] });
   return {
-    title: `Looking in version ${step.version} for an answer`,
+    title: `Looking for the answer in this course (version ${step.version})`,
     doneTitle: `Answered from version ${step.version}`,
     detail: null,
     sends,

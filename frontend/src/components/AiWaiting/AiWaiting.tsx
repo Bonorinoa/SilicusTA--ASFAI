@@ -15,7 +15,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { AcceptedIcon } from "../icons";
 import {
-  describeStep, formatElapsed, rangePhrase, spokenLimit, startAnnouncement, STOPS_WITHIN_SECONDS, typicalRange,
+  describeStep, formatElapsed, rangePhrase, startAnnouncement, typicalRange,
   type WaitingStep,
 } from "./model";
 import styles from "./AiWaiting.module.css";
@@ -35,7 +35,6 @@ export interface AiWaitingProps {
   zdr?: boolean | null;
   /** "compact" is the in-chat variant for a student's answer. */
   variant?: "card" | "compact";
-  stopsWithinSeconds?: number;
 }
 
 /** Lines of type: the width of each word, in ch. Fixed, decorative, and meaningless on purpose. */
@@ -60,7 +59,7 @@ function useReducedMotion(): boolean {
 }
 
 export function AiWaiting({
-  step, phase, typicalSeconds, paused = false, receipt = [], zdr = null, variant = "card", stopsWithinSeconds = STOPS_WITHIN_SECONDS,
+  step, phase, typicalSeconds, paused = false, receipt = [], zdr = null, variant = "card",
 }: AiWaitingProps) {
   const text = describeStep(step);
   const range = typicalRange(step.kind, typicalSeconds);
@@ -117,7 +116,7 @@ export function AiWaiting({
   // A finished compact step has nothing to add: the answer itself is the result. Only the announcement remains.
   if (compact && phase === "done") return <section aria-label="AI step finished" ref={root} data-variant="compact" data-phase="done">{live}</section>;
 
-  const eyebrow = running ? "The AI is drafting \u00b7 nothing is decided yet" : phase === "done" ? "Done \u00b7 nothing is decided yet" : "Stopped";
+  const eyebrow = running ? "The AI is drafting \u00b7 nothing is decided yet" : phase === "done" ? "Draft ready \u00b7 nothing is decided yet" : "Stopped";
 
   return (
     <section
@@ -159,7 +158,7 @@ export function AiWaiting({
 
       {longer ? (
         <p className={styles.longer}>
-          Taking longer than usual. It stops by itself within {spokenLimit(stopsWithinSeconds)}, and nothing you have recorded is lost.
+          Taking longer than usual. If the model does not answer, this step stops by itself, and nothing you have recorded is lost.
         </p>
       ) : null}
 

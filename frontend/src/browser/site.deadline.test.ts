@@ -99,4 +99,3 @@ describe("the site's deadline starts when the request leaves, not when the teach
     expect((err as Error).message).not.toMatch(/signal/i);
   });
 });
-

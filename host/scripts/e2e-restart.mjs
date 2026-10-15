@@ -22,6 +22,11 @@ const OWNER = "teacher:tk-1";
 
 /** A plan worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
 const echoingWorker = ({ prompt }) => {
+  if (/Propose learning objectives/.test(prompt)) {
+    const names = [...String(prompt).matchAll(/^=== MATERIAL: (.+) ===$/gm)].map((m) => m[1]);
+    return { objectives: [{ statement: "Students can explain what an algorithm is.", from: [names[0]] }, { statement: "Students can follow a short list of steps.", from: names }] };
+  }
+  if (/COURSE PACKAGE/.test(prompt)) return { answer: "An algorithm is a list of steps.", cites: ["objective:1"] };
   const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
   const refs = [...String(prompt).matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
   return {
@@ -174,11 +179,43 @@ const w0 = (await get(`/api/courses/${c2}`)).json;
 check("local: aligned from the local ontology file alone", (w0.plan.citations ?? []).length > 0 && w0.plan.citations.every((c) => c.source === "local-ontology"));
 check("local: not one MCP tool call reached ASFAI", (mock.st.toolArgs ?? []).length === toolCallsBefore, `before=${toolCallsBefore} after=${(mock.st.toolArgs ?? []).length}`);
 const w1 = (await get(`/api/courses/${c2}`)).json;
+
+// ---- Phase 3 (Sprints 7+8): material in, proposals out, a student asks; nothing about either is kept.
+const SECRET = "PURPLE-WALRUS-42";
+const c3 = (await post("/api/courses", { owner: OWNER, title: "From material" })).json.courseId;
+await post(`/api/courses/${c3}/checkpoints`, { id: "files", text: "Confirm the material list." });
+await post(`/api/courses/${c3}/intake/answer`, { text: "t", answers: { topic: "how AI answers are built" } });
+await post(`/api/courses/${c3}/intake/answer`, { text: "c", answers: { course: "AI literacy, ages 8-10" } });
+check("materials: topic and course alone do not open the outline", (await get(`/api/courses/${c3}/intake`)).json.outlineAuthorized === false);
+await post(`/api/courses/${c3}/intake/answer`, { text: "Propose the outcomes from my materials.", answers: { outcomes_from: "materials" } });
+check("materials: the explicit 'propose from my materials' act opens the local outline", (await get(`/api/courses/${c3}/intake`)).json.outlineAuthorized === true);
+await post(`/api/courses/${c3}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+const refusedUrl = await post(`/api/courses/${c3}/materials/propose`, { materials: [{ url: "https://169.254.169.254/latest/meta-data/" }] });
+check("materials: a private address is refused before anything is fetched", refusedUrl.status === 422 && refusedUrl.json.code === "URL_REFUSED");
+const prop3 = await post(`/api/courses/${c3}/materials/propose`, { materials: [{ name: "week1.txt", text: `An algorithm is a list of steps. ${SECRET}` }] });
+check("materials: the worker proposed objectives, labelled by material, none confirmed",
+  prop3.status === 200 && prop3.json.proposals.length === 2 && prop3.json.proposals.every((p) => p.source === "from week1.txt" && p.status === "proposed"));
+await post(`/api/courses/${c3}/decisions`, { decisions: prop3.json.proposals.map((p) => ({ verb: "accept", proposalId: p.id })), text: "Accept." });
+await post(`/api/courses/${c3}/plan`, {});
+await post(`/api/courses/${c3}/plan/confirm`, { text: "Confirm the lesson plan." });
+check("student: nothing to ask before the course is sealed", (await post(`/api/courses/${c3}/student/ask`, { question: "What is an algorithm?" })).json.code === "NOT_PUBLISHED");
+await post(`/api/courses/${c3}/publish`, { text: "Publish the course package." });
+const eventsBefore = (await get(`/api/courses/${c3}`)).json.integrity;
+const ans = await post(`/api/courses/${c3}/student/ask`, { question: "What is an algorithm?", studentId: "kid-77" });
+check("student: a grounded answer cites the sealed package", ans.status === 200 && ans.json.grounded === true && ans.json.cites[0].id === "objective:1");
+const eventsAfter = (await get(`/api/courses/${c3}`)).json.integrity;
+check("student: asking recorded nothing (the log did not grow)", eventsAfter.events === eventsBefore.events && eventsAfter.head === eventsBefore.head);
+const { readdirSync, readFileSync, statSync } = await import("node:fs");
+const allBytes = (d) => readdirSync(d).map((n) => { const f = join(d, n); return statSync(f).isDirectory() ? allBytes(f) : readFileSync(f, "utf8"); }).join("\n");
+check("materials: the material text is on no disk (log, meta, archive: nowhere under the data dir)", !allBytes(DATA).includes(SECRET));
+check("student: no student identifier reached the record", !allBytes(DATA).includes("kid-77"));
+const x1 = (await get(`/api/courses/${c3}`)).json;
 await stop(h2);
 const h3 = startHost();
 check("local: host restarts", await waitHealthy());
 const w2 = (await get(`/api/courses/${c2}`)).json;
 check("local: record is byte-identical after restart", JSON.stringify(w2) === JSON.stringify(w1));
+check("materials: that course is byte-identical after restart too", JSON.stringify((await get(`/api/courses/${c3}`)).json) === JSON.stringify(x1));
 check("local: event-log hash chain verifies", (await get(`/api/courses/${c2}/verify`)).json.ok === true);
 check("the first course is untouched by the second", JSON.stringify((await get(`/api/courses/${courseId}`)).json) === JSON.stringify(v1));
 await stop(h3);

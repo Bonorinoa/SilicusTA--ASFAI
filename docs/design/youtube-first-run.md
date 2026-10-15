@@ -1,5 +1,11 @@
 # The first run when the source is a YouTube video
 
+> **Note (later the same day):** this copy was renamed by the intake-clarity round. `OnboardingChat.tsx:29` now reads
+> "What name should this course show for you?" and its verb is "Record this name". The analysis below is otherwise
+> unchanged; the material step is now "What is this course built from? Name the materials, one per line."
+
+
+
 Branch `feat/youtube-design`. A specification, not a build: what the first run becomes when the teacher's
 material is a video, which intake questions still earn their place, the one new question and where it
 lives, and the smallest honest step toward "a series of videos → a course of lessons". No product code

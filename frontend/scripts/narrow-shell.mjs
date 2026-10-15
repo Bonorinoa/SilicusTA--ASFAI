@@ -284,10 +284,11 @@ try {
   // ---- name the course, confirm the materials, answer the intake
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   await reply("Photosynthesis for the very young — a course whose title is long enough to need wrapping in a narrow window", "Record the course title");
-  await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
-  await reply("Ada Lovelace", "Record the label");
+  // Renamed by the intake-clarity round: the label step is now "What name should this course show for you?".
+  await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
+  await reply("Ada Lovelace", "Record this name");
   await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
-  await reply("Lesson notes", "Record the materials");
+  await reply("Lesson notes", "Record these names");
   await poll(() => bodyHas("Confirm the material list"));
   await poll(async () => (await stored()).metas.length === 1);
   await clickText("Confirm the material list");
@@ -305,7 +306,7 @@ try {
   await clickText("Confirm the outline");
 
   // ---- the material panel, at every width (with one item already added, so the rows are set)
-  await poll(() => bodyHas("Give me the material"));
+  await poll(() => bodyHas("Add your material here")); // the intake-clarity round reworded this prompt
   await page.evaluate(() => {
     const label = [...document.querySelectorAll("label")].find((l) => /Or paste text/.test(l.textContent ?? ""));
     const input = document.getElementById(label.htmlFor);

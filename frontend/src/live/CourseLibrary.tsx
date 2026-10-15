@@ -35,7 +35,7 @@ export function CourseLibrary({
           const trouble = !!c.progress && "error" in c.progress;
           return (
             <li key={c.courseId} className={styles.row} data-current={isCurrent || undefined} data-trouble={trouble || undefined}>
-              <div>
+              <div className={styles.rowBody}>
                 <p className={styles.name}>{c.title}</p>
                 <p className={styles.meta}>{c.owner}{standing(c) ? ` · ${standing(c)}` : ""}</p>
               </div>

@@ -8,6 +8,7 @@
  */
 import { useId, useRef, useState } from "react";
 import type { MaterialInput } from "../gate/transport";
+import { plural } from "../lib/plural";
 import styles from "./OnboardingChat.module.css";
 
 const TEXTLIKE = /\.(txt|md|markdown|vtt|srt|html?|csv)$/i;
@@ -83,7 +84,7 @@ export function MaterialsPanel({
         <ul className={styles.turns} aria-label="Material added">
           {items.map((m, i) => (
             <li key={i} className={`${styles.pair} ${styles.materialRow}`}>
-              <p className={styles.said}>{"url" in m ? m.url : `${m.name} · ${m.text.length.toLocaleString()} characters`}</p>
+              <p className={styles.said}>{"url" in m ? m.url : `${m.name} · ${plural(m.text.length, "character")}`}</p>
               <button type="button" className={styles.edit} onClick={() => commit(held.current.filter((_, j) => j !== i))}
                 aria-label={`Remove ${"url" in m ? m.url : m.name}`}>Remove</button>
             </li>

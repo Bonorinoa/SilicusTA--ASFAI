@@ -10,6 +10,7 @@
  */
 import { useEffect, useId, useMemo, useState } from "react";
 import type { PackageVersionView } from "../gate/types";
+import { plural } from "../lib/plural";
 import {
   STATUS_LABEL, diffVersions,
   type ActivityDiff, type ActivityFieldChange, type AudienceSide, type CitedObjective,
@@ -162,10 +163,6 @@ function ActivityItem({ x, d }: { x: ActivityDiff; d: VersionDiffData }) {
       ) : null}
     </li>
   );
-}
-
-function plural(n: number, one: string, many = `${one}s`) {
-  return `${n} ${n === 1 ? one : many}`;
 }
 
 function summary(d: VersionDiffData): string {

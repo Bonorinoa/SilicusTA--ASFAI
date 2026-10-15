@@ -1,4 +1,5 @@
 import type { LessonPlanView, ObjectiveCiteView, PlanInvalidationView } from "../../gate/types";
+import { plural } from "../../lib/plural";
 import styles from "./PlanCard.module.css";
 
 /**
@@ -121,7 +122,7 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
           </span>
         ) : null}
         <span className={styles.metaDot}> · </span>
-        <span>{totalMinutes} minutes</span>
+        <span>{plural(totalMinutes, "minute")}</span>
         <span className={styles.metaDot}> · </span>
         <span>
           {plan.activities.length} {plan.activities.length === 1 ? "activity" : "activities"}

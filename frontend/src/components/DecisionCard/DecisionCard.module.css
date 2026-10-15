@@ -172,6 +172,8 @@
   letter-spacing: var(--tracking-display);
   color: var(--color-ink);
   text-wrap: pretty;
+  /* A long unbroken objective must WRAP, never widen the card (narrow window). */
+  overflow-wrap: anywhere;
   orphans: 2;
   widows: 2;
 }
@@ -221,6 +223,8 @@
   font-size: var(--text-xs);
   line-height: var(--leading-xs);
   color: var(--color-ink-muted);
+  /* Provenance carries material names and Marble keys: let them break. */
+  overflow-wrap: anywhere;
 }
 
 .dot {
@@ -490,6 +494,7 @@
   font-size: var(--text-base);
   line-height: var(--leading-base);
   color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
 }
 
 .confirmActions {
@@ -527,6 +532,11 @@
   background: transparent;
   color: var(--color-ink-muted);
   border: 1px solid var(--color-border-control);
+  /* The label is the contract: it wraps to a second line rather than clipping
+     behind the button's own edge at a narrow width. */
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   transition:
     background-color var(--duration-quick) var(--ease-standard),
     color var(--duration-quick) var(--ease-standard);
@@ -573,6 +583,57 @@
   .confirmBar {
     animation: none;
     transition: none;
+  }
+}
+
+/* ------------------------------ narrow window ----------------------------- */
+
+/* 34rem (544px) is the app's narrow breakpoint (PublishCard and AiWaiting use
+   it too). Below it the ledger cannot hold two columns of anything: the confirm
+   bar becomes a column — the status sentence first, its action full-width under
+   it — and the verb row may wrap instead of pushing the card wider. */
+@media (max-width: 34rem) {
+  .confirmBar {
+    flex-direction: column;
+    /* The bar bleeds to the card edges; those negative insets are sized for the
+       roomier padding and would overhang a narrow window. */
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .confirmStatus {
+    /* The status sentence takes the whole row and wraps on its own words. */
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .confirmActions {
+    flex-direction: column;
+    align-items: stretch;
+    /* Both controls take the full width: the label never competes with the
+       sentence for the row it needs. */
+    width: 100%;
+    flex-shrink: 1;
+  }
+
+  .confirmHint {
+    /* The hint belongs under the sentence, above the action it explains. */
+    order: -1;
+  }
+
+  .confirmButton {
+    width: 100%;
+  }
+
+  /* Verbs may wrap: a long "Edit wording" pair should sit on two lines rather
+     than run past the card. */
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  .verbButton[data-verb="drop"] {
+    /* The wide-screen separation is a gap in space we do not have here. */
+    margin-left: 0;
   }
 }
 

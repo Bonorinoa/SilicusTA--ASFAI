@@ -82,6 +82,16 @@ describe("the material panel without YouTube", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/only be read by the local Silicus app/);
     expect(screen.getByRole("button", { name: /Propose objectives/ })).toBeDisabled();
   });
+
+  it("counts a material's characters in words: '1 character', never '1 characters'", () => {
+    render(<MaterialsPanel busy={false} zdr={true} youtube={false} onPropose={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Or paste text/), { target: { value: "Lesson notes" } });
+    fireEvent.change(screen.getByLabelText("Pasted text"), { target: { value: "a" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add this text" }));
+
+    expect(screen.getByText("Lesson notes · 1 character")).toBeInTheDocument();
+    expect(screen.queryByText(/1 characters/)).not.toBeInTheDocument();
+  });
 });
 
 describe("the passcode dialog", () => {

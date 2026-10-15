@@ -18,6 +18,7 @@ import { describeIntent } from "../gate/harness";
 import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
 import { host, type AsfaiStatus, type CourseSummary, type HostView, type MaterialInput } from "../gate/transport";
 import { BROWSER_MODE } from "../gate/mode";
+import { plural } from "../lib/plural";
 import { BrowserRecord, type RecordStatus } from "../browser/BrowserRecord";
 import { PasscodeDialog } from "../browser/PasscodeDialog";
 import type { DecisionIntent } from "../gate/types";
@@ -327,7 +328,7 @@ export function LiveCourse() {
 
   const verifyLog = () => run(async () => {
     const r = await host.verify(courseId!);
-    setNotice(r.ok ? `Event log verified — ${r.events} events, chain intact.` : "The event log does NOT verify.");
+    setNotice(r.ok ? `Event log verified — ${plural(r.events, "event")}, chain intact.` : "The event log does NOT verify.");
   });
 
   if (offline) {
@@ -425,10 +426,10 @@ export function LiveCourse() {
       {passcodeDialog}
       <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
       <header className={styles.stageHeader}>
-        <div>
+        <div className={styles.stageMeta}>
           <h1 className={styles.title}>{view.course.title}</h1>
           <p className={styles.sub}>
-            {BROWSER_MODE ? "kept in this browser" : "host"} · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {view.integrity.events} events
+            {BROWSER_MODE ? "kept in this browser" : "host"} · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {plural(view.integrity.events, "event")}
           </p>
         </div>
         <ol className={styles.chips} aria-label="Checkpoints">

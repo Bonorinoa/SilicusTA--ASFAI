@@ -7,6 +7,7 @@ import type {
   PublishStatusView,
 } from "../../gate/types";
 import { PlanCard } from "../PlanCard";
+import { plural } from "../../lib/plural";
 import styles from "./PublishCard.module.css";
 
 /**
@@ -148,8 +149,8 @@ export function PublishCard({
   const sealCopy = (
     <>
       <strong className={styles.sealConfirmTitle}>Seal {nextVersionLabel.toLowerCase()}?</strong>{" "}
-      {objectives.length} confirmed objective{objectives.length === 1 ? "" : "s"} and{" "}
-      {activities.length} activit{activities.length === 1 ? "y" : "ies"} in “{title}”. Published
+      {plural(objectives.length, "confirmed objective")} and{" "}
+      {plural(activities.length, "activity", "activities")} in “{title}”. Published
       versions are immutable — any later change ships as a new version.
     </>
   );
@@ -211,8 +212,8 @@ export function PublishCard({
             {isSealed
               ? `Version ${published!.version} is sealed. Unpublished changes are ready for ${nextVersionLabel.toLowerCase()}.`
               : status.canPublish
-                ? `Ready — ${objectives.length} objectives, ${activities.length} activities, ${totalMinutes} minutes.`
-                : `Blocked — ${status.blockers.length} reason${status.blockers.length === 1 ? "" : "s"} the teacher must resolve first.`}
+                ? `Ready — ${plural(objectives.length, "objective")}, ${plural(activities.length, "activity", "activities")}, ${plural(totalMinutes, "minute")}.`
+                : `Blocked — ${plural(status.blockers.length, "reason")} the teacher must resolve first.`}
           </p>
           <div className={styles.confirmActions}>
             <span
@@ -328,8 +329,8 @@ function SealedPanel({
         <div className={styles.line}>
           <dt className={styles.lineLabel}>Contains</dt>
           <dd className={styles.lineText}>
-            {version.objectiveRefs.length} objective{version.objectiveRefs.length === 1 ? "" : "s"} ·{" "}
-            {activityCount} activit{activityCount === 1 ? "y" : "ies"}
+            {plural(version.objectiveRefs.length, "objective")} ·{" "}
+            {plural(activityCount, "activity", "activities")}
           </dd>
         </div>
         {version.note ? (

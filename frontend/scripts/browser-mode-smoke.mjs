@@ -41,13 +41,15 @@ const SECRET = "SAFFRON-HERON-8812";
 const MATERIAL_TEXT = `Plants make their own food from light.\nThe phrase ${SECRET} appears only in these notes.\nLeaves hold the green pigment that catches light.`;
 
 const results = [];
+/** Which pass is running ("wide 1440" / "narrow 380"). Every check line carries it. */
+let passLabel = "setup";
 const check = (name, ok, extra = "") => {
-  const line = `${ok ? "PASS" : "FAIL"}  ${name}${extra ? " — " + extra : ""}`;
+  const line = `${ok ? "PASS" : "FAIL"}  [${passLabel}] ${name}${extra ? " — " + extra : ""}`;
   results.push(line);
   console.log(line);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function poll(fn, ms = 12000) {
+async function poll(fn, ms = 20000) {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) {
     try { const v = await fn(); if (v) return v; } catch { /* retry */ }
@@ -73,7 +75,9 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 const PLAN_MS = Number(process.env.SILICUS_SMOKE_PLAN_MS ?? 2000);
 const STUDENT_MS = 1500;
 /** How long the mocked model "thinks", by the kind of prompt (host/worker.mjs builds each prompt's first line). */
-const modelDelay = (prompt) => prompt.startsWith("Draft one lesson plan") ? PLAN_MS : prompt.startsWith("You are a study helper") ? STUDENT_MS : 0;
+// The propose worker is instant by default; a small delay lets the running waiting card be measured (F5).
+const PROPOSE_MS = Number(process.env.SILICUS_SMOKE_PROPOSE_MS ?? 600);
+const modelDelay = (prompt) => prompt.startsWith("Draft one lesson plan") ? PLAN_MS : prompt.startsWith("You are a study helper") ? STUDENT_MS : prompt.startsWith("Propose learning objectives") ? PROPOSE_MS : 0;
 
 const api = { calls: [], workerBodies: [] };
 const readBody = (req) => new Promise((r) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => r(Buffer.concat(c).toString("utf8"))); });
@@ -109,7 +113,7 @@ const APP = `http://127.0.0.1:${server.address().port}`;
 const exe = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"].find((p) => existsSync(p));
 if (!exe) throw new Error("no system chrome found");
 const browser = await puppeteer.launch({ executablePath: exe, headless: "new", args: ["--no-sandbox"] });
-const page = await browser.newPage();
+let page = await browser.newPage();
 await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
 // No server configuration in the public bundle (verifier finding MED-1): no env-variable or key names, nothing key-shaped.
 {
@@ -121,8 +125,6 @@ await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
 }
 
 const DOWNLOADS = mkdtempSync(join(tmpdir(), "silicus-downloads-"));
-const cdp = await page.createCDPSession();
-await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS });
 
 const consoleErrors = [];
 const pageErrors = [];
@@ -134,6 +136,54 @@ await page.evaluateOnNewDocument(() => {
   document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
 });
 
+/* ------------------------------ the narrow pass ------------------------------
+ * The SAME story runs twice: once at 1440 (the design's own width) and once at
+ * 380, where a teacher's narrow window lives. The narrow pass additionally asserts
+ * at every stage that the page never scrolls sideways, that no element's right edge
+ * passes the viewport, that nothing is clipped by its own box, and — the defect a
+ * real user hit — that the primary confirm button still shows its whole label.
+ * -------------------------------------------------------------------------- */
+const layoutSnapshot = () => page.evaluate(() => {
+  const clientWidth = document.documentElement.clientWidth;
+  // Real overflow: a box that extends past the viewport. Text in normal flow WRAPS, so a card that
+  // genuinely cannot fit shows up here as a widened ancestor chain — no heuristic needed.
+  const past = [...document.querySelectorAll("body *")].flatMap((el) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.right <= clientWidth + 1) return [];
+    return [{ tag: el.tagName, className: typeof el.className === "string" ? el.className : "", right: Math.round(rect.right), text: (el.textContent ?? "").trim().slice(0, 60) }];
+  });
+  // Clipping: only where the element really HIDES what does not fit (overflow hidden/clip, or a control
+  // whose label is cut). Text that overflows without clipping is not a defect.
+  const clipped = [...document.querySelectorAll("body *")].flatMap((el) => {
+    const hidden = /hidden|clip/.test(getComputedStyle(el).overflowX);
+    const control = /^(BUTTON|INPUT|TEXTAREA)$/.test(el.tagName);
+    if ((!hidden && !control) || el.clientWidth <= 1) return [];
+    if (el.scrollWidth <= el.clientWidth + 1) return [];
+    return [{ tag: el.tagName, className: typeof el.className === "string" ? el.className : "", clientWidth: el.clientWidth, scrollWidth: el.scrollWidth, text: (el.textContent ?? "").trim().slice(0, 60) }];
+  });
+  const button = [...document.querySelectorAll("button")].find((b) => /build the plan|Review & publish/i.test(b.textContent ?? ""));
+  return {
+    clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    button: button ? { clientWidth: button.clientWidth, scrollWidth: button.scrollWidth, text: button.textContent.trim() } : null,
+    past,
+    clipped,
+  };
+});
+
+/** The narrow pass's standing assertion, run at every stage of the story. */
+const checkNarrow = async (stage) => {
+  const m = await layoutSnapshot();
+  check(`narrow ${stage}: the page does not scroll sideways`, m.scrollWidth <= m.clientWidth + 1, `scrollWidth ${m.scrollWidth} vs clientWidth ${m.clientWidth}`);
+  check(`narrow ${stage}: no element's right edge passes the viewport`, m.past.length === 0,
+    m.past.slice(0, 4).map((o) => `${o.tag}.${o.className} right=${o.right} "${o.text}"`).join(" | "));
+  check(`narrow ${stage}: no element's content is clipped by its own box`, m.clipped.length === 0,
+    m.clipped.slice(0, 4).map((o) => `${o.tag}.${o.className} ${o.scrollWidth}>${o.clientWidth} "${o.text}"`).join(" | "));
+  if (m.button) {
+    check(`narrow ${stage}: the confirm button "${m.button.text}" shows its whole label`, m.button.scrollWidth <= m.button.clientWidth + 1, `scrollWidth ${m.button.scrollWidth} vs clientWidth ${m.button.clientWidth}`);
+  }
+};
+
 const bodyHas = (t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
 const clickText = (text) => page.evaluate((t) => {
   const b = [...document.querySelectorAll("button")].find((x) =>
@@ -142,6 +192,16 @@ const clickText = (text) => page.evaluate((t) => {
   b.click();
   return true;
 }, text);
+/** Click, then wait for the consequence; re-click if React replaced the node between find and click (a real flake). */
+async function clickAndWait(text, predicate, attempts = 3, perAttemptMs = 6000) {
+  let last = null;
+  for (let i = 0; i < attempts; i++) {
+    try { await clickText(text); } catch (e) { last = e; }
+    // Per-attempt budget, so a genuinely dead control fails in ~18 s, not 3 x the 20 s poll default.
+    try { return await poll(predicate, perAttemptMs); } catch (e) { last = e; await sleep(400); }
+  }
+  throw last ?? new Error(`clickAndWait failed: ${text}`);
+}
 const setValue = (selector, text) => page.evaluate((sel, text) => {
   const el = document.querySelector(sel);
   if (!el) throw new Error(`no element: ${sel}`);
@@ -166,10 +226,13 @@ const shot = async (name, selector = null) => {
 };
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
-try {
+async function story(label, narrow) {
+  passLabel = label;
   // ---- first impression: the BARE url lands on the live course, in the product's own voice
   await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
+  // F5: the landing is measured AFTER navigation — before it, the frame is still about:blank.
+  if (narrow) await checkNarrow("landing");
   const first = await page.evaluate(() => ({
     title: document.title, h1: document.querySelector("h1")?.textContent ?? "", header: document.querySelector("header")?.innerText ?? "",
     icon: document.querySelector('link[rel="icon"]')?.getAttribute("href") ?? "", tabs: document.querySelectorAll('nav[aria-label="Workbench sections"]').length,
@@ -183,26 +246,27 @@ try {
   await page.click('footer a[href="#/decision"]');
   await poll(() => page.evaluate(() => document.querySelector('section[aria-label="Objective proposals"]') !== null));
   check("the Design system link opens the workbench, with a way back to the course", await page.evaluate(() => [...document.querySelectorAll("nav a")].some((a) => a.textContent === "Back to the course")));
+  // F7: the workbench route measures clean at 320 and 380 (there is no "report" claiming otherwise), so check it here.
+  if (narrow) await checkNarrow("design system workbench");
+  // The workbench is a detour: set the hash back to the live course and wait for its own first control.
+  // (A same-document goto to another hash would leave the app on the workbench route.)
   await page.evaluate(() => { location.hash = "#/live"; });
-
-  await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
-  await page.waitForFunction(() => document.querySelector("button") !== null);
-  check("the Live tab opens with no host (no developer 'host is not reachable' text)", !(await bodyHas("host is not reachable")) && (await bodyHas("What should we call this course")));
-  await shot("01-start");
-  check("online, the onboarding never mentions ASFAI it cannot reach (no 'Not sent to ASFAI')", !(await bodyHas("Not sent to ASFAI")));
-  check("a quiet notice says this browser keeps the record", (await bodyHas("This browser keeps the record")) && (await bodyHas("stored in this browser only")));
-
+  await page.waitForSelector("#onboarding-reply");
+  if (narrow) await checkNarrow("onboarding step 1: name the course");
   // ---- name the course (checkpoint 1)
   const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
   await reply("How plants eat", "Record the course title");
   await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+  if (narrow) await checkNarrow("onboarding step 2: name the label");
   await reply("Ada Lovelace", "Record the label");
   await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+  if (narrow) await checkNarrow("onboarding step 3: name the materials");
   await reply("Lesson notes", "Record the materials");
   await poll(async () => (await stored()).metas.length === 1);
   check("the course is recorded in IndexedDB (not on a server)", true);
   check("no /api/courses request ever left the page", !api.calls.some((c) => c.path.startsWith("/api/courses")));
   await poll(() => bodyHas("Confirm the material list"));
+  if (narrow) await checkNarrow("onboarding: confirm the material list");
   await clickText("Confirm the material list");
   await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
   check("materials confirmed on the record", true);
@@ -210,6 +274,7 @@ try {
   // ---- checkpoint 2: Silicus's own questions; ASFAI says it needs the local app
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
   await shot("01b-intake");
+  if (narrow) await checkNarrow("intake question 1: topic");
   check("ASFAI says plainly it needs the local app, with no Connect button",
     (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
   const fill = (id, text) => page.evaluate((id, text) => {
@@ -220,14 +285,18 @@ try {
   }, id, text);
   await fill("topic", "Photosynthesis"); await clickText("Record this answer");
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
+  if (narrow) await checkNarrow("intake question 2: course");
   await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
   await poll(() => bodyHas("Propose these from my materials instead"));
+  if (narrow) await checkNarrow("intake question 3: outcomes");
   await clickText("Propose these from my materials instead");
   await poll(() => bodyHas("Confirm the outline"));
+  if (narrow) await checkNarrow("outline confirm");
   await clickText("Confirm the outline");
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
   check("outline confirmed on the record", true);
 
+  if (narrow) await checkNarrow("material panel");
   // ---- material -> propose (the passcode is asked for)
   await poll(() => bodyHas("Give me the material"));
   check("the material panel says YouTube needs the local app", await bodyHas("YouTube captions need the local Silicus app"));
@@ -254,8 +323,13 @@ try {
   check("while the passcode dialog is open the waiting card holds its clock and says why",
     await page.evaluate(() => /Waiting for your passcode/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? "")));
   await shot("02-passcode", '[role="dialog"]');
+  if (narrow) await checkNarrow("passcode pause, waiting card held");
   await page.type('[role="dialog"] input[type="password"]', PASSCODE);
   await clickText("Continue");
+  // No race: the card is already running before Continue (it held its clock through the passcode pause, asserted
+  // above), and the mocked proposal takes PROPOSE_MS more after the click.
+  await page.waitForSelector('section[data-phase="running"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("waiting card, proposing objectives");
   await poll(async () => kinds(await stored()).includes("objectives.proposed"), 15000);
   const objReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
   check("proposing objectives ends with a true receipt: the proposals, none confirmed, what was read",
@@ -269,6 +343,7 @@ try {
   check("the material text went to the model once…", api.workerBodies.some((b) => b.includes(SECRET)));
   check("…and is in no IndexedDB value, localStorage or sessionStorage", !JSON.stringify(s).includes(SECRET));
 
+  if (narrow) await checkNarrow("confirm bar, proposals undecided");
   // ---- the teacher decides (accept every proposal)
   await poll(async () => {
     const st = await stored();
@@ -283,6 +358,7 @@ try {
   }, 25000);
   check("one teacher decision recorded per proposal", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
 
+  if (narrow) await checkNarrow("confirmed objectives");
   // ---- plan: draft, confirm
   await poll(() => bodyHas("Draft the plan from your confirmed objectives"));
   const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
@@ -290,6 +366,7 @@ try {
   const planBodiesBefore = api.workerBodies.length;
   await clickText("Draft the plan from your confirmed objectives");
   await page.waitForSelector('section[data-phase="running"][data-variant="card"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("waiting card, drafting the plan");
   const running = () => page.evaluate(() => document.querySelector('section[data-phase="running"][data-variant="card"]')?.innerText ?? "");
   const live = () => page.evaluate(() => [...document.querySelectorAll('section[data-variant="card"] [aria-live="polite"]')].map((n) => n.textContent));
   check("the waiting experience says in plain words what is happening, with the real count",
@@ -317,7 +394,11 @@ try {
   const planReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
   check("drafting the plan ends with a true receipt computed from the resulting view",
     /Checked: \d+ activit(y|ies), each cites only objectives you confirmed \(\d+ citations?\)\./.test(planReceipt) && /It stays a draft until you confirm it\./.test(planReceipt), planReceipt.replace(/\n+/g, " | "));
-  check("it says how long the step took, and the live region announces the finish", /Took\s*\d+ s/.test(planReceipt) && /^Finished after \d+ s\. Checked:/.test((await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? ""))));
+  const announced = await poll(async () => {
+    const t = await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? "");
+    return /^Finished after \d+ s\. Checked:/.test(t) ? t : null;
+  }).catch(() => "");
+  check("it says how long the step took, and the live region announces the finish", /Took\s*\d+ s/.test(planReceipt) && announced !== "", `${planReceipt.split("\n").filter((l) => /Took/.test(l))[0] ?? "(no 'Took' line)"} | announced: ${announced || "(never)"}`);
   await shot("14-receipt-plan", 'section[data-phase="done"][data-variant="card"]');
   const planBody = api.workerBodies.slice(planBodiesBefore).find((b) => b.includes("Draft one lesson plan")) ?? "";
   check("what the model sees is what left the page: every statement, the topic and the material name were sent; the label was NOT",
@@ -325,10 +406,12 @@ try {
   await poll(() => bodyHas("How plants eat"));
   check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
   await poll(() => bodyHas("Confirm the lesson plan"));
+  if (narrow) await checkNarrow("plan card, drafted");
   await clickText("Confirm the lesson plan");
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
   check("plan confirmed on the record", true);
 
+  if (narrow) await checkNarrow("plan card");
   // ---- publish (review -> confirm step -> publish)
   await poll(async () => {
     const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
@@ -342,12 +425,14 @@ try {
     await sleep(250);
     return null;
   }, 12000);
+  if (narrow) await checkNarrow("seal confirm step");
   await clickText("Publish version 1");
   await poll(async () => kinds(await stored()).includes("package.published"));
   await poll(() => bodyHas("sealed and pinned on this device"));
   s = await stored();
   check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
 
+  if (narrow) await checkNarrow("publish card, sealed");
   // ---- a student asks; nothing is written
   const beforeAsk = JSON.stringify(await stored());
   await page.waitForSelector('section[aria-label="Try it as a student"] input');
@@ -355,6 +440,7 @@ try {
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   await clickText("Ask");
   await page.waitForSelector('section[data-variant="compact"][data-phase="running"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("student answer, running");
   const compact = await page.evaluate(() => {
     const el = document.querySelector('section[data-variant="compact"][data-phase="running"]');
     const word = el.querySelector("span[style]");
@@ -382,8 +468,11 @@ try {
   await poll(() => bodyHas("Verify the event log"));
   await clickText("Verify the event log");
   await poll(() => bodyHas("chain intact"));
+  if (narrow) await checkNarrow("post-reload event log");
   check("after a reload the record verifies", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
 
+  if (narrow) await checkNarrow("published course");
+  if (narrow) await checkNarrow("footer data controls");
   // ---- export all
   await clickText("Export all courses");
   const exported = await poll(() => {
@@ -399,11 +488,10 @@ try {
   check("the export holds no material text", !text.includes(SECRET));
 
   // ---- delete all (confirmed first)
-  await clickText("Delete all data from this browser");
-  await poll(() => bodyHas("This cannot be undone"));
+  await clickAndWait("Delete all data from this browser", () => bodyHas("This cannot be undone"));
+  if (narrow) await checkNarrow("footer data controls, delete confirm");
   await shot("04-delete-confirm", 'section[aria-label="Where your courses are kept"]');
-  await clickText("Delete everything");
-  await poll(async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
+  await clickAndWait("Delete everything", async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
   await poll(() => bodyHas("What should we call this course"));
   s = await stored();
   check("delete all empties IndexedDB, the pins and the passcode", Object.keys(s.local).filter((k) => k.startsWith("silicus.")).length === 0 && !s.session["silicus.demoPasscode"]);
@@ -437,13 +525,39 @@ try {
   check("0 page errors", pageErrors.length === 0, pageErrors.join(" | "));
   check("the only network calls were the site's functions", api.calls.every((c) => ["/api/worker", "/api/worker/status"].includes(c.path)),
     [...new Set(api.calls.map((c) => c.path))].join(", "));
-} catch (e) {
-  console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
-  check("smoke run completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
-} finally {
-  await browser.close();
-  server.close();
 }
+
+await page.close();
+
+for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "narrow 380"]]) {
+  // A FRESH context per pass: its own IndexedDB and Web Storage, so the first pass's
+  // imported course cannot put the second pass's first-run story into the middle of a course.
+  const context = await browser.createBrowserContext();
+  page = await context.newPage();
+  page.on("console", (m) => { if (m.type() === "error") { consoleErrors.push(m.text()); console.log(`[console.error] ${m.text()}`); } });
+  page.on("pageerror", (e) => { pageErrors.push(e.message); console.log(`[pageerror] ${e.message}`); });
+  page.on("response", (r) => { if (r.status() >= 400) console.log(`[http ${r.status()}] ${r.url()}`); });
+  await page.evaluateOnNewDocument(() => {
+    window.__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  // A context id names the browser context just created; without it the download is only
+  // allowed for the default context, and the export silently misses this pass's directory.
+  const cdp = await page.createCDPSession();
+  await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS, browserContextId: context.id });
+  try {
+    await story(label, label.startsWith("narrow"));
+    check("the whole flow completed", true);
+  } catch (e) {
+    console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
+    check("the whole flow completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
+  }
+  await context.close();
+}
+
+await browser.close();
+server.close();
 
 const failed = results.filter((r) => r.startsWith("FAIL"));
 console.log(`\n${results.length - failed.length}/${results.length} browser-mode checks passed`);

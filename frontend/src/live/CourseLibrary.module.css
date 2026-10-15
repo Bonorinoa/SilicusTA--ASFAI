@@ -3,12 +3,14 @@
 .summary { font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted); cursor: pointer; min-height: 32px; display: flex; align-items: center; }
 .summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .list { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
-.row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--color-rule); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); flex-wrap: wrap; padding: var(--space-3) 0; border-top: 1px solid var(--color-rule); }
 .row[data-current] .name { color: var(--color-accent-strong); }
 .row[data-trouble] .meta { color: var(--color-danger, var(--color-ink)); font-weight: var(--weight-semibold); }
-.name { margin: 0; font-family: var(--font-display); font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
-.meta { margin: 2px 0 0; font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); }
-.open, .newCourse { font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold); min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-sm); cursor: pointer; background: transparent; border: 1px solid var(--color-border-control); color: var(--color-ink-soft); }
+/* The title is the teacher's words: without min-width it sets the row's minimum width. */
+.rowBody { min-width: 0; flex: 1 1 12rem; }
+.name { margin: 0; font-family: var(--font-display); font-size: var(--text-md); font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+.meta { margin: 2px 0 0; font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
+.open, .newCourse { font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold); min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-sm); cursor: pointer; background: transparent; border: 1px solid var(--color-border-control); color: var(--color-ink-soft); max-width: 100%; }
 .open:hover:not(:disabled), .newCourse:hover:not(:disabled) { background: var(--color-paper); color: var(--color-ink); }
 .open:focus-visible, .newCourse:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .open:disabled, .newCourse:disabled { opacity: 0.55; cursor: default; }

@@ -65,11 +65,11 @@ await shot("01-opening.png");
 
 await setVal("Seeing the claim");
 await click("Record the course title");
-await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
 await shot("02-label.png");
 
 await setVal("Ada Lovelace");
-await click("Record the label");
+await click("Record this name");
 await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
 await shot("03-materials.png");
 

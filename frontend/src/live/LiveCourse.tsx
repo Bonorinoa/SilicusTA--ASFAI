@@ -599,13 +599,14 @@ export function LiveCourse() {
       ) : null}
 
       <div className={styles.grid}>
+        {/* One course-level notice, shown once. It used to be echoed by every card it was passed to. */}
+        {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
         <DecisionCard
           canRedraftPlan={worker?.configured !== false}
           rows={view.proposals}
           onDispatch={dispatch}
           checkpointStatus={cp.objectives?.status}
           courseLabel={view.course.title}
-          notice={notice}
         />
       </div>
 
@@ -637,7 +638,6 @@ export function LiveCourse() {
           teacherName={view.course.owner}
           onPublish={publish}
           onExport={exportPackage}
-          notice={notice}
         />
       </div>
 

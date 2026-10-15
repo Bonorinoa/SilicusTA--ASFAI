@@ -209,11 +209,9 @@ describe("PublishCard", () => {
     expect(screen.getByText(/unpublished changes are ready/i)).toBeInTheDocument();
   });
 
-  it("keeps exactly ONE live region for announcements", () => {
-    render(<PublishCard {...baseProps({ notice: "Version 1 sealed." })} />);
+  it("keeps exactly ONE live region, for its own flashes (the course-level notice is LiveCourse's)", () => {
+    render(<PublishCard {...baseProps({})} />);
 
-    const live = screen.getAllByRole("status");
-    expect(live.length).toBe(1);
-    expect(live[0]).toHaveTextContent("Version 1 sealed.");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 });

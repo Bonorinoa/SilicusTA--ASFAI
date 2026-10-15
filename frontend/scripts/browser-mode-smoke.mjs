@@ -470,6 +470,12 @@ async function story(label, narrow) {
   await poll(() => bodyHas("chain intact"));
   if (narrow) await checkNarrow("post-reload event log");
   check("after a reload the record verifies", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
+  // The notice is shown ONCE (it used to be echoed by every card it was passed to — three copies on screen).
+  const noticeCopies = await page.evaluate(() => {
+    const t = "Event log verified";
+    return [...document.querySelectorAll("p,span,div")].filter((e) => (e.textContent ?? "").includes(t) && e.children.length === 0).length;
+  });
+  check("the course notice is shown exactly once, not echoed by every card", noticeCopies === 1, `${noticeCopies} cop(y|ies) on the page`);
 
   if (narrow) await checkNarrow("published course");
   if (narrow) await checkNarrow("footer data controls");

@@ -143,11 +143,16 @@ function DecisionDemo() {
 
   return (
     <div className={styles.demoGrid}>
+      {/* One notice, at the section level — the cards no longer echo it (see LiveCourse). */}
+      {notice ? (
+        <p className={styles.notice} role="status">
+          {notice}
+        </p>
+      ) : null}
       <DecisionCard
         rows={rows}
         courseLabel={harness.courseTitle}
         checkpointStatus={checkpoints.objectives.status as CheckpointStatus}
-        notice={notice}
         onDispatch={(intent) => {
           const result = harness.dispatch(intent);
           setNotice(result.ok ? null : `Refused by the confirm-gate (${result.code}): ${result.message}`);
@@ -271,6 +276,11 @@ function PublishDemo() {
 
   return (
     <div className={styles.demoGrid}>
+      {notice ? (
+        <p className={styles.notice} role="status">
+          {notice}
+        </p>
+      ) : null}
       <PublishCard
         courseLabel={harness.courseTitle}
         courseId={harness.courseId}
@@ -285,7 +295,6 @@ function PublishDemo() {
         teacherName="R. Okonkwo"
         onPublish={onPublish}
         onExport={onExport}
-        notice={notice}
       />
 
       <aside className={styles.gatePanel} data-print="hide" aria-label="Publish gate state">

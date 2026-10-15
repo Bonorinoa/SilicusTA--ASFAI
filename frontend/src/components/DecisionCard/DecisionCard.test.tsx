@@ -7,7 +7,7 @@
  */
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { seedProposals } from "../../gate/demo";
 import { ConfirmGateHarness } from "../../gate/harness";
@@ -23,17 +23,13 @@ function HarnessedCard({ onConfirm }: { onConfirm?: () => void }) {
     return h;
   }, []);
   useHarnessRevision(harness);
-  const [notice, setNotice] = useState<string | null>(null);
-
   return (
     <DecisionCard
       rows={harness.views()}
       courseLabel={harness.courseTitle}
       checkpointStatus={harness.gate.checkpoints().objectives.status as CheckpointStatus}
-      notice={notice}
       onDispatch={(intent: DecisionIntent) => {
-        const result = harness.dispatch(intent);
-        setNotice(result.ok ? null : `Refused by the confirm-gate (${result.code}).`);
+        harness.dispatch(intent);
       }}
       onConfirm={onConfirm}
     />

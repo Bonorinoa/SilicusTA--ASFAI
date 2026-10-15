@@ -55,8 +55,6 @@ export interface PublishCardProps {
   onPublish: () => void;
   /** Parent downloads the sealed package as JSON with a sha-256 digest. */
   onExport?: () => void;
-  /** Parent-surfaced notice (seal result or gate refusal), announced politely. */
-  notice?: string | null;
 }
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -79,7 +77,6 @@ export function PublishCard({
   teacherName,
   onPublish,
   onExport,
-  notice = null,
 }: PublishCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -113,13 +110,7 @@ export function PublishCard({
     if (flashTimer.current) clearTimeout(flashTimer.current);
   }, []);
 
-  // One live region: announce immediately + clear short-lived flashes.
-  useEffect(() => {
-    if (notice) {
-      setAnnouncement(notice);
-    }
-  }, [notice]);
-
+  // One live region for this card's own flashes; the course-level notice is announced once, by LiveCourse.
   const flashHint = (text: string) => {
     setHintFlash(true);
     setAnnouncement(text);
@@ -160,7 +151,7 @@ export function PublishCard({
       {/* The card's ONE live region: seal results and refusals. The parent
           notice is authoritative; the local flash covers blocked-hint clicks. */}
       <p className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">
-        {notice ?? announcement}
+        {announcement}
       </p>
 
       <header className={styles.header}>
@@ -280,11 +271,6 @@ export function PublishCard({
         </div>
       ) : null}
 
-      {notice ? (
-        <p className={styles.notice} role="alert">
-          {notice}
-        </p>
-      ) : null}
     </section>
   );
 }

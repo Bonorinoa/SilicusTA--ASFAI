@@ -144,8 +144,9 @@ describe("LiveCourse — thin client of the host", () => {
     render(<LiveCourse />);
 
     await user.click(await screen.findByRole("button", { name: /verify the event log/i }));
-    // The notice is echoed by the cards it is also passed to, so match on all of them.
-    expect((await screen.findAllByText("Event log verified — 1 event, chain intact.")).length).toBeGreaterThan(0);
+    // One course-level notice, shown once: it used to be echoed by every card it was also passed to.
+    const shown = await screen.findAllByText("Event log verified — 1 event, chain intact.");
+    expect(shown.length).toBe(1);
     expect(screen.queryByText(/Event log verified — 1 events/)).not.toBeInTheDocument();
   });
 

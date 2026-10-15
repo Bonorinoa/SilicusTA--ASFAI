@@ -37,8 +37,6 @@ export interface DecisionCardProps {
   checkpointStatus?: "pending" | "open" | "confirmed";
   /** Small caps kicker above the heading, e.g. "Lesson 3 · AI literacy". */
   courseLabel?: string;
-  /** Parent-surfaced notice (e.g. a gate refusal), announced politely. */
-  notice?: string | null;
   /**
    * Can a new lesson plan be drafted on this host? Only used to be honest about the cost of revoking an
    * objective the current plan cites. Omitted means "yes"; `false` is a host with no drafting worker.
@@ -66,7 +64,6 @@ export function DecisionCard({
   onConfirm,
   checkpointStatus = "open",
   courseLabel,
-  notice = null,
   canRedraftPlan = true,
 }: DecisionCardProps) {
   const [adding, setAdding] = useState(false);
@@ -246,11 +243,6 @@ export function DecisionCard({
         </div>
       </footer>
 
-      {notice ? (
-        <p className={styles.notice} role="alert">
-          {notice}
-        </p>
-      ) : null}
     </section>
   );
 }

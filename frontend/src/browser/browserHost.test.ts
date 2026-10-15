@@ -323,9 +323,18 @@ describe("the site's refusals become words a teacher can act on", () => {
     expect(res.json).toMatchObject({ code: "WORKER_NOT_CONFIGURED", message: MESSAGES.notSetUp });
   });
 
+  it("an OpenAI length finish is a 502 WORKER_TRUNCATED refusal in the browser host", async () => {
+    const r = await withWorker(() => reply(200, { choices: [{ finish_reason: "length", message: { content: '{"objectives":[' } }] }));
+    const { c } = await readyCourse(r);
+    const res = await r.call("POST", `${c}/materials/propose`, { materials: [MATERIAL] });
+    expect(res.status).toBe(502);
+    expect(res.json).toEqual({ ok: false, code: "WORKER_TRUNCATED", message: "The model ran out of room before finishing. Try again, or use less material." });
+  });
+
   it("worker status is the SITE's: zero-retention only when it says so, and whether a passcode is required", async () => {
-    const r = await rig({ site: fakeSite({ status: { configured: true, zdr: false, provider: "openrouter", passcodeRequired: true, model: "x" } }) });
-    expect((await r.call("GET", "/api/worker/status")).json).toEqual({ configured: true, zdr: false, provider: "openrouter", passcodeRequired: true });
+    const typicalSeconds = { objectives: [3, 15], plan: [5, 25], answer: [2, 8] };
+    const r = await rig({ site: fakeSite({ status: { configured: true, zdr: false, provider: "openrouter", passcodeRequired: true, model: "x", typicalSeconds } }) });
+    expect((await r.call("GET", "/api/worker/status")).json).toEqual({ configured: true, zdr: false, provider: "openrouter", passcodeRequired: true, typicalSeconds });
     const none = await rig({ site: fakeSite({ status: null }) });
     expect((await none.call("GET", "/api/worker/status")).json).toMatchObject({ configured: false, zdr: false });
   });

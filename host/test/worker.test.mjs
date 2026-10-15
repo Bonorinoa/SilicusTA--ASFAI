@@ -8,7 +8,7 @@
  */
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PlanWorker, WorkerError } from "../worker.mjs";
+import { DEFAULT_WORKER_TIMEOUT_MS, PlanWorker, WorkerError } from "../worker.mjs";
 import { workerFromEnv } from "../server.mjs";
 import { startMockWorker } from "./mock-worker.mjs";
 
@@ -233,6 +233,35 @@ test("ZDR fails CLOSED: a router refusal is a refusal, never a retry against a r
   assert.equal(mock.st.calls, 1, "exactly one attempt: no fallback request was made");
 });
 
+test("the OpenAI wire sends each reasoning option exactly; model-default omits it", async () => {
+  for (const [reasoning, want] of [["low", { effort: "low" }], ["medium", { effort: "medium" }], ["high", { effort: "high" }], ["off", { enabled: false }], ["model-default", undefined]]) {
+    const mock = await startMockWorker({ reply: goodPlan() }); MOCKS.push(mock);
+    const w = new PlanWorker({ url: mock.url, model: "m", reasoning });
+    await w.draft({ objectives: OBJECTIVES });
+    assert.deepEqual(mock.st.lastBody.reasoning, want, reasoning);
+  }
+});
+
+test("reasoning is never sent on the Anthropic wire", async () => {
+  const mock = await startMockWorker({ reply: goodPlan(), shape: "anthropic" }); MOCKS.push(mock);
+  const w = new PlanWorker({ url: mock.url, model: "m", provider: "anthropic", reasoning: "high" });
+  await w.draft({ objectives: OBJECTIVES });
+  assert.equal("reasoning" in mock.st.lastBody, false);
+});
+
+test("an OpenAI length finish is a clear truncation refusal before JSON parsing", async () => {
+  const mock = await startMockWorker({ reply: "{\"objectives\":[", finishReason: "length" }); MOCKS.push(mock);
+  const w = new PlanWorker({ url: mock.url, model: "m" });
+  await assert.rejects(w.draftObjectives({ materials: MATS }), {
+    code: "WORKER_TRUNCATED",
+    message: "The model ran out of room before finishing. Try again, or use less material.",
+  });
+});
+
+test("the PlanWorker default deadline is 120 seconds", () => {
+  assert.equal(DEFAULT_WORKER_TIMEOUT_MS, 120_000);
+});
+
 test("objectives are proposed from the material, which reaches the prompt as untrusted subject matter", async () => {
   const { mock, worker } = await workerWith(objectivesReply([
     { statement: "Students can explain what an algorithm is.", from: ["week1-slides.txt"] },
@@ -352,6 +381,14 @@ test("workerFromEnv: Anthropic defaults (URL, model, ANTHROPIC_API_KEY), OpenRou
   assert.equal(o.zdr, true);
   assert.throws(() => workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "k", SILICUS_WORKER_ZDR: "1" }), { code: "WORKER_BAD_CONFIG" });
   assert.equal(workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic" }).enabled, true, "enabled means url + model; the key is only needed when a call is made");
+});
+
+test("workerFromEnv reasoning parity: OpenRouter defaults low; other presets require an explicit setting", () => {
+  assert.equal(workerFromEnv({ SILICUS_WORKER_PROVIDER: "openrouter" }).reasoning, "low");
+  assert.equal(workerFromEnv({ SILICUS_WORKER_URL: "https://example.test/v1", SILICUS_WORKER_MODEL: "m" }).reasoning, "model-default");
+  for (const value of ["low", "medium", "high", "off", "model-default"]) {
+    assert.equal(workerFromEnv({ SILICUS_WORKER_URL: "https://example.test/v1", SILICUS_WORKER_MODEL: "m", SILICUS_WORKER_REASONING: value }).reasoning, value);
+  }
 });
 
 test("a real model echoes the prompt's [brackets] around a cited id: that still matches, and nothing else is loosened", async () => {

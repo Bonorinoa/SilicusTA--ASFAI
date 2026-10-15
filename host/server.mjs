@@ -42,6 +42,7 @@ import { LocalArchive } from "./archive.mjs";
 import { createHandler, HttpError, MAX_BODY } from "./handler.mjs";
 import { TokenStore } from "./asfai/tokens.mjs";
 import { PlanWorker } from "./worker.mjs";
+import { normalizeReasoning, typicalSecondsFromJson } from "./worker-config.mjs";
 import { prepareMaterials } from "./materials.mjs";
 import { AsfaiOAuth } from "./asfai/oauth.mjs";
 import { AsfaiClient } from "./asfai/mcp.mjs";
@@ -82,6 +83,7 @@ function guardRequest(req, allowedOrigins, pathname) {
  *   SILICUS_WORKER_API_KEY   the credential (the presets also read OPENROUTER_API_KEY / ANTHROPIC_API_KEY)
  *   SILICUS_WORKER_ZDR       zero-data-retention routing: OpenRouter only (on by default for the preset; 0 turns it off). Asking for it on the Anthropic wire
  *                            refuses to start, because the host must not claim a guarantee it cannot make.
+ *   SILICUS_WORKER_REASONING low (the OpenRouter preset default), medium, high, off, or model-default.
  */
 export function workerFromEnv(env) {
   const preset = env.SILICUS_WORKER_PROVIDER;
@@ -98,13 +100,14 @@ export function workerFromEnv(env) {
     // The OpenRouter preset is zero-data-retention unless explicitly switched off (SILICUS_WORKER_ZDR=0).
     // Every other setup is opt-in, so nothing claims a guarantee it was not asked for.
     zdr: openrouter ? env.SILICUS_WORKER_ZDR !== "0" : env.SILICUS_WORKER_ZDR === "1",
+    reasoning: normalizeReasoning(env.SILICUS_WORKER_REASONING, openrouter ? "low" : "model-default"),
     // The operator hint lives here, in the Node host, not in the worker module the browser bundle shares.
     configHint: "set SILICUS_WORKER_URL and SILICUS_WORKER_MODEL, or SILICUS_WORKER_PROVIDER=openrouter",
   });
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, workerEnv = process.env, sources = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -120,7 +123,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
   const archives = new LocalArchive(join(dataDir, "archives"));
   // The OSS worker that drafts a plan. OFF unless url+model are configured: the host
   // runs, and the suite passes, with no model at all. Its output is validated in worker.mjs.
-  const planWorker = worker ?? workerFromEnv(process.env);
+  const planWorker = worker ?? workerFromEnv(workerEnv);
 
   // Knowledge sources the worker may draw on: CONFIG, never a request field. ASFAI's graph first
   // (recommended; on unless SILICUS_SOURCE_ASFAI=0), then a local ontology file if one is named.
@@ -137,6 +140,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     store,
     asfai: asfaiSvc,
     worker: planWorker,
+    typicalSeconds: typicalSecondsFromJson(workerEnv.SILICUS_TYPICAL_SECONDS),
     sources: knowledgeSources,
     archives,
     prepareMaterials: (items) => prepareMaterials(items, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}), ...(ytdlp ? { ytdlp } : {}), ...(runImpl ? { runImpl } : {}) }),

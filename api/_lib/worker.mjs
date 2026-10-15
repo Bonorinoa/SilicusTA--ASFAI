@@ -6,9 +6,10 @@
  * client does not:
  *   - the model is SILICUS_WORKER_MODEL; a client `model` is discarded;
  *   - only messages / response_format / temperature / max_tokens are read from the body (every other
- *     key, including `provider`, `tools`, `stream`, `n`, is dropped), messages are rebuilt as
+ *     key, including `reasoning`, `provider`, `tools`, `stream`, `n`, is dropped), messages are rebuilt as
  *     {role, content} strings;
  *   - max_tokens = min(client, SILICUS_WORKER_MAX_TOKENS, 4000 by default);
+ *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it;
  *   - zero-data-retention routing `provider: {zdr: true, data_collection: "deny"}` is sent unless
  *     SILICUS_WORKER_ZDR === "0", and it fails CLOSED: one upstream attempt, never a retry elsewhere;
  *   - OPENROUTER_API_KEY goes only upstream as a Bearer token, never into a response or a log.
@@ -17,10 +18,11 @@
 import { PASSCODE_HEADER, fail, json, rateLimited, readJson, clientIp, isPlainObject, raceAbort } from "./http.mjs";
 import { passcodeConfigured, passcodeMatches } from "./passcode.mjs";
 import { createRateLimiter, dailyCap } from "./ratelimit.mjs";
+import { normalizeReasoning, reasoningBody, typicalSecondsFromJson } from "../../host/worker-config.mjs";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const MAX_BODY_BYTES = 512 * 1024;
-export const UPSTREAM_TIMEOUT_MS = 55_000;
+export const UPSTREAM_TIMEOUT_MS = 115_000;
 export const DEFAULT_MAX_TOKENS = 4000;
 const MAX_UPSTREAM_BYTES = 4 * 1024 * 1024;
 const ROLES = new Set(["system", "user", "assistant"]);
@@ -38,6 +40,7 @@ export function workerSettings(env = {}) {
     passcode: passcodeConfigured(env) ? env.SILICUS_DEMO_PASSCODE : null,
     // Fail closed: anything but the exact string "0" keeps zero-data-retention routing on.
     zdr: env.SILICUS_WORKER_ZDR !== "0",
+    reasoning: normalizeReasoning(env.SILICUS_WORKER_REASONING, "low"),
     maxTokensCap: Number.isInteger(cap) && cap > 0 ? Math.min(cap, DEFAULT_MAX_TOKENS) : DEFAULT_MAX_TOKENS,
     dailyCap: dailyCap(env),
   };
@@ -68,6 +71,8 @@ export function buildUpstreamBody(input, settings) {
   const asked = input.max_tokens;
   body.max_tokens = Number.isInteger(asked) && asked > 0 ? Math.min(asked, settings.maxTokensCap) : settings.maxTokensCap;
   if (settings.zdr) body.provider = { ...ZDR_PROVIDER };
+  const reasoning = reasoningBody(settings.reasoning);
+  if (reasoning) body.reasoning = reasoning;
   return { body };
 }
 
@@ -166,7 +171,8 @@ export function createWorkerHandler({ fetchImpl = (...a) => fetch(...a), env = p
 export function createStatusHandler({ env = process.env } = {}) {
   async function GET() {
     const s = workerSettings(env);
-    return json(200, { configured: isConfigured(s), zdr: s.zdr, provider: "openrouter", passcodeRequired: true, model: s.model });
+    return json(200, { configured: isConfigured(s), zdr: s.zdr, provider: "openrouter", passcodeRequired: true, model: s.model,
+      typicalSeconds: typicalSecondsFromJson(env.SILICUS_TYPICAL_SECONDS) });
   }
   return { GET };
 }

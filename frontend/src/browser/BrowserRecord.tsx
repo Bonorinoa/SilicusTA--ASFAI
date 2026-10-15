@@ -8,6 +8,7 @@
  * first). A renderer plus three calls into the browser host; it decides nothing about a course.
  */
 import { useEffect, useId, useRef, useState } from "react";
+import { plural } from "../lib/plural";
 import styles from "./BrowserRecord.module.css";
 
 type Phase = "idle" | "confirmDelete" | "working";
@@ -54,7 +55,7 @@ export function BrowserRecord({ hasCourses, onChanged, status, onStatus: setStat
       const n = out.included.length;
       setStatus({
         tone: out.skipped.length ? "refused" : "ok",
-        text: `Exported ${n} course${n === 1 ? "" : "s"} to ${out.filename}.`
+        text: `Exported ${plural(n, "course")} to ${out.filename}.`
           + (out.skipped.length ? ` Left out, because ${out.skipped.length === 1 ? "its record does" : "their records do"} not verify: ${out.skipped.map((s) => `“${s.title}”`).join(", ")}.` : ""),
       });
     } catch (e) {
@@ -75,7 +76,7 @@ export function BrowserRecord({ hasCourses, onChanged, status, onStatus: setStat
       setStatus({
         tone: "ok",
         text: n
-          ? `Imported ${n} course${n === 1 ? "" : "s"}. Every record was checked against its own fingerprints before it was kept.`
+          ? `Imported ${plural(n, "course")}. Every record was checked against its own fingerprints before it was kept.`
           : "Those courses are already in this browser, unchanged. Nothing new was imported.",
       });
       onChanged();

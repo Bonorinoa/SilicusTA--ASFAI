@@ -89,7 +89,7 @@ interface Call { url: string; body: Record<string, unknown> | undefined }
 
 function mockHost(
   view: HostView | null,
-  { workerConfigured = true, asfaiConnected = true, studentReply, zdr = true, extraCourses = [], otherView }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown; zdr?: boolean; extraCourses?: CourseSummary[]; otherView?: HostView } = {},
+  { workerConfigured = true, asfaiConnected = true, studentReply, zdr = true, extraCourses = [], otherView, verify }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown; zdr?: boolean; extraCourses?: CourseSummary[]; otherView?: HostView; verify?: { ok: boolean; events: number; head?: string } } = {},
 ): { calls: Call[] } {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
@@ -105,6 +105,7 @@ function mockHost(
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
     if (url.endsWith("/materials/propose")) return ok({ proposals: [], materials: [], skipped: [] });
     if (url.endsWith("/student/ask")) return ok(studentReply ?? { answer: "x", grounded: false, cites: [], note: "n" });
+    if (url.endsWith("/verify")) return ok(verify ?? { ok: true, events: view?.integrity.events ?? 0, head: view?.integrity.head ?? "h" });
     if (url.startsWith("/api/courses/")) return ok(view);
     return ok({});
   }));
@@ -124,6 +125,28 @@ describe("LiveCourse — thin client of the host", () => {
     expect(screen.getByRole("heading", { name: STATEMENT })).toBeInTheDocument();
     // A checkpoint chip reflects the host's status, not local state.
     expect(screen.getByText(/log 3 events/)).toBeInTheDocument();
+  });
+
+  it("counts a one-event log in words in the stage meta: 'log 1 event', never 'log 1 events'", async () => {
+    const v = stubView();
+    v.integrity = { events: 1, head: "deadbeef" };
+    mockHost(v);
+    render(<LiveCourse />);
+
+    expect(await screen.findByText(/log 1 event(?!s)/)).toBeInTheDocument();
+    expect(screen.queryByText(/log 1 events/)).not.toBeInTheDocument();
+  });
+
+  it("counts a one-event log in words in the verify receipt: 'Event log verified — 1 event, chain intact.'", async () => {
+    const v = stubView();
+    mockHost(v, { verify: { ok: true, events: 1, head: "deadbeef" } });
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+
+    await user.click(await screen.findByRole("button", { name: /verify the event log/i }));
+    // The notice is echoed by the cards it is also passed to, so match on all of them.
+    expect((await screen.findAllByText("Event log verified — 1 event, chain intact.")).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Event log verified — 1 events/)).not.toBeInTheDocument();
   });
 
   it("sends a teacher verb as an intent — no provenance leaves the browser", async () => {

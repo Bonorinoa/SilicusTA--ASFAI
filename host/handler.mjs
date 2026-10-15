@@ -66,17 +66,28 @@ export function errorResponse(err) {
 }
 
 /**
- * @param {{
- *   store: {has: Function, list: Function, meta: Function, log: Function, initCourse: Function},
- *   asfai: {status: Function, oauth?: object, runIntake: Function, validate: Function},
- *   worker: object,                          the PlanWorker (or a stand-in) every model call goes through
- *   workerStatus?: () => object | Promise<object>,   what /worker/status reports (default: the worker's own config)
- *   sources?: object[],                      knowledge sources (config, never a request field)
- *   archives?: object | null,                a LocalArchive, or null where there is no archive folder
- *   prepareMaterials: (items: unknown) => Promise<{materials: object[], skipped: object[]}>,
- *   guard?: (raw: unknown, pathname: string) => void,   transport checks run after the /api match (Node: loopback + origin)
- * }} deps
+ * The dependencies a host injects. Everything that differs between the Node host and the browser host is here.
+ *   store            CourseStore (disk) or RecordStore (memory written through to IndexedDB)
+ *   asfai            the ASFAI service, or a stand-in that says it is off
+ *   worker           the PlanWorker every model call goes through
+ *   workerStatus     what /worker/status reports (default: the worker's own config)
+ *   sources          knowledge sources (config, never a request field)
+ *   archives         a LocalArchive, or null where there is no archive folder
+ *   prepareMaterials how the teacher's material items become named plain text
+ *   guard            transport checks run right after the /api match (Node: loopback host + origin + JSON)
+ *
+ * @typedef {object} HandlerDeps
+ * @property {any} store
+ * @property {any} asfai
+ * @property {any} worker
+ * @property {(() => any) | null} [workerStatus]
+ * @property {any[]} [sources]
+ * @property {any} [archives]
+ * @property {(items: any) => Promise<{materials: any[], skipped: any[]}>} prepareMaterials
+ * @property {((raw: any, pathname: string) => void) | null} [guard]
  */
+
+/** @param {HandlerDeps} deps */
 export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, sources: knowledgeSources = [], archives = null, prepareMaterials, guard = null }) {
   const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider }));
 
@@ -113,7 +124,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
   }
 
   /**
-   * @param {{method?: string, url: string, readBody: () => Promise<any>, raw?: unknown}} req
+   * @param {{method?: string, url: string, readBody: () => Promise<any>, raw?: any}} req
    *   `readBody` is called only by routes that read a body, exactly when they read it (the Node host
    *   parses lazily, and a route that takes no body must not fail on one). `raw` is the transport's own
    *   request object, handed to `guard`.

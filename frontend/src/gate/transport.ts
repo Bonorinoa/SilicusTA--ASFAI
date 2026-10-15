@@ -97,6 +97,15 @@ export interface HostView {
 export interface AsfaiStatus { connected: boolean; expiresAt: number | null; scope: string | null; canRefresh: boolean }
 export interface PlanValidation { planId: string; valid: boolean; issues: string[]; at: number }
 
+/** One course in the library: a summary, never content. `progress.error` means its record needs attention. */
+export interface CourseSummary {
+  courseId: string;
+  owner: string;
+  title: string;
+  createdAt: number;
+  progress?: { confirmed: number; total: number; versions: number } | { error: string };
+}
+
 export class HostError extends Error {
   code?: string;
   blockers?: string[];
@@ -131,7 +140,7 @@ const enc = encodeURIComponent;
 
 export const host = {
   health: () => call<{ ok: boolean; courses: number }>("GET", "/health"),
-  listCourses: () => call<{ courses: { courseId: string; owner: string; title: string; createdAt: number }[] }>("GET", "/courses"),
+  listCourses: () => call<{ courses: CourseSummary[] }>("GET", "/courses"),
   createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[] }) =>
     call<{ ok: true; courseId: string; view: HostView }>("POST", "/courses", b),
   getCourse: (id: string) => call<HostView>("GET", `/courses/${enc(id)}`),

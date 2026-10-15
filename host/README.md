@@ -222,11 +222,11 @@ material, grounded student answers); its output is always validated as untrusted
 
 | Variable | Meaning |
 |---|---|
-| `SILICUS_WORKER_PROVIDER` | `openai` (default: OpenRouter, vLLM, Ollama...) or `anthropic` (native Messages API) |
+| `SILICUS_WORKER_PROVIDER` | `openrouter` (preset: OpenRouter, `deepseek/deepseek-v4-flash-0731`, zero-data-retention ON, key from `OPENROUTER_API_KEY`), `anthropic` (native Messages API), or unset (any chat-completions endpoint) |
 | `SILICUS_WORKER_URL` | endpoint; `anthropic` defaults to `https://api.anthropic.com/v1/messages` |
 | `SILICUS_WORKER_MODEL` | model; `anthropic` defaults to `claude-sonnet-5-5` |
 | `SILICUS_WORKER_API_KEY` | credential; `anthropic` also reads `ANTHROPIC_API_KEY` |
-| `SILICUS_WORKER_ZDR=1` | zero-data-retention routing (OpenRouter only). On the Anthropic wire this refuses to start: the host will not claim a guarantee it cannot make |
+| `SILICUS_WORKER_ZDR` | zero-data-retention routing, OpenRouter only. On for the `openrouter` preset (`0` turns it off); opt-in (`1`) otherwise. On the Anthropic wire `1` refuses to start: the host will not claim a guarantee it cannot make |
 | `SILICUS_YTDLP` | path to `yt-dlp`, for YouTube captions |
 
 Retention differs by provider. OpenRouter with `SILICUS_WORKER_ZDR=1` routes only to zero-retention
@@ -234,6 +234,8 @@ endpoints. The Anthropic API is under Anthropic's normal API data-retention term
 has a zero-retention agreement, which the host cannot see. The material panel says which applies. Use public
 material (a public lecture) or material you are allowed to share until that is settled.
 
-Example (Claude Sonnet 5.5, for now):
+Default (OpenRouter, zero-retention): 
 
-    SILICUS_WORKER_PROVIDER=anthropic ANTHROPIC_API_KEY=... SILICUS_YTDLP=$HOME/.local/bin/yt-dlp npm start
+    SILICUS_WORKER_PROVIDER=openrouter OPENROUTER_API_KEY=... SILICUS_YTDLP=$HOME/.local/bin/yt-dlp npm start
+
+Claude Sonnet 5.5 is available instead with `SILICUS_WORKER_PROVIDER=anthropic ANTHROPIC_API_KEY=...`.

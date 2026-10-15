@@ -15,11 +15,13 @@ import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
 import { describeIntent } from "../gate/harness";
 import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
-import { host, type AsfaiStatus, type HostView, type MaterialInput } from "../gate/transport";
+import { host, type AsfaiStatus, type CourseSummary, type HostView, type MaterialInput } from "../gate/transport";
 import type { DecisionIntent } from "../gate/types";
 import { OnboardingChat } from "./OnboardingChat";
 import { MaterialsPanel } from "./MaterialsPanel";
 import { StudentChat } from "./StudentChat";
+import { CourseLibrary } from "./CourseLibrary";
+import { buildHandoutHtml, handoutFilename } from "./handout";
 import styles from "./LiveCourse.module.css";
 const CHECKPOINT_LABEL: Record<string, string> = {
   files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
@@ -32,6 +34,7 @@ export function LiveCourse() {
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
   const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean } | null>(null);
+  const [library, setLibrary] = useState<CourseSummary[]>([]);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
 
@@ -40,6 +43,7 @@ export function LiveCourse() {
     void (async () => {
       try {
         const { courses } = await host.listCourses();
+        setLibrary(courses);
         if (courses.length > 0) {
           setCourseId(courses[0].courseId);
           setView(await host.getCourse(courses[0].courseId));
@@ -53,6 +57,7 @@ export function LiveCourse() {
 
   const reload = async (id = courseId) => {
     if (id) setView(await host.getCourse(id));
+    try { setLibrary((await host.listCourses()).courses); } catch { /* the library is a convenience; the course view is what matters */ }
     try { setAsfai(await host.asfaiStatus()); } catch { /* an old host: leave unknown */ }
   };
   useEffect(() => { void host.asfaiStatus().then(setAsfai).catch(() => {}); }, []);
@@ -71,8 +76,19 @@ export function LiveCourse() {
     const created = await host.createCourse(b);
     setCourseId(created.courseId);
     setView(created.view);
+    void host.listCourses().then((r) => setLibrary(r.courses)).catch(() => {});
     setNotice("Course recorded. Confirm the material list when it is right.");
   });
+
+  /** Open another course from the library. Nothing is written: this only changes which record is shown. */
+  const openCourse = (id: string) => run(async () => {
+    setNotice(null); setPinReport([]);
+    setView(await host.getCourse(id));
+    setCourseId(id);
+    setPins(listPins(id));
+  });
+  /** Show the naming conversation again. The new course exists only once the teacher records it. */
+  const newCourse = () => { setView(null); setCourseId(null); setNotice(null); setPinReport([]); };
 
   const confirmFiles = (text: string) => run(async () => {
     await host.confirmCheckpoint(courseId!, { id: "files", text });
@@ -230,6 +246,21 @@ export function LiveCourse() {
     setNotice("Exported the course package (tamper-evident JSON).");
   });
 
+  /** A standalone student page from the SEALED version. No AI, no host needed to read it. */
+  const downloadHandout = () => {
+    const sealed = view?.versions.at(-1);
+    if (!sealed) return;
+    const url = URL.createObjectURL(new Blob([buildHandoutHtml(sealed)], { type: "text/html" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = handoutFilename(sealed);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setNotice("Downloaded the student handout: a single page you can print or share.");
+  };
+
   const verifyLog = () => run(async () => {
     const r = await host.verify(courseId!);
     setNotice(r.ok ? `Event log verified — ${r.events} events, chain intact.` : "The event log does NOT verify.");
@@ -256,6 +287,7 @@ export function LiveCourse() {
             only your answers to those are sent. Nothing is decided in this browser.
           </p>
         </header>
+        <CourseLibrary courses={library} currentId={null} busy={busy} onOpen={openCourse} onNew={newCourse} open />
         <OnboardingChat
           view={null}
           asfai={asfai}
@@ -279,6 +311,7 @@ export function LiveCourse() {
 
   return (
     <div className={styles.live}>
+      <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
       <header className={styles.stageHeader}>
         <div>
           <h1 className={styles.title}>{view.course.title}</h1>
@@ -364,9 +397,14 @@ export function LiveCourse() {
           Verify the event log
         </button>
         {published ? (
-          <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>
-            Archive the export
-          </button>
+          <>
+            <button type="button" className={styles.ghostButton} onClick={downloadHandout} disabled={busy}>
+              Download student handout
+            </button>
+            <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>
+              Archive the export
+            </button>
+          </>
         ) : null}
       </div>
 

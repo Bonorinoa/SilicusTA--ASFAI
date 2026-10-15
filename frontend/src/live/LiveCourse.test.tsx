@@ -9,11 +9,12 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { HostView } from "../gate/transport";
+import type { CourseSummary, HostView } from "../gate/transport";
 import { LiveCourse } from "./LiveCourse";
 import { parseMaterials } from "./OnboardingChat";
 
 const COURSE_ID = "urn:uuid:11111111-2222-3333-4444-555555555555";
+const OTHER_ID = "urn:uuid:99999999-8888-7777-6666-555555555555";
 const STATEMENT = "Students can explain what an algorithm is, in their own words.";
 
 const ok = (o: unknown) => ({ ok: true, status: 200, json: async () => o }) as unknown as Response;
@@ -88,7 +89,7 @@ interface Call { url: string; body: Record<string, unknown> | undefined }
 
 function mockHost(
   view: HostView | null,
-  { workerConfigured = true, asfaiConnected = true, studentReply, zdr = true }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown; zdr?: boolean } = {},
+  { workerConfigured = true, asfaiConnected = true, studentReply, zdr = true, extraCourses = [], otherView }: { workerConfigured?: boolean; asfaiConnected?: boolean; studentReply?: unknown; zdr?: boolean; extraCourses?: CourseSummary[]; otherView?: HostView } = {},
 ): { calls: Call[] } {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
@@ -96,8 +97,9 @@ function mockHost(
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
     calls.push({ url, body });
     if (url === "/api/courses") {
-      return ok({ courses: view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1 }] : [] });
+      return ok({ courses: [...(view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1, progress: { confirmed: 2, total: 5, versions: 0 } }] : []), ...extraCourses] });
     }
+    if (url === `/api/courses/${encodeURIComponent(OTHER_ID)}` && otherView) return ok(otherView);
     if (url === "/api/asfai/status") return ok({ connected: asfaiConnected, expiresAt: asfaiConnected ? 9 : null, scope: asfaiConnected ? "asfai" : null, canRefresh: asfaiConnected });
     if (url === "/api/worker/status") return ok({ configured: workerConfigured, zdr, provider: zdr ? "openai" : "anthropic" });
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
@@ -438,5 +440,55 @@ describe("LiveCourse — thin client of the host", () => {
     expect(await screen.findByText(/stays in this tab only/i)).toBeInTheDocument();
     expect(screen.queryByText(/is set to zero-data-retention providers only/i)).not.toBeInTheDocument();
     expect(screen.getByText(/normal data-retention terms \(not zero-retention\)/i)).toBeInTheDocument();
+  });
+
+  it("lists your courses with honest standing, opens another without writing anything, and starts a new one on request", async () => {
+    const other = stubView();
+    other.course = { ...other.course, courseId: OTHER_ID, title: "Earlier course" };
+    const { calls } = mockHost(stubView(), {
+      otherView: other,
+      extraCourses: [
+        { courseId: OTHER_ID, owner: "teacher:tk-1", title: "Earlier course", createdAt: 0, progress: { confirmed: 5, total: 5, versions: 1 } },
+        { courseId: "urn:uuid:bad", owner: "teacher:tk-1", title: "Damaged course", createdAt: -1, progress: { error: "LOG_INTEGRITY" } },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    const list = await screen.findByRole("list", { name: "Your courses" });
+    expect(within(list).getByText(/2 of 5 checkpoints confirmed/)).toBeInTheDocument();
+    expect(within(list).getByText(/published, version 1/)).toBeInTheDocument();
+    expect(within(list).getByText(/needs attention: its record does not verify/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lesson 3 · AI literacy is open" })).toBeDisabled();
+
+    const writes = () => calls.filter((c) => c.body !== undefined).length;
+    const before = writes();
+    await user.click(within(list).getByRole("button", { name: "Open Earlier course" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Earlier course" })).toBeInTheDocument();
+    expect(writes()).toBe(before);
+
+    await user.click(screen.getByRole("button", { name: "Start a new course" }));
+    expect(await screen.findByLabelText("What should we call this course?")).toBeInTheDocument();
+    expect(writes()).toBe(before);
+  });
+
+  it("offers a student handout once published, built from the sealed version", async () => {
+    const v = stubView();
+    v.versions = [{
+      courseId: COURSE_ID, version: 1, previousVersion: null, title: "AI literacy", owner: "Ada", status: "published",
+      objectiveRefs: [{ id: "o", kind: "local", statement: STATEMENT }], lessonPlan: null, publishedAt: 1, note: null,
+      provenance: { turnRef: "t", decidedBy: "Ada", channel: "c", decidedAt: 1 },
+    }];
+    mockHost(v);
+    let blob: Blob | null = null;
+    const created = vi.fn((b: Blob) => { blob = b; return "blob:handout"; });
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() }));
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});   // jsdom cannot navigate
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await user.click(await screen.findByRole("button", { name: "Download student handout" }));
+    expect(created).toHaveBeenCalledOnce();
+    const text = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(blob as unknown as Blob); });
+    expect(text).toContain(STATEMENT);
+    expect((await screen.findAllByText(/Downloaded the student handout/)).length).toBeGreaterThan(0);
   });
 });

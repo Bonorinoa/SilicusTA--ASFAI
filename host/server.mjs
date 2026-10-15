@@ -104,25 +104,29 @@ class HttpError extends Error {
 
 /**
  * The drafting worker from environment config. OFF unless a model is configured.
- *   SILICUS_WORKER_PROVIDER  "openai" (default; OpenRouter, vLLM, Ollama...) or "anthropic" (native Messages API)
+ *   SILICUS_WORKER_PROVIDER  "openrouter" (preset: OpenRouter, deepseek/deepseek-v4-flash-0731, zero-data-retention ON),
+ *                            "anthropic" (native Messages API), or unset/"openai" (any chat-completions endpoint)
  *   SILICUS_WORKER_URL       the endpoint (anthropic defaults to https://api.anthropic.com/v1/messages)
  *   SILICUS_WORKER_MODEL     the model (anthropic defaults to claude-sonnet-5-5)
- *   SILICUS_WORKER_API_KEY   the credential (anthropic also reads ANTHROPIC_API_KEY)
- *   SILICUS_WORKER_ZDR=1     zero-data-retention routing: OpenRouter only. Asking for it on the Anthropic wire
+ *   SILICUS_WORKER_API_KEY   the credential (the presets also read OPENROUTER_API_KEY / ANTHROPIC_API_KEY)
+ *   SILICUS_WORKER_ZDR       zero-data-retention routing: OpenRouter only (on by default for the preset; 0 turns it off). Asking for it on the Anthropic wire
  *                            refuses to start, because the host must not claim a guarantee it cannot make.
  */
 export function workerFromEnv(env) {
-  const provider = env.SILICUS_WORKER_PROVIDER === "anthropic" ? "anthropic" : "openai";
-  const anthropic = provider === "anthropic";
-  const key = anthropic
-    ? (env.SILICUS_WORKER_API_KEY || env.ANTHROPIC_API_KEY || null)
-    : (env.SILICUS_WORKER_API_KEY || null);
+  const preset = env.SILICUS_WORKER_PROVIDER;
+  const anthropic = preset === "anthropic";
+  const openrouter = preset === "openrouter";
+  const key = env.SILICUS_WORKER_API_KEY
+    || (anthropic ? env.ANTHROPIC_API_KEY : openrouter ? env.OPENROUTER_API_KEY : null)
+    || null;
   return new PlanWorker({
-    provider,
-    url: env.SILICUS_WORKER_URL || (anthropic ? "https://api.anthropic.com/v1/messages" : null),
-    model: env.SILICUS_WORKER_MODEL || (anthropic ? "claude-sonnet-5-5" : null),
+    provider: anthropic ? "anthropic" : "openai",
+    url: env.SILICUS_WORKER_URL || (anthropic ? "https://api.anthropic.com/v1/messages" : openrouter ? "https://openrouter.ai/api/v1/chat/completions" : null),
+    model: env.SILICUS_WORKER_MODEL || (anthropic ? "claude-sonnet-5-5" : openrouter ? "deepseek/deepseek-v4-flash-0731" : null),
     apiKey: key,
-    zdr: env.SILICUS_WORKER_ZDR === "1",
+    // The OpenRouter preset is zero-data-retention unless explicitly switched off (SILICUS_WORKER_ZDR=0).
+    // Every other setup is opt-in, so nothing claims a guarantee it was not asked for.
+    zdr: openrouter ? env.SILICUS_WORKER_ZDR !== "0" : env.SILICUS_WORKER_ZDR === "1",
   });
 }
 
@@ -233,8 +237,20 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       // /api/courses
       if (parts.length === 2) {
         if (method === "GET") {
-          return { status: 200, json: { courses: store.list().map((m) => ({
-            courseId: m.courseId, owner: m.owner, title: m.title, createdAt: m.createdAt })) } };
+          // The library: enough to choose a course and to see, honestly, which one needs attention.
+          // A course whose record does not verify says so here instead of silently disappearing.
+          const courses = store.list().map((m) => {
+            let progress;
+            try {
+              const v = CourseSession.load(store, m.courseId).view();
+              const cps = Object.values(v.checkpoints);
+              progress = { confirmed: cps.filter((c) => c.status === "confirmed").length, total: cps.length, versions: v.versions.length };
+            } catch (e) {
+              progress = { error: e?.code ?? "UNREADABLE" };
+            }
+            return { courseId: m.courseId, owner: m.owner, title: m.title, createdAt: m.createdAt, progress };
+          }).sort((a, b) => b.createdAt - a.createdAt);
+          return { status: 200, json: { courses } };
         }
         if (method === "POST") {
           const b = await body(req);

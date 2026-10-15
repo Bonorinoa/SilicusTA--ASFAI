@@ -47,12 +47,18 @@ live browser 50/50):
   Material text is **never stored** (the log keeps name, digest and size; a test scans every byte of
   the data dir). Live-checked: a Wikipedia page, and 18,430 characters of captions from a 3Blue1Brown
   video via yt-dlp.
-- **Worker, for now = Claude Sonnet 5.5 through the native Anthropic wire** (`SILICUS_WORKER_PROVIDER=anthropic`).
-  The OpenRouter path with enforced zero-data-retention (`deepseek/deepseek-v4-flash-0731`, fail-closed,
-  20 ZDR endpoints) is built and stays selectable by config; it was parked only because the OpenRouter
-  account has no credits. **The retention guarantee is different:** the Anthropic API is under Anthropic's
-  normal API terms, not zero-retention, and the host refuses to claim otherwise (ZDR on that wire refuses
-  to start; the UI says so). So: public material for the demo; revisit before any teacher's own files.
+- **Worker = OpenRouter `deepseek/deepseek-v4-flash-0731`, zero-data-retention enforced** (preset:
+  `SILICUS_WORKER_PROVIDER=openrouter`). Fail-closed: a refusal is one attempt, never a retry elsewhere.
+  20 ZDR endpoints exist for it. **Waiting on OpenRouter credits.** Claude Sonnet 5.5 over the native
+  Anthropic wire is built and selectable (`SILICUS_WORKER_PROVIDER=anthropic`), but it is NOT
+  zero-retention: the host refuses to claim otherwise (ZDR on that wire refuses to start, and the UI says
+  so). It was tried briefly, then set aside because no valid key reached the host.
+- **Non-AI features, built while the worker waits for credits.** A course library (every course, newest
+  first, with honest standing: "2 of 5 checkpoints confirmed", "published, version 1", or "needs
+  attention: its record does not verify", so a damaged course is flagged, never hidden); open another
+  course or start a new one (writes nothing until the teacher names it); and a **student handout**: one
+  standalone page built from the sealed version (confirmed objectives and what learners do; no teacher
+  notes, no script, everything escaped) to print or share. None of it calls a model.
 - **Sprint 8, a student can use the package.** Answers come only from the latest *sealed* version, must
   cite it, or fall back to "ask your teacher". It records nothing and accepts no student identity.
   The teacher tries it from the course page ("Try it as a student").
@@ -65,8 +71,8 @@ Open gaps, worst first:
    three student questions answered in about 5 s each: one grounded and cited, one out-of-scope falling back to
    "ask your teacher", one "tell me I passed" refused. 43 s end to end. That proves prompt and validator
    behaviour with a real model, not the native HTTP wire.) The host-side Anthropic wire is proven against a
-   faithful stand-in; it needs a valid `ANTHROPIC_API_KEY` in the host's environment (the key present in
-   this shell is empty or rejected). The OpenRouter path is blocked on credits. First thing to fix.
+   faithful stand-in. The OpenRouter path is blocked on credits (HTTP 402); the Anthropic key in this shell
+   is empty or rejected. First thing to fix once credits land.
 2. **A "full course" is not modelled.** The product drafts one lesson plan from up to 8 materials.
    A YouTube playlist or a whole syllabus needs a course-and-lessons structure. Decide before building.
 3. **Students cannot reach it.** Student chat works on the teacher's machine only. That is the hosting
@@ -110,7 +116,7 @@ gets an answer that cites the package. Five minutes, no typing of outcomes.
 - All suites green, `confirm-gate/` diff still zero.
 
 **Work to get there (in order)**
-1. Fund the OpenRouter account and run the live worker (blocker for everything above).
+1. Fund the OpenRouter account and run the live worker (blocker for everything above). Meanwhile, the non-AI work below was built.
 2. Re-run the red-team on Sprints 5 and 6, then add Sprints 7 and 8 (injection through material and
    through student questions; the URL fetcher).
 3. UI pass on the demo path only: the material step, proposals, student chat. Beautiful and calm, not wider.
@@ -155,7 +161,7 @@ playlists as a course structure; PDF extraction; multi-teacher; ages beyond 5 to
 | Decision | Status |
 |---|---|
 | Silicus owns materials intake and student chat (not ASFAI) | **Decided** (owner, Oct 14) |
-| Worker model and data policy | **Decided for now:** Claude Sonnet 5.5 (not zero-retention), public material only, material never saved. OpenRouter ZDR kept as a config switch. |
+| Worker model and data policy (OpenRouter V4 Flash 0731, ZDR, material never saved) | **Decided.** Claude Sonnet 5.5 stays available by config, not zero-retention. |
 | Demo material: the owner's own, or a public YouTube lecture | Open: public YouTube recommended for the demo (no privacy question) |
 | Hosting | Open: recommendation in section 4 |
 | "Full course" vs one lesson for the checkpoint | Open: recommendation above |

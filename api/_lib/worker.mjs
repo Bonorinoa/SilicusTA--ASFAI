@@ -5,10 +5,11 @@
  * The browser hosts the course; this function exists only to hold the model key. It decides, the
  * client does not:
  *   - the model is SILICUS_WORKER_MODEL; a client `model` is discarded;
- *   - only messages / response_format / temperature / max_tokens are read from the body (every other
- *     key, including `reasoning`, `provider`, `tools`, `stream`, `n`, is dropped), messages are rebuilt as
+ *   - only messages / response_format / temperature are read from the body (every other key, including
+ *     `max_tokens`, `reasoning`, `provider`, `tools`, `stream`, `n`, is dropped), messages are rebuilt as
  *     {role, content} strings;
- *   - max_tokens = min(client, SILICUS_WORKER_MAX_TOKENS, 4000 by default);
+ *   - max_tokens = SILICUS_WORKER_MAX_TOKENS, 4000 by default: the server decides it, because a client
+ *     value could only shrink the reply and turn a normal call into a truncation refusal;
  *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it;
  *   - zero-data-retention routing `provider: {zdr: true, data_collection: "deny"}` is sent unless
  *     SILICUS_WORKER_ZDR === "0", and it fails CLOSED: one upstream attempt, never a retry elsewhere;
@@ -68,8 +69,8 @@ export function buildUpstreamBody(input, settings) {
   if (typeof input.temperature === "number" && Number.isFinite(input.temperature) && input.temperature >= 0 && input.temperature <= 2) {
     body.temperature = input.temperature;
   }
-  const asked = input.max_tokens;
-  body.max_tokens = Number.isInteger(asked) && asked > 0 ? Math.min(asked, settings.maxTokensCap) : settings.maxTokensCap;
+  // Server-decided (see the header): a client `max_tokens` is dropped with every other key.
+  body.max_tokens = settings.maxTokensCap;
   if (settings.zdr) body.provider = { ...ZDR_PROVIDER };
   const reasoning = reasoningBody(settings.reasoning);
   if (reasoning) body.reasoning = reasoning;

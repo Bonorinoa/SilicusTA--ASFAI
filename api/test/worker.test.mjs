@@ -227,16 +227,19 @@ test("ZDR fails closed: one upstream attempt, never a retry, when the ZDR route 
 
 /* --------------------------------- max_tokens --------------------------------- */
 
-test("max_tokens = min(client, env cap, default 4000)", async () => {
+test("max_tokens is server-decided: the env cap (4000 by default) and nothing the client sends", async () => {
+  // The browser never sends max_tokens, so a client value can only be an attack: max_tokens: 1 would turn a
+  // normal call into a truncation refusal. The server decides, exactly like model, provider and reasoning.
   const cases = [
     [{}, undefined, 4000],
-    [{}, 100, 100],
+    [{}, 1, 4000],
+    [{}, 100, 4000],
     [{}, 99999, 4000],
     [{}, -5, 4000],
     [{}, "50", 4000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, undefined, 1000],
+    [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 1, 1000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 5000, 1000],
-    [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 300, 300],
     [{ SILICUS_WORKER_MAX_TOKENS: "junk" }, undefined, 4000],
   ];
   for (const [over, client, want] of cases) {

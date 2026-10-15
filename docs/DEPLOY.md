@@ -30,7 +30,7 @@ The CLI prompts for the value; never put a value in the repo, a commit message o
 | `SILICUS_DEMO_PASSCODE` | yes | The shared passcode the app sends in the `x-silicus-passcode` header. |
 | `SILICUS_WORKER_ZDR` | no | Zero-data-retention routing. On unless set to exactly `0`. |
 | `SILICUS_DAILY_CAP` | no | Model calls per function instance per UTC day. Default 300. |
-| `SILICUS_WORKER_MAX_TOKENS` | no | Lowers the reply cap below the default of 4000 tokens. It cannot raise it. |
+| `SILICUS_WORKER_MAX_TOKENS` | no | Sets the reply cap (default 4000, never higher). The client cannot influence it. |
 | `SILICUS_WORKER_REASONING` | no | Server-selected reasoning effort: `low` (default), `medium`, `high`, `off` (`{enabled:false}`), or `model-default` (omit the setting). The browser cannot override it. |
 | `SILICUS_TYPICAL_SECONDS` | no | JSON task wait ranges shown by the UI, for example `{"plan":[7,30]}`. Defaults: `{"objectives":[3,15],"plan":[5,25],"answer":[2,8]}`; invalid JSON or invalid task entries are ignored. |
 
@@ -56,9 +56,10 @@ Low is the default because measured runs of the real plan prompt showed that mod
   check takes the same time whether the guess is close or not. Wrong guesses count toward the
   rate limit.
 - **The function decides, not the browser.** The model, the reply cap, reasoning effort and the retention routing
-  come from the environment. Only `messages`, `response_format`, `temperature` and `max_tokens`
-  are read from the request; everything else (`model`, `reasoning`, `provider`, `tools`, `stream`, ...) is
-  dropped.
+  come from the environment. Only `messages`, `response_format` and `temperature` are read from the
+  request; everything else (`model`, `max_tokens`, `reasoning`, `provider`, `tools`, `stream`, ...) is
+  dropped. A client `max_tokens` is dropped with them: it could only shrink the reply and turn a normal
+  call into a truncation refusal.
 - **Zero-data-retention routing.** Unless `SILICUS_WORKER_ZDR=0`, every call asks OpenRouter for
   zero-retention endpoints only (`provider: {zdr: true, data_collection: "deny"}`). If none can
   serve it, the call fails. It is never retried somewhere that keeps data. The status route reports

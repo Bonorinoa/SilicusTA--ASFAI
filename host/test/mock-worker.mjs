@@ -23,7 +23,7 @@ const DEFAULT_PLAN = {
 };
 
 export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200 } = {}) {
-  const st = { calls: 0, lastPrompt: null, lastAuth: null };
+  const st = { calls: 0, lastPrompt: null, lastAuth: null, lastBody: null };
 
   const srv = createServer(async (req, res) => {
     const raw = await new Promise((r) => {
@@ -34,8 +34,10 @@ export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200 } = {
     st.calls += 1;
     st.lastAuth = req.headers.authorization ?? null;
     try {
-      st.lastPrompt = JSON.parse(raw || "{}")?.messages?.[0]?.content ?? null;
+      st.lastBody = JSON.parse(raw || "{}");
+      st.lastPrompt = st.lastBody?.messages?.[0]?.content ?? null;
     } catch {
+      st.lastBody = null;
       st.lastPrompt = null;
     }
     // `reply` may be a value, a raw string, or a function of { prompt, body } so a test

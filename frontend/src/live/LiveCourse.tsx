@@ -17,7 +17,7 @@ import { describeIntent } from "../gate/harness";
 import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
 import { host, type AsfaiStatus, type CourseSummary, type HostView, type MaterialInput } from "../gate/transport";
 import { BROWSER_MODE } from "../gate/mode";
-import { BrowserRecord } from "../browser/BrowserRecord";
+import { BrowserRecord, type RecordStatus } from "../browser/BrowserRecord";
 import { PasscodeDialog } from "../browser/PasscodeDialog";
 import type { DecisionIntent } from "../gate/types";
 import { OnboardingChat } from "./OnboardingChat";
@@ -44,6 +44,7 @@ export function LiveCourse() {
   const [library, setLibrary] = useState<CourseSummary[]>([]);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
+  const [recordStatus, setRecordStatus] = useState<RecordStatus>(null);
 
   // Discover an existing course on load. NEVER writes on load.
   useEffect(() => {
@@ -300,7 +301,7 @@ export function LiveCourse() {
     else if (!courseId && courses.length > 0) { setCourseId(courses[0].courseId); setView(await host.getCourse(courses[0].courseId)); setPins(listPins(courses[0].courseId)); }
     else if (courseId) setPins(listPins(courseId));
   });
-  const browserRecord = BROWSER_MODE ? <BrowserRecord hasCourses={library.length > 0} onChanged={afterRecordChange} /> : null;
+  const browserRecord = BROWSER_MODE ? <BrowserRecord hasCourses={library.length > 0} onChanged={afterRecordChange} status={recordStatus} onStatus={setRecordStatus} /> : null;
   const passcodeDialog = BROWSER_MODE ? <PasscodeDialog /> : null;
 
   if (!view) {
@@ -310,8 +311,8 @@ export function LiveCourse() {
           <h1 className={styles.title}>Name this course</h1>
           {BROWSER_MODE ? (
             <p className={styles.lede}>
-              Your words stay on this record, and this browser keeps it. Nothing leaves this browser until you
-              ask the AI for a draft, and nothing is decided without you.
+              Your words stay on this record. Nothing leaves this browser until you ask the AI for a draft,
+              and nothing is decided without you.
             </p>
           ) : (
             <p className={styles.lede}>

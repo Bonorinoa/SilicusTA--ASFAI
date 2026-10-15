@@ -2,7 +2,7 @@
 
 .record {
   display: flex; flex-direction: column; gap: var(--space-2);
-  max-width: 46rem; padding: var(--space-3) var(--space-5);
+  max-width: 40rem; box-sizing: border-box; padding: var(--space-3) var(--space-5);
   background: var(--color-sunken); border-left: 2px solid var(--color-rule-strong); border-radius: var(--radius-xs);
 }
 .label {
@@ -10,7 +10,9 @@
   letter-spacing: var(--tracking-label); color: var(--color-ink-muted);
 }
 .text { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
-.verbs { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.verbs { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-top: var(--space-1); }
+/* The irreversible act sits apart from the two safe ones. */
+.verbs .link { margin-left: auto; }
 .confirm { display: flex; flex-direction: column; gap: var(--space-2); }
 
 .quiet, .danger, .link {

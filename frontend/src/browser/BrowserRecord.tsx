@@ -12,14 +12,21 @@ import styles from "./BrowserRecord.module.css";
 
 type Phase = "idle" | "confirmDelete" | "working";
 
+/** The last thing the notice said. Held by the parent: an import or delete changes which page is shown. */
+export type RecordStatus = { tone: "ok" | "refused"; text: string } | null;
+
 async function host() {
   const { browserHost } = await import("./browserHost");
   return browserHost();
 }
 
-export function BrowserRecord({ hasCourses, onChanged }: { hasCourses: boolean; onChanged: () => void }) {
+export function BrowserRecord({ hasCourses, onChanged, status, onStatus: setStatus }: {
+  hasCourses: boolean;
+  onChanged: () => void;
+  status: RecordStatus;
+  onStatus: (s: RecordStatus) => void;
+}) {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [status, setStatus] = useState<{ tone: "ok" | "refused"; text: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
   const fileId = useId();
 

@@ -85,19 +85,27 @@ record a `teacher` turn. `proposeObjectives` hard-writes `confirmedByEducator: f
 ## 3. Decision verbs (checkpoint 3)
 
 One `confirmObjectives({ provenance, decisions })` call = one teacher turn over the
-proposal set. Verbs: **accept / rename / drop / add**.
+proposal set. Verbs: **accept / rename / drop / add / reword**.
 
 | Verb | Semantics | Confirmed-set effect |
 |---|---|---|
 | `accept` | The proposal enters the confirmed set exactly as proposed (its `urn:uuid` id, its optional `mt_*` reference). | adds `objectiveId = proposalId` |
 | `rename` | The teacher's replacement statement becomes the wording of the **same** objective: the `urn:uuid` id stays **stable** (contract: `ObjectiveRef.id` is "URN, stable") so plans citing it survive wording edits. The proposal record itself is immutable and never rewritten; before→after lives on the decision record (`renamedFrom`). | updates `objectiveId = proposalId` (unchanged id); confirmed entry carries the teacher's statement |
 | `drop` | Removed from / kept out of the confirmed set. Terminal: a dropped proposal cannot be revived (propose a new one). | removes if present; invalidates any confirmed plan citing it |
+| `reword` | The teacher's new statement for an objective that is **already confirmed** (accepted, renamed or added): same `urn:uuid` id, same `kind`, same `mt_*` reference. The decision carries `proposalId = targetId = <objective id>`, `statement` (the after) and `rewordedFrom: {objectiveId, previousStatement, originalStatement, kind, publicId}` (the before, and the proposal's own wording). Refused, each with its own code and nothing recorded: unknown id `UNKNOWN_OBJECTIVE`; still a proposal `NOT_CONFIRMED`; dropped `OBJECTIVE_REVOKED`; no statement `BAD_STATEMENT`; the current statement `STATEMENT_UNCHANGED`. | replaces the confirmed entry with the new statement (the objective's own `decisionId`/`provenance` are kept; `rewordedFrom` is added there too); marks the record changed since the last publish; **does not** invalidate or reconfirm any plan |
 | `add` | The teacher authors a new **local** objective (`kind: "local"`, teacher-written statement). Its id is minted locally (`urn:uuid:…`) — never an `mt_*` id. Optional `alignment` (`publicId: mt_…`, `relationship: closeMatch \| relatedTo \| exactMatch`) is metadata with `confirmedByEducator: true`, never a key. | adds immediately (the teacher IS the decision) |
 
 Rules:
 
 - At most one **content-shaping** decision (accept/rename) per proposal; a conflicting
   second decision throws `ALREADY_DECIDED`. `drop` may follow accept/rename (revocation).
+- **`reword` is the only verb that acts on a confirmed objective, and it is repeatable** (rename/accept stay terminal).
+  A plan citing the objective keeps its citations; but it was written from the old wording, so
+  `rewordedSincePlan(planId?)` reports each cited objective reworded since the plan was last proposed or confirmed
+  (`{objectiveId, before, after, decisionId}`, collapsing several rewords to the first before and the last after,
+  dropping a reword-and-back). The plan is not invalidated, not reconfirmed and not blocked: publishing stays open.
+  A new plan proposal or a later `confirmLessonPlan` clears it; an invalidated plan reports nothing. A sealed
+  version never changes; the next `publish` seals version N+1 with the new statement.
 - **Rename never mutates the proposal.** Both records survive: the original proposal
   (frozen, `statement` as proposed) and the confirmed entry (teacher's statement,
   `renamedFrom` provenance chain). Provenance on the decision and on the confirmed entry
@@ -150,6 +158,7 @@ operation is keyed and replay-safe:
 | Call | Idempotency key | Replay result | Conflict result |
 |---|---|---|---|
 | `confirmObjectives` accept/rename/drop | `verb : proposalId : turnRef` | original `DecisionRecord`, no state change | `ALREADY_DECIDED` (different turn re-deciding) |
+| `confirmObjectives` reword | `reword : objectiveId : turnRef : sha256(statement)`, honoured only while it is the LATEST reword of that objective (A→B→A in one turn applies every step) | original `DecisionRecord`, no state change | the current statement is refused `STATEMENT_UNCHANGED` |
 | `confirmObjectives` add | `add : turnRef : sha256(statement)` | original record; **no second id is minted** | new turn = a genuinely new `add` |
 | `confirmLessonPlan` | `confirm-plan : planId : turnRef` | same plan, still confirmed | a later turn may re-confirm (post-invalidation repair) |
 | `publish` | (state-based: no changes since last publish) | previous version record | — |

@@ -86,6 +86,8 @@ export interface RevisionView {
   changes: {
     objectivesAdded: { id: string; statement: string }[];
     objectivesRemoved: { id: string; statement: string }[];
+    /** Same id as in the sealed version, different statement: the teacher reworded it in place. (Absent on an older host.) */
+    objectivesReworded?: { id: string; before: string; after: string }[];
     /** same: the sealed, confirmed plan. replaced: a different confirmed plan. unconfirmed: a draft or invalidated plan. */
     plan: "same" | "replaced" | "unconfirmed";
     planStatus: "draft" | "confirmed" | "invalidated" | null;
@@ -107,6 +109,12 @@ export interface HostView {
   decisions: unknown[];
   plan: LessonPlanView | null;
   invalidation: PlanInvalidationView;
+  /**
+   * Cited objectives the teacher reworded since the plan was last drafted or confirmed. The plan is NOT
+   * invalidated and nothing is re-confirmed for them: this is the notice that its text was written from the
+   * old wording. `before` is the wording the plan was written from. (Absent on an older host.)
+   */
+  planWording?: { stale: boolean; objectives: { id: string; before: string | null; after: string }[] };
   publish: PublishStatusView;
   /** Absent on a host that predates revision; the UI then offers no revision tools. */
   revision?: RevisionView;

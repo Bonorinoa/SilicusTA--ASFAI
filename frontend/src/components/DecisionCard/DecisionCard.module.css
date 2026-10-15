@@ -156,6 +156,12 @@
   color: var(--color-dropped);
 }
 
+/* "Reworded by you": quiet, beside the state label, never colour-only. */
+.rewordedMark::before {
+  content: "·";
+  margin-right: var(--space-2);
+}
+
 .statement {
   margin: 0;
   max-width: 32rem;

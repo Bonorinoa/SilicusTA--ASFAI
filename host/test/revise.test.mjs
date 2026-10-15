@@ -69,21 +69,21 @@ async function publishedV1(t) {
 
 const ask = (t, c) => t.post(`${c}/student/ask`, { question: "What will I learn?" });
 
-test("AUDIT: after a seal the gate lets a teacher add and revoke, refuses a reword, and does nothing until asked", async () => {
+test("AUDIT: after a seal the gate lets a teacher add and revoke, refuses a RENAME of a confirmed objective (reword is the verb for that), and does nothing until asked", async () => {
   const t = await boot(freshDir());
   const { c, proposals } = await publishedV1(t);
   const v1 = (await t.get(c)).json;
 
   // Published and untouched: the honest reading is "unchanged", and nothing is being drafted.
   assert.deepEqual(v1.revision, { sealedVersion: 1, nextVersion: 2, drafting: false,
-    changes: { objectivesAdded: [], objectivesRemoved: [], plan: "same", planStatus: "confirmed" }, notInPlan: [] });
+    changes: { objectivesAdded: [], objectivesRemoved: [], objectivesReworded: [], plan: "same", planStatus: "confirmed" }, notInPlan: [] });
   // Publishing again with nothing changed seals nothing new.
   const again = await t.post(`${c}/publish`, { text: "Publish again." });
   assert.equal(again.status, 200);
   assert.equal(again.json.version.version, 1);
   assert.equal((await t.get(c)).json.versions.length, 1);
 
-  // A reword of a CONFIRMED objective is refused by the gate (rename is terminal). The gap is real: see README.
+  // A RENAME of a CONFIRMED objective is still refused (rename is terminal). Rewording one has its own verb: see reword.test.mjs.
   const reword = await t.post(`${c}/decisions`, { decisions: [{ verb: "rename", proposalId: proposals[0].id, statement: "Reworded." }], text: "Reword." });
   assert.equal(reword.status, 409);
   assert.equal(reword.json.code, "ALREADY_DECIDED");

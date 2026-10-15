@@ -27,6 +27,11 @@ export interface PlanCardProps {
   /** WHY the plan is invalidated (D), derived by the parent from gate state. */
   invalidation?: PlanInvalidationView | null;
   /**
+   * Cited objectives the teacher reworded since this plan was drafted or confirmed (host-derived). The plan
+   * stays valid (its cited ids did not change) but was written from the old wording, so the page says so.
+   */
+  rewordedSince?: readonly { id: string; before: string | null; after: string }[];
+  /**
    * Show the worker's alignment suggestions. They are NOT part of a sealed package, so a surface
    * that previews "exactly what will be published" must pass false, or it would imply they are.
    */
@@ -53,7 +58,7 @@ const SOURCE_LABEL: Record<string, string> = {
   "local-ontology": "your ontology file",
 };
 
-export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, showAlignment = true }: PlanCardProps) {
+export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true }: PlanCardProps) {
   const citedIds = plan.activities.flatMap((a) => a.objectiveIds);
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
@@ -71,8 +76,27 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, sho
             </p>
           ))}
           <p className={styles.invalidatedNote}>
-            Re-confirm this plan as it reads, or propose a new one. It cannot be published until
-            every cited objective is confirmed again.
+            A revoked objective cannot be confirmed again, so re-confirming this plan as it reads would not
+            make it publishable while it cites one. Draft a new plan from your confirmed objectives. This one
+            cannot be published until every cited objective is confirmed again.
+          </p>
+        </section>
+      ) : null}
+      {plan.status !== "invalidated" && rewordedSince.length > 0 ? (
+        <section className={styles.reworded} aria-label="Objectives reworded since this plan was written">
+          <p className={styles.rewordedTitle}>
+            {rewordedSince.length === 1 ? "An objective was" : `${rewordedSince.length} objectives were`} reworded since this plan was{" "}
+            {plan.status === "confirmed" ? "confirmed" : "drafted"}
+          </p>
+          {rewordedSince.map((r) => (
+            <p key={r.id} className={styles.rewordedLine}>
+              “{r.after}”
+              {r.before ? <span className={styles.rewordedWas}>The plan was written from: “{r.before}”</span> : null}
+            </p>
+          ))}
+          <p className={styles.rewordedNote}>
+            The plan still cites {rewordedSince.length === 1 ? "it" : "them"}, so it stays valid. Its activities were written from the
+            earlier wording: read them again, then confirm the plan as it reads or draft a new one.
           </p>
         </section>
       ) : null}

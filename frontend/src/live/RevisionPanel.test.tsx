@@ -57,8 +57,10 @@ describe("RevisionPanel", () => {
     expect(screen.getByRole("status")).not.toHaveTextContent(/drafting/);
     expect(screen.queryByRole("button", { name: /Draft a new lesson plan/ })).not.toBeInTheDocument();
     expect(onDraftPlan).not.toHaveBeenCalled();
-    // Be honest about the gap rather than hide it.
-    expect(screen.getByText(/cannot be edited in place yet/)).toBeInTheDocument();
+    // The old "revoke it and add the new wording" advice is gone: wording is edited in place now.
+    expect(screen.queryByText(/cannot be edited in place yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/revoke it and add the new wording/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Editing a confirmed objective.s wording keeps its id, so the lesson plan still cites it/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close the revision tools" }));
     expect(screen.getByRole("button", { name: "Revise this course" })).toHaveFocus();
@@ -94,6 +96,55 @@ describe("RevisionPanel", () => {
     setup(DRAFTING, { worker: false });
     expect(screen.queryByRole("button", { name: /Draft a new lesson plan/ })).not.toBeInTheDocument();
     expect(screen.getByText(/No drafting worker is configured on this host/)).toHaveTextContent(/version 2 cannot be published/);
+  });
+
+  const REWORDED: RevisionView = {
+    sealedVersion: 1, nextVersion: 2, drafting: true,
+    changes: {
+      objectivesAdded: [], objectivesRemoved: [],
+      objectivesReworded: [{ id: "a", before: "Students can explain what an algorithm is.", after: "Students can explain, with an example, what an algorithm is." }],
+      plan: "same", planStatus: "confirmed",
+    },
+    notInPlan: [],
+  };
+  const PLAN_REWORDED = [{ id: "a", before: "Students can explain what an algorithm is.", after: "Students can explain, with an example, what an algorithm is." }];
+
+  it("counts a reword as a change: drafting the next version, listed with before and after, and the plan is NOT called invalid", () => {
+    setup(REWORDED);
+    expect(screen.getByRole("status")).toHaveTextContent("Version 1 is published and unchanged; you are drafting version 2.");
+    const changes = screen.getByRole("list", { name: "Changes since version 1" });
+    expect(within(changes).getByText("Reworded: “Students can explain what an algorithm is.” became “Students can explain, with an example, what an algorithm is.”")).toBeInTheDocument();
+    expect(within(changes).queryByText(/The lesson plan is invalid/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing yet/)).not.toBeInTheDocument();
+  });
+
+  it("an older host without objectivesReworded still renders (nothing is listed, nothing breaks)", () => {
+    setup(DRAFTING);
+    expect(within(screen.getByRole("list", { name: "Changes since version 1" })).queryByText(/Reworded:/)).not.toBeInTheDocument();
+  });
+
+  it("with the worker on, a plan older than the wording offers an OPTIONAL re-draft; the AI only drafts", async () => {
+    const user = userEvent.setup();
+    const onDraftPlan = vi.fn();
+    render(<RevisionPanel revision={REWORDED} workerConfigured planReworded={PLAN_REWORDED} busy={false} onDraftPlan={onDraftPlan} />);
+    expect(screen.getByText(/Optional\. The AI drafts/)).toBeInTheDocument();
+    expect(onDraftPlan).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Draft a new lesson plan from your confirmed objectives" }));
+    expect(onDraftPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it("with NO worker, a reword says the plan is still valid and publishable as it reads, and offers no draft button", () => {
+    render(<RevisionPanel revision={REWORDED} workerConfigured={false} planReworded={PLAN_REWORDED} busy={false} onDraftPlan={() => {}} />);
+    expect(screen.queryByRole("button", { name: /Draft a new lesson plan/ })).not.toBeInTheDocument();
+    const line = screen.getByText(/written from the earlier wording/);
+    expect(line).toHaveTextContent(/still valid and version 2 can be published with it as it reads/);
+    expect(line).not.toHaveTextContent(/cannot be published\./);
+  });
+
+  it("no longer advises revoking and re-adding to change a wording", () => {
+    setup(REWORDED);
+    expect(screen.queryByText(/revoke it and add the new wording/)).not.toBeInTheDocument();
+    expect(screen.getByText(/edit the wording of a confirmed one/)).toBeInTheDocument();
   });
 
   it("an added objective with a still-valid plan says it is not in the plan, and publishing is not called blocked", () => {

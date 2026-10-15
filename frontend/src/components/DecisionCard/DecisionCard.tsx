@@ -7,7 +7,9 @@ import styles from "./DecisionCard.module.css";
  * DecisionCard — the teacher's decision surface for checkpoint 3 (objectives).
  *
  * Renders objective PROPOSALS as a quiet ledger of rows and exposes the four
- * teacher decision verbs — accept / rename / drop / add — as explicit actions.
+ * teacher decision verbs — accept / rename / drop / add — as explicit actions, plus
+ * "Edit wording" (verb `reword`) on an already CONFIRMED objective: same id, so the lesson
+ * plan's citations survive, and the original wording stays visible.
  * The card holds no policy: every action dispatches a {@link DecisionIntent}
  * upward, and the parent turns it into a real teacher turn + `confirmObjectives`
  * call on the confirm-gate core. Nothing is ever pre-confirmed; the resting
@@ -90,14 +92,18 @@ export function DecisionCard({
   // (plus the milestone when the last proposal is decided). Two independent
   // effects would race and silently drop the decision announcement.
   const prevStatuses = useRef(new Map<string, ProposalView["status"]>());
+  const prevStatements = useRef(new Map<string, string>());
   useEffect(() => {
     const landed: string[] = [];
     rows.forEach((row, i) => {
       const prev = prevStatuses.current.get(row.id);
       if (prev !== undefined && prev !== row.status) {
         landed.push(`Objective ${i + 1}: ${STATUS_LABEL[row.status].toLowerCase()}.`);
+      } else if (prev !== undefined && prevStatements.current.get(row.id) !== row.statement) {
+        landed.push(`Objective ${i + 1}: wording saved, reworded by you.`);
       }
       prevStatuses.current.set(row.id, row.status);
+      prevStatements.current.set(row.id, row.statement);
     });
     if (landed.length === 0) return;
     announce(
@@ -159,7 +165,7 @@ export function DecisionCard({
         <h2 className={styles.heading}>Learning objectives</h2>
         <p className={styles.subhead}>
           Proposed for your course. Nothing is confirmed until you decide — accept, rename in your
-          own words, drop, or add one of your own.
+          own words, drop, or add one of your own. Once confirmed, an objective's wording can still be edited.
         </p>
       </header>
 
@@ -261,6 +267,8 @@ function ProposalRow({
   canRedraftPlan: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  // Which verb the open editor will send: rename answers a PROPOSAL, reword edits a CONFIRMED objective.
+  const [editVerb, setEditVerb] = useState<"rename" | "reword">("rename");
   const [draft, setDraft] = useState(row.statement);
   const [hint, setHint] = useState<string | null>(null);
   const [confirmingDrop, setConfirmingDrop] = useState(false);
@@ -316,10 +324,10 @@ function ProposalRow({
       return;
     }
     if (statement === row.statement) {
-      setHint("Unchanged — use Accept to keep the proposal as written.");
+      setHint(editVerb === "reword" ? "Unchanged — change the wording, or Cancel." : "Unchanged — use Accept to keep the proposal as written.");
       return;
     }
-    onDispatch({ verb: "rename", proposalId: row.id, statement });
+    onDispatch({ verb: editVerb, proposalId: row.id, statement });
     setHint(null);
     setFocusAfterClose("actions");
     setEditing(false);
@@ -335,6 +343,8 @@ function ProposalRow({
   const label = STATUS_LABEL[row.status];
   const decided = row.status !== "proposed";
   const canRename = row.status === "proposed";
+  // A confirmed objective is edited in place: reword keeps its id, so the plan's citations survive.
+  const canReword = row.status === "accepted" || row.status === "renamed" || row.status === "added";
   const canDrop =
     row.status === "proposed" ||
     row.status === "accepted" ||
@@ -411,7 +421,7 @@ function ProposalRow({
       return (
         <div className={styles.editor}>
           <label className={styles.srOnly} htmlFor={`rename-${row.id}`}>
-            New wording for objective {index}
+            {editVerb === "reword" ? `Edit the wording of objective ${index}` : `New wording for objective ${index}`}
           </label>
           <textarea
             id={`rename-${row.id}`}
@@ -439,7 +449,10 @@ function ProposalRow({
               role="status"
               aria-live="polite"
             >
-              {hint ?? "Save or Cancel — Enter saves, Esc cancels"}
+              {hint ??
+                (editVerb === "reword"
+                  ? "The objective keeps its id, so the lesson plan still cites it. Enter saves, Esc cancels"
+                  : "Save or Cancel — Enter saves, Esc cancels")}
             </p>
             <div className={styles.actions}>
               <button
@@ -487,9 +500,21 @@ function ProposalRow({
             data-verb="rename"
             ref={renameRef}
             aria-label={`Rename objective: “${row.statement}”`}
-            onClick={() => setEditing(true)}
+            onClick={() => { setEditVerb("rename"); setEditing(true); }}
           >
             Rename
+          </button>
+        ) : null}
+        {canReword ? (
+          <button
+            type="button"
+            className={styles.verbButton}
+            data-verb="rename"
+            ref={renameRef}
+            aria-label={`Edit the wording of objective ${index}: “${row.statement}”`}
+            onClick={() => { setEditVerb("reword"); setEditing(true); }}
+          >
+            Edit wording
           </button>
         ) : null}
         {canDrop ? (
@@ -524,6 +549,7 @@ function ProposalRow({
           <p className={styles.statusLabel} data-status={row.status}>
             <StateIcon status={row.status} />
             <span>{label}</span>
+            {row.reworded ? <span className={styles.rewordedMark}>Reworded by you</span> : null}
           </p>
 
           {/* While editing, the editor stands in the statement's place (the wording
@@ -542,8 +568,9 @@ function ProposalRow({
 
               {row.originalStatement && row.originalStatement !== row.statement ? (
                 <p className={styles.renamedFrom}>
-                  as proposed: “{row.originalStatement}” — wording is versioned; the objective id is
-                  stable.
+                  {row.reworded
+                    ? `${row.by === "teacher" ? "as you first wrote it" : "as proposed"}: “${row.originalStatement}” — you reworded it; the objective id is unchanged.`
+                    : `as proposed: “${row.originalStatement}” — wording is versioned; the objective id is stable.`}
                 </p>
               ) : null}
             </>
@@ -565,7 +592,9 @@ function ProposalRow({
           ) : null}
           {decided && row.status !== "dropped" && !editing && !confirmingDrop ? (
             <p className={styles.decidedNote}>
-              Decided. One decision per proposal; you can still revoke it.
+              {canReword
+                ? "Decided. You can edit its wording, or revoke it."
+                : "Decided. One decision per proposal; you can still revoke it."}
             </p>
           ) : null}
         </div>

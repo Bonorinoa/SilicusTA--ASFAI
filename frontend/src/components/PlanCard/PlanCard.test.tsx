@@ -217,4 +217,39 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
       expect(container.innerHTML).toBe(before);
     });
   });
+
+  describe("objectives reworded since the plan was written", () => {
+    const reworded = [{ id: "o1", before: "Students can explain what an algorithm is.", after: "Students can explain, with an example, what an algorithm is." }];
+
+    it("says so on the page without invalidating the plan, and shows the wording the plan was written from", () => {
+      render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} rewordedSince={reworded} />);
+      const notice = screen.getByRole("region", { name: "Objectives reworded since this plan was written" });
+      expect(within(notice).getByText("An objective was reworded since this plan was confirmed")).toBeInTheDocument();
+      expect(within(notice).getByText(/Students can explain, with an example, what an algorithm is\./)).toBeInTheDocument();
+      expect(within(notice).getByText(/The plan was written from: “Students can explain what an algorithm is\.”/)).toBeInTheDocument();
+      expect(within(notice).getByText(/it stays valid/)).toBeInTheDocument();
+      expect(screen.getByText("Confirmed")).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Why this plan was invalidated" })).not.toBeInTheDocument();
+    });
+
+    it("says nothing when nothing was reworded, and nothing extra on an invalidated plan (it has its own story)", () => {
+      const { rerender } = render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} rewordedSince={[]} />);
+      expect(screen.queryByRole("region", { name: /reworded since/ })).not.toBeInTheDocument();
+      rerender(<PlanCard plan={{ ...scenario.plan, status: "invalidated" }} objectives={scenario.objectives} rewordedSince={reworded} />);
+      expect(screen.queryByRole("region", { name: /reworded since/ })).not.toBeInTheDocument();
+    });
+  });
+
+  it("an invalidated plan no longer tells the teacher that re-confirming it as it reads will make it publishable", () => {
+    render(
+      <PlanCard
+        plan={{ ...scenario.plan, status: "invalidated" }}
+        objectives={scenario.objectives}
+        invalidation={{ invalidated: true, gaps: [{ id: "g", statement: "Gone.", citedIn: ["Warm-up"] }] }}
+      />,
+    );
+    const note = screen.getByText(/A revoked objective cannot be confirmed again/);
+    expect(note).toHaveTextContent(/would not make it publishable/);
+    expect(screen.queryByText(/Re-confirm this plan as it reads, or propose a new one/)).not.toBeInTheDocument();
+  });
 });

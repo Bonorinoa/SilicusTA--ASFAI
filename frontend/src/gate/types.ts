@@ -8,8 +8,8 @@
  * directly and never fabricate decisions or provenance.
  */
 
-/** The four teacher decision verbs of checkpoint 3 (matches gate `VERBS`). */
-export type DecisionVerb = "accept" | "rename" | "drop" | "add";
+/** The teacher decision verbs of checkpoint 3 (matches gate `VERBS`). `reword` acts on a CONFIRMED objective. */
+export type DecisionVerb = "accept" | "rename" | "drop" | "add" | "reword";
 
 /** Row lifecycle state, derived from real gate decisions. */
 export type ProposalStatus = "proposed" | "accepted" | "renamed" | "dropped" | "added";
@@ -38,6 +38,8 @@ export interface ProposalView {
   by: "ai" | "teacher";
   /** Host-derived: the current lesson plan cites this objective. Revoking it invalidates that plan. */
   citedByPlan?: boolean;
+  /** Host-derived: the teacher reworded this confirmed objective in place (same id). `originalStatement` is then the wording it started with. */
+  reworded?: boolean;
 }
 
 /**
@@ -49,7 +51,9 @@ export type DecisionIntent =
   | { verb: "accept"; proposalId: string }
   | { verb: "rename"; proposalId: string; statement: string }
   | { verb: "drop"; proposalId: string }
-  | { verb: "add"; statement: string };
+  | { verb: "add"; statement: string }
+  /** A new statement for an already CONFIRMED objective: same id, so plan citations survive. */
+  | { verb: "reword"; proposalId: string; statement: string };
 
 /** Gate checkpoint status (checkpoint 3 for the DecisionCard). */
 export type CheckpointStatus = "pending" | "open" | "confirmed";
@@ -183,14 +187,14 @@ export interface TimelineEvent {
   id: string;
   kind: TimelineEventKind;
   /** Decision events only: the verb that was decided. */
-  verb?: "accept" | "rename" | "drop" | "add";
+  verb?: "accept" | "rename" | "drop" | "add" | "reword";
   /** Epoch ms; the timeline is sorted by this. */
   at: number;
   /** Human headline: "Accepted", "Checkpoint confirmed — files", "Published version 2". */
   label: string;
   /** The wording/note the event is about (null for a bare checkpoint). */
   detail?: string | null;
-  /** rename only: the original statement, before the teacher's rewording. */
+  /** rename: the original statement, before the teacher's rewording. reword: the wording it replaced. */
   before?: string | null;
   /** Quiet provenance garnish (e.g. "from your slides p.4"), when the parent has it. */
   source?: string | null;

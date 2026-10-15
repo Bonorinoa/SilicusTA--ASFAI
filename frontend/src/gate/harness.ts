@@ -49,7 +49,7 @@ export interface GateProposalInput {
 }
 
 export interface GateDecisionInput {
-  verb: "accept" | "rename" | "drop" | "add";
+  verb: "accept" | "rename" | "drop" | "add" | "reword";
   proposalId?: string;
   statement?: string;
 }
@@ -57,7 +57,7 @@ export interface GateDecisionInput {
 export interface GateDecisionRecord {
   id: string;
   key: string;
-  verb: "accept" | "rename" | "drop" | "add";
+  verb: "accept" | "rename" | "drop" | "add" | "reword";
   proposalId: string | null;
   targetId: string | null;
   statement?: string;
@@ -67,6 +67,7 @@ export interface GateDecisionRecord {
     originalKind: string;
     publicId: string | null;
   };
+  rewordedFrom?: { objectiveId: string; previousStatement: string | null; originalStatement: string | null };
   provenance: GateProvenance;
   boundCourseVersion: number;
 }
@@ -118,6 +119,8 @@ export interface GateLike {
   }): LessonPlanView;
   confirmLessonPlan(spec: { planId?: string; provenance: GateProvenance }): LessonPlanView;
   currentPlan(): LessonPlanView | null;
+  /** Cited objectives reworded since the plan was drafted/confirmed (the plan stays valid; see the gate). */
+  rewordedSincePlan(planId?: string): readonly { objectiveId: string; before: string | null; after: string; decisionId: string }[];
   getPlan(planId: string): LessonPlanView | null;
   publishStatus(): { canPublish: boolean; blockers: readonly string[] };
   publish(spec: { provenance: GateProvenance; note?: string | null }): PackageVersionView;
@@ -330,7 +333,7 @@ export class ConfirmGateHarness {
       .find(
         (d) =>
           d.statement &&
-          (d.verb === "rename" || d.verb === "add") &&
+          (d.verb === "rename" || d.verb === "add" || d.verb === "reword") &&
           (d.proposalId === id || d.targetId === id),
       );
     if (latest?.statement) return latest.statement;
@@ -423,7 +426,7 @@ export class ConfirmGateHarness {
         at: d.provenance.decidedAt,
         label: VERB_LABEL[d.verb],
         detail: d.statement ?? null,
-        before: d.renamedFrom?.originalStatement ?? null,
+        before: d.renamedFrom?.originalStatement ?? d.rewordedFrom?.previousStatement ?? null,
         source: sourceKey ? (this.#meta.get(sourceKey)?.source ?? null) : null,
         version: d.boundCourseVersion,
         turnRef: d.provenance.turnRef,
@@ -467,8 +470,8 @@ export class ConfirmGateHarness {
     const decision: GateDecisionInput =
       intent.verb === "add"
         ? { verb: "add", statement: intent.statement }
-        : intent.verb === "rename"
-          ? { verb: "rename", proposalId: intent.proposalId, statement: intent.statement }
+        : intent.verb === "rename" || intent.verb === "reword"
+          ? { verb: intent.verb, proposalId: intent.proposalId, statement: intent.statement }
           : { verb: intent.verb, proposalId: intent.proposalId };
     try {
       const records = this.gate.confirmObjectives({ provenance, decisions: [decision] });
@@ -507,7 +510,7 @@ export class ConfirmGateHarness {
       seen.add(proposal.id);
       const mine = decisions.filter((d) => d.verb !== "add" && d.proposalId === proposal.id);
       const status = statusOf(mine);
-      const rename = [...mine].reverse().find((d) => d.verb === "rename");
+      const rename = [...mine].reverse().find((d) => d.verb === "rename" || d.verb === "reword");
       const meta = this.#meta.get(proposal.id);
       const confirmed = status === "proposed" ? null : this.gate.getObjective(proposal.id);
       const alignmentSource = confirmed?.alignment ?? proposal.alignment;
@@ -517,6 +520,7 @@ export class ConfirmGateHarness {
         status,
         statement: rename?.statement ?? proposal.statement ?? proposal.publicId ?? "",
         originalStatement: proposal.statement ?? null,
+        reworded: mine.some((d) => d.verb === "reword"),
         source: meta?.source ?? null,
         alignment: alignmentSource
           ? {
@@ -537,8 +541,9 @@ export class ConfirmGateHarness {
         id: d.targetId,
         kind: "local",
         status: "added",
-        statement: d.statement ?? objective?.statement ?? "",
-        originalStatement: null,
+        statement: objective?.statement ?? d.statement ?? "",
+        originalStatement: decisions.some((x) => x.verb === "reword" && x.targetId === d.targetId) ? (d.statement ?? null) : null,
+        reworded: decisions.some((x) => x.verb === "reword" && x.targetId === d.targetId),
         source: this.#meta.get(d.targetId)?.source ?? "your own objective",
         alignment: objective?.alignment
           ? {
@@ -577,6 +582,7 @@ const VERB_LABEL: Record<GateDecisionRecord["verb"], string> = {
   rename: "Renamed",
   drop: "Dropped",
   add: "Added",
+  reword: "Reworded",
 };
 
 function statusOf(ds: readonly GateDecisionRecord[]): ProposalStatus {
@@ -597,5 +603,7 @@ export function describeIntent(intent: DecisionIntent): string {
       return `Drop objective (proposal ${intent.proposalId}).`;
     case "add":
       return `Add objective: ${intent.statement}`;
+    case "reword":
+      return `Reword objective (${intent.proposalId}) to: ${intent.statement}`;
   }
 }

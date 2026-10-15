@@ -140,3 +140,69 @@ test("youtube: no captions is a normal state with a way forward; a caption track
 test("normalizeText strips control, bidi and line-separator characters", () => {
   assert.equal(normalizeText("a\u0000b\u202ec\u2028d\u200be"), "a b c d e");
 });
+
+/* ---- yt-dlp: the OSS acquisition worker behind the same seam ---- */
+
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { readdirSync } from "node:fs";
+import { ytdlpTranscript } from "../materials.mjs";
+
+/** A fake yt-dlp: writes a json3 file where -o says, prints a title, and (like the real one) may exit non-zero. */
+const fakeYtdlp = ({ files = { "dQw4w9WgXcQ.en.json3": JSON3 }, title = "Intro to AI" } = {}) => {
+  const seen = [];
+  const runImpl = async (cmd, args) => {
+    seen.push({ cmd, args });
+    const out = args[args.indexOf("-o") + 1];
+    const dir = out.slice(0, out.lastIndexOf("/"));
+    for (const [n, body] of Object.entries(files)) writeFileSync(join(dir, n), body);
+    return `${title}\n`;
+  };
+  return { runImpl, seen };
+};
+const noCaptionsWeb = () => web({ "https://www.youtube.com/watch?v=dQw4w9WgXcQ": { body: WATCH([]) } });
+
+test("yt-dlp is the fallback when the page's own captions are not there - and only if the teacher's machine has it", async () => {
+  const w = noCaptionsWeb();
+  const f = fakeYtdlp();
+  const r = await prepareMaterials([{ url: "https://youtu.be/dQw4w9WgXcQ" }], { ...w.deps, ytdlp: "/usr/local/bin/yt-dlp", runImpl: f.runImpl });
+  assert.equal(r.materials[0].text, "An algorithm is steps. Models predict words.");
+  assert.equal(r.materials[0].name, "Intro to AI");
+  assert.equal(r.materials[0].kind, "youtube");
+  assert.equal(f.seen.length, 1);
+  await assert.rejects(prepareMaterials([{ url: "https://youtu.be/dQw4w9WgXcQ" }], { ...noCaptionsWeb().deps }), { code: "NO_TRANSCRIPT" }, "not configured is a state, with a way forward");
+});
+
+test("yt-dlp runs with an argument ARRAY and a validated id, in a private temp dir that is removed afterwards", async () => {
+  const f = fakeYtdlp();
+  const before = readdirSync(tmpdir()).filter((n) => n.startsWith("silicus-yt-")).length;
+  await ytdlpTranscript("dQw4w9WgXcQ", { cmd: "/usr/local/bin/yt-dlp", runImpl: f.runImpl });
+  const { cmd, args } = f.seen[0];
+  assert.equal(cmd, "/usr/local/bin/yt-dlp");
+  assert.ok(Array.isArray(args) && args.includes("--skip-download") && args.at(-1) === "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+  assert.equal(readdirSync(tmpdir()).filter((n) => n.startsWith("silicus-yt-")).length, before, "the temp directory is gone");
+  for (const bad of ["x", "../../etc/passwd", "dQw4w9WgXcQ; rm -rf ~", "dQw4w9WgXc$"]) {
+    await assert.rejects(ytdlpTranscript(bad, { cmd: "/usr/local/bin/yt-dlp", runImpl: f.runImpl }), { code: "NO_TRANSCRIPT" }, bad);
+  }
+  assert.equal(f.seen.length, 1, "a malformed id never reached the command");
+});
+
+test("yt-dlp: human captions win over auto ones, a non-zero exit with a file is fine, and no file is a clear refusal", async () => {
+  const auto = JSON.stringify({ events: [{ segs: [{ utf8: "auto words" }] }] });
+  const both = fakeYtdlp({ files: { "dQw4w9WgXcQ.en-ar.json3": auto, "dQw4w9WgXcQ.en.json3": JSON3 } });
+  assert.equal((await ytdlpTranscript("dQw4w9WgXcQ", { cmd: "y", runImpl: both.runImpl })).text, "An algorithm is steps. Models predict words.");
+  await assert.rejects(ytdlpTranscript("dQw4w9WgXcQ", { cmd: "y", runImpl: fakeYtdlp({ files: {} }).runImpl }), { code: "NO_TRANSCRIPT" });
+  await assert.rejects(ytdlpTranscript("dQw4w9WgXcQ", { cmd: "y", runImpl: fakeYtdlp({ files: { "dQw4w9WgXcQ.en.json3": JSON.stringify({ events: [] }) } }).runImpl }), { code: "NO_TRANSCRIPT" });
+});
+
+test("a page's <main> content is preferred over its navigation chrome", () => {
+  const t = htmlToText("<html><body><nav>Main menu Navigation Contents</nav><main><h1>Algorithm</h1><p>A list of steps.</p></main><footer>Privacy</footer></body></html>");
+  assert.equal(t.text, "Algorithm\nA list of steps.");
+});
+
+test("yt-dlp is told to actually WRITE the captions: --print implies a dry run unless --no-simulate (found by a live run, pinned here)", async () => {
+  const f = fakeYtdlp();
+  await ytdlpTranscript("dQw4w9WgXcQ", { cmd: "y", runImpl: f.runImpl });
+  assert.ok(f.seen[0].args.includes("--no-simulate"));
+});

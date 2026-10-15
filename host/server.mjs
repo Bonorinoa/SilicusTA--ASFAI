@@ -103,7 +103,7 @@ class HttpError extends Error {
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, fetchImpl = undefined, lookupImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -292,7 +292,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
           // the proposals are written by the worker from the material, labelled with the names the
           // teacher supplied, and every one still waits for the teacher. Only `materials` is read.
           // The text is returned to nobody and kept nowhere; the log gets names, digests and sizes.
-          const prepared = await prepareMaterials(b.materials, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}) });
+          const prepared = await prepareMaterials(b.materials, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}), ...(ytdlp ? { ytdlp } : {}), ...(runImpl ? { runImpl } : {}) });
           const r = await s.proposeObjectivesFromMaterials({ worker: planWorker, materials: prepared.materials });
           if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
           return { status: 200, json: {

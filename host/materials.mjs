@@ -11,12 +11,18 @@
  *     capped. The host is loopback-only and the teacher supplies the URL, which keeps the risk low;
  *     the check is still done, because "the teacher typed it" is not a security property. A DNS
  *     rebind between the address check and the connect is a documented residual.
- *   - YouTube captions are best-effort over the same guarded fetcher. NO_TRANSCRIPT is a normal state;
- *     pasting a transcript always works.
+ *   - YouTube captions are best-effort. YouTube now often serves empty caption files to a plain fetch, so
+ *     the host first tries the page's own caption track, then (if the teacher's machine has yt-dlp and
+ *     SILICUS_YTDLP names it) an OSS acquisition worker behind this seam. The product never depends on it.
+ *     NO_TRANSCRIPT is a normal state; pasting a transcript always works.
  */
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { lookup as dnsLookup } from "node:dns/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { isIP } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 export class MaterialError extends Error {
   /** @param {string} code @param {string} message */
@@ -185,7 +191,9 @@ function safeChar(cp) {
 export function htmlToText(html) {
   const src = String(html ?? "");
   const title = decodeEntities((src.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").replace(/\s+/g, " ").trim()).slice(0, LIMITS.maxName);
-  const body = src
+  // Prefer the page's own main content over navigation chrome, when it declares one.
+  const main = src.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? src.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] ?? src;
+  const body = main
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<(script|style|noscript|svg|head|template|iframe)\b[\s\S]*?<\/\1>/gi, " ")
     .replace(/<\/(p|div|section|article|li|tr|h[1-6]|blockquote|pre|ul|ol|table)>/gi, "\n")
@@ -256,6 +264,38 @@ export async function fetchYoutubeTranscript(id, deps = {}) {
   return { title, text };
 }
 
+/** Run an executable with an argument ARRAY (never a shell). Output is returned even when the exit code is not 0. */
+function defaultRun(cmd, args) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: 90_000, maxBuffer: 1_000_000 }, (_err, stdout) => resolve(String(stdout ?? "")));
+  });
+}
+
+/**
+ * Captions through yt-dlp, an OSS tool that keeps up with YouTube's changes so this product does not
+ * have to. The video id is a validated 11-character token, the command is server config, and the
+ * files go to a private temp directory that is removed afterwards. A non-zero exit is tolerated:
+ * yt-dlp fails the auto-caption track with 429 even when the human captions downloaded fine.
+ */
+export async function ytdlpTranscript(id, { cmd, runImpl = defaultRun, tmpRoot = tmpdir() } = {}) {
+  if (!cmd || !/^[\w-]{11}$/.test(id)) throw new MaterialError("NO_TRANSCRIPT", "that video's captions could not be read");
+  const dir = await mkdtemp(join(tmpRoot, "silicus-yt-"));
+  try {
+    const stdout = await runImpl(cmd, [
+      "--skip-download", "--no-playlist", "--no-warnings", "--no-simulate", "--write-subs", "--write-auto-subs",
+      "--sub-langs", "en.*,en", "--sub-format", "json3", "--print", "title",
+      "-o", join(dir, "%(id)s.%(ext)s"), `https://www.youtube.com/watch?v=${id}`,
+    ]);
+    const files = (await readdir(dir)).filter((f) => f.endsWith(".json3")).sort((a, b) => Number(/-ar|-orig/.test(a)) - Number(/-ar|-orig/.test(b)));
+    if (files.length === 0) throw new MaterialError("NO_TRANSCRIPT", "that video has no captions Silicus can read. Paste a transcript instead.");
+    const text = transcriptText(await readFile(join(dir, files[0]), "utf8"), "application/json");
+    if (!text) throw new MaterialError("NO_TRANSCRIPT", "that video's captions were empty. Paste a transcript instead.");
+    return { title: cleanName(String(stdout).split("\n")[0]), text };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 /* ------------------------------- preparing a request ------------------------------- */
 
 const cleanName = (n) => String(n ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/g, " ").trim().slice(0, LIMITS.maxName);
@@ -284,7 +324,16 @@ export async function prepareMaterials(items, deps = {}) {
       if (typeof item?.url === "string" && item.url.trim()) {
         const url = item.url.trim();
         const vid = youtubeVideoId(url);
-        if (vid) { const t = await fetchYoutubeTranscript(vid, deps); text = t.text; name = given || t.title || url; kind = "youtube"; }
+        if (vid) {
+          let t;
+          try {
+            t = await fetchYoutubeTranscript(vid, deps);
+          } catch (e) {
+            if (!(e instanceof MaterialError) || e.code !== "NO_TRANSCRIPT" || !deps.ytdlp) throw e;
+            t = await ytdlpTranscript(vid, { cmd: deps.ytdlp, ...(deps.runImpl ? { runImpl: deps.runImpl } : {}) });
+          }
+          text = t.text; name = given || t.title || url; kind = "youtube";
+        }
         else {
           const page = await fetchPublic(url, deps);
           const isHtml = /html/i.test(page.contentType);

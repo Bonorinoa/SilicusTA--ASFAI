@@ -25,12 +25,14 @@ const REPO = join(HERE, "..");
 /** A plan worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
 const echoingWorker = ({ prompt }) => {
   const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  const refs = [...String(prompt).matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);
   return {
     title: "Seeing the claim: how AI answers are built",
     audience: { ageRangeStart: 8, ageRangeEnd: 10 },
     activities: ids.map((id, i) => ({
       title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
       learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation",
+      ...(refs[i] ? { citations: [refs[i]] } : {}),
     })),
   };
 };
@@ -112,6 +114,7 @@ const hostProc1 = bg(process.execPath, ["server.mjs"], {
     ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT),
     SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
     SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
+    SILICUS_ONTOLOGY_FILE: join(REPO, "host", "fixtures", "ontology.example.json"),
   },
 });
 // Bind IPv4 explicitly: `localhost` can resolve to ::1 only, and this script (and the host proxy) talk to 127.0.0.1.
@@ -251,6 +254,11 @@ await poll(async () => (await getView(courseId)).plan?.status === "draft");
 check("plan drafted on the host", true);
 await poll(async () => await bodyHas(page, "Seeing the claim: how AI answers are built"));
 check("PlanCard renders the host's plan", true);
+await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
+check("the plan shows suggested alignment from ASFAI's graph, labelled as a suggestion",
+  (await bodyHas(page, "from ASFAI's skill map")) && (await bodyHas(page, "not part of the sealed package")));
+check("the publish preview does NOT show the suggestions (they are not in the package)",
+  await page.evaluate(() => document.querySelectorAll('section[aria-label="Suggested alignment"]').length === 1));
 
 // teacher confirms the plan
 await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
@@ -346,6 +354,7 @@ bg(process.execPath, ["server.mjs"], {
     ...process.env, SILICUS_HOST_DATA: DATA2, SILICUS_HOST_PORT: String(HOST_PORT),
     SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
     SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
+    SILICUS_ONTOLOGY_FILE: join(REPO, "host", "fixtures", "ontology.example.json"),
   },
 });
 check("local: a second host, with no ASFAI credential, is up", await waitHttp(`${HOST}/api/health`));
@@ -407,6 +416,9 @@ check("local: objectives confirmed through the gate", decided2.checkpoints.objec
 await poll(async () => await bodyHas(page, "Draft the plan from your confirmed objectives"));
 await clickText(page, "Draft the plan from your confirmed objectives");
 await poll(async () => (await getView(course2)).plan?.status === "draft");
+await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
+check("local: the plan is aligned from the ontology file alone, with no ASFAI",
+  (await bodyHas(page, "from your ontology file")) && !(await bodyHas(page, "from ASFAI's skill map")));
 await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
 await clickText(page, "Confirm the lesson plan");
 await poll(async () => (await getView(course2)).plan?.status === "confirmed");

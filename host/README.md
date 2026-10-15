@@ -193,3 +193,24 @@ Not invented: `action_schema` publishes no schema for the ASFAI object operation
 hold course files. A Pod-backed archive therefore needs a file-capable store and its
 field names confirmed against the live server first. `export` + `verify` are the
 documented ASFAI-shaped path.
+
+## ASFAI is recommended, never required (Sprint 5)
+
+A fresh course carries the host's own three questions (same ids and prompts ASFAI asks). The
+teacher's recorded answers authorize checkpoint 2 when ASFAI was never consulted; once ASFAI has
+been consulted, its observed round governs exactly as before. "Was ASFAI consulted" is derived
+(`observedState !== null`), so there is no new event and replay stays exact.
+
+## Knowledge sources (Sprint 6)
+
+The plan-drafting worker may draw on pluggable sources (`host/knowledge.mjs`). Config only, never
+a request field:
+
+- `SILICUS_SOURCE_ASFAI=0` turns ASFAI's graph off (on by default when ASFAI is connected).
+- `SILICUS_ONTOLOGY_FILE=/path/ontology.json` enables a local ontology (`fixtures/ontology.example.json`).
+- `GET /api/knowledge/status` reports which sources are in play (capability only).
+
+Retrieved text is untrusted context and is never recorded; the plan event keeps ref, label,
+source, activities and whether a source actually checked it. ASFAI's graph is only queried for a
+course whose answers the teacher already sent to ASFAI. Citations are suggestions: not objectives,
+not in the sealed package, never required.

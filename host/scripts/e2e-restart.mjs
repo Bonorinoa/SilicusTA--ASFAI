@@ -23,12 +23,14 @@ const OWNER = "teacher:tk-1";
 /** A plan worker that echoes the objective ids it was handed, so the plan is genuinely citable. */
 const echoingWorker = ({ prompt }) => {
   const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  const refs = [...String(prompt).matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
   return {
     title: "Seeing the claim: how AI answers are built",
     audience: { ageRangeStart: 8, ageRangeEnd: 10 },
     activities: ids.map((id, i) => ({
       title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
       learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation",
+      ...(refs[i] ? { citations: [refs[i]] } : {}),
     })),
   };
 };
@@ -44,6 +46,7 @@ function startHost() {
       ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(PORT),
       SILICUS_ASFAI_MCP_URL: mock.mcpUrl, SILICUS_ASFAI_PRM_URL: mock.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
       SILICUS_WORKER_URL: worker.url, SILICUS_WORKER_MODEL: "test-model",
+      SILICUS_ONTOLOGY_FILE: new URL("../fixtures/ontology.example.json", import.meta.url).pathname,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -121,6 +124,15 @@ check("package sealed as version 1", pub.status === 200 && pub.json.version.vers
 const v1 = (await get(`/api/courses/${courseId}`)).json;
 check("view reports all five checkpoints confirmed", ["files", "outline", "objectives", "plan", "publish"].every((k) => v1.checkpoints[k].status === "confirmed"));
 
+const kn = (await get("/api/knowledge/status")).json.sources;
+check("knowledge sources: ASFAI's graph first, then the local ontology, both enabled",
+  kn.map((k) => k.id).join() === "asfai-graph,local-ontology" && kn.every((k) => k.enabled));
+const cites1 = v1.plan.citations ?? [];
+check("sources: a course whose answers went to ASFAI is aligned from ASFAI's graph and the ontology file",
+  cites1.some((c) => c.source === "asfai-graph" && c.verified === true) && cites1.some((c) => c.source === "local-ontology" && c.verified === true),
+  cites1.map((c) => c.ref).join(","));
+check("sources: the sealed version carries no alignment suggestions", !JSON.stringify(v1.versions).includes("asfai:mt_") && !JSON.stringify(v1.versions).includes("local:"));
+
 await stop(h1);
 check("host process terminated", true);
 
@@ -158,6 +170,8 @@ await post(`/api/courses/${c2}/plan`, {});
 await post(`/api/courses/${c2}/plan/confirm`, { text: "Confirm the lesson plan." });
 const pub2 = await post(`/api/courses/${c2}/publish`, { text: "Publish the course package." });
 check("local: sealed as version 1 with no ASFAI", pub2.status === 200 && pub2.json.version.version === 1);
+const w0 = (await get(`/api/courses/${c2}`)).json;
+check("local: aligned from the local ontology file alone", (w0.plan.citations ?? []).length > 0 && w0.plan.citations.every((c) => c.source === "local-ontology"));
 check("local: not one MCP tool call reached ASFAI", (mock.st.toolArgs ?? []).length === toolCallsBefore, `before=${toolCallsBefore} after=${(mock.st.toolArgs ?? []).length}`);
 const w1 = (await get(`/api/courses/${c2}`)).json;
 await stop(h2);

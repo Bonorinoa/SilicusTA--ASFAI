@@ -84,6 +84,9 @@
   color: var(--color-ink-soft);
 }
 
+/* "Recommended" is a typographic weight, not a badge and not a second colour. */
+.recommended { font-weight: var(--weight-semibold); color: var(--color-ink); }
+
 .composer, .asfai {
   display: flex;
   flex-direction: column;

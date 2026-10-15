@@ -45,6 +45,12 @@ export interface IntakeStatus {
   courseId: string;
   guardState: string;
   observedState: "clarifying" | "ready_to_draft" | null;
+  /**
+   * Who asked the questions. "local" = the host's own three (ASFAI was never consulted);
+   * "asfai" = ASFAI's questionnaire. Drives the copy: the host's questions are never
+   * attributed to ASFAI.
+   */
+  questionsFrom: "asfai" | "local";
   roundOpened: boolean;
   roundAnswered: boolean;
   questions: { id: string; prompt: string; reason: string | null }[];

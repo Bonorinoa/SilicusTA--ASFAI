@@ -98,6 +98,9 @@ export function OnboardingChat({
   const openQuestion = questions.find((q) => FORWARDABLE.has(q.id) && !answerText(recorded[q.id]).trim());
   const unforwardable = questions.filter((q) => !FORWARDABLE.has(q.id));
   const roundComplete = questions.some((q) => FORWARDABLE.has(q.id)) && !openQuestion;
+  // Who asked. The host's own questions are never attributed to ASFAI.
+  const fromAsfai = view?.intake.questionsFrom === "asfai";
+  const asker = fromAsfai ? "ASFAI" : "Silicus";
   const multiline = openQuestion?.id === "learning_outcomes" || (!view && step === "materials");
   const canRecord = reply.trim().length > 0 && !busy;
 
@@ -148,7 +151,7 @@ export function OnboardingChat({
     const text = reply.trim();
     if (!openQuestion || !text) return;
     setReply("");
-    setLive("Recorded on this course. Sent only when you send the round.");
+    setLive(fromAsfai ? "Recorded on this course. Sent only when you send the round." : "Recorded on this course. Not sent to ASFAI.");
     onAnswer({ [openQuestion.id]: text });
   };
 
@@ -189,10 +192,12 @@ export function OnboardingChat({
         ))}
         {questions.filter((q) => answerText(recorded[q.id]).trim()).map((q) => (
           <li key={q.id} className={styles.pair}>
-            <p className={styles.ask}><span className={styles.who}>ASFAI</span>{q.prompt}</p>
+            <p className={styles.ask}><span className={styles.who}>{asker}</span>{q.prompt}</p>
             <p className={styles.you}>You</p>
             <p className={styles.said}>{answerText(recorded[q.id])}</p>
-            <p className={styles.kept}>Recorded on this course. Sent only when you send the round.</p>
+            <p className={styles.kept}>
+              {fromAsfai ? "Recorded on this course. Sent only when you send the round." : "Recorded on this course. Not sent to ASFAI."}
+            </p>
           </li>
         ))}
       </ol>
@@ -250,9 +255,26 @@ export function OnboardingChat({
       ) : null}
 
       {view && !filesOpen && outlineOpen ? (
-        <section className={styles.asfai} aria-label="ASFAI course intake">
+        <section className={styles.asfai} aria-label={fromAsfai ? "ASFAI course intake" : "Course intake"}>
           <p className={styles.step} aria-live="polite">{live.startsWith("Recorded on") ? live : ""}</p>
-          {asfai && !asfai.connected ? (
+          {/* ASFAI is the recommended way in, never the price of entry: the host's own
+              questions below are live whether or not ASFAI is connected. */}
+          {!fromAsfai && asfai?.connected ? (
+            <p className={styles.kept}>
+              <span className={styles.recommended}>Recommended:</span> let ASFAI ask. It aligns the lesson to its skill map
+              and checks the outline. Only your answers are sent.{" "}
+              <button type="button" className={styles.quiet} onClick={onAsk} disabled={busy}>Use ASFAI's questionnaire</button>
+            </p>
+          ) : null}
+          {!fromAsfai && asfai && !asfai.connected ? (
+            <p className={styles.kept}>
+              <span className={styles.recommended}>Recommended:</span> connect ASFAI to align the lesson to its skill map and have
+              the outline checked. Nothing waits on it — you can answer below now. Nothing is sent until you approve it.{" "}
+              <button type="button" className={styles.quiet} onClick={onConnect} disabled={busy}>Connect ASFAI</button>{" "}
+              <button type="button" className={styles.quiet} onClick={onRefresh} disabled={busy}>I approved it</button>
+            </p>
+          ) : null}
+          {fromAsfai && asfai && !asfai.connected ? (
             <p className={styles.kept}>
               ASFAI is not connected. Nothing is sent until you approve it.{" "}
               <button type="button" className={styles.quiet} onClick={onConnect} disabled={busy}>Connect ASFAI</button>{" "}
@@ -264,13 +286,12 @@ export function OnboardingChat({
           ))}
           {openQuestion ? (
             <form className={styles.composer} onSubmit={(e) => { e.preventDefault(); submitAnswer(); }}>
-              <span className={styles.who}>ASFAI</span>
+              <span className={styles.who}>{asker}</span>
               <label className={styles.prompt} htmlFor={`intake-${openQuestion.id}`}>{openQuestion.prompt}</label>
               {openQuestion.reason ? <p className={styles.kept}>{openQuestion.reason}</p> : null}
               <p className={styles.kept} id={hintId}>
-                {openQuestion.id === "learning_outcomes"
-                  ? "One outcome per line — each line becomes an objective you confirm. Recorded on this course; sent only when you send the round."
-                  : "Recorded on this course. Sent only when you send the round."}
+                {openQuestion.id === "learning_outcomes" ? "One outcome per line — each line becomes an objective you confirm. " : ""}
+                {fromAsfai ? "Recorded on this course; sent only when you send the round." : "Recorded on this course. Not sent to ASFAI."}
               </p>
               <textarea
                 id={`intake-${openQuestion.id}`}
@@ -287,15 +308,7 @@ export function OnboardingChat({
               </button>
             </form>
           ) : null}
-          {!openQuestion && questions.length === 0 ? (
-            <>
-              <p className={styles.kept}>ASFAI will ask a few questions. Your answers, in your words, are all it will be sent.</p>
-              <button type="button" className={styles.send} onClick={onAsk} disabled={busy || asfai?.connected === false}>
-                Ask ASFAI for the questions
-              </button>
-            </>
-          ) : null}
-          {roundComplete ? (
+          {fromAsfai && roundComplete ? (
             <>
               <p className={styles.kept}>Every question you can answer is recorded. Sending them is a separate act.</p>
               <button type="button" className={styles.send} onClick={onSendToAsfai} disabled={busy || view.intake.mayCallPrepareOutline === false}>
@@ -304,7 +317,7 @@ export function OnboardingChat({
             </>
           ) : null}
           {view.intake.refusal ? <p className={styles.refusal}>{view.intake.refusal.reason}</p> : null}
-          {view.intake.outlineAuthorized ? (
+          {fromAsfai && view.intake.outlineAuthorized ? (
             <p className={styles.kept}>ASFAI has your answers. Confirming the outline is still your decision.</p>
           ) : null}
         </section>

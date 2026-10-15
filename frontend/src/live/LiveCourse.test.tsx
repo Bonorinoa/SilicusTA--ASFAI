@@ -36,6 +36,7 @@ function stubView(): HostView {
       courseId: COURSE_ID,
       guardState: "clarifying",
       observedState: "clarifying",
+      questionsFrom: "asfai",
       roundOpened: true,
       roundAnswered: false,
       questions: [
@@ -59,9 +60,36 @@ function stubView(): HostView {
   };
 }
 
+/** A fresh course before ASFAI is consulted: the host's own three questions, none answered. */
+function localView(): HostView {
+  const v = stubView();
+  v.checkpoints.outline.status = "pending";
+  v.intake = {
+    courseId: COURSE_ID,
+    guardState: "ready",
+    observedState: null,
+    questionsFrom: "local",
+    roundOpened: false,
+    roundAnswered: false,
+    questions: [
+      { id: "topic", prompt: "What topic should this lesson cover?", reason: "The outline needs a subject." },
+      { id: "course", prompt: "Which course is this part of?", reason: "Course context sets scope and sequencing." },
+      { id: "learning_outcomes", prompt: "What should learners be able to do by the end?", reason: "An observable outcome anchors the outline." },
+    ],
+    draftAuthorization: false,
+    outlineAuthorized: false,
+    mayCallPrepareOutline: true,
+    refusal: null,
+  };
+  return v;
+}
+
 interface Call { url: string; body: Record<string, unknown> | undefined }
 
-function mockHost(view: HostView | null, { workerConfigured = true }: { workerConfigured?: boolean } = {}): { calls: Call[] } {
+function mockHost(
+  view: HostView | null,
+  { workerConfigured = true, asfaiConnected = true }: { workerConfigured?: boolean; asfaiConnected?: boolean } = {},
+): { calls: Call[] } {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
     const url = String(input);
@@ -70,7 +98,7 @@ function mockHost(view: HostView | null, { workerConfigured = true }: { workerCo
     if (url === "/api/courses") {
       return ok({ courses: view ? [{ courseId: COURSE_ID, owner: view.course.owner, title: view.course.title, createdAt: 1 }] : [] });
     }
-    if (url === "/api/asfai/status") return ok({ connected: true, expiresAt: 9, scope: "asfai", canRefresh: true });
+    if (url === "/api/asfai/status") return ok({ connected: asfaiConnected, expiresAt: asfaiConnected ? 9 : null, scope: asfaiConnected ? "asfai" : null, canRefresh: asfaiConnected });
     if (url === "/api/worker/status") return ok({ configured: workerConfigured });
     if (url.endsWith("/decisions")) return ok({ decisions: [] });
     if (url.startsWith("/api/courses/")) return ok(view);
@@ -147,13 +175,11 @@ describe("LiveCourse — thin client of the host", () => {
   });
 
   it("asking ASFAI sends NO fields from the browser (the host builds the call)", async () => {
-    const fresh = stubView();
-    fresh.checkpoints.outline.status = "pending";
-    fresh.intake = { ...fresh.intake, roundOpened: false, roundAnswered: false, observedState: null, questions: [], refusal: null, mayCallPrepareOutline: true };
+    const fresh = localView();
     const { calls } = mockHost(fresh);
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.click(await screen.findByRole("button", { name: "Ask ASFAI for the questions" }));
+    await user.click(await screen.findByRole("button", { name: /use ASFAI's questionnaire/i }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/call"))).toBe(true));
     expect(calls.find((c) => c.url.endsWith("/intake/call"))!.body).toEqual({});
   });
@@ -244,5 +270,61 @@ describe("LiveCourse — thin client of the host", () => {
     expect(parseMaterials("none")).toEqual([]);
     expect(parseMaterials("None yet.")).toEqual([]);
     expect(parseMaterials("slides.pdf\n a worksheet ")).toEqual([{ name: "slides.pdf" }, { name: "a worksheet" }]);
+  });
+
+  it("recommends ASFAI when it is connected, as the primary way in", async () => {
+    mockHost(localView(), { asfaiConnected: true });
+    render(<LiveCourse />);
+    expect(await screen.findByRole("button", { name: /use ASFAI's questionnaire/i })).toBeInTheDocument();
+    expect(screen.getByText(/recommended/i)).toBeInTheDocument();
+    // ...and the host's own questions stay live underneath, so a failed call loses nothing.
+    expect(screen.getByLabelText(/what topic should this lesson cover/i)).toBeInTheDocument();
+  });
+
+  it("recommends ASFAI without blocking when it is not connected", async () => {
+    mockHost(localView(), { asfaiConnected: false });
+    render(<LiveCourse />);
+    expect(await screen.findByRole("button", { name: /connect ASFAI/i })).toBeInTheDocument();
+    expect(screen.getByText(/recommended/i)).toBeInTheDocument();
+    // The teacher can simply answer: the questions are live, not disabled behind the connection.
+    const box = await screen.findByLabelText(/what topic should this lesson cover/i);
+    expect(box).toBeEnabled();
+    // And nothing attributes the host's own questions to ASFAI.
+    expect(screen.queryByText(/ASFAI asked/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("ASFAI", { selector: "span" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Course intake" })).toBeInTheDocument();
+    expect(screen.getAllByText(/Not sent to ASFAI/i).length).toBeGreaterThan(0);
+  });
+
+  it("records a local answer under its own question id, with nothing but the teacher's words", async () => {
+    const { calls } = mockHost(localView(), { asfaiConnected: false });
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await user.type(await screen.findByLabelText(/what topic should this lesson cover/i), "how AI answers are built");
+    await user.click(screen.getByRole("button", { name: "Record this answer" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/intake/answer"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/intake/answer"))!.body as Record<string, unknown>;
+    expect(body.answers).toEqual({ topic: "how AI answers are built" });
+    expect(JSON.stringify(body)).not.toMatch(/payload|learningOutcomes|mode/);
+  });
+
+  it("opens the outline confirm once the teacher's own answers are in, with ASFAI untouched", async () => {
+    const done = localView();
+    done.intake = { ...done.intake, outlineAuthorized: true, answers: { topic: "t", course: "c", learning_outcomes: ["o"] } };
+    mockHost(done, { asfaiConnected: false });
+    render(<LiveCourse />);
+    expect(await screen.findByRole("button", { name: "Confirm the outline" })).toBeInTheDocument();
+    expect(screen.queryByText(/Connect ASFAI to continue/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /course intake/i })).not.toBeInTheDocument();
+  });
+
+  it("once ASFAI has asked, its questions are attributed to it and no recommendation is repeated", async () => {
+    const asked = stubView();
+    asked.checkpoints.outline.status = "pending";
+    mockHost(asked, { asfaiConnected: true });
+    render(<LiveCourse />);
+    expect(await screen.findByRole("region", { name: "ASFAI course intake" })).toBeInTheDocument();
+    expect(screen.queryByText(/recommended/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /use ASFAI's questionnaire/i })).not.toBeInTheDocument();
   });
 });

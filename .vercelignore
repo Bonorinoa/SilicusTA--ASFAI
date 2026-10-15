@@ -1,0 +1,2 @@
+# Every file under api/ becomes a route unless excluded. The tests are not routes.
+api/test

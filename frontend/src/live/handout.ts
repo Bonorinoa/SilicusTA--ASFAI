@@ -33,14 +33,18 @@ export function buildHandoutHtml(version: PackageVersionView): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(version.title)}</title>
 <style>
-  body { font: 18px/1.55 Georgia, 'Times New Roman', serif; color: #1c1b19; max-width: 40rem; margin: 3rem auto; padding: 0 1.25rem; }
+  /* A light page, declared: with no background of its own, a browser in dark mode paints dark grey behind
+     this dark ink and the handout is unreadable. color-scheme: light makes it a light page everywhere. */
+  :root { color-scheme: light; }
+  html { background: #fbf8f1; }
+  body { font: 18px/1.55 Georgia, 'Times New Roman', serif; color: #1c1b19; background: #fbf8f1; max-width: 40rem; margin: 0 auto; padding: 3rem 1.25rem; }
   h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 .25rem; }
   h2 { font: 600 .8rem/1 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #6b675f; margin: 2.25rem 0 .75rem; }
   h3 { font-size: 1.1rem; margin: 0 0 .15rem; }
   .min, .meta, footer { font: .9rem/1.4 system-ui, sans-serif; color: #6b675f; }
   ol { padding-left: 1.4rem; } li { margin: 0 0 .9rem; } li p { margin: 0; }
   footer { border-top: 1px solid #d9d5cc; margin-top: 3rem; padding-top: 1rem; }
-  @media print { body { margin: 1.5cm auto; } }
+  @media print { html, body { background: #fff; } body { padding: 1.5cm 1.25rem; } }
 </style>
 </head>
 <body>

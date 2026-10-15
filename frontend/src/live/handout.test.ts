@@ -50,4 +50,11 @@ describe("the student handout", () => {
     expect(handoutFilename(version())).toBe("silicus-handout-ai-literacy-b-claims-b-v2.html");
     expect(handoutFilename(version({ title: "???" }))).toBe("silicus-handout-course-v2.html");
   });
+
+  it("is a light page on its own: a browser in dark mode must not paint dark grey behind dark ink", () => {
+    const html = buildHandoutHtml(version());
+    expect(html).toContain("color-scheme: light");
+    expect(html).toMatch(/html \{ background: #fbf8f1; \}/);
+    expect(html).toMatch(/body \{[^}]*color: #1c1b19; background: #fbf8f1;/);
+  });
 });

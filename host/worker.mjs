@@ -16,6 +16,9 @@
  */
 import { EVIDENCE_KINDS } from "../confirm-gate/confirm-gate.mjs";
 import { unknownRefs } from "./knowledge.mjs";
+import { normalizeReasoning, reasoningBody } from "./worker-config.mjs";
+
+export const DEFAULT_WORKER_TIMEOUT_MS = 120_000;
 
 /** A worker failure that is a refusal, not a crash. */
 export class WorkerError extends Error {
@@ -52,6 +55,7 @@ export class PlanWorker {
   #timeoutMs;
   #provider;
   #configHint;
+  #reasoning;
 
   /**
    * `zdr` asks the router to use ONLY zero-data-retention endpoints (OpenRouter's
@@ -60,13 +64,14 @@ export class PlanWorker {
    * `maxTokens` bounds the reply, which also bounds what the router reserves against the account.
    *
    * @param {{url?: string|null, model?: string|null, apiKey?: string|null, fetchImpl?: typeof fetch,
-   *          zdr?: boolean, maxTokens?: number, timeoutMs?: number, provider?: "openai"|"anthropic"}} [config]
+   *          zdr?: boolean, maxTokens?: number, timeoutMs?: number, provider?: "openai"|"anthropic",
+   *          reasoning?: "low"|"medium"|"high"|"off"|"model-default"}} [config]
    *
    * `provider` is the wire format: "openai" (chat completions: OpenRouter, vLLM, Ollama, ...) or
    * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
    * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = 60_000, provider = "openai", configHint = "" } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", configHint = "" } = {}) {
     // How to configure this worker is the TRANSPORT's business (the Node host passes its env-variable hint); this module
     // is shared with the browser bundle, so it names no server setting itself.
     this.#configHint = configHint ? ` (${configHint})` : "";
@@ -82,10 +87,11 @@ export class PlanWorker {
     this.#apiKey = apiKey ? String(apiKey) : null;
     this.#fetch = fetchImpl ?? fetch;
     this.#zdr = zdr === true;
+    this.#reasoning = normalizeReasoning(reasoning);
     this.#maxTokens = Number.isInteger(maxTokens) && maxTokens > 0 ? maxTokens : 4000;
     // A model that never answers must not hold a course hostage: every request to a course runs behind
     // one lock, so an unbounded wait here would freeze the whole course. The deadline covers the body too.
-    this.#timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 60_000;
+    this.#timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_WORKER_TIMEOUT_MS;
   }
 
   /** Which wire format the worker speaks. Config, never a credential. */
@@ -96,6 +102,11 @@ export class PlanWorker {
   /** Is the router told to use zero-data-retention endpoints only? Config, never a credential. */
   get zdr() {
     return this.#zdr;
+  }
+
+  /** Server-selected reasoning mode. It is omitted on the Anthropic wire and for model-default. */
+  get reasoning() {
+    return this.#reasoning;
   }
 
   /** A worker is configured or it is not. Not configured is a state, never an outage. */
@@ -142,6 +153,8 @@ export class PlanWorker {
       max_tokens: this.#maxTokens,
       ...(this.#zdr ? { provider: { zdr: true, data_collection: "deny" } } : {}),
     };
+    const reasoning = anthropic ? undefined : reasoningBody(this.#reasoning);
+    if (reasoning) body.reasoning = reasoning;
     const headers = { "content-type": "application/json" };
     if (anthropic) {
       headers["anthropic-version"] = "2023-06-01";
@@ -168,6 +181,9 @@ export class PlanWorker {
     } catch (e) {
       if (signal.aborted) throw new WorkerError("WORKER_UNREACHABLE", "the drafting worker did not answer in time");
       throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's response was not JSON");
+    }
+    if (!anthropic && payload?.choices?.[0]?.finish_reason === "length") {
+      throw new WorkerError("WORKER_TRUNCATED", "The model ran out of room before finishing. Try again, or use less material.");
     }
     // OpenAI wire: choices[0].message.content. Anthropic wire: content is a list of typed blocks.
     const content = anthropic

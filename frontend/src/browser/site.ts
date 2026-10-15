@@ -10,6 +10,7 @@
 import { WorkerError } from "../../../host/worker.mjs";
 import { MaterialError, normalizeText, youtubeVideoId } from "../../../host/materials-core.mjs";
 import type { PasscodeKeeper } from "./passcode";
+import type { TypicalSeconds } from "../gate/types";
 
 // The JS default (LIMITS.maxChars) makes TypeScript infer a literal type for `max`; it takes any number.
 const normalize = normalizeText as (raw: unknown, max?: number) => string;
@@ -21,6 +22,7 @@ export interface SiteStatus {
   provider: string;
   passcodeRequired: boolean;
   model?: string;
+  typicalSeconds?: TypicalSeconds;
 }
 
 const NOT_SET_UP: SiteStatus = { configured: false, zdr: false, provider: "openrouter", passcodeRequired: false };
@@ -36,8 +38,8 @@ export const MESSAGES = {
   wait: (seconds: number | null) => `Too many AI requests just now. Wait ${seconds ? `${seconds} seconds` : "a minute"} and try again.`,
 } as const;
 
-/** The site's own deadline for one network attempt (the model proxy itself gives up upstream at 55 s). */
-export const REQUEST_TIMEOUT_MS = 60_000;
+/** The site's own deadline for one network attempt (the model proxy gives up upstream at 115 s). */
+export const REQUEST_TIMEOUT_MS = 120_000;
 /** The status check is tiny; if it does not answer quickly the site is treated as not set up (and asked again next time). */
 export const STATUS_TIMEOUT_MS = 10_000;
 
@@ -84,6 +86,7 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
       known = {
         configured: j.configured === true, zdr: j.zdr === true, provider: String(j.provider ?? "openrouter"),
         passcodeRequired: j.passcodeRequired !== false, ...(typeof j.model === "string" ? { model: j.model } : {}),
+        ...(j.typicalSeconds !== undefined ? { typicalSeconds: j.typicalSeconds } : {}),
       };
       return known;
     } catch {

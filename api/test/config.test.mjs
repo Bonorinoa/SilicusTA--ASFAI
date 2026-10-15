@@ -13,9 +13,9 @@ import { createRateLimiter } from "../_lib/ratelimit.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const API = join(ROOT, "api");
 
-test("vercel.json: maxDuration 60 for api/**, /api gets cache-control no-store, the original CSP block is intact", () => {
+test("vercel.json: maxDuration 120 for api/**, /api gets cache-control no-store, the original CSP block is intact", () => {
   const v = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8"));
-  assert.equal(v.functions?.["api/**/*.mjs"]?.maxDuration, 60);
+  assert.equal(v.functions?.["api/**/*.mjs"]?.maxDuration, 120);
   const api = v.headers.find((h) => h.source === "/api/(.*)");
   assert.ok(api, "no headers entry for /api");
   assert.ok(api.headers.some((h) => h.key.toLowerCase() === "cache-control" && h.value === "no-store"));

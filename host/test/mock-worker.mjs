@@ -22,7 +22,7 @@ const DEFAULT_PLAN = {
   ],
 };
 
-export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200, shape = "openai" } = {}) {
+export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200, shape = "openai", finishReason = undefined } = {}) {
   const st = { calls: 0, lastPrompt: null, lastAuth: null, lastBody: null, lastHeaders: null };
 
   const srv = createServer(async (req, res) => {
@@ -54,7 +54,7 @@ export async function startMockWorker({ reply = DEFAULT_PLAN, status = 200, shap
     // "anthropic" speaks the Messages API: typed content blocks (a thinking block may precede the text).
     res.end(JSON.stringify(shape === "anthropic"
       ? { id: "msg_test", type: "message", role: "assistant", content: [{ type: "thinking", thinking: "..." }, { type: "text", text: content }], stop_reason: "end_turn" }
-      : { choices: [{ message: { content } }] }));
+      : { choices: [{ message: { content }, ...(finishReason ? { finish_reason: finishReason } : {}) }] }));
   });
 
   await new Promise((r) => srv.listen(0, "127.0.0.1", r));

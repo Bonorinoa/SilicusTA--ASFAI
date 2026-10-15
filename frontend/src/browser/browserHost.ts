@@ -139,7 +139,8 @@ export async function createBrowserHost(opts: BrowserHostOptions = {}): Promise<
     worker,
     workerStatus: async () => {
       const st = await site.status();
-      return { configured: st.configured, zdr: st.zdr, provider: st.provider, passcodeRequired: st.passcodeRequired };
+      return { configured: st.configured, zdr: st.zdr, provider: st.provider, passcodeRequired: st.passcodeRequired,
+        ...(st.typicalSeconds !== undefined ? { typicalSeconds: st.typicalSeconds } : {}) };
     },
     sources: [],
     archives: null,

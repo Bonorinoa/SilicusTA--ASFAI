@@ -44,8 +44,32 @@ cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
 |---|---|
 | `store.mjs` | `EventLog` (hash-chained NDJSON) + `CourseStore`. One directory per course: `<data-root>/<slug>/meta.json` and `events.ndjson`. |
 | `course.mjs` | `CourseSession`: owns the ledger + gate per course, mints the teacher channel in the inbound hook, appends every mutation, rebuilds by replay, derives the views. |
-| `server.mjs` | The intent-only HTTP API (node:http). |
+| `handler.mjs` | The API itself, transport-agnostic: `createHandler(deps).handle({method, url, readBody})` -> `{status, json}`. Routes, intents-only shapes, the per-course lock, verified replay per request, the error mapping. |
+| `server.mjs` | The node:http transport around the handler (loopback/origin guard, body reader, CORS), and the Node dependencies it injects. |
+| `chain.mjs` | The hash-chain rule (`linkDigest`, `verifyRecords`, `ChainedLog`), shared by the disk log and the browser log. |
+| `record-store.mjs` | The `CourseStore` interface over in-memory meta text + NDJSON lines with a write hook (the browser writes it through to IndexedDB). Same bytes as the disk store. |
+| `backup.mjs` | Every course + its full log in the archive envelope; `readBackup` fails closed, whole (digest, chain, meta, replay). |
+| `materials-core.mjs` | Material rules both hosts share (names, limits, clipping, digests); how a link becomes text is injected. `materials.mjs` adds the Node fetch + SSRF guard + YouTube. |
+| `digest.mjs`, `lib/sha256.mjs` | `digestOf(json)`; one synchronous SHA-256 (the browser's `node:crypto` shim is a facade over it), cross-checked against node:crypto. |
 | `scripts/e2e-restart.mjs` | The cross-process acceptance run. |
+| `scripts/parity-run.mjs` | Runs `test/scripted-course.mjs` on this host (disk, real node:crypto, pinned ids/clock) for the cross-host parity test. |
+
+## One API, two hosts
+
+The same `handler.mjs` + `course.mjs` run in two places; only the injected dependencies differ.
+
+| | Node host (local app, `server.mjs`) | Browser host (online app, `frontend/src/browser/`) |
+|---|---|---|
+| storage | `CourseStore`: files on disk | `RecordStore` written through to IndexedDB (add-only, awaited before a request answers) |
+| hashing | node:crypto | `lib/sha256.mjs` via the `node:crypto` alias |
+| worker | `workerFromEnv` (OpenRouter ZDR / OpenAI-wire / Anthropic) | `PlanWorker` at the site's `/api/worker`, demo passcode in sessionStorage |
+| links | fetched here behind the SSRF guard; YouTube via captions / yt-dlp | the site's `/api/fetch`; YouTube refused as local-app-only |
+| ASFAI, knowledge sources | ASFAI (OAuth) + local ontology | off: `available: false`, `sources: []` |
+| archive | `LocalArchive` folder | none: Export all courses / Import (backup.mjs) |
+
+Parity is a test, not a promise: `frontend/src/browser/browserHost.test.ts` runs the scripted course on both and
+requires an identical transcript and byte-identical log (and is shown to fail when only the store bytes or only
+the hash diverge).
 
 ## The API
 

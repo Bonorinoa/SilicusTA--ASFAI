@@ -163,7 +163,10 @@ export class LessonIntake {
    */
   #localAnswersComplete() {
     const asked = this.#questions.filter((q) => KNOWN.has(q.id));
-    return asked.length > 0 && asked.every((q) => hasAnswer(this.#answers, q.id));
+    // The outcomes question may be answered by one explicit teacher act: "propose them from my
+    // materials". That is a recorded answer, not objective text, and it only counts here.
+    const standsIn = (id) => id === "learning_outcomes" && this.#answers?.outcomes_from === "materials";
+    return asked.length > 0 && asked.every((q) => hasAnswer(this.#answers, q.id) || standsIn(q.id));
   }
 
   /**
@@ -236,6 +239,11 @@ function cleanAnswers(raw, asked) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const askedIds = new Set((asked ?? []).map((q) => q.id));
   const out = {};
+  // The one non-question key: the teacher chose to have the outcomes proposed from their materials.
+  // Only the exact value counts, and only while the outcomes question is the one being asked.
+  if (Object.hasOwn(raw, "outcomes_from") && raw.outcomes_from === "materials" && askedIds.has("learning_outcomes")) {
+    out.outcomes_from = "materials";
+  }
   for (const key of Object.keys(raw)) {
     if (!KNOWN.has(key) || !askedIds.has(key)) continue; // an answer to a question nobody asked is ignored
     const v = raw[key];

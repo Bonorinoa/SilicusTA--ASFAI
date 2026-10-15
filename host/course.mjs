@@ -105,6 +105,11 @@ export class CourseSession {
    * never recorded — it is not evidence.
    */
   #citations = new Map();
+  /**
+   * Which materials the AI's proposals were drawn from: name, digest, characters. NEVER the text.
+   * The digest lets an audit tie a proposal to the exact text without the course keeping it.
+   */
+  #materialsUsed = [];
 
   get courseId() { return this.meta.courseId; }
 
@@ -187,6 +192,7 @@ export class CourseSession {
         if (event.assistantText) {
           this.#ledger.recordAssistantTurn(event.assistantText, { channel: "model", at: event.at });
         }
+        for (const m of event.materials ?? []) this.#materialsUsed.push({ name: m.name, digest: m.digest, chars: m.chars });
         const created = this.#gate.proposeObjectives(event.items);
         created.forEach((record, i) => {
           this.#proposalIds.push(record.id);
@@ -354,6 +360,51 @@ export class CourseSession {
       items,
       sources: items.map(() => source),
       assistantText: null,
+      at: a,
+    };
+    this.#apply(event);
+    this.#append(event);
+    return { ok: true, proposals: this.view().proposals };
+  }
+
+  /**
+   * Checkpoint 3 from the teacher's MATERIAL: a worker reads it and proposes objectives; the teacher
+   * accepts, renames, drops or adds. Unlike a derived proposal this was really written by a model, so
+   * an assistant turn IS recorded. The log keeps each material's name, digest and size, never its text.
+   * Each proposal names the material(s) it came from, and only names the teacher supplied are possible.
+   *
+   * @param {{worker: object, materials: {name: string, text: string, chars: number, digest: string}[], at?: number}} input
+   */
+  async proposeObjectivesFromMaterials({ worker, materials = [], at } = {}) {
+    if (this.#proposalIds.length > 0) {
+      return { ok: false, code: "ALREADY_PROPOSED", reason: "objectives have already been proposed for this course" };
+    }
+    if (!worker) return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };
+    if (!Array.isArray(materials) || materials.length === 0) {
+      return { ok: false, code: "NO_MATERIALS", reason: "there is no material to propose objectives from" };
+    }
+    const answers = this.#intake.answers();
+    let proposed;
+    try {
+      proposed = await worker.draftObjectives({
+        materials: materials.map((m) => ({ name: m.name, text: m.text })),
+        topic: String(answers?.topic ?? ""),
+        course: String(answers?.course ?? this.meta.title ?? ""),
+      });
+    } catch (e) {
+      return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
+    }
+    const label = (from) => {
+      const text = from.length > 0 ? `from ${from.join(", ")}` : "from your materials";
+      return text.length <= 120 ? text : "from your materials";
+    };
+    const a = at ?? Date.now();
+    const event = {
+      kind: "objectives.proposed",
+      items: proposed.map((o) => ({ kind: "local", statement: o.statement })),
+      sources: proposed.map((o) => label(o.from)),
+      assistantText: `Proposed ${proposed.length} objective${proposed.length === 1 ? "" : "s"} from your materials.`,
+      materials: materials.map((m) => ({ name: m.name, digest: m.digest, chars: m.chars })),
       at: a,
     };
     this.#apply(event);
@@ -602,6 +653,7 @@ export class CourseSession {
       intake: this.#intake.status(),
       validations: [...this.#validations],
       proposals: this.#rows(),
+      materialsUsed: this.#materialsUsed.map((m) => ({ ...m })),
       objectives: this.#objectiveView(),
       decisions: this.#gate.decisions(),
       plan: this.#planView(),

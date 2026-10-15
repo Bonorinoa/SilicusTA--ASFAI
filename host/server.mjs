@@ -26,6 +26,7 @@
  *   GET  /api/archives                       list archive refs
  *   POST /api/courses/:id/checkpoints        {id:"files"|"outline", text, note?}
  *   POST /api/courses/:id/objectives         no body: the HOST derives them from the teacher's recorded answers
+ *   POST /api/courses/:id/materials/propose  {materials:[{name,text}|{url}]} the WORKER proposes objectives from the teacher's material (nothing is stored but names, digests, sizes)
  *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides)
  *   POST /api/courses/:id/plan               no body: the OSS WORKER drafts from the confirmed objectives
  *   POST /api/courses/:id/plan/confirm       {text, planId?}                           (teacher confirms)
@@ -40,6 +41,7 @@ import { CourseSession } from "./course.mjs";
 import { LocalArchive } from "./archive.mjs";
 import { TokenStore } from "./asfai/tokens.mjs";
 import { PlanWorker } from "./worker.mjs";
+import { prepareMaterials, MaterialError } from "./materials.mjs";
 import { AsfaiOAuth } from "./asfai/oauth.mjs";
 import { AsfaiClient } from "./asfai/mcp.mjs";
 import { AsfaiService } from "./asfai/service.mjs";
@@ -55,7 +57,8 @@ const MAX_BODY = 1 << 20;
 /** A worker state maps to an honest status: not configured is 501, an outage or bad output is 502. */
 function planStatus(code) {
   if (code === "WORKER_NOT_CONFIGURED") return 501;
-  if (code === "NO_CONFIRMED_OBJECTIVES") return 409;
+  if (code === "NO_CONFIRMED_OBJECTIVES" || code === "ALREADY_PROPOSED") return 409;
+  if (code === "NO_MATERIALS") return 422;
   return 502;
 }
 
@@ -98,7 +101,7 @@ class HttpError extends Error {
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, sources = null, fetchImpl = undefined, lookupImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -117,6 +120,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
   const planWorker = worker ?? new PlanWorker({
     url: process.env.SILICUS_WORKER_URL ?? null,
     model: process.env.SILICUS_WORKER_MODEL ?? null,
+    zdr: process.env.SILICUS_WORKER_ZDR === "1",
     apiKey: process.env.SILICUS_WORKER_API_KEY ?? null,
   });
 
@@ -180,7 +184,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     if (parts[1] === "health" && method === "GET") return { status: 200, json: { ok: true, courses: store.list().length } };
     // Whether a drafting worker is configured. Config, never a credential.
     if (parts[1] === "worker" && parts[2] === "status" && method === "GET") {
-      return { status: 200, json: { configured: planWorker.enabled } };
+      return { status: 200, json: { configured: planWorker.enabled, zdr: planWorker.zdr } };
     }
     // Which knowledge sources are in play. Config and capability only: no URL, no path, no credential.
     if (parts[1] === "knowledge" && parts[2] === "status" && method === "GET") {
@@ -271,6 +275,20 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
           if (!r.ok) throw new HttpError(409, r.code, r.reason);
           return { status: 200, json: { proposals: r.proposals } };
         }
+        case "materials/propose": {
+          // Content comes IN here, because material is the teacher's input. Objective TEXT never does:
+          // the proposals are written by the worker from the material, labelled with the names the
+          // teacher supplied, and every one still waits for the teacher. Only `materials` is read.
+          // The text is returned to nobody and kept nowhere; the log gets names, digests and sizes.
+          const prepared = await prepareMaterials(b.materials, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}) });
+          const r = await s.proposeObjectivesFromMaterials({ worker: planWorker, materials: prepared.materials });
+          if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
+          return { status: 200, json: {
+            proposals: r.proposals,
+            materials: prepared.materials.map(({ name, chars, digest, kind, truncated }) => ({ name, chars, digest, kind, truncated })),
+            skipped: prepared.skipped,
+          } };
+        }
         case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
         case "plan": {
           // The WORKER drafts from the confirmed objectives. The body is read and ignored:
@@ -308,6 +326,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       if (err instanceof HttpError) return send(err.status, { ok: false, code: err.code, message: err.message, ...(err.blockers ? { blockers: err.blockers } : {}) });
       if (err && err.name === "PublishBlockedError") return send(409, { ok: false, code: "PUBLISH_BLOCKED", message: err.message, blockers: err.blockers });
       if (err && err.name === "FabricatedConfirmationError") return send(403, { ok: false, code: err.code, message: err.message });
+      if (err && err.name === "MaterialError") return send(err.code === "URL_UNREACHABLE" ? 502 : 422, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "AsfaiAuthError") return send(401, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "AsfaiCallError") return send(502, { ok: false, code: err.code, message: err.message });
       if (err && err.code) return send(409, { ok: false, code: err.code, message: err.message });

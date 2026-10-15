@@ -7,7 +7,7 @@
  * refused whole and nothing is written), and delete everything this browser holds for Silicus (confirmed
  * first). A renderer plus three calls into the browser host; it decides nothing about a course.
  */
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import styles from "./BrowserRecord.module.css";
 
 type Phase = "idle" | "confirmDelete" | "working";
@@ -29,6 +29,15 @@ export function BrowserRecord({ hasCourses, onChanged, status, onStatus: setStat
   const [phase, setPhase] = useState<Phase>("idle");
   const file = useRef<HTMLInputElement>(null);
   const fileId = useId();
+  const hintId = useId();
+  // Deleting everything is the one act here that cannot be undone: the safe choice holds focus, and focus comes back.
+  const keep = useRef<HTMLButtonElement>(null);
+  const deleteBtn = useRef<HTMLButtonElement>(null);
+  const asked = useRef(false);
+  useEffect(() => {
+    if (phase === "confirmDelete") { asked.current = true; keep.current?.focus(); }
+    else if (asked.current && phase === "idle") { asked.current = false; deleteBtn.current?.focus(); }
+  }, [phase]);
 
   const exportAll = async () => {
     setPhase("working");
@@ -106,21 +115,27 @@ export function BrowserRecord({ hasCourses, onChanged, status, onStatus: setStat
           </p>
           <div className={styles.verbs}>
             <button type="button" className={styles.danger} onClick={() => void deleteAll()}>Delete everything</button>
-            <button type="button" className={styles.quiet} onClick={() => setPhase("idle")}>Keep them</button>
+            <button type="button" className={styles.quiet} ref={keep} onClick={() => setPhase("idle")}>Keep them</button>
           </div>
         </div>
       ) : (
         <div className={styles.verbs}>
-          <button type="button" className={styles.quiet} onClick={() => void exportAll()} disabled={busy || !hasCourses}>Export all courses</button>
+          <button type="button" className={styles.quiet} onClick={() => void exportAll()} disabled={busy || !hasCourses} aria-describedby={hasCourses ? undefined : hintId}>Export all courses</button>
           <input id={fileId} ref={file} className={styles.file} type="file" accept=".json,application/json" disabled={busy}
             aria-label="Import courses from an exported file" onChange={(e) => void importFile(e.target.files)} />
           <label className={styles.quiet} htmlFor={fileId} aria-hidden="true" aria-disabled={busy || undefined}>Import</label>
-          <button type="button" className={styles.link} onClick={() => { setStatus(null); setPhase("confirmDelete"); }} disabled={busy}>
+          <button type="button" className={styles.link} ref={deleteBtn} onClick={() => { setStatus(null); setPhase("confirmDelete"); }} disabled={busy}>
             Delete all data from this browser
           </button>
         </div>
       )}
-      {status ? <p className={styles.status} data-tone={status.tone} role="status">{status.text}</p> : null}
+      {phase !== "confirmDelete" && !hasCourses ? <p className={styles.hint} id={hintId}>Nothing to export yet: your first course will appear here once you have recorded it.</p> : null}
+      {status ? (
+        <p className={styles.status} data-tone={status.tone} role="status">
+          <span className={styles.statusMark} aria-hidden="true">{status.tone === "ok" ? "\u2713" : "!"}</span>
+          <span>{status.text}</span>
+        </p>
+      ) : null}
     </section>
   );
 }

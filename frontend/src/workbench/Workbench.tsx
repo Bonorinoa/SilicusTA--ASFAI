@@ -5,6 +5,7 @@ import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
 import { LiveCourse } from "../live/LiveCourse";
+import { BROWSER_MODE } from "../gate/mode";
 import { colorTokens, spacingScale, typeScale } from "../design/tokens";
 import { buildAuditedScenario, buildPlanScenario, seedProposals } from "../gate/demo";
 import { ConfirmGateHarness } from "../gate/harness";
@@ -32,14 +33,29 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "tokens", label: "Tokens" },
 ];
 
+/** The online app opens on the live course; the local app and its tests keep opening on the decision card. */
+const HOME: TabId = BROWSER_MODE ? "live" : "decision";
+
 function tabFromHash(): TabId {
   const raw = window.location.hash.replace(/^#\/?/, "");
-  return TABS.some((t) => t.id === raw) ? (raw as TabId) : "decision";
+  return TABS.some((t) => t.id === raw) ? (raw as TabId) : HOME;
+}
+
+/** Three lines of type on an ink-blue ground: the same mark as the favicon, drawn from the tokens. */
+function Mark() {
+  return (
+    <svg className={styles.mark} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect className={styles.markGround} width="32" height="32" rx="7" />
+      <rect className={styles.markLine} x="7" y="9" width="18" height="3" rx="1.5" />
+      <rect className={styles.markLine} x="7" y="15" width="13" height="3" rx="1.5" opacity="0.85" />
+      <rect className={styles.markLine} x="7" y="21" width="8" height="3" rx="1.5" opacity="0.7" />
+    </svg>
+  );
 }
 
 export function Workbench() {
   const [tab, setTab] = useState<TabId>(() =>
-    typeof window === "undefined" ? "decision" : tabFromHash(),
+    typeof window === "undefined" ? HOME : tabFromHash(),
   );
 
   useEffect(() => {
@@ -48,28 +64,44 @@ export function Workbench() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // The online app reads as the product: a masthead, no tabs. The component workbench stays one quiet link away.
+  const product = BROWSER_MODE && tab === "live";
+
   return (
     <div className={styles.shell}>
-      <header className={styles.chrome} data-print="hide">
-        <div className={styles.brand}>
-          <p className={styles.brandName}>Silicus TA 3.0</p>
-          <p className={styles.brandNote}>design workbench · tokens-first · bound to confirm-gate</p>
-        </div>
-        <nav className={styles.tabs} aria-label="Workbench sections">
-          {TABS.map((t) => (
-            <a
-              key={t.id}
-              className={styles.tab}
-              href={`#/${t.id}`}
-              data-current={tab === t.id ? "true" : "false"}
-              onClick={() => setTab(t.id)}
-              aria-current={tab === t.id ? "page" : undefined}
-            >
-              {t.label}
-            </a>
-          ))}
-        </nav>
-      </header>
+      {product ? (
+        <header className={styles.masthead} data-print="hide">
+          <a className={styles.wordmark} href="#/live" aria-label="Silicus TA, home">
+            <Mark />
+            <span className={styles.wordmarkName}>Silicus <span className={styles.wordmarkTa}>TA</span></span>
+          </a>
+          <p className={styles.tagline}>The AI proposes. You decide.</p>
+        </header>
+      ) : (
+        <header className={styles.chrome} data-print="hide">
+          <div className={styles.brand}>
+            <p className={styles.brandName}>Silicus TA 3.0</p>
+            <p className={styles.brandNote}>design workbench · tokens-first · bound to confirm-gate</p>
+          </div>
+          <nav className={styles.tabs} aria-label="Workbench sections">
+            {BROWSER_MODE ? (
+              <a className={styles.tab} href="#/live" onClick={() => setTab("live")}>Back to the course</a>
+            ) : null}
+            {TABS.map((t) => (
+              <a
+                key={t.id}
+                className={styles.tab}
+                href={`#/${t.id}`}
+                data-current={tab === t.id ? "true" : "false"}
+                onClick={() => setTab(t.id)}
+                aria-current={tab === t.id ? "page" : undefined}
+              >
+                {t.label}
+              </a>
+            ))}
+          </nav>
+        </header>
+      )}
 
       <main className={styles.stage}>
         {tab === "live" ? <LiveCourse /> : null}
@@ -79,6 +111,15 @@ export function Workbench() {
         {tab === "audit" ? <AuditDemo /> : null}
         {tab === "tokens" ? <TokensSheet /> : null}
       </main>
+
+      {product ? (
+        <footer className={styles.colophon} data-print="hide">
+          <p className={styles.colophonText}>
+            A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+          </p>
+          <a className={styles.colophonLink} href="#/decision" onClick={() => setTab("decision")}>Design system</a>
+        </footer>
+      ) : null}
     </div>
   );
 }

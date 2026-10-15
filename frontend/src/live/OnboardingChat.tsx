@@ -178,7 +178,7 @@ export function OnboardingChat({
 
   return (
     <section className={styles.thread} aria-label="Course onboarding">
-      <p className={styles.status}>{view ? "On this device. Not sent to ASFAI." : "On this device only. Not sent to ASFAI."}</p>
+      <p className={`${styles.status} ${styles.assurance}`}>{view ? "On this device. Not sent to ASFAI." : "On this device only. Not sent to ASFAI."}</p>
       {view ? null : <p className={styles.step} aria-live="polite">{live}</p>}
       <ol className={styles.turns}>
         {savedLines.map((s) => (

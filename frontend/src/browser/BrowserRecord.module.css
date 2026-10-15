@@ -1,29 +1,39 @@
-/* BrowserRecord — the standing "this browser keeps the record" notice. Quiet: a sunken well, one rule. */
+/* BrowserRecord — the standing "this browser keeps the record" notice.
+   A ruled colophon, not a box: one accent dash, a sentence, three quiet acts. The one irreversible act sits apart. */
 
 .record {
-  display: flex; flex-direction: column; gap: var(--space-2);
-  max-width: 40rem; box-sizing: border-box; padding: var(--space-3) var(--space-5);
-  background: var(--color-sunken); border-left: 2px solid var(--color-rule-strong); border-radius: var(--radius-xs);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  max-width: 42rem; box-sizing: border-box; margin-top: var(--space-4); padding: var(--space-4) 0 var(--space-5);
+  border-top: 1px solid var(--color-rule-strong); border-bottom: 1px solid var(--color-rule);
 }
 .label {
-  margin: 0; font-family: var(--font-ui); font-size: var(--text-2xs); text-transform: uppercase;
-  letter-spacing: var(--tracking-label); color: var(--color-ink-muted);
+  display: flex; align-items: center; gap: var(--space-2); margin: 0;
+  font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold);
+  text-transform: uppercase; letter-spacing: var(--tracking-label); color: var(--color-ink-soft);
 }
-.text { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
+.label::before { content: ""; width: 1.25rem; height: 2px; background: var(--color-accent); }
+.text { margin: 0; font-family: var(--font-display); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); }
+.hint { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); }
 .verbs { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-top: var(--space-1); }
 /* The irreversible act sits apart from the two safe ones. */
 .verbs .link { margin-left: auto; }
-.confirm { display: flex; flex-direction: column; gap: var(--space-2); }
+.confirm {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4); background: var(--color-dropped-bg); border-left: 2px solid var(--color-dropped); border-radius: var(--radius-xs);
+}
+.confirm .text { font-family: var(--font-ui); font-size: var(--text-base); color: var(--color-ink); }
 
 .quiet, .danger, .link {
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold);
-  min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-sm); cursor: pointer;
-  display: inline-flex; align-items: center;
+  min-height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-sm); cursor: pointer;
+  display: inline-flex; align-items: center; box-sizing: border-box;
 }
 .quiet { background: transparent; border: 1px solid var(--color-border-control); color: var(--color-ink-soft); }
 .quiet:hover { background: var(--color-paper-raised); color: var(--color-ink); }
 .danger { background: var(--color-dropped); border: 1px solid var(--color-dropped); color: var(--color-paper-raised); }
-.link { background: transparent; border: none; color: var(--color-ink-muted); text-decoration: underline; font-weight: var(--weight-regular); }
+.danger:hover { filter: brightness(0.92); }
+.link { background: transparent; border: none; color: var(--color-ink-muted); text-decoration: underline; text-underline-offset: 3px; font-weight: var(--weight-regular); padding: 0 var(--space-1); }
+.link:hover { color: var(--color-dropped); }
 .quiet:focus-visible, .danger:focus-visible, .link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .quiet:disabled, .link:disabled, .quiet[aria-disabled] { opacity: 0.55; cursor: default; }
 
@@ -31,5 +41,8 @@
 .file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 .file:focus-visible + .quiet { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
-.status { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
+/* A result is never colour alone: a mark and words. */
+.status { display: flex; gap: var(--space-2); align-items: baseline; margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
+.statusMark { flex: none; font-weight: var(--weight-semibold); color: var(--color-accepted); }
 .status[data-tone="refused"] { color: var(--color-dropped); }
+.status[data-tone="refused"] .statusMark { color: var(--color-dropped); }

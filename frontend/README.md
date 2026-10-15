@@ -113,6 +113,13 @@ mid-activity breaks. Page geometry is global in `src/styles/print.css`
 at-rule, so leaving it in the component made the plan govern every print in the
 app. Print the Plan tab of the workbench to judge it.
 
+### `AiWaiting` — every AI step, honestly
+
+One component for proposing objectives, drafting the plan and a student's answer (compact variant): plain
+words with real counts, a live clock, the usual range (`typicalSeconds` from the worker status, else
+`objectives 3–15`, `plan 5–25`, `answer 2–8`), "What the model sees", a true receipt computed from the
+resulting view, and no progress bar. See `../docs/design/waiting-experience.md`.
+
 ## Binding to the confirm-gate core (architecture)
 
 `../confirm-gate/confirm-gate.mjs` and `host-guard.mjs` are imported **directly

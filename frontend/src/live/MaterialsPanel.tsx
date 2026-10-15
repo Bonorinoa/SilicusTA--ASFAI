@@ -12,6 +12,7 @@ import styles from "./OnboardingChat.module.css";
 
 const TEXTLIKE = /\.(txt|md|markdown|vtt|srt|html?|csv)$/i;
 const MAX_FILE = 400_000;
+const MAX_ITEMS = 8;
 
 /** A YouTube link, by host name. Only used to say, before anything is sent, that it needs the local app. */
 const YOUTUBE = /^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/|$)/i;
@@ -37,29 +38,35 @@ export function MaterialsPanel({
   const file = useRef<HTMLInputElement>(null);
   const ids = { name: useId(), text: useId(), url: useId(), file: useId() };
 
-  const add = (m: MaterialInput) => { setItems((xs) => [...xs, m].slice(0, 8)); setNote(null); };
+  // The list is mirrored in a ref so several files added in one go are counted as they land, not as of this render.
+  const held = useRef<MaterialInput[]>([]);
+  const commit = (next: MaterialInput[]) => { held.current = next; setItems(next); };
+  const add = (m: MaterialInput): boolean => {
+    if (held.current.length >= MAX_ITEMS) { setNote("Eight pieces of material is the most for one request. Remove one to add another."); return false; }
+    commit([...held.current, m]); setNote(null);
+    return true;
+  };
 
   const addPasted = () => {
     if (!text.trim() || !name.trim()) { setNote("Give the pasted text a name, then paste it."); return; }
-    add({ name: name.trim().slice(0, 160), text });
-    setName(""); setText("");
+    if (add({ name: name.trim().slice(0, 160), text })) { setName(""); setText(""); }
   };
   const addUrl = () => {
     const u = url.trim();
     if (!u) return;
     if (!youtube && YOUTUBE.test(u)) { setNote("YouTube captions can only be read by the local Silicus app. Paste the transcript as text instead."); return; }
-    add({ url: u });
-    setUrl("");
+    if (add({ url: u })) setUrl("");
   };
   const addFiles = async (list: FileList | null) => {
     for (const f of Array.from(list ?? [])) {
       if (!TEXTLIKE.test(f.name)) { setNote(`${f.name}: only text-like files (.txt, .md, .vtt, .srt, .html) can be read for now. Paste the text instead.`); continue; }
       if (f.size > MAX_FILE) { setNote(`${f.name} is too large. Paste the part you want used.`); continue; }
-      add({ name: f.name, text: await f.text() });
+      if (!add({ name: f.name, text: await f.text() })) break;
     }
     if (file.current) file.current.value = "";
   };
 
+  const urlHint = `${ids.url}-hint`;
   return (
     <section className={styles.composer} aria-label="Course material">
       <span className={styles.who}>Silicus</span>
@@ -75,29 +82,36 @@ export function MaterialsPanel({
       {items.length > 0 ? (
         <ul className={styles.turns} aria-label="Material added">
           {items.map((m, i) => (
-            <li key={i} className={styles.pair}>
+            <li key={i} className={`${styles.pair} ${styles.materialRow}`}>
               <p className={styles.said}>{"url" in m ? m.url : `${m.name} · ${m.text.length.toLocaleString()} characters`}</p>
-              <button type="button" className={styles.edit} onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))}
+              <button type="button" className={styles.edit} onClick={() => commit(held.current.filter((_, j) => j !== i))}
                 aria-label={`Remove ${"url" in m ? m.url : m.name}`}>Remove</button>
             </li>
           ))}
         </ul>
       ) : null}
 
-      <label className={styles.prompt} htmlFor={ids.url}>A public link</label>
-      {youtube ? null : <p className={styles.kept}>YouTube captions need the local Silicus app; paste a transcript instead.</p>}
-      <input id={ids.url} className={styles.box} type="url" value={url} autoComplete="off" placeholder="https://…"
-        onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addUrl(); } }} />
-      <div className={styles.verbs}><button type="button" className={styles.quiet} onClick={addUrl} disabled={busy || !url.trim()}>Add this link</button></div>
+      <div className={styles.field}>
+        <label className={styles.fieldLabel} htmlFor={ids.url}>A public link</label>
+        <input id={ids.url} className={styles.box} type="url" value={url} autoComplete="off" placeholder="https://…"
+          aria-describedby={youtube ? undefined : urlHint}
+          onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addUrl(); } }} />
+        {youtube ? null : <p className={styles.fieldHint} id={urlHint}>YouTube captions need the local Silicus app; paste a transcript instead.</p>}
+        <div className={styles.verbs}><button type="button" className={styles.quiet} onClick={addUrl} disabled={busy || !url.trim()}>Add this link</button></div>
+      </div>
 
-      <label className={styles.prompt} htmlFor={ids.file}>A text file</label>
-      <input id={ids.file} ref={file} type="file" multiple accept=".txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv"
-        onChange={(e) => void addFiles(e.target.files)} />
+      <div className={styles.field}>
+        <label className={styles.fieldLabel} htmlFor={ids.file}>A text file</label>
+        <input id={ids.file} ref={file} className={styles.fileInput} type="file" multiple accept=".txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv"
+          onChange={(e) => void addFiles(e.target.files)} />
+      </div>
 
-      <label className={styles.prompt} htmlFor={ids.name}>Or paste text — name it first</label>
-      <input id={ids.name} className={styles.box} type="text" value={name} maxLength={160} autoComplete="off" onChange={(e) => setName(e.target.value)} />
-      <textarea id={ids.text} aria-label="Pasted text" className={`${styles.box} ${styles.boxTall}`} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
-      <div className={styles.verbs}><button type="button" className={styles.quiet} onClick={addPasted} disabled={busy}>Add this text</button></div>
+      <div className={styles.field}>
+        <label className={styles.fieldLabel} htmlFor={ids.name}>Or paste text — name it first</label>
+        <input id={ids.name} className={styles.box} type="text" value={name} maxLength={160} autoComplete="off" placeholder="A name, for example Lesson notes" onChange={(e) => setName(e.target.value)} />
+        <textarea id={ids.text} aria-label="Pasted text" className={`${styles.box} ${styles.boxTall}`} rows={4} value={text} placeholder="Paste the text here" onChange={(e) => setText(e.target.value)} />
+        <div className={styles.verbs}><button type="button" className={styles.quiet} onClick={addPasted} disabled={busy}>Add this text</button></div>
+      </div>
 
       {note ? <p className={styles.refusal} role="status">{note}</p> : null}
       <button type="button" className={styles.send} disabled={busy || items.length === 0} onClick={() => onPropose(items)}>

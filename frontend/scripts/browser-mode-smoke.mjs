@@ -13,6 +13,11 @@
  *
  * State is asserted on the RECORD (IndexedDB, read in the page) and re-verified in Node with the host's own
  * chain and backup modules over real node:crypto, so a log written by the browser verifies on the Node host.
+ * The model is slow on purpose: the mocked /api/worker takes SILICUS_SMOKE_PLAN_MS (default 2000) to draft a plan and 1.5 s to
+ * answer a student, so the run also asserts the WAITING EXPERIENCE: the plain-words title with the real count, a live clock, the
+ * typical range, one polite live region, "What the model sees" matching the request that really left the page (and never
+ * the teacher's label), a true receipt afterwards, the passcode pause, and still motion under prefers-reduced-motion.
+ * SILICUS_SMOKE_PLAN_MS=28000 also holds the plan past its usual range to assert (and capture) the "taking longer" line.
  * Also asserted: no /api/courses request ever leaves the page, material text is never stored, student chat
  * writes nothing, the passcode lives in sessionStorage only, 0 CSP violations, 0 console errors.
  *
@@ -65,6 +70,11 @@ const HEADERS = Object.fromEntries(vercel.headers.find((h) => h.source === "/(.*
 check("serving with vercel.json's strict CSP", /default-src 'self'; script-src 'self'/.test(HEADERS["Content-Security-Policy"] ?? ""));
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".json": "application/json", ".svg": "image/svg+xml" };
 
+const PLAN_MS = Number(process.env.SILICUS_SMOKE_PLAN_MS ?? 2000);
+const STUDENT_MS = 1500;
+/** How long the mocked model "thinks", by the kind of prompt (host/worker.mjs builds each prompt's first line). */
+const modelDelay = (prompt) => prompt.startsWith("Draft one lesson plan") ? PLAN_MS : prompt.startsWith("You are a study helper") ? STUDENT_MS : 0;
+
 const api = { calls: [], workerBodies: [] };
 const readBody = (req) => new Promise((r) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => r(Buffer.concat(c).toString("utf8"))); });
 const sendJson = (res, status, obj, extra = {}) => { res.writeHead(status, { ...HEADERS, "content-type": "application/json", ...extra }); res.end(JSON.stringify(obj)); };
@@ -81,6 +91,7 @@ const server = createServer(async (req, res) => {
       const parsed = JSON.parse(body || "{}");
       api.workerBodies.push(body);
       const prompt = parsed?.messages?.[0]?.content ?? "";
+      if (modelDelay(prompt) > 0) await sleep(modelDelay(prompt));
       return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(modelReply(prompt)) } }] });
     }
     return sendJson(res, 404, { error: { code: "NOT_FOUND" } });
@@ -156,6 +167,24 @@ const shot = async (name, selector = null) => {
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
 try {
+  // ---- first impression: the BARE url lands on the live course, in the product's own voice
+  await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector("h1") !== null);
+  const first = await page.evaluate(() => ({
+    title: document.title, h1: document.querySelector("h1")?.textContent ?? "", header: document.querySelector("header")?.innerText ?? "",
+    icon: document.querySelector('link[rel="icon"]')?.getAttribute("href") ?? "", tabs: document.querySelectorAll('nav[aria-label="Workbench sections"]').length,
+    design: [...document.querySelectorAll("footer a")].map((a) => [a.textContent, a.getAttribute("href")]),
+  }));
+  check("the bare URL lands on the live course, not the demo decision card", /Build a course, one decision at a time/.test(first.h1) && (await page.$('section[aria-label="Objective proposals"]')) === null, first.h1);
+  check("the page is titled as the product, with an inline SVG favicon", /^Silicus TA/.test(first.title) && /^data:image\/svg\+xml,/.test(first.icon), first.title);
+  check("the header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
+  check("the component workbench stays reachable through a discreet footer 'Design system' link", first.design.some(([t, h]) => t === "Design system" && h === "#/decision"));
+  await shot("00-first-impression");
+  await page.click('footer a[href="#/decision"]');
+  await poll(() => page.evaluate(() => document.querySelector('section[aria-label="Objective proposals"]') !== null));
+  check("the Design system link opens the workbench, with a way back to the course", await page.evaluate(() => [...document.querySelectorAll("nav a")].some((a) => a.textContent === "Back to the course")));
+  await page.evaluate(() => { location.hash = "#/live"; });
+
   await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("button") !== null);
   check("the Live tab opens with no host (no developer 'host is not reachable' text)", !(await bodyHas("host is not reachable")) && (await bodyHas("What should we call this course")));
@@ -217,13 +246,20 @@ try {
   }, MATERIAL_TEXT);
   await clickText("Add this text");
   await poll(() => bodyHas("Lesson notes ·"));
+  await shot("06-material-panel", 'section[aria-label="Course material"]');
   await clickText("Propose objectives from my materials");
   await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
   check("an AI action asks for the demo passcode", await bodyHas("Demo passcode"));
-  await shot("02-passcode");
+  check("while the passcode dialog is open the waiting card holds its clock and says why",
+    await page.evaluate(() => /Waiting for your passcode/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? "")));
+  await shot("02-passcode", '[role="dialog"]');
   await page.type('[role="dialog"] input[type="password"]', PASSCODE);
   await clickText("Continue");
   await poll(async () => kinds(await stored()).includes("objectives.proposed"), 15000);
+  const objReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
+  check("proposing objectives ends with a true receipt: the proposals, none confirmed, what was read",
+    /3 proposals\. None is confirmed until you decide\./.test(objReceipt) && /Drawn from 1 material/.test(objReceipt), objReceipt.replace(/\n+/g, " | "));
+  await shot("11-receipt-proposals", 'section[data-phase="done"][data-variant="card"]');
   check("the worker proposed objectives through /api/worker, with the passcode header",
     api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
   let s = await stored();
@@ -248,8 +284,43 @@ try {
 
   // ---- plan: draft, confirm
   await poll(() => bodyHas("Draft the plan from your confirmed objectives"));
+  const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
+  check("three confirmed objectives are on the page to be sent", confirmedStatements.length === 3 && confirmedStatements.every(Boolean), String(confirmedStatements.length));
+  const planBodiesBefore = api.workerBodies.length;
   await clickText("Draft the plan from your confirmed objectives");
-  await poll(async () => kinds(await stored()).includes("plan.proposed"), 15000);
+  await page.waitForSelector('section[data-phase="running"][data-variant="card"]', { timeout: 5000 });
+  const running = () => page.evaluate(() => document.querySelector('section[data-phase="running"][data-variant="card"]')?.innerText ?? "");
+  const live = () => page.evaluate(() => [...document.querySelectorAll('section[data-variant="card"] [aria-live="polite"]')].map((n) => n.textContent));
+  check("the waiting experience says in plain words what is happening, with the real count",
+    /Drafting a lesson plan from your 3 confirmed objectives/.test(await running()));
+  check("it states the typical range the documented defaults give: usually 5–25 seconds", /usually 5\u201325 seconds/.test(await running()));
+  const liveAtStart = await live();
+  check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 5 to 25 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
+  check("there is no progress bar and no percentage", !(await page.evaluate(() => !!document.querySelector('section[data-phase="running"] progress, section[data-phase="running"] [role="progressbar"]') || /%/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? ""))));
+  await shot("10-waiting-plan", 'section[data-phase="running"][data-variant="card"]');
+  await page.evaluate(() => { [...document.querySelectorAll('section[data-phase="running"] button')].find((b) => b.textContent.trim() === "What the model sees").click(); });
+  const sees = await page.evaluate(() => { const b = document.querySelector('section[data-phase="running"] button[aria-expanded="true"]'); return b ? document.getElementById(b.getAttribute("aria-controls")).innerText : null; });
+  check("'What the model sees' opens and lists the confirmed statements, the topic, the material names, and what it never sees",
+    !!sees && confirmedStatements.every((t) => sees.includes(t)) && /Photosynthesis/.test(sees) && /Lesson notes/.test(sees) && /What it never sees/i.test(sees), sees === null ? "did not open" : "");
+  await shot("12-waiting-plan-sees", 'section[data-phase="running"][data-variant="card"]');
+  await poll(async () => /\b[1-9] s elapsed/.test(await running()), 8000);
+  check("the elapsed readout is a real clock: it has advanced", true);
+  if (PLAN_MS > 27000) {
+    await poll(async () => /Taking longer than usual/.test(await running()), PLAN_MS);
+    check("past the high end the calm 'taking longer' line appears, and says nothing is lost", /It stops by itself within two minutes, and nothing you have recorded is lost/.test(await running()));
+    await shot("13-waiting-longer", 'section[data-phase="running"][data-variant="card"]');
+  } else {
+    check("before the high end there is no 'taking longer' line", !/Taking longer than usual/.test(await running()));
+  }
+  await poll(async () => kinds(await stored()).includes("plan.proposed"), PLAN_MS + 15000);
+  const planReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
+  check("drafting the plan ends with a true receipt computed from the resulting view",
+    /Checked: \d+ activit(y|ies), each cites only objectives you confirmed \(\d+ citations?\)\./.test(planReceipt) && /It stays a draft until you confirm it\./.test(planReceipt), planReceipt.replace(/\n+/g, " | "));
+  check("it says how long the step took, and the live region announces the finish", /Took\s*\d+ s/.test(planReceipt) && /^Finished after \d+ s\. Checked:/.test((await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? ""))));
+  await shot("14-receipt-plan", 'section[data-phase="done"][data-variant="card"]');
+  const planBody = api.workerBodies.slice(planBodiesBefore).find((b) => b.includes("Draft one lesson plan")) ?? "";
+  check("what the model sees is what left the page: every statement, the topic and the material name were sent; the label was NOT",
+    confirmedStatements.every((t) => planBody.includes(t)) && planBody.includes("Photosynthesis") && planBody.includes("Lesson notes") && !planBody.includes("Ada Lovelace") && !planBody.includes(SECRET));
   await poll(() => bodyHas("How plants eat"));
   check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
   await poll(() => bodyHas("Confirm the lesson plan"));
@@ -280,7 +351,19 @@ try {
   const beforeAsk = JSON.stringify(await stored());
   await page.waitForSelector('section[aria-label="Try it as a student"] input');
   await page.type('section[aria-label="Try it as a student"] input', "What do plants need to make food?");
+  await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   await clickText("Ask");
+  await page.waitForSelector('section[data-variant="compact"][data-phase="running"]', { timeout: 5000 });
+  const compact = await page.evaluate(() => {
+    const el = document.querySelector('section[data-variant="compact"][data-phase="running"]');
+    const word = el.querySelector("span[style]");
+    return { text: el.innerText, motion: el.getAttribute("data-motion"), anim: getComputedStyle(word).animationName, live: el.querySelectorAll('[aria-live="polite"]').length };
+  });
+  check("a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–8 seconds",
+    /Looking in version 1 for an answer/.test(compact.text) && /usually 2\u20138 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
+  check("under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation)", compact.motion === "still" && compact.anim === "none", `${compact.motion} / ${compact.anim}`);
+  await shot("15-waiting-student", 'section[data-variant="compact"][data-phase="running"]');
+  await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
   await poll(() => bodyHas("A plant uses light, water and air to make sugar."), 15000);
   check("the student gets an answer that cites the package", await bodyHas("From Objective 1, Activity 1"));
   check("student chat wrote nothing (IndexedDB and web storage identical before and after)", JSON.stringify(await stored()) === beforeAsk);

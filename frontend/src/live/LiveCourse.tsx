@@ -425,7 +425,7 @@ export function LiveCourse() {
       {passcodeDialog}
       <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
       <header className={styles.stageHeader}>
-        <div>
+        <div className={styles.stageMeta}>
           <h1 className={styles.title}>{view.course.title}</h1>
           <p className={styles.sub}>
             {BROWSER_MODE ? "kept in this browser" : "host"} · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {view.integrity.events} events

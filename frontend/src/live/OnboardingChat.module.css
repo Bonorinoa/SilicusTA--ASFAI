@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  min-width: 0;
   max-width: 40rem;
   padding: var(--space-5) var(--space-5) var(--space-4);
   background: var(--color-paper-raised);
@@ -44,6 +45,7 @@
   line-height: var(--leading-lg);
   letter-spacing: var(--tracking-display);
   color: var(--color-ink);
+  overflow-wrap: anywhere;
 }
 
 .you {
@@ -66,6 +68,7 @@
   line-height: var(--leading-md);
   color: var(--color-ink);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .status {
   margin: 0;
@@ -74,14 +77,16 @@
   font-weight: var(--weight-semibold);
   line-height: var(--leading-base);
   color: var(--color-ink);
+  overflow-wrap: anywhere;
 }
-.step { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); }
+.step { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
 .kept {
   margin: 0;
   font-family: var(--font-ui);
   font-size: var(--text-base);
   line-height: var(--leading-base);
   color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
 }
 
 /* "Recommended" is a typographic weight, not a badge and not a second colour. */
@@ -91,6 +96,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* Every one of these can be a flex item in a row (the material panel sits among the page's
+     buttons): without min-width the widest control inside sets the whole card's width. */
+  min-width: 0;
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-rule);
 }
@@ -115,6 +123,11 @@
   height: 44px;
   resize: none;
   box-shadow: none;
+  /* A text field's own default width is ~20 characters: wider than a 320px column, so it must be
+     allowed to shrink to the column instead of pushing the card past the viewport. */
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 .boxTall { height: auto; min-height: 7.5rem; padding: var(--space-3); }
 
@@ -128,6 +141,9 @@
   min-height: 44px;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  /* A label is never cut off for want of width: the button wraps its own words instead. */
+  max-width: 100%;
+  text-wrap: balance;
 }
 
 .send {
@@ -184,7 +200,7 @@
 .field { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-rule); }
 .fieldLabel { font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-soft); }
 .fieldHint { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); }
-.fileInput { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-soft); }
+.fileInput { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-soft); max-width: 100%; min-width: 0; }
 .fileInput::file-selector-button {
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-ink-soft);
   min-height: 40px; padding: 0 var(--space-4); margin-right: var(--space-3); cursor: pointer;
@@ -195,6 +211,18 @@
 
 /* The standing "on this device" line is reassurance, not the headline: quiet, so the question is what the eye finds. */
 .assurance { font-size: var(--text-xs); font-weight: var(--weight-regular); line-height: var(--leading-xs); color: var(--color-ink-muted); }
-.materialRow { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-4); }
-.materialRow .said { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.materialRow { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); flex-wrap: wrap; }
+.materialRow .said { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
 .materialRow .edit { flex: none; align-self: center; }
+
+/* ---- narrow windows (320px up): the card keeps its measure and its controls stay inside it ---- */
+@media (max-width: 40rem) {
+  .thread, .composer, .asfai, .field { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .thread { padding-top: var(--space-4); padding-bottom: var(--space-3); gap: var(--space-4); min-width: 0; }
+  .turns { gap: var(--space-4); }
+  /* A verb under its field, never beside it: the two-column row has no room to be two columns. */
+  .verbs { gap: var(--space-2); }
+  .send, .quiet { padding-left: var(--space-3); padding-right: var(--space-3); }
+  /* The file chooser's own default width is wider than a narrow column: it takes the column. */
+  .fileInput { width: 100%; }
+}

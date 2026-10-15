@@ -33,3 +33,6 @@
 *.sav
 *.rds
 # --- end model weights & raw data ---
+
+# Vercel CLI link state (project and org ids; local only)
+.vercel

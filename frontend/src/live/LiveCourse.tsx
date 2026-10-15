@@ -22,6 +22,7 @@ import { MaterialsPanel } from "./MaterialsPanel";
 import { StudentChat } from "./StudentChat";
 import { CourseLibrary } from "./CourseLibrary";
 import { buildHandoutHtml, handoutFilename } from "./handout";
+import { VersionDiffPanel } from "./VersionDiffPanel";
 import styles from "./LiveCourse.module.css";
 const CHECKPOINT_LABEL: Record<string, string> = {
   files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
@@ -474,6 +475,8 @@ export function LiveCourse() {
           notice={notice}
         />
       </div>
+
+      {published ? <div className={styles.grid}><VersionDiffPanel versions={view.versions} courseId={view.course.courseId} /></div> : null}
 
       {published ? (
         <div className={styles.grid}>

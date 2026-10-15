@@ -1,0 +1,48 @@
+/* Calm and ruled, like the course library: one quiet panel, a ruled list, status in words first. */
+.panel { border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper-raised); padding: var(--space-4) var(--space-5); }
+.heading { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--leading-lg); font-weight: 600; color: var(--color-ink); }
+.lede { margin: var(--space-1) 0 var(--space-4); font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); }
+.controls { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-4); }
+.field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 14rem; flex: 1 1 14rem; }
+.label { font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted); }
+.select { font-family: var(--font-ui); font-size: var(--text-base); min-height: 44px; padding: 0 var(--space-3); color: var(--color-ink); background: var(--color-paper); border: 1px solid var(--color-border-control); border-radius: var(--radius-sm); }
+.select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.range { margin: 0; font-family: var(--font-display); font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
+.summary { margin: var(--space-1) 0 var(--space-4); font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); }
+.hint { margin: var(--space-1) 0 var(--space-2); font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); font-weight: var(--weight-regular); }
+.empty { margin: var(--space-3) 0 0; padding: var(--space-3) var(--space-4); background: var(--color-sunken); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.sectionHead { margin: var(--space-5) 0 var(--space-1); font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted); }
+.list, .changes, .inline { list-style: none; margin: 0; padding: 0; }
+.item { padding: var(--space-3) 0; border-top: 1px solid var(--color-rule); }
+.item[data-status="unchanged"] .statement, .item[data-status="unchanged"] .itemName { color: var(--color-ink-soft); }
+.itemHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.itemName { font-family: var(--font-display); font-size: var(--text-md); font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+.statement, .same { margin: var(--space-1) 0 0; font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink); overflow-wrap: anywhere; white-space: pre-wrap; }
+.same { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); }
+.sub { margin: var(--space-1) 0 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
+.text { overflow-wrap: anywhere; white-space: pre-wrap; }
+.none { font-style: italic; color: var(--color-ink-muted); }
+
+/* The label carries the meaning; the hue only echoes it. */
+.badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--space-2); border: 1px solid currentColor; border-radius: var(--radius-pill); font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-micro); white-space: nowrap; }
+.badge[data-status="added"] { color: var(--color-accepted); background: var(--color-accepted-bg); }
+.badge[data-status="removed"] { color: var(--color-dropped); background: var(--color-dropped-bg); }
+.badge[data-status="reworded"], .badge[data-status="changed"] { color: var(--color-renamed); background: var(--color-renamed-bg); }
+.badge[data-status="unchanged"] { color: var(--color-ink-muted); background: transparent; border-color: var(--color-rule-strong); font-weight: var(--weight-regular); }
+
+.pair { margin: var(--space-2) 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-3); }
+.side { margin: 0; padding: var(--space-2) var(--space-3); background: var(--color-paper); border-left: 2px solid var(--color-rule-strong); border-radius: var(--radius-xs); }
+.side dt { font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-ink-muted); }
+.side dd { margin: var(--space-1) 0 0; font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink); }
+.changes { margin-top: var(--space-2); }
+.change { padding: var(--space-2) 0 var(--space-2) var(--space-3); border-left: 2px solid var(--color-accent-line); margin-bottom: var(--space-2); }
+.fieldName { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-micro); color: var(--color-ink-soft); }
+.inline { margin: var(--space-1) 0 0; font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink); overflow-wrap: anywhere; }
+.inline li { margin: 0 0 var(--space-1); }
+
+.unchanged { margin-top: var(--space-2); }
+.summaryToggle { font-family: var(--font-ui); font-size: var(--text-base); color: var(--color-ink-soft); cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.summaryToggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

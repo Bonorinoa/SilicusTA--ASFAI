@@ -40,8 +40,12 @@ export const OUTCOMES_KEY = "learning_outcomes";
  * @returns {string[]}
  */
 export function outcomeSentences(raw) {
-  const parts = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split("\n") : [];
-  return parts.map((s) => String(s ?? "").trim()).filter(Boolean);
+  // Every Unicode line terminator ends a line, and control / bidi characters are blanked: an outcome later
+  // appears on a single line of the drafting prompt, and a stray U+2028 must not be able to start a new one.
+  const parts = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/\r\n|[\n\r\u0085\u2028\u2029]/) : [];
+  return parts
+    .map((s) => String(s ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, " ").trim())
+    .filter(Boolean);
 }
 
 /**

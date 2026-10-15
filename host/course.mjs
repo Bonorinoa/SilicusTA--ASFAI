@@ -395,8 +395,11 @@ export class CourseSession {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }
     const label = (from) => {
-      const text = from.length > 0 ? `from ${from.join(", ")}` : "from your materials";
-      return text.length <= 120 ? text : "from your materials";
+      // Always prefixed "from material:". The names come from the teacher or from a web page's own title, and
+      // the labels "from your answer", "from your answer to ASFAI" and "your own objective" are reserved for
+      // the teacher's words: a page titled "your answer" must not make a model's proposal read as theirs.
+      const text = from.length > 0 ? `from material: ${from.join(", ")}` : "from material: (several)";
+      return text.length <= 120 ? text : "from material: (several)";
     };
     const a = at ?? Date.now();
     const event = {

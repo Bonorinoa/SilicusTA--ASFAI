@@ -49,6 +49,7 @@ export class PlanWorker {
   #fetch;
   #zdr;
   #maxTokens;
+  #timeoutMs;
 
   /**
    * `zdr` asks the router to use ONLY zero-data-retention endpoints (OpenRouter's
@@ -57,15 +58,18 @@ export class PlanWorker {
    * `maxTokens` bounds the reply, which also bounds what the router reserves against the account.
    *
    * @param {{url?: string|null, model?: string|null, apiKey?: string|null, fetchImpl?: typeof fetch,
-   *          zdr?: boolean, maxTokens?: number}} [config]
+   *          zdr?: boolean, maxTokens?: number, timeoutMs?: number}} [config]
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000 } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = 60_000 } = {}) {
     this.#url = url ? assertUsableUrl(url) : null;
     this.#model = model ? String(model) : null;
     this.#apiKey = apiKey ? String(apiKey) : null;
     this.#fetch = fetchImpl ?? fetch;
     this.#zdr = zdr === true;
     this.#maxTokens = Number.isInteger(maxTokens) && maxTokens > 0 ? maxTokens : 4000;
+    // A model that never answers must not hold a course hostage: every request to a course runs behind
+    // one lock, so an unbounded wait here would freeze the whole course. The deadline covers the body too.
+    this.#timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 60_000;
   }
 
   /** Is the router told to use zero-data-retention endpoints only? Config, never a credential. */
@@ -119,9 +123,10 @@ export class PlanWorker {
     const headers = { "content-type": "application/json" };
     if (this.#apiKey) headers.authorization = `Bearer ${this.#apiKey}`;
 
+    const signal = AbortSignal.timeout(this.#timeoutMs);
     let res;
     try {
-      res = await this.#fetch(this.#url, { method: "POST", headers, body: JSON.stringify(body) });
+      res = await this.#fetch(this.#url, { method: "POST", headers, body: JSON.stringify(body), signal });
     } catch (e) {
       throw new WorkerError("WORKER_UNREACHABLE", `the drafting worker could not be reached: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -130,7 +135,8 @@ export class PlanWorker {
     let payload;
     try {
       payload = await res.json();
-    } catch {
+    } catch (e) {
+      if (signal.aborted) throw new WorkerError("WORKER_UNREACHABLE", "the drafting worker did not answer in time");
       throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's response was not JSON");
     }
     const content = payload?.choices?.[0]?.message?.content;

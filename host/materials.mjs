@@ -73,15 +73,42 @@ function v4Private(ip) {
   );
 }
 
-/** True for any address a public fetch must never reach. Unknown shapes are refused. */
+/** The eight 16-bit groups of an IPv6 address, or null if it does not parse. Handles :: and a dotted tail. */
+function parseV6(ip) {
+  let s = String(ip).toLowerCase().split("%")[0];
+  const tail = s.match(/^(.*:)(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (tail) {
+    const p = tail.slice(2).map(Number);
+    if (p.some((n) => n > 255)) return null;
+    s = `${tail[1]}${((p[0] << 8) | p[1]).toString(16)}:${((p[2] << 8) | p[3]).toString(16)}`;
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  if (halves.length === 1 && head.length !== 8) return null;
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  if (fill < 0) return null;
+  const g = [...head, ...Array(fill).fill("0"), ...rest].map((h) => (/^[0-9a-f]{1,4}$/.test(h) ? parseInt(h, 16) : NaN));
+  return g.length === 8 && g.every(Number.isInteger) ? g : null;
+}
+
+/**
+ * True for any address a public fetch must never reach. IPv6 is an ALLOW-list: only global unicast
+ * (2000::/3) outside the transition and documentation ranges counts as public. That one rule refuses
+ * every spelling of loopback, link-local, unique-local, site-local, IPv4-mapped (::ffff:a.b.c.d, which
+ * the URL parser rewrites to hex), IPv4-compatible and NAT64, none of which a public page needs.
+ * An unparseable address is refused.
+ */
 export function isPrivateAddress(ip) {
   const v = isIP(ip);
   if (v === 4) return v4Private(ip);
   if (v === 6) {
-    const x = ip.toLowerCase();
-    const mapped = x.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return v4Private(mapped[1]);
-    return x === "::" || x === "::1" || x.startsWith("fc") || x.startsWith("fd") || /^fe[89ab]/.test(x) || x.startsWith("ff");
+    const g = parseV6(ip);
+    if (!g) return true;
+    const inGlobal = g[0] >= 0x2000 && g[0] <= 0x3fff;
+    const transition = g[0] === 0x2002 || (g[0] === 0x2001 && (g[1] === 0 || g[1] === 0x0db8));
+    return !inGlobal || transition;
   }
   return true;
 }
@@ -97,7 +124,7 @@ export async function assertPublicUrl(raw, { lookupImpl = dnsLookup } = {}) {
   if (u.protocol !== "https:") throw new MaterialError("URL_REFUSED", "only https links can be read");
   if (u.username || u.password) throw new MaterialError("URL_REFUSED", "a link with a login in it cannot be read");
   if (u.port && u.port !== "443") throw new MaterialError("URL_REFUSED", "only the standard https port can be read");
-  const host = u.hostname.replace(/^\[|\]$/g, "");
+  const host = u.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
   if (isIP(host)) {
     if (isPrivateAddress(host)) throw new MaterialError("URL_REFUSED", "that address is not a public one");
     return u;
@@ -282,7 +309,7 @@ export async function ytdlpTranscript(id, { cmd, runImpl = defaultRun, tmpRoot =
   const dir = await mkdtemp(join(tmpRoot, "silicus-yt-"));
   try {
     const stdout = await runImpl(cmd, [
-      "--skip-download", "--no-playlist", "--no-warnings", "--no-simulate", "--write-subs", "--write-auto-subs",
+      "--ignore-config", "--skip-download", "--no-playlist", "--no-warnings", "--no-simulate", "--write-subs", "--write-auto-subs",
       "--sub-langs", "en.*,en", "--sub-format", "json3", "--print", "title",
       "-o", join(dir, "%(id)s.%(ext)s"), `https://www.youtube.com/watch?v=${id}`,
     ]);

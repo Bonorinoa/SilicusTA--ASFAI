@@ -115,10 +115,16 @@ export async function retrieveAll(sources, { topic = "", objectives = [], limit 
   const seen = new Set();
   const out = [];
   for (const { s, hits } of settled) {
-    for (const h of hits) {
+    // A source may hand back anything. Look at no more than `limit` of its hits, and keep no more than
+    // `limit` in total, so no source can bloat the prompt or the work done here.
+    for (const h of hits.slice(0, limit)) {
+      if (out.length >= limit) break;
       const c = makeCitation({ ...h, source: s.id });
       if (!c.ref || !c.label) continue;
-      if (!c.ref.startsWith(`${s.namespace}:`)) continue; // a source may only mint refs in its own namespace
+      // A ref is matched exactly and shown on one line in a bracketed prompt entry. Whitespace, control
+      // characters and brackets would let the shown text and the matched text disagree, so refuse them.
+      if (/[\s\u0000-\u001f\u007f-\u009f\u2028\u2029\[\]]/.test(c.ref)) continue;
+      if (!c.ref.startsWith(`${s.namespace}:`) || c.ref.length === s.namespace.length + 1) continue; // its own namespace, and an id after it
       if (seen.has(c.ref)) continue;
       seen.add(c.ref);
       out.push(c);

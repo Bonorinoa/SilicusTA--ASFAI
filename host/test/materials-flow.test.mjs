@@ -120,7 +120,7 @@ test("objectives are proposed from the material, labelled by name, recorded as a
   const r = await post(`${c}/materials/propose`, { materials: [SLIDES] });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.deepEqual(r.json.proposals.map((p) => p.statement), ["Students can explain what an algorithm is.", "Students can follow a short list of steps."]);
-  assert.deepEqual(r.json.proposals.map((p) => p.source), ["from week1-slides.txt", "from week1-slides.txt"]);
+  assert.deepEqual(r.json.proposals.map((p) => p.source), ["from material: week1-slides.txt", "from material: week1-slides.txt"]);
   assert.ok(r.json.proposals.every((p) => p.status === "proposed" && p.id.startsWith("urn:uuid:") && p.kind === "local"), "proposals only: local URN identity, nothing confirmed");
   assert.equal(JSON.stringify(r.json).includes("PURPLE-WALRUS"), false, "the response does not echo the material");
 
@@ -226,7 +226,7 @@ test("a public page is fetched by the host, and a private address is refused bef
   const ok = await post(`${c}/materials/propose`, { materials: [{ url: "https://example.org/ai-intro" }] });
   assert.equal(ok.status, 200, JSON.stringify(ok.json));
   assert.deepEqual(asked, ["https://example.org/ai-intro"]);
-  assert.deepEqual(ok.json.proposals.map((p) => p.source), ["from AI intro", "from AI intro"], "the page title names it");
+  assert.deepEqual(ok.json.proposals.map((p) => p.source), ["from material: AI intro", "from material: AI intro"], "the page title names it");
   assert.equal(ok.json.materials[0].kind, "url");
   assert.match(calls[0], /A model predicts the next word\./);
   assert.equal((await get(c)).json.materialsUsed[0].name, "AI intro");
@@ -250,7 +250,7 @@ test("the whole story with NO typed outcomes and NO ASFAI: material -> proposals
   assert.equal((await post(`${c}/publish`, { text: "Publish the course package." })).status, 200);
   const view = (await get(c)).json;
   assert.deepEqual(view.objectives.map((o) => o.statement).sort(), ["Students can explain what an algorithm is.", "Students can follow and write a short list of steps.", "Students can say why order matters."].sort());
-  assert.deepEqual(view.proposals.map((p) => p.source), ["from week1-slides.txt", "from week1-slides.txt", "your own objective"]);
+  assert.deepEqual(view.proposals.map((p) => p.source), ["from material: week1-slides.txt", "from material: week1-slides.txt", "your own objective"]);
   assert.equal(view.versions.length, 1);
   assert.equal(view.intake.questionsFrom, "local");
   assert.equal((await get(`${c}/verify`)).json.ok, true);

@@ -34,14 +34,22 @@ function parseBody(contentType, text, id) {
 }
 
 export class AsfaiClient {
-  #oauth; #url; #fetch; #session = null; #seq = 0; #ready = false;
+  #oauth; #url; #fetch; #timeoutMs; #session = null; #seq = 0; #ready = false;
 
-  constructor({ oauth, url, fetchImpl = fetch }) { this.#oauth = oauth; this.#url = url; this.#fetch = fetchImpl; }
+  // timeoutMs: every request to a course runs behind one lock, so an ASFAI that never answers would
+  // freeze the course. A deadline turns that into "ASFAI could not be reached" and the course goes on.
+  constructor({ oauth, url, fetchImpl = fetch, timeoutMs = 30_000 }) { this.#oauth = oauth; this.#url = url; this.#fetch = fetchImpl; this.#timeoutMs = timeoutMs; }
 
   async #rpc(method, params, { notification = false, retry = true } = {}) {
     const token = await this.#oauth.accessToken();
     const id = notification ? undefined : ++this.#seq;
-    const res = await this.#fetch(this.#url, {
+    const signal = AbortSignal.timeout(this.#timeoutMs);
+    const timedOut = (e) => (e && (e.name === "TimeoutError" || e.name === "AbortError")) || signal.aborted
+      ? new AsfaiCallError("ASFAI_UNREACHABLE", "ASFAI did not answer in time; the course still works locally") : e;
+    let res;
+    try {
+    res = await this.#fetch(this.#url, {
+      signal,
       method: "POST",
       headers: {
         "content-type": "application/json", accept: "application/json, text/event-stream",
@@ -49,6 +57,7 @@ export class AsfaiClient {
       },
       body: JSON.stringify({ jsonrpc: "2.0", ...(notification ? {} : { id }), method, params }),
     });
+    } catch (e) { throw timedOut(e); }
     if (res.status === 401) {
       this.#ready = false; this.#session = null;
       this.#oauth.invalidate(); // a rejected credential is not "connected", whichever call found out
@@ -56,7 +65,8 @@ export class AsfaiClient {
     }
     if (res.status === 404 && this.#session && retry) { this.#session = null; this.#ready = false; await this.#init(); return this.#rpc(method, params, { notification, retry: false }); }
     const sid = res.headers.get("mcp-session-id"); if (sid) this.#session = sid;
-    const text = await res.text();
+    let text;
+    try { text = await res.text(); } catch (e) { throw timedOut(e); }
     if (notification) return null;
     if (!res.ok) throw new AsfaiCallError("HTTP_" + res.status, `ASFAI returned HTTP ${res.status}`);
     let msg; try { msg = parseBody(res.headers.get("content-type") ?? "", text, id); } catch { throw new AsfaiCallError("BAD_RESPONSE", "ASFAI sent an unreadable response"); }

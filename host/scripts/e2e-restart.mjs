@@ -194,7 +194,7 @@ const refusedUrl = await post(`/api/courses/${c3}/materials/propose`, { material
 check("materials: a private address is refused before anything is fetched", refusedUrl.status === 422 && refusedUrl.json.code === "URL_REFUSED");
 const prop3 = await post(`/api/courses/${c3}/materials/propose`, { materials: [{ name: "week1.txt", text: `An algorithm is a list of steps. ${SECRET}` }] });
 check("materials: the worker proposed objectives, labelled by material, none confirmed",
-  prop3.status === 200 && prop3.json.proposals.length === 2 && prop3.json.proposals.every((p) => p.source === "from week1.txt" && p.status === "proposed"));
+  prop3.status === 200 && prop3.json.proposals.length === 2 && prop3.json.proposals.every((p) => p.source === "from material: week1.txt" && p.status === "proposed"));
 await post(`/api/courses/${c3}/decisions`, { decisions: prop3.json.proposals.map((p) => ({ verb: "accept", proposalId: p.id })), text: "Accept." });
 await post(`/api/courses/${c3}/plan`, {});
 await post(`/api/courses/${c3}/plan/confirm`, { text: "Confirm the lesson plan." });

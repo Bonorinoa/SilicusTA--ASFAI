@@ -13,9 +13,11 @@
  *
  * A missing, unreadable or malformed file is a state (no context), never a crash.
  */
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { KnowledgeSource, makeCitation } from "../knowledge.mjs";
 
+const MAX_BYTES = 2_000_000;   // a hand-edited ontology is small; anything bigger is not one
+const MAX_NODES = 5_000;
 const STOP = new Set(["a", "an", "and", "are", "about", "can", "do", "for", "how", "in", "is", "lesson", "of", "on", "or", "the", "to", "what", "with", "students", "learners", "be", "able"]);
 
 function terms(text) {
@@ -42,8 +44,9 @@ export class LocalOntologySource extends KnowledgeSource {
   async #nodes() {
     if (!this.#file) return [];
     try {
+      if ((await stat(this.#file)).size > MAX_BYTES) return [];
       const doc = JSON.parse(await readFile(this.#file, "utf8"));
-      if (!doc || !Array.isArray(doc.nodes)) return [];
+      if (!doc || !Array.isArray(doc.nodes) || doc.nodes.length > MAX_NODES) return [];
       return doc.nodes.filter((n) => n && typeof n.id === "string" && n.id && typeof n.title === "string" && n.title);
     } catch {
       return [];

@@ -1,0 +1,366 @@
+/**
+ * browser-mode-smoke.mjs — the online build, end to end, in real Chrome: the teacher's browser IS the host.
+ *
+ * Builds the app with VITE_SILICUS_MODE=browser (into a temp dir, so frontend/dist stays the host-mode build the
+ * live smoke serves), serves it with EXACTLY the headers vercel.json sets (strict CSP included), and stands in for
+ * the site's two functions with local mocks that follow their fixed contract (/api/worker: an OpenAI-shaped reply
+ * behind the demo passcode; /api/worker/status; /api/fetch). Then drives the whole story through the UI:
+ *
+ *   name the course -> confirm materials -> answer Silicus's questions -> confirm the outline -> paste material ->
+ *   propose (the passcode is asked for and answered) -> accept the objectives -> draft the plan -> confirm ->
+ *   publish -> a student asks and gets a cited answer -> reload: the course is still there and verifies ->
+ *   export all (a file is downloaded) -> delete all -> a tampered file is refused -> import -> the course is back.
+ *
+ * State is asserted on the RECORD (IndexedDB, read in the page) and re-verified in Node with the host's own
+ * chain and backup modules over real node:crypto, so a log written by the browser verifies on the Node host.
+ * Also asserted: no /api/courses request ever leaves the page, material text is never stored, student chat
+ * writes nothing, the passcode lives in sessionStorage only, 0 CSP violations, 0 console errors.
+ *
+ * Run:  node frontend/scripts/browser-mode-smoke.mjs     (exit 0 = pass)
+ */
+import { spawnSync } from "node:child_process";
+import { createServer } from "node:http";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
+import puppeteer from "puppeteer-core";
+import { modelReply } from "../../host/test/scripted-course.mjs";
+import { verifyRecords } from "../../host/chain.mjs";
+import { readBackup } from "../../host/backup.mjs";
+
+const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
+const REPO = join(HERE, "..");
+const PASSCODE = "smoke-demo-passcode";
+const SECRET = "SAFFRON-HERON-8812";
+const MATERIAL_TEXT = `Plants make their own food from light.\nThe phrase ${SECRET} appears only in these notes.\nLeaves hold the green pigment that catches light.`;
+
+const results = [];
+const check = (name, ok, extra = "") => {
+  const line = `${ok ? "PASS" : "FAIL"}  ${name}${extra ? " — " + extra : ""}`;
+  results.push(line);
+  console.log(line);
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function poll(fn, ms = 12000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    try { const v = await fn(); if (v) return v; } catch { /* retry */ }
+    await sleep(150);
+  }
+  throw new Error("poll timed out");
+}
+
+// ------------------------------------------------------------------ build (browser mode)
+const OUT = mkdtempSync(join(tmpdir(), "silicus-browser-build-"));
+const build = spawnSync("npx", ["vite", "build", "--outDir", OUT, "--emptyOutDir"], { cwd: HERE, env: { ...process.env, VITE_SILICUS_MODE: "browser" }, encoding: "utf8" });
+check("the app builds with VITE_SILICUS_MODE=browser", build.status === 0, build.status === 0 ? "" : build.stderr.slice(-400));
+if (build.status !== 0) process.exit(1);
+const chunks = readdirSync(join(OUT, "assets"));
+check("the browser host is its own chunk in the browser build", chunks.some((f) => /^browserHost-.*\.js$/.test(f)));
+
+// ------------------------------------------------------------------ serve with vercel.json's headers + mock functions
+const vercel = JSON.parse(readFileSync(join(REPO, "vercel.json"), "utf8"));
+const HEADERS = Object.fromEntries(vercel.headers.find((h) => h.source === "/(.*)").headers.map((h) => [h.key, h.value]));
+check("serving with vercel.json's strict CSP", /default-src 'self'; script-src 'self'/.test(HEADERS["Content-Security-Policy"] ?? ""));
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".json": "application/json", ".svg": "image/svg+xml" };
+
+const api = { calls: [], workerBodies: [] };
+const readBody = (req) => new Promise((r) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => r(Buffer.concat(c).toString("utf8"))); });
+const sendJson = (res, status, obj, extra = {}) => { res.writeHead(status, { ...HEADERS, "content-type": "application/json", ...extra }); res.end(JSON.stringify(obj)); };
+
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, "http://x");
+  if (url.pathname.startsWith("/api/")) {
+    const body = await readBody(req);
+    api.calls.push({ method: req.method, path: url.pathname, passcode: req.headers["x-silicus-passcode"] ?? null });
+    if (url.pathname === "/api/worker/status" && req.method === "GET") return sendJson(res, 200, { configured: true, zdr: true, provider: "openrouter", passcodeRequired: true, model: "mock" });
+    if ((url.pathname === "/api/worker" || url.pathname === "/api/fetch") && req.method === "POST") {
+      if (req.headers["x-silicus-passcode"] !== PASSCODE) return sendJson(res, 401, { error: { code: "BAD_PASSCODE" } });
+      if (url.pathname === "/api/fetch") return sendJson(res, 422, { error: { code: "URL_REFUSED" } });
+      const parsed = JSON.parse(body || "{}");
+      api.workerBodies.push(body);
+      const prompt = parsed?.messages?.[0]?.content ?? "";
+      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(modelReply(prompt)) } }] });
+    }
+    return sendJson(res, 404, { error: { code: "NOT_FOUND" } });
+  }
+  const rel = url.pathname === "/" ? "/index.html" : url.pathname;
+  const file = normalize(join(OUT, rel));
+  if (!file.startsWith(OUT) || !existsSync(file)) { res.writeHead(404, HEADERS); return res.end("not found"); }
+  res.writeHead(200, { ...HEADERS, "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
+  res.end(readFileSync(file));
+});
+await new Promise((r) => server.listen(0, "127.0.0.1", r));
+const APP = `http://127.0.0.1:${server.address().port}`;
+
+// ------------------------------------------------------------------ Chrome
+const exe = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"].find((p) => existsSync(p));
+if (!exe) throw new Error("no system chrome found");
+const browser = await puppeteer.launch({ executablePath: exe, headless: "new", args: ["--no-sandbox"] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
+// No server configuration in the public bundle (verifier finding MED-1): no env-variable or key names, nothing key-shaped.
+{
+  const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);
+  const text = walk(OUT).filter((f) => /\.(js|html|css|map)$/.test(f)).map((f) => readFileSync(f, "utf8")).join("\n");
+  const names = [...new Set(text.match(/\b(SILICUS_[A-Z_]+|OPENROUTER_API_KEY|ANTHROPIC_API_KEY)\b/g) ?? [])];
+  check("the built bundle names no server env variable or key", names.length === 0, names.join(", "));
+  check("the built bundle holds nothing key-shaped", !/sk-(or-)?(v1-)?[A-Za-z0-9]{20,}/.test(text));
+}
+
+const DOWNLOADS = mkdtempSync(join(tmpdir(), "silicus-downloads-"));
+const cdp = await page.createCDPSession();
+await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS });
+
+const consoleErrors = [];
+const pageErrors = [];
+page.on("console", (m) => { if (m.type() === "error") { consoleErrors.push(m.text()); console.log(`[console.error] ${m.text()}`); } });
+page.on("pageerror", (e) => { pageErrors.push(e.message); console.log(`[pageerror] ${e.message}`); });
+page.on("response", (r) => { if (r.status() >= 400) console.log(`[http ${r.status()}] ${r.url()}`); });
+await page.evaluateOnNewDocument(() => {
+  window.__csp = [];
+  document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+});
+
+const bodyHas = (t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
+const clickText = (text) => page.evaluate((t) => {
+  const b = [...document.querySelectorAll("button")].find((x) =>
+    (x.textContent ?? "").trim().startsWith(t) || (x.getAttribute("aria-label") ?? "").trim().startsWith(t));
+  if (!b) throw new Error(`no button matching: ${t}`);
+  b.click();
+  return true;
+}, text);
+const setValue = (selector, text) => page.evaluate((sel, text) => {
+  const el = document.querySelector(sel);
+  if (!el) throw new Error(`no element: ${sel}`);
+  const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set;
+  setter.call(el, text);
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}, selector, text);
+/** Everything this origin holds: every IndexedDB value plus both Web Storages. Read IN the page. */
+const stored = () => page.evaluate(async () => {
+  const db = await new Promise((res, rej) => { const q = indexedDB.open("silicus-host"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  const all = (name) => new Promise((res) => { const r = db.transaction(name, "readonly").objectStore(name).getAll(); r.onsuccess = () => res(r.result); });
+  const out = { metas: await all("courses"), events: await all("events"), local: { ...localStorage }, session: { ...sessionStorage } };
+  db.close();
+  return out;
+});
+/** Optional captures for design review: SILICUS_SMOKE_SHOTS=<dir>. */
+const SHOTS = process.env.SILICUS_SMOKE_SHOTS ?? null;
+const shot = async (name, selector = null) => {
+  if (!SHOTS) return;
+  const el = selector ? await page.$(selector) : null;
+  await (el ?? page).screenshot({ path: join(SHOTS, `${name}.png`) });
+};
+const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
+
+try {
+  await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector("button") !== null);
+  check("the Live tab opens with no host (no developer 'host is not reachable' text)", !(await bodyHas("host is not reachable")) && (await bodyHas("What should we call this course")));
+  await shot("01-start");
+  check("a quiet notice says this browser keeps the record", (await bodyHas("This browser keeps the record")) && (await bodyHas("stored in this browser only")));
+
+  // ---- name the course (checkpoint 1)
+  const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
+  await reply("How plants eat", "Record the course title");
+  await page.waitForFunction(() => document.body.innerText.includes("What label should your copy"));
+  await reply("Ada Lovelace", "Record the label");
+  await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+  await reply("Lesson notes", "Record the materials");
+  await poll(async () => (await stored()).metas.length === 1);
+  check("the course is recorded in IndexedDB (not on a server)", true);
+  check("no /api/courses request ever left the page", !api.calls.some((c) => c.path.startsWith("/api/courses")));
+  await poll(() => bodyHas("Confirm the material list"));
+  await clickText("Confirm the material list");
+  await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
+  check("materials confirmed on the record", true);
+
+  // ---- checkpoint 2: Silicus's own questions; ASFAI says it needs the local app
+  await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
+  await shot("01b-intake");
+  check("ASFAI says plainly it needs the local app, with no Connect button",
+    (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
+  const fill = (id, text) => page.evaluate((id, text) => {
+    const ta = document.querySelector(`#intake-${id}`);
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+    setter.call(ta, text);
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+  }, id, text);
+  await fill("topic", "Photosynthesis"); await clickText("Record this answer");
+  await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
+  await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
+  await poll(() => bodyHas("Propose these from my materials instead"));
+  await clickText("Propose these from my materials instead");
+  await poll(() => bodyHas("Confirm the outline"));
+  await clickText("Confirm the outline");
+  await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
+  check("outline confirmed on the record", true);
+
+  // ---- material -> propose (the passcode is asked for)
+  await poll(() => bodyHas("Give me the material"));
+  check("the material panel says YouTube needs the local app", await bodyHas("YouTube captions need the local Silicus app"));
+  check("zero-retention is claimed only because the site's status says zdr: true", await bodyHas("zero-data-retention providers only"));
+  await page.evaluate(() => {
+    const name = [...document.querySelectorAll("label")].find((l) => /Or paste text/.test(l.textContent ?? ""));
+    const input = document.getElementById(name.htmlFor);
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    setter.call(input, "Lesson notes");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.evaluate((text) => {
+    const ta = document.querySelector('textarea[aria-label="Pasted text"]');
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+    setter.call(ta, text);
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+  }, MATERIAL_TEXT);
+  await clickText("Add this text");
+  await poll(() => bodyHas("Lesson notes ·"));
+  await clickText("Propose objectives from my materials");
+  await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
+  check("an AI action asks for the demo passcode", await bodyHas("Demo passcode"));
+  await shot("02-passcode");
+  await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+  await clickText("Continue");
+  await poll(async () => kinds(await stored()).includes("objectives.proposed"), 15000);
+  check("the worker proposed objectives through /api/worker, with the passcode header",
+    api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
+  let s = await stored();
+  check("the passcode is in sessionStorage only", s.session["silicus.demoPasscode"] === PASSCODE
+    && !JSON.stringify(s.local).includes(PASSCODE) && !JSON.stringify(s.metas).includes(PASSCODE) && !JSON.stringify(s.events).includes(PASSCODE));
+  check("the material text went to the model once…", api.workerBodies.some((b) => b.includes(SECRET)));
+  check("…and is in no IndexedDB value, localStorage or sessionStorage", !JSON.stringify(s).includes(SECRET));
+
+  // ---- the teacher decides (accept every proposal)
+  await poll(async () => {
+    const st = await stored();
+    const ks = kinds(st);
+    if (ks.filter((k) => k === "objectives.decided").length >= 3) return true;
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((x) => (x.getAttribute("aria-label") ?? "").trim().startsWith("Accept objective"));
+      if (b && !b.disabled) b.click();
+    });
+    await sleep(400);
+    return null;
+  }, 25000);
+  check("one teacher decision recorded per proposal", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
+
+  // ---- plan: draft, confirm
+  await poll(() => bodyHas("Draft the plan from your confirmed objectives"));
+  await clickText("Draft the plan from your confirmed objectives");
+  await poll(async () => kinds(await stored()).includes("plan.proposed"), 15000);
+  await poll(() => bodyHas("How plants eat"));
+  check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
+  await poll(() => bodyHas("Confirm the lesson plan"));
+  await clickText("Confirm the lesson plan");
+  await poll(async () => kinds(await stored()).includes("plan.confirmed"));
+  check("plan confirmed on the record", true);
+
+  // ---- publish (review -> confirm step -> publish)
+  await poll(async () => {
+    const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
+    if (opened) return true;
+    await page.evaluate(() => {
+      const sec = document.querySelector('section[aria-label*="Course package"]');
+      const armed = !!sec && /ready to seal/i.test(sec.innerText);
+      const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
+      if (btn && armed) btn.click();
+    });
+    await sleep(250);
+    return null;
+  }, 12000);
+  await clickText("Publish version 1");
+  await poll(async () => kinds(await stored()).includes("package.published"));
+  await poll(() => bodyHas("sealed and pinned on this device"));
+  s = await stored();
+  check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
+
+  // ---- a student asks; nothing is written
+  const beforeAsk = JSON.stringify(await stored());
+  await page.waitForSelector('section[aria-label="Try it as a student"] input');
+  await page.type('section[aria-label="Try it as a student"] input', "What do plants need to make food?");
+  await clickText("Ask");
+  await poll(() => bodyHas("A plant uses light, water and air to make sugar."), 15000);
+  check("the student gets an answer that cites the package", await bodyHas("From Objective 1, Activity 1"));
+  check("student chat wrote nothing (IndexedDB and web storage identical before and after)", JSON.stringify(await stored()) === beforeAsk);
+
+  // ---- the record verifies under node:crypto, too
+  s = await stored();
+  const records = s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line));
+  const v = verifyRecords(records);
+  check("the browser-written log verifies on the Node host's chain (node:crypto)", v.ok === true, `${v.events} events`);
+
+  // ---- reload: still there, still verifies
+  await page.reload({ waitUntil: "networkidle0" });
+  await poll(() => bodyHas("How plants eat"));
+  check("after a reload the published course is still there", (await bodyHas("published, version 1")) || (await bodyHas("Version 1")));
+  await poll(() => bodyHas("Verify the event log"));
+  await clickText("Verify the event log");
+  await poll(() => bodyHas("chain intact"));
+  check("after a reload the record verifies", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
+
+  // ---- export all
+  await clickText("Export all courses");
+  const exported = await poll(() => {
+    const f = readdirSync(DOWNLOADS).find((n) => /^silicus-courses-\d{4}-\d{2}-\d{2}\.json$/.test(n));
+    return f ? join(DOWNLOADS, f) : null;
+  }, 10000);
+  const text = readFileSync(exported, "utf8");
+  check("an export file was downloaded", text.length > 100, exported.split("/").at(-1));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot("03-course-top");
+  const back = readBackup(text);
+  check("the export verifies in Node (envelope digest, chain, meta, replay)", back.courses.length === 1 && back.courses[0].events === v.events);
+  check("the export holds no material text", !text.includes(SECRET));
+
+  // ---- delete all (confirmed first)
+  await clickText("Delete all data from this browser");
+  await poll(() => bodyHas("This cannot be undone"));
+  await shot("04-delete-confirm", 'section[aria-label="Where your courses are kept"]');
+  await clickText("Delete everything");
+  await poll(async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
+  await poll(() => bodyHas("What should we call this course"));
+  s = await stored();
+  check("delete all empties IndexedDB, the pins and the passcode", Object.keys(s.local).filter((k) => k.startsWith("silicus.")).length === 0 && !s.session["silicus.demoPasscode"]);
+
+  // ---- a tampered file is refused, whole
+  const input = await page.$('input[type="file"][aria-label="Import courses from an exported file"]');
+  const tampered = join(DOWNLOADS, "tampered.json");
+  writeFileSync(tampered, text.replace("Confirm this lesson plan.", "Confirm a plan I never read."));
+  await input.uploadFile(tampered);
+  await poll(() => bodyHas("does not match its own fingerprint"));
+  await shot("05-tampered", 'section[aria-label="Where your courses are kept"]');
+  check("a tampered export is refused with a clear message, and nothing is written",
+    (await stored()).events.length === 0 && (await bodyHas("Nothing was imported")));
+
+  // ---- import: the course comes back
+  const input2 = await page.$('input[type="file"][aria-label="Import courses from an exported file"]');
+  await input2.uploadFile(exported);
+  await poll(() => bodyHas("Imported 1 course"));
+  await poll(() => bodyHas("How plants eat"));
+  s = await stored();
+  check("import brings the course back, record intact", s.events.length === v.events && verifyRecords(s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line))).head === v.head);
+  await poll(() => bodyHas("Verify the event log"));
+  await clickText("Verify the event log");
+  await poll(() => bodyHas("chain intact"));
+  check("the imported course verifies in the app", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
+
+  // ---- the whole run
+  const csp = await page.evaluate(() => window.__csp);
+  check("0 CSP violations", csp.length === 0, csp.join("; "));
+  check("0 console errors", consoleErrors.length === 0, consoleErrors.join(" | "));
+  check("0 page errors", pageErrors.length === 0, pageErrors.join(" | "));
+  check("the only network calls were the site's functions", api.calls.every((c) => ["/api/worker", "/api/worker/status"].includes(c.path)),
+    [...new Set(api.calls.map((c) => c.path))].join(", "));
+} catch (e) {
+  console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
+  check("smoke run completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
+} finally {
+  await browser.close();
+  server.close();
+}
+
+const failed = results.filter((r) => r.startsWith("FAIL"));
+console.log(`\n${results.length - failed.length}/${results.length} browser-mode checks passed`);
+process.exit(failed.length ? 1 : 0);

@@ -178,6 +178,23 @@ Unchanged or empty rename wording is refused inline with a hint (the gate would
 answer `STATEMENT_UNCHANGED` / `BAD_STATEMENT`), so the teacher never hits a
 protocol error from the editor.
 
+## Two builds: host mode and browser mode
+
+`VITE_SILICUS_MODE` is read at build time (`src/gate/mode.ts`).
+
+- **unset (host mode, the default):** the Live tab is a client of the Node host at `/api` (the vite dev/preview
+  proxy forwards it to 127.0.0.1:8787). All existing tests and `scripts/live-host-smoke.mjs` run this way.
+- **`browser` (the online app; what `vercel.json` builds):** the teacher's browser is the host. `transport.ts`
+  sends the same intents to the same handler in-page (`src/browser/browserHost.ts` over `host/handler.mjs`); the
+  record is kept in IndexedDB; the only network calls are the site's `/api/worker` (model proxy) and `/api/fetch`
+  (guarded link reader), behind a demo passcode kept in sessionStorage. The UI says this browser keeps the
+  record, offers Export all courses / Import / Delete all data from this browser, and says plainly that ASFAI and
+  YouTube need the local app.
+
+```sh
+node scripts/browser-mode-smoke.mjs   # builds browser mode, serves it with vercel.json's headers + mock functions, drives Chrome
+```
+
 ## Workbench & commands
 
 ```sh

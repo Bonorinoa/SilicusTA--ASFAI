@@ -13,10 +13,15 @@ import styles from "./OnboardingChat.module.css";
 const TEXTLIKE = /\.(txt|md|markdown|vtt|srt|html?|csv)$/i;
 const MAX_FILE = 400_000;
 
+/** A YouTube link, by host name. Only used to say, before anything is sent, that it needs the local app. */
+const YOUTUBE = /^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/|$)/i;
+
 export function MaterialsPanel({
-  busy, zdr, onPropose,
+  busy, zdr, youtube = true, onPropose,
 }: {
   busy: boolean;
+  /** Can this host read YouTube captions? The online app cannot (it needs the local app's tools). */
+  youtube?: boolean;
   /**
    * Is the worker told to use zero-data-retention endpoints only? Config, from the host. Only an
    * explicit true earns the zero-retention sentence: anything else says the plain truth.
@@ -42,6 +47,7 @@ export function MaterialsPanel({
   const addUrl = () => {
     const u = url.trim();
     if (!u) return;
+    if (!youtube && YOUTUBE.test(u)) { setNote("YouTube captions can only be read by the local Silicus app. Paste the transcript as text instead."); return; }
     add({ url: u });
     setUrl("");
   };
@@ -59,7 +65,7 @@ export function MaterialsPanel({
       <span className={styles.who}>Silicus</span>
       <p className={styles.prompt}>Give me the material and I will propose the objectives.</p>
       <p className={styles.kept}>
-        Paste text, add a text file, or paste a link to a public web page or a YouTube video. You decide every
+        Paste text, add a text file, or paste a link to a public web page{youtube ? " or a YouTube video" : ""}. You decide every
         objective afterwards. The material stays in this tab only: it is not saved, and it is sent once to the
         drafting worker{zdr === true
           ? ", which is set to zero-data-retention providers only"
@@ -79,6 +85,7 @@ export function MaterialsPanel({
       ) : null}
 
       <label className={styles.prompt} htmlFor={ids.url}>A public link</label>
+      {youtube ? null : <p className={styles.kept}>YouTube captions need the local Silicus app; paste a transcript instead.</p>}
       <input id={ids.url} className={styles.box} type="url" value={url} autoComplete="off" placeholder="https://…"
         onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addUrl(); } }} />
       <div className={styles.verbs}><button type="button" className={styles.quiet} onClick={addUrl} disabled={busy || !url.trim()}>Add this link</button></div>

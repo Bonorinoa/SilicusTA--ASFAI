@@ -6,7 +6,13 @@
  * the teacher turn and runs the confirm-gate. The UI never holds the gate, never
  * mints provenance, and never decides anything locally — a refusal comes back as
  * an error carrying the gate's own code/message.
+ *
+ * Two hosts, one API. By default (host mode) intents go over HTTP to the Node host at /api (through the
+ * vite proxy). Built with VITE_SILICUS_MODE=browser, the SAME intents go to the same handler running in
+ * this page (src/browser/browserHost.ts, over host/handler.mjs), which keeps the record in IndexedDB.
+ * Same paths, same bodies, same {status, json} answers, same errors: nothing above this line can tell.
  */
+import { BROWSER_MODE } from "./mode";
 import type { CourseAnchor } from "./pin";
 import type {
   LessonPlanView, ObjectiveCiteView, PackageVersionView, PlanInvalidationView,
@@ -124,7 +130,8 @@ export interface HostView {
   integrity: { events: number; head: string };
 }
 
-export interface AsfaiStatus { connected: boolean; expiresAt: number | null; scope: string | null; canRefresh: boolean }
+/** `available: false` means this host does not offer ASFAI at all (the online build): say so, offer no button. */
+export interface AsfaiStatus { connected: boolean; expiresAt: number | null; scope: string | null; canRefresh: boolean; available?: boolean }
 export interface PlanValidation { planId: string; valid: boolean; issues: string[]; at: number }
 
 /** One course in the library: a summary, never content. `progress.error` means its record needs attention. */
@@ -149,20 +156,31 @@ export class HostError extends Error {
 
 const BASE = "/api";
 
+export { BROWSER_MODE };
+
+function refusal(json: Record<string, unknown> | null, fallback: string): HostError {
+  return new HostError(
+    String(json?.message ?? fallback),
+    json?.code ? String(json.code) : undefined,
+    Array.isArray(json?.blockers) ? (json.blockers as string[]) : undefined,
+  );
+}
+
 async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+  if (BROWSER_MODE) {
+    const { browserHost } = await import("../browser/browserHost");
+    const out = await (await browserHost()).handle({ method, path: BASE + path, body });
+    const json = (out.json ?? null) as Record<string, unknown> | null;
+    if (out.status < 200 || out.status >= 300) throw refusal(json, String(out.status));
+    return json as unknown as T;
+  }
   const res = await fetch(BASE + path, {
     method,
     headers: body === undefined ? undefined : { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!res.ok) {
-    throw new HostError(
-      String(json?.message ?? `${res.status} ${res.statusText}`),
-      json?.code ? String(json.code) : undefined,
-      Array.isArray(json?.blockers) ? (json.blockers as string[]) : undefined,
-    );
-  }
+  if (!res.ok) throw refusal(json, `${res.status} ${res.statusText}`);
   return json as unknown as T;
 }
 
@@ -200,7 +218,7 @@ export const host = {
   /** The OSS WORKER drafts the plan from the teacher's confirmed objectives; the UI sends no body. */
   proposePlan: (id: string) => call("POST", `/courses/${enc(id)}/plan`, {}),
   /** Is a drafting worker configured? Config only, never a credential. */
-  workerStatus: () => call<{ configured: boolean; zdr?: boolean; provider?: string }>("GET", "/worker/status"),
+  workerStatus: () => call<{ configured: boolean; zdr?: boolean; provider?: string; passcodeRequired?: boolean }>("GET", "/worker/status"),
   /** The teacher's material goes IN; the WORKER proposes objectives. The host keeps names and digests, never the text. */
   proposeFromMaterials: (id: string, b: { materials: MaterialInput[] }) =>
     call<{ proposals: ProposalView[]; materials: { name: string; chars: number; kind: string }[]; skipped: { name: string; reason: string }[] }>(

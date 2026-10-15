@@ -51,6 +51,7 @@ export class PlanWorker {
   #maxTokens;
   #timeoutMs;
   #provider;
+  #configHint;
 
   /**
    * `zdr` asks the router to use ONLY zero-data-retention endpoints (OpenRouter's
@@ -65,12 +66,15 @@ export class PlanWorker {
    * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
    * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = 60_000, provider = "openai" } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = 60_000, provider = "openai", configHint = "" } = {}) {
+    // How to configure this worker is the TRANSPORT's business (the Node host passes its env-variable hint); this module
+    // is shared with the browser bundle, so it names no server setting itself.
+    this.#configHint = configHint ? ` (${configHint})` : "";
     if (provider !== "openai" && provider !== "anthropic") {
       throw new WorkerError("WORKER_BAD_CONFIG", `unknown worker provider: ${String(provider)}`);
     }
     if (provider === "anthropic" && zdr === true) {
-      throw new WorkerError("WORKER_BAD_CONFIG", "zero-data-retention routing is not available on the Anthropic API wire; unset SILICUS_WORKER_ZDR or use an OpenRouter worker");
+      throw new WorkerError("WORKER_BAD_CONFIG", "zero-data-retention routing is not available on the Anthropic API wire; turn zero-retention off or use an OpenRouter worker");
     }
     this.#provider = provider;
     this.#url = url ? assertUsableUrl(url) : null;
@@ -115,7 +119,7 @@ export class PlanWorker {
     if (!this.enabled) {
       throw new WorkerError(
         "WORKER_NOT_CONFIGURED",
-        "no drafting worker is configured (set SILICUS_WORKER_URL and SILICUS_WORKER_MODEL)",
+        `no drafting worker is configured${this.#configHint}`,
       );
     }
     if (objectives.length === 0) {
@@ -151,6 +155,9 @@ export class PlanWorker {
     try {
       res = await this.#fetch(this.#url, { method: "POST", headers, body: JSON.stringify(body), signal });
     } catch (e) {
+      // A fetchImpl that refuses with its own WorkerError (the browser host's passcode-carrying fetch maps the
+      // site function's "no credits" / "busy" / "not set up" to one) keeps its code and words.
+      if (e instanceof WorkerError) throw e;
       throw new WorkerError("WORKER_UNREACHABLE", `the drafting worker could not be reached: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (!res.ok) throw new WorkerError("WORKER_UNREACHABLE", `the drafting worker answered ${res.status}`);
@@ -176,7 +183,7 @@ export class PlanWorker {
 
   #requireEnabled() {
     if (!this.enabled) {
-      throw new WorkerError("WORKER_NOT_CONFIGURED", "no drafting worker is configured (set SILICUS_WORKER_URL and SILICUS_WORKER_MODEL)");
+      throw new WorkerError("WORKER_NOT_CONFIGURED", `no drafting worker is configured${this.#configHint}`);
     }
   }
 

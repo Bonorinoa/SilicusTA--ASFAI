@@ -201,6 +201,8 @@
 .edit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .quiet {
+  /* Also used as the label that drives the hidden file chooser, so it must be a box, not inline. */
+  display: inline-flex; align-items: center;
   padding: 0 var(--space-3);
   background: transparent;
   border: 1px solid var(--color-border-control);
@@ -222,14 +224,11 @@
 .field { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-rule); }
 .fieldLabel { font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-soft); }
 .fieldHint { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); }
-.fileInput { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-soft); max-width: 100%; min-width: 0; }
-.fileInput::file-selector-button {
-  font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-ink-soft);
-  min-height: 40px; padding: 0 var(--space-4); margin-right: var(--space-3); cursor: pointer;
-  background: transparent; border: 1px solid var(--color-border-control); border-radius: var(--radius-sm);
-}
-.fileInput::file-selector-button:hover { background: var(--color-paper); color: var(--color-ink); }
-.fileInput:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+/* The file chooser is driven by a quiet button instead of the browser's own control, so no width can
+   truncate its status text. Kept in the accessibility tree and out of the layout, like the record
+   band's Import; the focus ring moves onto the button that drives it. */
+.fileHidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.fileHidden:focus-visible + .quiet { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* The standing "on this device" line is reassurance, not the headline: quiet, so the question is what the eye finds. */
 .assurance { font-size: var(--text-xs); font-weight: var(--weight-regular); line-height: var(--leading-xs); color: var(--color-ink-muted); }
@@ -245,6 +244,4 @@
   /* A verb under its field, never beside it: the two-column row has no room to be two columns. */
   .verbs { gap: var(--space-2); }
   .send, .quiet { padding-left: var(--space-3); padding-right: var(--space-3); }
-  /* The file chooser's own default width is wider than a narrow column: it takes the column. */
-  .fileInput { width: 100%; }
 }

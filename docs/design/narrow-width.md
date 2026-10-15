@@ -58,6 +58,7 @@ belong to the parallel round.
 | 4 | Course library row | 320 px | Row content 214 > box 182 | The row's text column had no `min-width: 0`, so the long title's minimum width pushed the row |
 | 5 | Materials panel | 320 px | The whole section: left 52 → right **328** (276 px) where 216 px was available; the file input alone was 276 px | `input[type=file]`'s own default width set the card's minimum, and the panel — a flex item in a row of buttons — could not shrink below it |
 | 6 | Pinned copies row | 380 px | Status span left 290 → right **402**; row content 328 > box 234 | `.pinRow` is a four-column grid, `3rem 9rem 7rem 1fr` — 340 px of fixed columns, wider than the viewport |
+| 7 | Material panel, file chooser | 320 px | The browser's own "No file chosen" status truncated to **`N...n`** | Chrome's native file control has no room for its status text in a ~190 px column. Not caught by the harness: the text lives in the control's shadow DOM, so no `scrollWidth` reports it — found by looking at the screenshot |
 
 | State | 320 | 380 | 480 | 768 | 1440 |
 |---|---|---|---|---|---|
@@ -111,6 +112,21 @@ digest and what it says.
 the cards' from 20px to 16px, and the page's vertical pauses shrink — so a 320px window keeps a ~190px
 measure inside the card and a ~224px column on the page instead of spending 60% of its width on margins.
 
+**The file chooser is a house-styled button.** The browser's own control cannot survive a narrow column: at
+320px Chrome truncated its "No file chosen" status to `N...n`. It is now out of the layout and driven by a
+quiet **Choose a file** label — the same pattern the record band already uses for *Import* — so no width can
+truncate it, and the chosen file still appears by name in the list above as soon as it lands. The focus ring
+moves onto the button that drives it.
+
+## The wide screen did not move
+
+The harness records every surface's bounding box, so this is exact rather than a matter of looking: at
+**1440px the geometry is identical** between the pre-fix code and this branch, in all five states (landing,
+intake question, materials panel, full live course, delete confirm) — the same left and right edge for every
+surface. Of the four full-page screenshots the browser smoke takes at 1440px, three are byte-identical
+between the two builds; the fourth (`03-course-top.png`) differs only in the data each run mints — a fresh
+course UUID, pin digest and timeline timestamps — not in any layout band.
+
 ## Before / after
 
 | State | Width | `scrollWidth` vs `clientWidth` | Overflowing on my surfaces |
@@ -158,16 +174,17 @@ the page, so their content re-sets a little earlier — and the wide design is u
 
 ## What is held by a test
 
-`frontend/src/live/narrow-width.test.tsx` — 10 tests. jsdom applies no CSS-module rules and no media queries,
+`frontend/src/live/narrow-width.test.tsx` — 12 tests. jsdom applies no CSS-module rules and no media queries,
 so the layout itself is proved in real Chrome by the harness; what is pinned here is the contract that made
 the narrow window broken, so it cannot come back quietly:
 
 - the masthead's promise is never hidden by a breakpoint, and the masthead wraps;
 - one narrow breakpoint (`40rem`) in every sheet it touches;
 - the classes holding the teacher's own words declare `overflow-wrap: anywhere`;
-- no control declares a width without `max-width: 100%` (text fields and the file chooser take the column);
+- no control declares a width without `max-width: 100%`; text fields take the column;
 - the wrappers that can sit in a row of buttons declare `min-width: 0`;
 - the pin row has a stacked narrow fallback; the steps line has its numbered fallback;
+- the file chooser is out of the layout and driven by a label (the truncation the harness cannot see);
 - **the honesty copy is byte-for-byte what it was** on the surfaces touched here — the material's retention
   sentence, the plain truth when the worker is not zero-retention, and the student chat's "Asking here is not
   evidence of learning, and nothing you ask is saved."
@@ -179,6 +196,11 @@ assurance line, the onboarding's "on this device" and "not sent to ASFAI" lines,
 retention paragraph, the student chat's not-evidence sentence, the record band's "this browser keeps the
 record". The only text that moves is the steps line's arrows becoming the list's own numbers below 40rem,
 which is typesetting, not wording.
+
+The one new string is **"Choose a file"**, the label that now drives the file chooser (it replaces the
+browser's own "Choose Files / No file chosen" control, which no width could keep whole). It names the act and
+nothing else — no claim about what happens to the file, because the panel's retention paragraph above it
+already says that, unchanged.
 
 ## Notes for the next round
 

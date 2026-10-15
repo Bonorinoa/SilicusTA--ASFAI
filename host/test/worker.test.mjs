@@ -353,3 +353,9 @@ test("workerFromEnv: Anthropic defaults (URL, model, ANTHROPIC_API_KEY), OpenRou
   assert.throws(() => workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "k", SILICUS_WORKER_ZDR: "1" }), { code: "WORKER_BAD_CONFIG" });
   assert.equal(workerFromEnv({ SILICUS_WORKER_PROVIDER: "anthropic" }).enabled, true, "enabled means url + model; the key is only needed when a call is made");
 });
+
+test("a real model echoes the prompt's [brackets] around a cited id: that still matches, and nothing else is loosened", async () => {
+  const items = [{ id: "objective:1", label: "Objective 1", text: "x" }, { id: "activity:1", label: "Activity 1", text: "y" }];
+  const { worker } = await workerWith({ answer: "Steps.", cites: ["[objective:1]", " [activity:1] ", "objective:1", "[[objective:1]]", "[objective:ghost]", "[objective:1", "(objective:1)", "[ ]"] });
+  assert.deepEqual(await worker.answerStudent({ question: "q", items }), { answer: "Steps.", cites: ["objective:1", "activity:1"] });
+});

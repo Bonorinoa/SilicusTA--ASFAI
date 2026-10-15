@@ -385,6 +385,11 @@ function validateAnswer(raw, items) {
   const answer = clean(raw?.answer, MAX_ANSWER);
   if (!answer) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no answer");
   const known = new Set(items.map((i) => i.id));
-  const cites = [...new Set((Array.isArray(raw?.cites) ? raw.cites : []).map(String).filter((c) => known.has(c)))];
+  // The prompt shows each id as "[objective:1]", and real models echo the brackets back. Tolerate exactly that
+  // one cosmetic: trim, then strip one surrounding bracket pair. The id must still match a real one EXACTLY,
+  // so this never admits a citation the host did not hand out (without it, every answer from a real model
+  // fell back to "ask your teacher": safe, but useless).
+  const unbracket = (c) => String(c).trim().replace(/^\[([^\[\]]+)\]$/, "$1").trim();
+  const cites = [...new Set((Array.isArray(raw?.cites) ? raw.cites : []).map(unbracket).filter((c) => known.has(c)))];
   return { answer, cites };
 }

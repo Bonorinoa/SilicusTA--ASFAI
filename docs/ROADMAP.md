@@ -65,7 +65,8 @@ live browser 50/50):
 
 Open gaps, worst first:
 
-1. **The live worker has not run through the host's own HTTP client.** (The real prompts and validators were run
+0. **First live run through the real host (2026-10-14), free OpenRouter model `nvidia/nemotron-3-super-120b-a12b:free`, ZDR off, public YouTube lecture:** 5 objectives proposed in about 20 s, a 4-activity plan drafted and validated in about 20-35 s, published, and a student question answered grounded with citations; an out-of-scope question and a "tell me I passed" both fell back to "ask your teacher"; the log verifies. It found a real bug: the model echoed the prompt's `[objective:1]` brackets, so every citation failed the exact-id match and every answer fell back (safe but useless). Fixed (one bracket pair is stripped; the id must still match exactly). Free models are not zero-retention: public material only.
+1. **(Superseded by item 0 for the OpenRouter wire.) The live worker has not run through the host's own HTTP client.** (The real prompts and validators were run
    against real Claude Sonnet 5.5 on 2026-10-14 through Hermes' credentials: 8 objectives proposed from a
    public lecture's 18,430-character captions in 11 s, a 5-activity plan that passed validation in 15 s, and
    three student questions answered in about 5 s each: one grounded and cited, one out-of-scope falling back to

@@ -15,6 +15,9 @@
 /** The label the UI shows beside a derived proposal. It must be the truth. */
 export const SOURCE_FROM_ANSWERS = "from your answer to ASFAI";
 
+/** The same, when the teacher answered the host's own questions and nothing left the machine. */
+export const SOURCE_FROM_LOCAL_ANSWERS = "from your answer";
+
 /** The question id whose answer is the teacher's objective list. */
 export const OUTCOMES_KEY = "learning_outcomes";
 

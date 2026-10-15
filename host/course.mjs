@@ -24,7 +24,7 @@ import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gat
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { CourseStore } from "./store.mjs";
 import { LessonIntake } from "./intake.mjs";
-import { objectivesFromAnswers, SOURCE_FROM_ANSWERS } from "./proposer.mjs";
+import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "./proposer.mjs";
 import { digestOf } from "./archive.mjs";
 
 const CHANNEL = "silicus-ui";
@@ -333,14 +333,17 @@ export class CourseSession {
         ok: false,
         code: "NO_TEACHER_OUTCOMES",
         reason:
-          "the teacher has not answered ASFAI's outcomes question, so there is nothing of theirs to propose",
+          "the teacher has not answered the outcomes question, so there is nothing of theirs to propose",
       };
     }
+    // The label is frozen into the proposal event, so a later ASFAI consult cannot
+    // retroactively rewrite where an earlier proposal came from.
+    const source = this.#intake.sentToAsfai() ? SOURCE_FROM_ANSWERS : SOURCE_FROM_LOCAL_ANSWERS;
     const a = at ?? Date.now();
     const event = {
       kind: "objectives.proposed",
       items,
-      sources: items.map(() => SOURCE_FROM_ANSWERS),
+      sources: items.map(() => source),
       assistantText: null,
       at: a,
     };

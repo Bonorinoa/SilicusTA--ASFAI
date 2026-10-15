@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { objectivesFromAnswers, outcomeSentences, SOURCE_FROM_ANSWERS } from "../proposer.mjs";
+import { objectivesFromAnswers, outcomeSentences, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "../proposer.mjs";
 
 test("each teacher outcome sentence becomes one local proposal, verbatim", () => {
   const items = objectivesFromAnswers({
@@ -74,4 +74,10 @@ test("the proposals derive from the same list intake.mjs sends ASFAI — one rul
     objectivesFromAnswers({ learning_outcomes: raw }).map((o) => o.statement),
     outcomeSentences(raw),
   );
+});
+
+test("the two source labels are distinct and both honest", () => {
+  assert.equal(SOURCE_FROM_ANSWERS, "from your answer to ASFAI");
+  assert.equal(SOURCE_FROM_LOCAL_ANSWERS, "from your answer");
+  assert.notEqual(SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS);
 });

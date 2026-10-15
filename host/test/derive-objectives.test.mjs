@@ -101,3 +101,27 @@ test("the teacher still decides: a derived proposal is not a confirmed objective
   // and the second one is still awaiting a decision
   assert.equal(s.view().proposals.find((p) => p.id === p2).status, "proposed");
 });
+
+test("a locally-answered course does not claim ASFAI as the source", () => {
+  // No observeIntake anywhere: the teacher answers the host's own questions.
+  const s = CourseSession.create(newStore(), { owner: OWNER, title: "T" });
+  s.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  s.answerIntake({ text: "my answers", answers: ANSWERS, at: 2000 });
+  s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 3000 });
+  const r = s.proposeObjectivesFromAnswers({ at: 4000 });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.proposals.map((p) => p.statement), ANSWERS.learning_outcomes);
+  assert.ok(r.proposals.every((p) => p.source === "from your answer"), "nothing left the machine, so nothing says it did");
+});
+
+test("the source label is frozen at proposal time: a later ASFAI consult does not rewrite it", () => {
+  const store = newStore();
+  const s = CourseSession.create(store, { owner: OWNER, title: "T" });
+  s.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  s.answerIntake({ text: "my answers", answers: ANSWERS, at: 2000 });
+  s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 3000 });
+  s.proposeObjectivesFromAnswers({ at: 4000 });
+  s.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: 5000 });
+  const again = CourseSession.load(store, s.courseId).view().proposals;
+  assert.ok(again.every((p) => p.source === "from your answer"));
+});

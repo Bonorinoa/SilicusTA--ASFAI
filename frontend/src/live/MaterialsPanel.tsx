@@ -102,8 +102,12 @@ export function MaterialsPanel({
 
       <div className={styles.field}>
         <label className={styles.fieldLabel} htmlFor={ids.file}>A text file</label>
-        <input id={ids.file} ref={file} className={styles.fileInput} type="file" multiple accept=".txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv"
+        {/* The browser's own file chooser is driven by a quiet button, the way the record band's
+            Import is: its "No file chosen" status truncates to "N...n" in a narrow column, and the
+            chosen file is listed above by name as soon as it lands, so nothing is lost. */}
+        <input id={ids.file} ref={file} className={styles.fileHidden} type="file" multiple accept=".txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv"
           onChange={(e) => void addFiles(e.target.files)} />
+        <div className={styles.verbs}><label className={styles.quiet} htmlFor={ids.file}>Choose a file</label></div>
       </div>
 
       <div className={styles.field}>

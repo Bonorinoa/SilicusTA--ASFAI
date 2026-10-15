@@ -8,7 +8,7 @@
  * plain message.
  */
 import { describe, expect, it } from "vitest";
-import { createSite, MESSAGES } from "./site";
+import { createSite, MESSAGES, REQUEST_TIMEOUT_MS } from "./site";
 import { PlanWorker, WorkerError } from "../../../host/worker.mjs";
 import type { PasscodeKeeper } from "./passcode";
 
@@ -47,6 +47,10 @@ const objectivesReply = () => new Response(JSON.stringify({
 }), { status: 200 });
 
 describe("the site's deadline starts when the request leaves, not when the teacher is asked", () => {
+  it("uses the Vercel function's 120 second duration", () => {
+    expect(REQUEST_TIMEOUT_MS).toBe(120_000);
+  });
+
   it("a passcode dialog that outlasts the worker's own deadline still sends the request (the production failure)", async () => {
     const seen: { url: string; signalAborted: boolean; passcode: string | null }[] = [];
     const site = createSite({ origin: ORIGIN, fetchImpl: siteFetch(async () => objectivesReply(), seen), passcode: slowTeacher(150) });

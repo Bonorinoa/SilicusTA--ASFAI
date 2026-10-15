@@ -10,6 +10,7 @@
 import { WorkerError } from "../../../host/worker.mjs";
 import { MaterialError, normalizeText, youtubeVideoId } from "../../../host/materials-core.mjs";
 import type { PasscodeKeeper } from "./passcode";
+import type { TypicalSeconds } from "../gate/types";
 
 // The JS default (LIMITS.maxChars) makes TypeScript infer a literal type for `max`; it takes any number.
 const normalize = normalizeText as (raw: unknown, max?: number) => string;
@@ -21,23 +22,24 @@ export interface SiteStatus {
   provider: string;
   passcodeRequired: boolean;
   model?: string;
+  typicalSeconds?: TypicalSeconds;
 }
 
 const NOT_SET_UP: SiteStatus = { configured: false, zdr: false, provider: "openrouter", passcodeRequired: false };
 
 export const MESSAGES = {
-  noCredits: "The model account has no credits, so the AI cannot draft right now. Everything you have recorded still works.",
-  notSetUp: "AI drafting is not set up on this site.",
+  noCredits: "The AI service is out of credit, so it cannot draft right now. Nothing you have recorded is affected; try again later.",
+  notSetUp: "AI drafting is not switched on for this site, so nothing was sent. Everything else still works.",
   rejected: "The demo passcode was not accepted, so nothing was sent to the model.",
   cancelled: "AI drafting needs the demo passcode. Nothing was sent.",
-  timeout: "The model did not answer in time. Try again.",
-  tooLarge: "That is too much to send to the model at once. Use less material.",
+  timeout: "The model did not answer in time, so the step stopped. Nothing you have recorded is lost; you can try again.",
+  tooLarge: "That is more than the model can take at once. Remove a piece of material, or paste only the part you want used.",
   youtube: "YouTube captions can only be read by the local Silicus app. Paste the transcript as text instead.",
-  wait: (seconds: number | null) => `Too many AI requests just now. Wait ${seconds ? `${seconds} seconds` : "a minute"} and try again.`,
+  wait: (seconds: number | null) => `The AI is busy: too many requests just now. Wait ${seconds ? `about ${seconds} seconds` : "a minute"}, then try again.`,
 } as const;
 
-/** The site's own deadline for one network attempt (the model proxy itself gives up upstream at 55 s). */
-export const REQUEST_TIMEOUT_MS = 60_000;
+/** The site's own deadline for one network attempt (the model proxy gives up upstream at 115 s). */
+export const REQUEST_TIMEOUT_MS = 120_000;
 /** The status check is tiny; if it does not answer quickly the site is treated as not set up (and asked again next time). */
 export const STATUS_TIMEOUT_MS = 10_000;
 
@@ -84,6 +86,7 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
       known = {
         configured: j.configured === true, zdr: j.zdr === true, provider: String(j.provider ?? "openrouter"),
         passcodeRequired: j.passcodeRequired !== false, ...(typeof j.model === "string" ? { model: j.model } : {}),
+        ...(j.typicalSeconds !== undefined ? { typicalSeconds: j.typicalSeconds } : {}),
       };
       return known;
     } catch {

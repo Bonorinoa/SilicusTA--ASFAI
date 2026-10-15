@@ -164,7 +164,7 @@ test("client model/provider/tools/stream/etc are stripped and the env model is f
     max_tokens: 100,
   }))));
   const sent = calls[0].body;
-  assert.deepEqual(Object.keys(sent).sort(), ["max_tokens", "messages", "model", "provider", "response_format", "temperature"]);
+  assert.deepEqual(Object.keys(sent).sort(), ["max_tokens", "messages", "model", "provider", "reasoning", "response_format", "temperature"]);
   assert.equal(sent.model, MODEL);
   assert.equal(sent.temperature, 0.2);
   assert.deepEqual(sent.response_format, { type: "json_object" });
@@ -176,6 +176,28 @@ test("message objects are rebuilt to {role, content}: extra per-message keys nev
   const { POST, calls } = handler();
   await read(await POST(post(WORKER_URL, { messages: [{ role: "system", content: "s", name: "n", tool_calls: [] }, { role: "user", content: "u", cache_control: {} }] })));
   assert.deepEqual(calls[0].body.messages, [{ role: "system", content: "s" }, { role: "user", content: "u" }]);
+});
+
+test("reasoning is server-decided: low by default, every supported env value maps exactly", async () => {
+  const cases = [
+    [undefined, { effort: "low" }],
+    ["low", { effort: "low" }],
+    ["medium", { effort: "medium" }],
+    ["high", { effort: "high" }],
+    ["off", { enabled: false }],
+    ["model-default", undefined],
+  ];
+  for (const [configured, want] of cases) {
+    const { POST, calls } = handler({ env: baseEnv({ SILICUS_WORKER_REASONING: configured }) });
+    await read(await POST(post(WORKER_URL, chat())));
+    assert.deepEqual(calls[0].body.reasoning, want, `SILICUS_WORKER_REASONING=${configured}`);
+  }
+});
+
+test("a client reasoning field is stripped; the server's low setting wins", async () => {
+  const { POST, calls } = handler({ env: baseEnv({ SILICUS_WORKER_REASONING: "low" }) });
+  await read(await POST(post(WORKER_URL, chat({ reasoning: { effort: "high", enabled: true } }))));
+  assert.deepEqual(calls[0].body.reasoning, { effort: "low" });
 });
 
 /* ------------------------------------ ZDR ------------------------------------ */
@@ -205,16 +227,19 @@ test("ZDR fails closed: one upstream attempt, never a retry, when the ZDR route 
 
 /* --------------------------------- max_tokens --------------------------------- */
 
-test("max_tokens = min(client, env cap, default 4000)", async () => {
+test("max_tokens is server-decided: the env cap (4000 by default) and nothing the client sends", async () => {
+  // The browser never sends max_tokens, so a client value can only be an attack: max_tokens: 1 would turn a
+  // normal call into a truncation refusal. The server decides, exactly like model, provider and reasoning.
   const cases = [
     [{}, undefined, 4000],
-    [{}, 100, 100],
+    [{}, 1, 4000],
+    [{}, 100, 4000],
     [{}, 99999, 4000],
     [{}, -5, 4000],
     [{}, "50", 4000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, undefined, 1000],
+    [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 1, 1000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 5000, 1000],
-    [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 300, 300],
     [{ SILICUS_WORKER_MAX_TOKENS: "junk" }, undefined, 4000],
   ];
   for (const [over, client, want] of cases) {
@@ -293,9 +318,9 @@ test("upstream that ignores the abort signal still yields 504 at the deadline", 
   assert.equal(r.status, 504);
 });
 
-test("the default upstream deadline is 55 s", async () => {
+test("the default upstream deadline leaves 5 s of headroom under the 120 s function duration", async () => {
   const { UPSTREAM_TIMEOUT_MS } = await import("../_lib/worker.mjs");
-  assert.equal(UPSTREAM_TIMEOUT_MS, 55_000);
+  assert.equal(UPSTREAM_TIMEOUT_MS, 115_000);
 });
 
 test("upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed", async () => {

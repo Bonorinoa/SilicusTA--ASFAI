@@ -1,7 +1,7 @@
 /* LiveCourse — the one-teacher story over the real host. */
 
 .live {
-  max-width: 64rem;
+  max-width: 46rem;
   margin: 0 auto;
   padding: var(--space-6) var(--space-5) var(--space-8);
   display: flex;
@@ -23,6 +23,7 @@
 .chip[data-status="confirmed"] { border-color: var(--color-accent); }
 .chip[data-status="confirmed"] .chipState { color: var(--color-accent-strong); }
 
+.waiting { display: flex; flex-direction: column; }
 .actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 
 .primaryButton, .ghostButton, .textButton {
@@ -78,5 +79,19 @@
 
 .grid { display: flex; flex-direction: column; gap: var(--space-4); }
 .notice { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-soft); margin: 0; }
-.offline { font-family: var(--font-ui); font-size: var(--text-base); color: var(--color-ink-soft); background: var(--color-sunken); border-left: 2px solid var(--color-dropped); padding: var(--space-4) var(--space-5); border-radius: var(--radius-xs); margin: 0; }
+.offline { display: flex; flex-direction: column; gap: var(--space-2); max-width: 40rem; background: var(--color-sunken); border-left: 2px solid var(--color-dropped); padding: var(--space-4) var(--space-5); border-radius: var(--radius-xs); margin: 0; }
+.offlineTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--leading-lg); font-weight: 600; color: var(--color-ink); }
+.offlineText { margin: 0; font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); }
+/* A quiet standing note: why a button is not offered. Not an error, not a toast. */
+.aside { max-width: 40rem; margin: 0; padding: var(--space-3) var(--space-4); background: var(--color-sunken); border-left: 2px solid var(--color-rule-strong); border-radius: var(--radius-xs); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
 .offline code { font-family: var(--font-mono); font-size: var(--text-xs); }
+
+/* ---- first impression (online app): a title page, not a form ---- */
+.hero { display: flex; flex-direction: column; gap: var(--space-4); max-width: 42rem; padding: var(--space-4) 0 var(--space-2); }
+.kicker { margin: 0; font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted); }
+.heroTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-2xl); line-height: var(--leading-2xl); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); text-wrap: balance; }
+.heroLede { margin: 0; font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink-soft); }
+.moves { display: flex; flex-wrap: wrap; gap: var(--space-1) 0; list-style: none; margin: var(--space-2) 0 0; padding: var(--space-4) 0; border-top: 1px solid var(--color-rule); font-family: var(--font-display); font-size: var(--text-base); font-style: italic; color: var(--color-ink-soft); }
+.moves li + li::before { content: "\2192"; font-style: normal; font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-accent); margin: 0 var(--space-3); position: relative; top: -0.06em; }
+.assure { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+@media (max-width: 40rem) { .heroTitle { font-size: var(--text-xl); line-height: var(--leading-xl); } }

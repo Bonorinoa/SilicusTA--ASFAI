@@ -30,28 +30,43 @@ The CLI prompts for the value; never put a value in the repo, a commit message o
 | `SILICUS_DEMO_PASSCODE` | yes | The shared passcode the app sends in the `x-silicus-passcode` header. |
 | `SILICUS_WORKER_ZDR` | no | Zero-data-retention routing. On unless set to exactly `0`. |
 | `SILICUS_DAILY_CAP` | no | Model calls per function instance per UTC day. Default 300. |
-| `SILICUS_WORKER_MAX_TOKENS` | no | Lowers the reply cap below the default of 4000 tokens. It cannot raise it. |
+| `SILICUS_WORKER_MAX_TOKENS` | no | Sets the reply cap (default 4000, never higher). The client cannot influence it. |
+| `SILICUS_WORKER_REASONING` | no | Server-selected reasoning effort: `low` (default), `medium`, `high`, `off` (`{enabled:false}`), or `model-default` (omit the setting). The browser cannot override it. |
+| `SILICUS_TYPICAL_SECONDS` | no | JSON task wait ranges shown by the UI, for example `{"plan":[7,30]}`. Defaults: `{"objectives":[3,15],"plan":[5,25],"answer":[2,8]}`; invalid JSON or invalid task entries are ignored. |
 
 If the key, the model or the passcode is missing, `/api/worker` answers 503 and does nothing.
 If the passcode is missing, `/api/fetch` answers 503 too. Neither is ever an open proxy.
 
 Changing a variable takes effect on the next deployment.
 
+## Why reasoning effort is low
+
+Low is the default because measured runs of the real plan prompt showed that model-default reasoning can spend most of the request budget thinking, while low reasoning kept the output valid and cut latency sharply. The server owns this setting so a browser cannot quietly raise cost or exceed the reply budget.
+
+| request | time | reasoning tokens | completion tokens |
+|---|---:|---:|---:|
+| as deployed (no reasoning setting) | 52.5 s | 4,628 | 5,362 |
+| as deployed, repeat | 20.6 s | 2,029 | 2,597 |
+| `reasoning: {effort: "low"}` | 7.2 s | 54 | 776 |
+| `reasoning: {enabled: false}` | 10.5 s | 0 | 876 |
+
 ## What each guard does
 
 - **Passcode.** Every `POST` needs the right `x-silicus-passcode` header, or it gets 401. The
   check takes the same time whether the guess is close or not. Wrong guesses count toward the
   rate limit.
-- **The function decides, not the browser.** The model, the reply cap and the retention routing
-  come from the environment. Only `messages`, `response_format`, `temperature` and `max_tokens`
-  are read from the request; everything else (`model`, `provider`, `tools`, `stream`, ...) is
-  dropped.
+- **The function decides, not the browser.** The model, the reply cap, reasoning effort and the retention routing
+  come from the environment. Only `messages`, `response_format` and `temperature` are read from the
+  request; everything else (`model`, `max_tokens`, `reasoning`, `provider`, `tools`, `stream`, ...) is
+  dropped. A client `max_tokens` is dropped with them: it could only shrink the reply and turn a normal
+  call into a truncation refusal.
 - **Zero-data-retention routing.** Unless `SILICUS_WORKER_ZDR=0`, every call asks OpenRouter for
   zero-retention endpoints only (`provider: {zdr: true, data_collection: "deny"}`). If none can
   serve it, the call fails. It is never retried somewhere that keeps data. The status route reports
   `zdr` exactly as configured.
 - **Size and time.** A model request over 512 KB is refused (413), and so is a fetch request over
-  4 KB. OpenRouter gets 55 seconds (then 504); a web page gets 20 seconds.
+  4 KB. The function may run for 120 seconds; OpenRouter gets 115 seconds (then 504), leaving five
+  seconds to return the refusal. A web page gets 20 seconds.
 - **Errors.** OpenRouter's error text is never passed on, only its status code: `402` means the
   account is out of credits.
 - **URL fetch.** This is the same guard the local app uses (`host/materials.mjs`): https only,

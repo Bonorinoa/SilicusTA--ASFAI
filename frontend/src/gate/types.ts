@@ -58,6 +58,13 @@ export type DecisionIntent =
 /** Gate checkpoint status (checkpoint 3 for the DecisionCard). */
 export type CheckpointStatus = "pending" | "open" | "confirmed";
 
+/** Optional expected wait ranges reported by the host, in seconds. */
+export interface TypicalSeconds {
+  objectives: readonly [number, number];
+  plan: readonly [number, number];
+  answer: readonly [number, number];
+}
+
 /** Result of dispatching an intent through the harness into the gate. */
 export type DispatchResult =
   | { ok: true; turnRef: string }

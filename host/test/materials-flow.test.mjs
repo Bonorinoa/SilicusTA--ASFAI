@@ -37,11 +37,11 @@ const model = (calls = []) => ({ prompt }) => {
     activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Do it.", teacherDoes: "Ask.", evidenceIfAny: "observation" })) };
 };
 
-async function boot({ reply = model(), withWorker = true, fetchImpl, lookupImpl } = {}) {
-  const wm = await startMockWorker({ reply }); CLOSERS.push(() => wm.close());
+async function boot({ reply = model(), withWorker = true, fetchImpl, lookupImpl, finishReason, workerEnv } = {}) {
+  const wm = await startMockWorker({ reply, finishReason }); CLOSERS.push(() => wm.close());
   const dir = mkdtempSync(join(tmpdir(), "silicus-mat-"));
   const worker = withWorker ? new PlanWorker({ url: wm.url, model: "m", zdr: true }) : new PlanWorker({});
-  const app = createApp({ dataDir: dir, worker, sources: [], fetchImpl, lookupImpl });
+  const app = createApp({ dataDir: dir, worker, sources: [], fetchImpl, lookupImpl, workerEnv });
   CLOSERS.push(() => { app.closeAllConnections?.(); app.close(); });
   await new Promise((r) => app.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${app.address().port}`;
@@ -206,6 +206,15 @@ test("a worker that misbehaves is a 502 refusal, never half-written proposals", 
   assert.equal((await bad.get(c)).json.proposals.length, 0);
 });
 
+test("an OpenAI length finish is a 502 WORKER_TRUNCATED refusal on the Node host", async () => {
+  const bad = await boot({ reply: "{\"objectives\":[", finishReason: "length" });
+  const c = await courseReady(bad.post);
+  await bad.post(`${c}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  const r = await bad.post(`${c}/materials/propose`, { materials: [SLIDES] });
+  assert.equal(r.status, 502);
+  assert.deepEqual(r.json, { ok: false, code: "WORKER_TRUNCATED", message: "The model ran out of room before finishing. Try again, or use less material." });
+});
+
 /* --------------------------------- public sources --------------------------------- */
 
 test("a public page is fetched by the host, and a private address is refused before the worker is ever called", async () => {
@@ -256,7 +265,15 @@ test("the whole story with NO typed outcomes and NO ASFAI: material -> proposals
   assert.equal((await get(`${c}/verify`)).json.ok, true);
 });
 
-test("the worker status reports capability only: configured, zdr and provider, never a key or a URL", async () => {
+test("the worker status reports capability and typical waits, never a key or a URL", async () => {
   const { get } = await boot();
-  assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true, provider: "openai" });
+  assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true, provider: "openai",
+    typicalSeconds: { objectives: [3, 15], plan: [5, 25], answer: [2, 8] } });
+});
+
+test("the Node status endpoint applies per-task SILICUS_TYPICAL_SECONDS overrides and ignores invalid JSON", async () => {
+  const custom = await boot({ workerEnv: { SILICUS_TYPICAL_SECONDS: '{"answer":[4,12]}' } });
+  assert.deepEqual((await custom.get("/api/worker/status")).json.typicalSeconds, { objectives: [3, 15], plan: [5, 25], answer: [4, 12] });
+  const invalid = await boot({ workerEnv: { SILICUS_TYPICAL_SECONDS: "not json" } });
+  assert.deepEqual((await invalid.get("/api/worker/status")).json.typicalSeconds, { objectives: [3, 15], plan: [5, 25], answer: [2, 8] });
 });

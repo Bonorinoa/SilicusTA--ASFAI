@@ -19,6 +19,7 @@
  */
 import { CourseSession } from "./course.mjs";
 import { askStudent, packageOf } from "./student.mjs";
+import { DEFAULT_TYPICAL_SECONDS } from "./worker-config.mjs";
 
 export const MAX_BODY = 1 << 20;
 
@@ -71,6 +72,7 @@ export function errorResponse(err) {
  *   asfai            the ASFAI service, or a stand-in that says it is off
  *   worker           the PlanWorker every model call goes through
  *   workerStatus     what /worker/status reports (default: the worker's own config)
+ *   typicalSeconds   expected wait ranges for objectives, plans and answers
  *   sources          knowledge sources (config, never a request field)
  *   archives         a LocalArchive, or null where there is no archive folder
  *   prepareMaterials how the teacher's material items become named plain text
@@ -81,6 +83,7 @@ export function errorResponse(err) {
  * @property {any} asfai
  * @property {any} worker
  * @property {(() => any) | null} [workerStatus]
+ * @property {any} [typicalSeconds]
  * @property {any[]} [sources]
  * @property {any} [archives]
  * @property {(items: any) => Promise<{materials: any[], skipped: any[]}>} prepareMaterials
@@ -88,8 +91,8 @@ export function errorResponse(err) {
  */
 
 /** @param {HandlerDeps} deps */
-export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, sources: knowledgeSources = [], archives = null, prepareMaterials, guard = null }) {
-  const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider }));
+export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, typicalSeconds = DEFAULT_TYPICAL_SECONDS, sources: knowledgeSources = [], archives = null, prepareMaterials, guard = null }) {
+  const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider, typicalSeconds }));
 
   /**
    * Load per request. The event log is the source of record, so a fresh verified

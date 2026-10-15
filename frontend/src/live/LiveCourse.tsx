@@ -8,8 +8,9 @@
  * (accept / rename / drop / add / confirm / publish) all go through the host's
  * inbound-message hook, which is the only place a teacher turn can be recorded.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DecisionCard } from "../components/DecisionCard";
+import { AiWaiting, answerText, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
 import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
@@ -28,9 +29,37 @@ import { CourseLibrary } from "./CourseLibrary";
 import { buildHandoutHtml, handoutFilename } from "./handout";
 import { VersionDiffPanel } from "./VersionDiffPanel";
 import styles from "./LiveCourse.module.css";
+/** One AI step in flight, or just finished: what the waiting card shows. `receipt` is computed from the resulting view. */
+interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[] }
+
 const CHECKPOINT_LABEL: Record<string, string> = {
   files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
 };
+/** What "propose objectives" sends, read from the page: the material in memory plus what the teacher already told the host. */
+function objectivesStep(materials: MaterialInput[], view: HostView): WaitingStep {
+  const answers = view.intake.answers ?? {};
+  return {
+    kind: "objectives",
+    materials: materials.map((m) => ("url" in m ? { kind: "link" as const, url: m.url } : { kind: "text" as const, name: m.name, chars: m.text.length })),
+    topic: answerText(answers.topic),
+    course: answers.course === undefined ? view.course.title : answerText(answers.course),
+  };
+}
+
+/** What "draft the plan" sends: the confirmed objective statements, the topic, and the NAMES of the listed materials. */
+function planStep(view: HostView): WaitingStep {
+  return {
+    kind: "plan",
+    objectives: view.objectives.map((o) => o.statement),
+    topic: answerText(view.intake.answers?.topic),
+    materialNames: materialNamesOf(view.course.materials),
+    referenceNotes: !BROWSER_MODE,
+  };
+}
+
+/** A refusal message as a sentence: capitalised, ending in a full stop. */
+const sentence = (m: string) => { const t = m.trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? "" : ".") : ""; };
+
 export function LiveCourse() {
   const [view, setView] = useState<HostView | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
@@ -38,7 +67,10 @@ export function LiveCourse() {
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
-  const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean } | null>(null);
+  const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean; typicalSeconds?: unknown } | null>(null);
+  const [waiting, setWaiting] = useState<Waiting | null>(null);
+  const [passcodeOpen, setPasscodeOpen] = useState(false);
+  const waitIds = useRef(0);
   // ASFAI is a local-app feature. The host says so (available: false) and the UI then offers no ASFAI button.
   const asfaiOffered = asfai?.available !== false;
   const [library, setLibrary] = useState<CourseSummary[]>([]);
@@ -63,18 +95,34 @@ export function LiveCourse() {
     })();
   }, []);
 
-  const reload = async (id = courseId) => {
-    if (id) setView(await host.getCourse(id));
+  const reload = async (id = courseId): Promise<HostView | null> => {
+    let fresh: HostView | null = null;
+    if (id) { fresh = await host.getCourse(id); setView(fresh); }
     try { setLibrary((await host.listCourses()).courses); } catch { /* the library is a convenience; the course view is what matters */ }
     try { setAsfai(await host.asfaiStatus()); } catch { /* an old host: leave unknown */ }
+    return fresh;
   };
   useEffect(() => { void host.asfaiStatus().then(setAsfai).catch(() => {}); }, []);
   useEffect(() => { void host.workerStatus().then(setWorker).catch(() => {}); }, []);
-  const run = (fn: () => Promise<void>) => {
+  const run = (fn: () => Promise<unknown>) => {
     setBusy(true);
+    // A receipt is true only until the teacher's next act (accepting a proposal makes "none is confirmed" false).
+    setWaiting((w) => (w && w.phase !== "running" ? null : w));
     fn()
       .catch((e) => setNotice(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false));
+  };
+
+  /** An AI step begins: the page shows what is happening, from data it already holds. */
+  const startWait = (step: WaitingStep): number => {
+    const id = (waitIds.current += 1);
+    setWaiting({ id, step, phase: "running", receipt: [] });
+    return id;
+  };
+  /** It ends: a receipt computed from the view the host just returned, or an honest "stopped". */
+  const finishWait = (id: number | null, ok: boolean, fresh: ReceiptView | null, receiptOf: (v: ReceiptView) => string[]) => {
+    if (id === null) return;
+    setWaiting((w) => (w && w.id === id ? { ...w, phase: ok ? "done" : "failed", receipt: ok && fresh ? receiptOf(fresh) : [] } : w));
   };
 
   const cp = view?.checkpoints ?? {};
@@ -96,7 +144,7 @@ export function LiveCourse() {
     setPins(listPins(id));
   });
   /** Show the naming conversation again. The new course exists only once the teacher records it. */
-  const newCourse = () => { setView(null); setCourseId(null); setNotice(null); setPinReport([]); };
+  const newCourse = () => { setView(null); setCourseId(null); setNotice(null); setPinReport([]); setWaiting(null); };
 
   const confirmFiles = (text: string) => run(async () => {
     await host.confirmCheckpoint(courseId!, { id: "files", text });
@@ -182,13 +230,17 @@ export function LiveCourse() {
 
   /** The material goes to the host once; a WORKER proposes objectives from it. The teacher decides each one. */
   const proposeFromMaterials = (materials: MaterialInput[]) => run(async () => {
+    const wait = view ? startWait(objectivesStep(materials, view)) : null;
+    let ok = false;
     try {
       const r = await host.proposeFromMaterials(courseId!, { materials });
+      ok = true;
       setNotice(r.skipped.length ? `Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}` : null);
     } catch (e) {
-      setNotice(`Nothing was proposed: ${(e as Error).message}`);
+      setNotice(`Nothing was proposed. ${sentence((e as Error).message)}`);
     } finally {
-      await reload();
+      let fresh: HostView | null = null;
+      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, proposalsReceipt); }
     }
   });
 
@@ -206,12 +258,16 @@ export function LiveCourse() {
 
   /** The WORKER drafts from the teacher's CONFIRMED objectives; the UI supplies no content. */
   const draftPlan = () => run(async () => {
+    const wait = view ? startWait(planStep(view)) : null;
+    let ok = false;
     try {
       await host.proposePlan(courseId!);
+      ok = true;
     } catch (e) {
       setNotice(`No plan was drafted: ${(e as Error).message}`);
     } finally {
-      await reload();
+      let fresh: HostView | null = null;
+      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, planReceipt); }
     }
   });
 
@@ -278,15 +334,21 @@ export function LiveCourse() {
     return (
       <div className={styles.live}>
         {BROWSER_MODE ? (
-          <p className={styles.offline}>
-            This browser would not open its storage for Silicus, so no course can be kept here. Private windows
-            and some privacy settings block it; a regular window usually works.
-          </p>
+          <div className={styles.offline} role="alert">
+            <p className={styles.offlineTitle}>This window cannot keep a record for Silicus</p>
+            <p className={styles.offlineText}>
+              This browser would not open its storage for Silicus, so no course can be kept here. Private windows
+              and some privacy settings block it; a regular window usually works.
+            </p>
+          </div>
         ) : (
-          <p className={styles.offline}>
-            The Silicus host is not reachable. Start it with{" "}
-            <code>cd host && npm start</code> (listens on 127.0.0.1:8787), then reload.
-          </p>
+          <div className={styles.offline} role="alert">
+            <p className={styles.offlineTitle}>The Silicus host is not running</p>
+            <p className={styles.offlineText}>
+              The Silicus host is not reachable. Start it with{" "}
+              <code>cd host && npm start</code> (listens on 127.0.0.1:8787), then reload.
+            </p>
+          </div>
         )}
       </div>
     );
@@ -302,27 +364,39 @@ export function LiveCourse() {
     else if (courseId) setPins(listPins(courseId));
   });
   const browserRecord = BROWSER_MODE ? <BrowserRecord hasCourses={library.length > 0} onChanged={afterRecordChange} status={recordStatus} onStatus={setRecordStatus} /> : null;
-  const passcodeDialog = BROWSER_MODE ? <PasscodeDialog /> : null;
+  const passcodeDialog = BROWSER_MODE ? <PasscodeDialog onAsking={setPasscodeOpen} /> : null;
 
   if (!view) {
     return (
       <div className={styles.live}>
-        <header className={styles.intro}>
-          <h1 className={styles.title}>Name this course</h1>
-          {BROWSER_MODE ? (
-            <p className={styles.lede}>
+        {BROWSER_MODE ? (
+          <header className={styles.hero}>
+            <p className={styles.kicker}>Course authoring, teacher in the loop</p>
+            <h1 className={styles.heroTitle}>Build a course, one decision at a time.</h1>
+            <p className={styles.heroLede}>
+              Bring your material. An AI proposes learning objectives and drafts a lesson plan; you confirm every step.
+              Publishing seals a version, and a student can ask questions answered only from what you sealed.
+            </p>
+            <ol className={styles.moves} aria-label="How it goes">
+              <li>Bring your material</li>
+              <li>Confirm the objectives</li>
+              <li>Confirm the plan</li>
+              <li>Publish a sealed version</li>
+            </ol>
+            <p className={styles.assure}>
               Your words stay on this record. Nothing leaves this browser until you ask the AI for a draft,
               and nothing is decided without you.
             </p>
-          ) : (
+          </header>
+        ) : (
+          <header className={styles.intro}>
+            <h1 className={styles.title}>Name this course</h1>
             <p className={styles.lede}>
               Your words stay on this record. ASFAI asks its own questions later, and
               only your answers to those are sent. Nothing is decided in this browser.
             </p>
-          )}
-        </header>
-        {browserRecord}
-        {passcodeDialog}
+          </header>
+        )}
         <CourseLibrary courses={library} currentId={null} busy={busy} onOpen={openCourse} onNew={newCourse} open />
         <OnboardingChat
           view={null}
@@ -337,6 +411,7 @@ export function LiveCourse() {
           onRefresh={() => run(reload)}
         />
         {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+        {browserRecord}
       </div>
     );
   }
@@ -349,7 +424,6 @@ export function LiveCourse() {
     <div className={styles.live}>
       {passcodeDialog}
       <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
-      {browserRecord}
       <header className={styles.stageHeader}>
         <div>
           <h1 className={styles.title}>{view.course.title}</h1>
@@ -383,6 +457,20 @@ export function LiveCourse() {
         />
       ) : null}
 
+      {waiting ? (
+        <div className={styles.waiting}>
+          <AiWaiting
+            key={waiting.id}
+            step={waiting.step}
+            phase={waiting.phase}
+            receipt={waiting.receipt}
+            typicalSeconds={worker?.typicalSeconds}
+            zdr={worker?.zdr ?? null}
+            paused={passcodeOpen}
+          />
+        </div>
+      ) : null}
+
       <div className={styles.actions}>
         {is("files", "confirmed") && (is("outline", "pending") || is("outline", "open")) && view.intake.outlineAuthorized ? (
           <button type="button" className={styles.primaryButton} onClick={confirmOutline} disabled={busy}>
@@ -399,7 +487,7 @@ export function LiveCourse() {
         ) : null}
         {is("objectives", "confirmed") && !plan ? (
           worker && !worker.configured ? (
-            <p className={styles.notice}>
+            <p className={styles.aside}>
               {BROWSER_MODE
                 ? "AI drafting is not set up on this site, so the plan cannot be drafted here. Everything else still works."
                 : "No drafting worker is configured on this host, so the plan cannot be drafted here. Everything else still works."}
@@ -556,7 +644,19 @@ export function LiveCourse() {
 
       {published ? (
         <div className={styles.grid}>
-          <StudentChat courseId={view.course.courseId} courseTitle={view.course.title} />
+          <StudentChat
+            courseId={view.course.courseId}
+            courseTitle={view.course.title}
+            sealed={{
+              version: published.version,
+              title: published.title ?? view.course.title,
+              objectives: published.objectiveRefs?.length ?? 0,
+              activities: published.lessonPlan?.activities?.length ?? 0,
+            }}
+            typicalSeconds={worker?.typicalSeconds}
+            zdr={worker?.zdr ?? null}
+            paused={passcodeOpen}
+          />
         </div>
       ) : null}
 
@@ -565,6 +665,8 @@ export function LiveCourse() {
           <TimelineCard events={view.timeline} courseLabel={view.course.title} />
         </div>
       ) : null}
+
+      {browserRecord}
     </div>
   );
 }

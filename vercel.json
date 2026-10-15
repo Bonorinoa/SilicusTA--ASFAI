@@ -6,7 +6,7 @@
   "outputDirectory": "frontend/dist",
   "cleanUrls": true,
   "functions": {
-    "api/**/*.mjs": { "maxDuration": 60 }
+    "api/**/*.mjs": { "maxDuration": 120 }
   },
   "headers": [
     {

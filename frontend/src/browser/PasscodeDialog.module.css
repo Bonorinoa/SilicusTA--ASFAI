@@ -1,35 +1,41 @@
-/* PasscodeDialog — a small sheet over a soft scrim. Same paper, ink and accent as everything else. */
+/* PasscodeDialog — a small sheet over a dimmed desk. Same paper, ink and accent as everything else. */
 
 .scrim {
   position: fixed; inset: 0; z-index: 50;
   display: flex; align-items: center; justify-content: center; padding: var(--space-5);
-  background: rgba(34, 31, 26, 0.28);
+  background: color-mix(in srgb, var(--color-ink) 48%, transparent);
+  backdrop-filter: blur(2px);
 }
 .dialog {
-  width: min(26rem, 100%); display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-5) var(--space-6); background: var(--color-paper-raised);
-  border: 1px solid var(--color-border-card); border-radius: var(--radius-md); box-shadow: var(--shadow-page);
+  width: min(26rem, 100%); display: flex; flex-direction: column; gap: var(--space-3); box-sizing: border-box;
+  padding: var(--space-6) var(--space-6) var(--space-5); background: var(--color-paper-raised);
+  border: 1px solid var(--color-border-card); border-top: 2px solid var(--color-accent);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-page);
 }
-.title { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; color: var(--color-ink); }
+.eyebrow { margin: 0; font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted); }
+.title { margin: calc(var(--space-2) * -1) 0 0; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); }
 .note { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
-.form { display: flex; flex-direction: column; gap: var(--space-2); }
+.form { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-1); }
 .label {
-  font-family: var(--font-ui); font-size: var(--text-2xs); text-transform: uppercase;
+  font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); text-transform: uppercase;
   letter-spacing: var(--tracking-label); color: var(--color-ink-muted);
 }
 .box {
   font-family: var(--font-ui); font-size: var(--text-base); color: var(--color-ink);
   background: var(--color-paper); border: 1px solid var(--color-border-control); border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3); min-height: 40px;
+  padding: var(--space-2) var(--space-3); min-height: 44px; box-sizing: border-box; width: 100%;
 }
-.box:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.verbs { display: flex; gap: var(--space-3); margin-top: var(--space-2); }
+/* One focus treatment, not two: the border takes the accent and a soft halo; no second outline inside it. */
+.box:focus-visible { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-line); }
+.verbs { display: flex; gap: var(--space-3); margin-top: var(--space-3); }
 .primary, .quiet {
-  font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold);
-  min-height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-sm); cursor: pointer;
+  flex: 1; font-family: var(--font-ui); font-size: var(--text-base); font-weight: var(--weight-semibold);
+  min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-sm); cursor: pointer;
 }
 .primary { background: var(--color-accent); border: 1px solid var(--color-accent); color: var(--color-paper-raised); }
-.primary:hover { background: var(--color-accent-strong); }
+.primary:hover:not(:disabled) { background: var(--color-accent-strong); }
 .quiet { background: transparent; border: 1px solid var(--color-border-control); color: var(--color-ink-soft); }
+.quiet:hover { background: var(--color-paper); color: var(--color-ink); }
 .primary:focus-visible, .quiet:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .primary:disabled { opacity: 0.55; cursor: default; }
+.fine { margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); }

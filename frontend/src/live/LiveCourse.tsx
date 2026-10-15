@@ -16,6 +16,9 @@ import { TimelineCard } from "../components/TimelineCard";
 import { describeIntent } from "../gate/harness";
 import { comparePin, listPins, pinVersion, type CoursePin } from "../gate/pin";
 import { host, type AsfaiStatus, type CourseSummary, type HostView, type MaterialInput } from "../gate/transport";
+import { BROWSER_MODE } from "../gate/mode";
+import { BrowserRecord } from "../browser/BrowserRecord";
+import { PasscodeDialog } from "../browser/PasscodeDialog";
 import type { DecisionIntent } from "../gate/types";
 import { OnboardingChat } from "./OnboardingChat";
 import { MaterialsPanel } from "./MaterialsPanel";
@@ -36,6 +39,8 @@ export function LiveCourse() {
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
   const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean } | null>(null);
+  // ASFAI is a local-app feature. The host says so (available: false) and the UI then offers no ASFAI button.
+  const asfaiOffered = asfai?.available !== false;
   const [library, setLibrary] = useState<CourseSummary[]>([]);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
@@ -271,24 +276,52 @@ export function LiveCourse() {
   if (offline) {
     return (
       <div className={styles.live}>
-        <p className={styles.offline}>
-          The Silicus host is not reachable. Start it with{" "}
-          <code>cd host && npm start</code> (listens on 127.0.0.1:8787), then reload.
-        </p>
+        {BROWSER_MODE ? (
+          <p className={styles.offline}>
+            This browser would not open its storage for Silicus, so no course can be kept here. Private windows
+            and some privacy settings block it; a regular window usually works.
+          </p>
+        ) : (
+          <p className={styles.offline}>
+            The Silicus host is not reachable. Start it with{" "}
+            <code>cd host && npm start</code> (listens on 127.0.0.1:8787), then reload.
+          </p>
+        )}
       </div>
     );
   }
+
+  /** After an import or a delete-all: show what this browser now holds. Nothing is written here. */
+  const afterRecordChange = () => run(async () => {
+    const { courses } = await host.listCourses();
+    setLibrary(courses);
+    setPinReport([]);
+    if (courseId && !courses.some((c) => c.courseId === courseId)) { setView(null); setCourseId(null); setPins([]); }
+    else if (!courseId && courses.length > 0) { setCourseId(courses[0].courseId); setView(await host.getCourse(courses[0].courseId)); setPins(listPins(courses[0].courseId)); }
+    else if (courseId) setPins(listPins(courseId));
+  });
+  const browserRecord = BROWSER_MODE ? <BrowserRecord hasCourses={library.length > 0} onChanged={afterRecordChange} /> : null;
+  const passcodeDialog = BROWSER_MODE ? <PasscodeDialog /> : null;
 
   if (!view) {
     return (
       <div className={styles.live}>
         <header className={styles.intro}>
           <h1 className={styles.title}>Name this course</h1>
-          <p className={styles.lede}>
-            Your words stay on this record. ASFAI asks its own questions later, and
-            only your answers to those are sent. Nothing is decided in this browser.
-          </p>
+          {BROWSER_MODE ? (
+            <p className={styles.lede}>
+              Your words stay on this record, and this browser keeps it. Nothing leaves this browser until you
+              ask the AI for a draft, and nothing is decided without you.
+            </p>
+          ) : (
+            <p className={styles.lede}>
+              Your words stay on this record. ASFAI asks its own questions later, and
+              only your answers to those are sent. Nothing is decided in this browser.
+            </p>
+          )}
         </header>
+        {browserRecord}
+        {passcodeDialog}
         <CourseLibrary courses={library} currentId={null} busy={busy} onOpen={openCourse} onNew={newCourse} open />
         <OnboardingChat
           view={null}
@@ -313,12 +346,14 @@ export function LiveCourse() {
 
   return (
     <div className={styles.live}>
+      {passcodeDialog}
       <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
+      {browserRecord}
       <header className={styles.stageHeader}>
         <div>
           <h1 className={styles.title}>{view.course.title}</h1>
           <p className={styles.sub}>
-            host · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {view.integrity.events} events
+            {BROWSER_MODE ? "kept in this browser" : "host"} · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {view.integrity.events} events
           </p>
         </div>
         <ol className={styles.chips} aria-label="Checkpoints">
@@ -354,7 +389,7 @@ export function LiveCourse() {
           </button>
         ) : null}
         {is("outline", "confirmed") && view.proposals.length === 0 && view.intake.answers?.outcomes_from === "materials" ? (
-          <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} onPropose={proposeFromMaterials} />
+          <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
         ) : null}
         {is("outline", "confirmed") && view.proposals.length === 0 && view.intake.answers?.outcomes_from !== "materials" ? (
           <button type="button" className={styles.ghostButton} onClick={proposeObjectives} disabled={busy}>
@@ -364,8 +399,9 @@ export function LiveCourse() {
         {is("objectives", "confirmed") && !plan ? (
           worker && !worker.configured ? (
             <p className={styles.notice}>
-              No drafting worker is configured on this host, so the plan cannot be drafted here.
-              Everything else still works.
+              {BROWSER_MODE
+                ? "AI drafting is not set up on this site, so the plan cannot be drafted here. Everything else still works."
+                : "No drafting worker is configured on this host, so the plan cannot be drafted here. Everything else still works."}
             </p>
           ) : (
             <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
@@ -375,9 +411,11 @@ export function LiveCourse() {
         ) : null}
         {plan && plan.status === "draft" ? (
           <>
-            <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
-              Check the plan with ASFAI
-            </button>
+            {asfaiOffered ? (
+              <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
+                Check the plan with ASFAI
+              </button>
+            ) : null}
             <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
               Confirm the lesson plan
             </button>
@@ -417,9 +455,11 @@ export function LiveCourse() {
             <button type="button" className={styles.ghostButton} onClick={downloadHandout} disabled={busy}>
               Download student handout
             </button>
-            <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>
-              Archive the export
-            </button>
+            {BROWSER_MODE ? null : (
+              <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>
+                Archive the export
+              </button>
+            )}
           </>
         ) : null}
       </div>
@@ -427,10 +467,18 @@ export function LiveCourse() {
       {pins.length > 0 ? (
         <section className={styles.pins} aria-label="Pinned copies on this device">
           <h2 className={styles.pinTitle}>Pinned on this device</h2>
-          <p className={styles.pinNote}>
-            Your own copies of each sealed version, held outside the host. Re-check them to
-            detect a record that was rewritten or shortened — the host cannot tell you that.
-          </p>
+          {BROWSER_MODE ? (
+            <p className={styles.pinNote}>
+              Your own copies of each sealed version, kept in this browser apart from the course record. Re-check
+              them to detect a record that was rewritten or shortened — the record’s own check cannot tell you that.
+              Both live in this browser, so export to keep a copy elsewhere.
+            </p>
+          ) : (
+            <p className={styles.pinNote}>
+              Your own copies of each sealed version, held outside the host. Re-check them to
+              detect a record that was rewritten or shortened — the host cannot tell you that.
+            </p>
+          )}
           <ul className={styles.pinList}>
             {pins.map((p) => {
               const r = pinReport.find((x) => x.version === p.version);

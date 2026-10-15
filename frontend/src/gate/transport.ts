@@ -12,6 +12,7 @@
  * this page (src/browser/browserHost.ts, over host/handler.mjs), which keeps the record in IndexedDB.
  * Same paths, same bodies, same {status, json} answers, same errors: nothing above this line can tell.
  */
+import { BROWSER_MODE } from "./mode";
 import type { CourseAnchor } from "./pin";
 import type {
   LessonPlanView, ObjectiveCiteView, PackageVersionView, PlanInvalidationView,
@@ -155,8 +156,7 @@ export class HostError extends Error {
 
 const BASE = "/api";
 
-/** Which host this build talks to. Fixed at build time (VITE_SILICUS_MODE=browser); default is the Node host. */
-export const BROWSER_MODE: boolean = import.meta.env.VITE_SILICUS_MODE === "browser";
+export { BROWSER_MODE };
 
 function refusal(json: Record<string, unknown> | null, fallback: string): HostError {
   return new HostError(

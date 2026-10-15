@@ -270,7 +270,13 @@ export function OnboardingChat({
               <button type="button" className={styles.quiet} onClick={onAsk} disabled={busy}>Use ASFAI's questionnaire</button>
             </p>
           ) : null}
-          {!fromAsfai && asfai && !asfai.connected ? (
+          {!fromAsfai && asfai && asfai.available === false ? (
+            <p className={styles.kept}>
+              ASFAI’s skill-map alignment needs the local Silicus app. Here, Silicus asks its own questions below,
+              and nothing is sent to ASFAI.
+            </p>
+          ) : null}
+          {!fromAsfai && asfai && !asfai.connected && asfai.available !== false ? (
             <p className={styles.kept}>
               <span className={styles.recommended}>Recommended:</span> connect ASFAI to align the lesson to its skill map and have
               the outline checked. Nothing waits on it — you can answer below now. Nothing is sent until you approve it.{" "}
@@ -278,7 +284,7 @@ export function OnboardingChat({
               <button type="button" className={styles.quiet} onClick={onRefresh} disabled={busy}>I approved it</button>
             </p>
           ) : null}
-          {fromAsfai && asfai && !asfai.connected ? (
+          {fromAsfai && asfai && !asfai.connected && asfai.available !== false ? (
             <p className={styles.kept}>
               ASFAI is not connected. Nothing is sent until you approve it.{" "}
               <button type="button" className={styles.quiet} onClick={onConnect} disabled={busy}>Connect ASFAI</button>{" "}

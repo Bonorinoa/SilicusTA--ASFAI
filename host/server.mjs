@@ -27,6 +27,7 @@
  *   POST /api/courses/:id/checkpoints        {id:"files"|"outline", text, note?}
  *   POST /api/courses/:id/objectives         no body: the HOST derives them from the teacher's recorded answers
  *   POST /api/courses/:id/materials/propose  {materials:[{name,text}|{url}]} the WORKER proposes objectives from the teacher's material (nothing is stored but names, digests, sizes)
+ *   POST /api/courses/:id/student/ask        {question, history?} a student asks about the PUBLISHED package; read-only, grounded or "ask your teacher", records nothing
  *   POST /api/courses/:id/decisions          {decisions:[...], text}                   (teacher decides)
  *   POST /api/courses/:id/plan               no body: the OSS WORKER drafts from the confirmed objectives
  *   POST /api/courses/:id/plan/confirm       {text, planId?}                           (teacher confirms)
@@ -42,6 +43,7 @@ import { LocalArchive } from "./archive.mjs";
 import { TokenStore } from "./asfai/tokens.mjs";
 import { PlanWorker } from "./worker.mjs";
 import { prepareMaterials, MaterialError } from "./materials.mjs";
+import { askStudent, packageOf, StudentError } from "./student.mjs";
 import { AsfaiOAuth } from "./asfai/oauth.mjs";
 import { AsfaiClient } from "./asfai/mcp.mjs";
 import { AsfaiService } from "./asfai/service.mjs";
@@ -229,6 +231,16 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       }
 
       const courseId = decodeURIComponent(parts[2]);
+
+      // A student asks about the PUBLISHED course. Read-only and outside the course lock: it writes
+      // nothing, and a slow model call must not hold up the teacher. Only {question, history} are read.
+      if (parts[3] === "student" && parts[4] === "ask" && parts.length === 5) {
+        if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
+        const sealed = session(courseId).latestSealedVersion();
+        if (!sealed) throw new HttpError(409, "NOT_PUBLISHED", "this course has not been published yet");
+        return { status: 200, json: await askStudent({ pkg: packageOf(sealed), worker: planWorker, body: await body(req) }) };
+      }
+
       return withCourse(courseId, async () => {
       const s = session(courseId);
       const tail = parts.slice(3).join("/");
@@ -326,6 +338,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
       if (err instanceof HttpError) return send(err.status, { ok: false, code: err.code, message: err.message, ...(err.blockers ? { blockers: err.blockers } : {}) });
       if (err && err.name === "PublishBlockedError") return send(409, { ok: false, code: "PUBLISH_BLOCKED", message: err.message, blockers: err.blockers });
       if (err && err.name === "FabricatedConfirmationError") return send(403, { ok: false, code: err.code, message: err.message });
+      if (err && err.name === "StudentError") return send(err.code === "NO_QUESTION" ? 422 : err.code === "WORKER_NOT_CONFIGURED" ? 501 : 502, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "MaterialError") return send(err.code === "URL_UNREACHABLE" ? 502 : 422, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "AsfaiAuthError") return send(401, { ok: false, code: err.code, message: err.message });
       if (err && err.name === "AsfaiCallError") return send(502, { ok: false, code: err.code, message: err.message });

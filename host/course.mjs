@@ -701,6 +701,14 @@ export class CourseSession {
     };
   }
 
+  /**
+   * What a student may ask about: the latest SEALED version, or null if nothing is published. Read only:
+   * asking writes nothing to the log, and a draft or an unpublished edit is never reachable from here.
+   */
+  latestSealedVersion() {
+    return this.#gate.versions().at(-1) ?? null;
+  }
+
   /** WHY the current plan is invalidated: cited objectives no longer confirmed. */
   planInvalidation() {
     const plan = this.#gate.currentPlan();

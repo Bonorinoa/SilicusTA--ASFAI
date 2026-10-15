@@ -97,14 +97,14 @@ Open gaps, worst first:
 3. **Students cannot reach it.** Student chat works on the teacher's machine only. That is the hosting
    decision, below.
 4. **Packages cannot move.** No import on a second host yet.
-5. **One course on screen.** No course list, no way to start a second course in the UI.
+5. ~~One course on screen.~~ **Fixed (Oct 14):** a course library lists every course, with honest standing, and a second course can be opened or started from the UI.
 6. **UI polish is uneven at the edges** (empty and error states, accessibility, plain-English trust
    panel, mobile). Student chat is functional, not yet beautiful.
 7. **Student chat can explain the objectives and activities, not teach content.** Material is not kept,
    so the package has no content. "Include these notes in the package" is a decision, not a build task.
 8. **Quality is unmeasured.** No eval of proposed objectives or drafted plans; scorecards A and B unrun.
-9. **Red-team of Sprints 5 and 6 has not happened.** Two DeepSeek V4 Flash red-team runs were launched and
-   both died on the same 402. Worktrees and briefs are ready.
+9. ~~Red-team of Sprints 5 and 6 has not happened.~~ **Done (Oct 14), by the orchestrator** after the DeepSeek V4 Flash runs died on the 402:
+   Sprints 5 to 8, nine findings fixed (two high), kept as regression tests. See `docs/RED-TEAM-2026-10-14.md`.
 10. **Known limits, stated.** The log is evidence, not proof. The ASFAI storage round-trip is not built.
     DNS rebinding between the address check and the connect is a documented residual in the URL fetcher.
 

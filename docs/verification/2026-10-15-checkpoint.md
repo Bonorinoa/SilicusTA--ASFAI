@@ -20,6 +20,7 @@ Production: <https://silicus-ta.vercel.app> · `main` at the merge of the rounds
 - **Suites at the checkpoint:** confirm-gate 41, api 57, host 262, restart e2e 53/53, frontend 286 + tsc + build,
   live-host smoke 62/62, browser-mode smoke 208/208 (wide + 380 px), narrow-shell 16/16.
 - **Independent verifier** on a different model family, per round; reports in this folder.
+- **Deployed build at narrow widths:** `node frontend/scripts/prod-narrow.mjs` — 45/45 at 320, 380 and 480 px.
 - **Production after deploy:** page 200, `/api/worker/status` configured with zero-retention and the usual-wait
   figures, missing passcode 401, the served bundle carries the latest change, the new onboarding copy is live,
   and the notice counts 1 on the page.
@@ -33,9 +34,11 @@ Production: <https://silicus-ta.vercel.app> · `main` at the merge of the rounds
    fixed and checked here by execution. **The owner approved shipping on that basis.**
 2. **The verifier's fallback chain must change** before real student data is anywhere near it (see the locks:
    free models are not zero-retention).
-3. **Narrow-window verification is from the local harness, not a resized production tab.** The browser harness
-   ignores viewport resizing, so production was checked at the flow level and the 320–1440 px geometry was
-   proved by the harness against the same build. Worth a manual check in a genuinely narrow browser window.
+3. ~~Narrow-window verification is from the local harness, not a resized production tab.~~ **Closed the same day.**
+   The agent browser ignores viewport resizing, so `frontend/scripts/prod-narrow.mjs` drives the *deployed* site
+   with puppeteer (which sets a real viewport), walks the onboarding, and applies the narrow harness's
+   predicates plus a content-clipping check. At the checkpoint: 45 checks, 0 failures at 320, 380 and 480 px on
+   `https://silicus-ta.vercel.app`. Run it with `node frontend/scripts/prod-narrow.mjs` (optionally one width).
 4. **Online, teachers can name materials but not paste their text.** The intake says so plainly. The local app
    has the paste-text panel; the online build does not.
 5. Some rows inside the decision-history and objectives cards are still narrower than their content at 320 px.

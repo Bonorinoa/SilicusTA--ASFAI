@@ -121,6 +121,23 @@ describe("PublishCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("uses singular labels for a one-objective, one-activity, one-minute plan", () => {
+    const [objective] = OBJECTIVES;
+    const activity = { ...ACTIVITIES[0], minutes: 1 };
+    render(
+      <PublishCard
+        {...baseProps({
+          objectives: [objective],
+          activities: [activity],
+          totalMinutes: 1,
+          plan: { ...PLAN, activities: [activity] },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Ready — 1 objective, 1 activity, 1 minute.")).toBeInTheDocument();
+  });
+
   it("keeps the gate's blocker reasons reachable and never fires publish while blocked", async () => {
     const user = userEvent.setup();
     const onPublish = vi.fn();

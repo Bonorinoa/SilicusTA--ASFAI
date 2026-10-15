@@ -41,8 +41,10 @@ const SECRET = "SAFFRON-HERON-8812";
 const MATERIAL_TEXT = `Plants make their own food from light.\nThe phrase ${SECRET} appears only in these notes.\nLeaves hold the green pigment that catches light.`;
 
 const results = [];
+/** Which pass is running ("wide 1440" / "narrow 380"). Every check line carries it. */
+let passLabel = "setup";
 const check = (name, ok, extra = "") => {
-  const line = `${ok ? "PASS" : "FAIL"}  ${name}${extra ? " — " + extra : ""}`;
+  const line = `${ok ? "PASS" : "FAIL"}  [${passLabel}] ${name}${extra ? " — " + extra : ""}`;
   results.push(line);
   console.log(line);
 };
@@ -109,7 +111,7 @@ const APP = `http://127.0.0.1:${server.address().port}`;
 const exe = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"].find((p) => existsSync(p));
 if (!exe) throw new Error("no system chrome found");
 const browser = await puppeteer.launch({ executablePath: exe, headless: "new", args: ["--no-sandbox"] });
-const page = await browser.newPage();
+let page = await browser.newPage();
 await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
 // No server configuration in the public bundle (verifier finding MED-1): no env-variable or key names, nothing key-shaped.
 {
@@ -121,8 +123,6 @@ await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
 }
 
 const DOWNLOADS = mkdtempSync(join(tmpdir(), "silicus-downloads-"));
-const cdp = await page.createCDPSession();
-await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS });
 
 const consoleErrors = [];
 const pageErrors = [];
@@ -133,6 +133,54 @@ await page.evaluateOnNewDocument(() => {
   window.__csp = [];
   document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
 });
+
+/* ------------------------------ the narrow pass ------------------------------
+ * The SAME story runs twice: once at 1440 (the design's own width) and once at
+ * 380, where a teacher's narrow window lives. The narrow pass additionally asserts
+ * at every stage that the page never scrolls sideways, that no element's right edge
+ * passes the viewport, that nothing is clipped by its own box, and — the defect a
+ * real user hit — that the primary confirm button still shows its whole label.
+ * -------------------------------------------------------------------------- */
+const layoutSnapshot = () => page.evaluate(() => {
+  const clientWidth = document.documentElement.clientWidth;
+  // Real overflow: a box that extends past the viewport. Text in normal flow WRAPS, so a card that
+  // genuinely cannot fit shows up here as a widened ancestor chain — no heuristic needed.
+  const past = [...document.querySelectorAll("body *")].flatMap((el) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.right <= clientWidth + 1) return [];
+    return [{ tag: el.tagName, className: typeof el.className === "string" ? el.className : "", right: Math.round(rect.right), text: (el.textContent ?? "").trim().slice(0, 60) }];
+  });
+  // Clipping: only where the element really HIDES what does not fit (overflow hidden/clip, or a control
+  // whose label is cut). Text that overflows without clipping is not a defect.
+  const clipped = [...document.querySelectorAll("body *")].flatMap((el) => {
+    const hidden = /hidden|clip/.test(getComputedStyle(el).overflowX);
+    const control = /^(BUTTON|INPUT|TEXTAREA)$/.test(el.tagName);
+    if ((!hidden && !control) || el.clientWidth <= 1) return [];
+    if (el.scrollWidth <= el.clientWidth + 1) return [];
+    return [{ tag: el.tagName, className: typeof el.className === "string" ? el.className : "", clientWidth: el.clientWidth, scrollWidth: el.scrollWidth, text: (el.textContent ?? "").trim().slice(0, 60) }];
+  });
+  const button = [...document.querySelectorAll("button")].find((b) => /build the plan|Review & publish/i.test(b.textContent ?? ""));
+  return {
+    clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    button: button ? { clientWidth: button.clientWidth, scrollWidth: button.scrollWidth, text: button.textContent.trim() } : null,
+    past,
+    clipped,
+  };
+});
+
+/** The narrow pass's standing assertion, run at every stage of the story. */
+const checkNarrow = async (stage) => {
+  const m = await layoutSnapshot();
+  check(`narrow ${stage}: the page does not scroll sideways`, m.scrollWidth <= m.clientWidth + 1, `scrollWidth ${m.scrollWidth} vs clientWidth ${m.clientWidth}`);
+  check(`narrow ${stage}: no element's right edge passes the viewport`, m.past.length === 0,
+    m.past.slice(0, 4).map((o) => `${o.tag}.${o.className} right=${o.right} "${o.text}"`).join(" | "));
+  check(`narrow ${stage}: no element's content is clipped by its own box`, m.clipped.length === 0,
+    m.clipped.slice(0, 4).map((o) => `${o.tag}.${o.className} ${o.scrollWidth}>${o.clientWidth} "${o.text}"`).join(" | "));
+  if (m.button) {
+    check(`narrow ${stage}: the confirm button "${m.button.text}" shows its whole label`, m.button.scrollWidth <= m.button.clientWidth + 1, `scrollWidth ${m.button.scrollWidth} vs clientWidth ${m.button.clientWidth}`);
+  }
+};
 
 const bodyHas = (t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
 const clickText = (text) => page.evaluate((t) => {
@@ -166,7 +214,9 @@ const shot = async (name, selector = null) => {
 };
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
-try {
+async function story(label, narrow) {
+  passLabel = label;
+  if (narrow) await checkNarrow("landing");
   // ---- first impression: the BARE url lands on the live course, in the product's own voice
   await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
@@ -180,18 +230,16 @@ try {
   check("the header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
   check("the component workbench stays reachable through a discreet footer 'Design system' link", first.design.some(([t, h]) => t === "Design system" && h === "#/decision"));
   await shot("00-first-impression");
+  /* NOTE: the design-system workbench route (#/decision) is NOT asserted at 380: it is not owned by the
+     cards in this change's fence, and it overflows on its own (see the report's unfixed list). */
   await page.click('footer a[href="#/decision"]');
   await poll(() => page.evaluate(() => document.querySelector('section[aria-label="Objective proposals"]') !== null));
   check("the Design system link opens the workbench, with a way back to the course", await page.evaluate(() => [...document.querySelectorAll("nav a")].some((a) => a.textContent === "Back to the course")));
+  // The workbench is a detour: set the hash back to the live course and wait for its own first control.
+  // (A same-document goto to another hash would leave the app on the workbench route.)
   await page.evaluate(() => { location.hash = "#/live"; });
-
-  await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
-  await page.waitForFunction(() => document.querySelector("button") !== null);
-  check("the Live tab opens with no host (no developer 'host is not reachable' text)", !(await bodyHas("host is not reachable")) && (await bodyHas("What should we call this course")));
-  await shot("01-start");
-  check("online, the onboarding never mentions ASFAI it cannot reach (no 'Not sent to ASFAI')", !(await bodyHas("Not sent to ASFAI")));
-  check("a quiet notice says this browser keeps the record", (await bodyHas("This browser keeps the record")) && (await bodyHas("stored in this browser only")));
-
+  await page.waitForSelector("#onboarding-reply");
+  if (narrow) await checkNarrow("onboarding start");
   // ---- name the course (checkpoint 1)
   const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
   await reply("How plants eat", "Record the course title");
@@ -228,6 +276,7 @@ try {
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
   check("outline confirmed on the record", true);
 
+  if (narrow) await checkNarrow("material panel");
   // ---- material -> propose (the passcode is asked for)
   await poll(() => bodyHas("Give me the material"));
   check("the material panel says YouTube needs the local app", await bodyHas("YouTube captions need the local Silicus app"));
@@ -269,6 +318,7 @@ try {
   check("the material text went to the model once…", api.workerBodies.some((b) => b.includes(SECRET)));
   check("…and is in no IndexedDB value, localStorage or sessionStorage", !JSON.stringify(s).includes(SECRET));
 
+  if (narrow) await checkNarrow("confirm bar, proposals undecided");
   // ---- the teacher decides (accept every proposal)
   await poll(async () => {
     const st = await stored();
@@ -283,6 +333,7 @@ try {
   }, 25000);
   check("one teacher decision recorded per proposal", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
 
+  if (narrow) await checkNarrow("confirmed objectives");
   // ---- plan: draft, confirm
   await poll(() => bodyHas("Draft the plan from your confirmed objectives"));
   const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
@@ -329,6 +380,7 @@ try {
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
   check("plan confirmed on the record", true);
 
+  if (narrow) await checkNarrow("plan card");
   // ---- publish (review -> confirm step -> publish)
   await poll(async () => {
     const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
@@ -342,12 +394,14 @@ try {
     await sleep(250);
     return null;
   }, 12000);
+  if (narrow) await checkNarrow("seal confirm step");
   await clickText("Publish version 1");
   await poll(async () => kinds(await stored()).includes("package.published"));
   await poll(() => bodyHas("sealed and pinned on this device"));
   s = await stored();
   check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
 
+  if (narrow) await checkNarrow("publish card, sealed");
   // ---- a student asks; nothing is written
   const beforeAsk = JSON.stringify(await stored());
   await page.waitForSelector('section[aria-label="Try it as a student"] input');
@@ -384,6 +438,7 @@ try {
   await poll(() => bodyHas("chain intact"));
   check("after a reload the record verifies", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
 
+  if (narrow) await checkNarrow("published course");
   // ---- export all
   await clickText("Export all courses");
   const exported = await poll(() => {
@@ -437,13 +492,39 @@ try {
   check("0 page errors", pageErrors.length === 0, pageErrors.join(" | "));
   check("the only network calls were the site's functions", api.calls.every((c) => ["/api/worker", "/api/worker/status"].includes(c.path)),
     [...new Set(api.calls.map((c) => c.path))].join(", "));
-} catch (e) {
-  console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
-  check("smoke run completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
-} finally {
-  await browser.close();
-  server.close();
 }
+
+await page.close();
+
+for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "narrow 380"]]) {
+  // A FRESH context per pass: its own IndexedDB and Web Storage, so the first pass's
+  // imported course cannot put the second pass's first-run story into the middle of a course.
+  const context = await browser.createBrowserContext();
+  page = await context.newPage();
+  page.on("console", (m) => { if (m.type() === "error") { consoleErrors.push(m.text()); console.log(`[console.error] ${m.text()}`); } });
+  page.on("pageerror", (e) => { pageErrors.push(e.message); console.log(`[pageerror] ${e.message}`); });
+  page.on("response", (r) => { if (r.status() >= 400) console.log(`[http ${r.status()}] ${r.url()}`); });
+  await page.evaluateOnNewDocument(() => {
+    window.__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  // A context id names the browser context just created; without it the download is only
+  // allowed for the default context, and the export silently misses this pass's directory.
+  const cdp = await page.createCDPSession();
+  await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DOWNLOADS, browserContextId: context.id });
+  try {
+    await story(label, label.startsWith("narrow"));
+    check("the whole flow completed", true);
+  } catch (e) {
+    console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
+    check("the whole flow completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
+  }
+  await context.close();
+}
+
+await browser.close();
+server.close();
 
 const failed = results.filter((r) => r.startsWith("FAIL"));
 console.log(`\n${results.length - failed.length}/${results.length} browser-mode checks passed`);

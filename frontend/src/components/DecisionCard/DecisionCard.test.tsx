@@ -249,6 +249,19 @@ describe("DecisionCard, bound to a real ConfirmGate", () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the singular objective label when one proposal is decided", async () => {
+    const user = userEvent.setup();
+    const harness = new ConfirmGateHarness();
+    harness.propose([{ statement: "Alpha objective." }]);
+    render(<BoundCard harness={harness} />);
+
+    await user.click(screen.getByRole("button", { name: /^accept objective/i }));
+
+    expect(
+      screen.getByRole("button", { name: "Confirm 1 objective · build the plan" }),
+    ).toBeInTheDocument();
+  });
+
   it("tab order: accept → rename → drop per row, then Add, then Confirm", async () => {
     const user = userEvent.setup();
     const harness = new ConfirmGateHarness();

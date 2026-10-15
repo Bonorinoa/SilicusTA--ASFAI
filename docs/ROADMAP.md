@@ -82,6 +82,12 @@ live browser 50/50):
   worker off, which is what makes revising usable without one. In the page: **Edit wording** on a confirmed row, shown
   as "Reworded by you" with the original visible. Also: the invalidated-plan note no longer suggests that
   re-confirming a plan as it reads would make it publishable.
+- **Decisions carry only intent.** Found by the reword worker's audit: `add` and `rename` used to write a client's extra
+  keys into the hash-chained log verbatim (a forged provenance block, an invented id, an `mt_*` alignment that the
+  gate honoured as teacher-confirmed). Every decision verb is now cut down to the fields the host uses; older logs still
+  replay. The test fails against the old code. **Still open from the same audit:** a reword-and-back (or add-then-drop)
+  leaves the gate's dirty flag set, so publish could seal an identical next version even though the revision panel says
+  nothing changed.
 - **Version diff, non-AI and read-only.** With two or more published versions, the course page shows what changed
   between any two (default: the latest against the one before it): objectives added, removed or reworded
   (matched by id only, never by guessing from similar wording), plan activities added, removed or changed (title,

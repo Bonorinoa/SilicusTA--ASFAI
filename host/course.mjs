@@ -433,11 +433,21 @@ export class CourseSession {
     // A reword carries exactly the intent (the verb, the objective id, the new statement) and nothing else, so a
     // client's extra keys (a provenance block, ids, a kind, an mt_* alignment) never reach the log. They would be
     // inert (the gate ignores them), but the log is hash-chained and permanent: it keeps only what the host used.
+    // Every verb is cut down to the fields the host actually uses, so a client can never put a provenance block, an id
+    // it invented, a kind, or an mt_* alignment into the hash-chained log (the red-team finding: add and rename used to
+    // log the client's extra keys verbatim; the gate ignored most of them, but an add's `alignment` was honoured as
+    // teacher-confirmed). Older logs that hold extra keys still replay: this runs on the way IN, never on replay.
     const cleaned = Array.isArray(decisions)
       ? decisions.map((d) => {
           if (!d || typeof d !== "object") return d;
-          if (d.verb === "reword") return { verb: "reword", proposalId: d.proposalId, statement: teacherStatement(d.statement) };
-          return d.verb === "add" || d.verb === "rename" ? { ...d, statement: teacherStatement(d.statement) } : d;
+          switch (d.verb) {
+            case "reword": return { verb: "reword", proposalId: d.proposalId, statement: teacherStatement(d.statement) };
+            case "rename": return { verb: "rename", proposalId: d.proposalId, statement: teacherStatement(d.statement) };
+            case "add": return { verb: "add", statement: teacherStatement(d.statement) };
+            case "accept": return { verb: "accept", proposalId: d.proposalId };
+            case "drop": return { verb: "drop", proposalId: d.proposalId };
+            default: return { verb: d.verb };   // an unknown verb is refused by the gate; it carries nothing else
+          }
         })
       : decisions;
     const event = { kind: "objectives.decided", decisions: cleaned, text: requireMsg(text, "text"), at: a };

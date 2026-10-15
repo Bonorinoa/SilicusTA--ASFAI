@@ -42,10 +42,52 @@ export const OUTCOMES_KEY = "learning_outcomes";
 export function outcomeSentences(raw) {
   // Every Unicode line terminator ends a line, and control / bidi characters are blanked: an outcome later
   // appears on a single line of the drafting prompt, and a stray U+2028 must not be able to start a new one.
-  const parts = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/\r\n|[\n\r\u0085\u2028\u2029]/) : [];
-  return parts
-    .map((s) => String(s ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, " ").trim())
-    .filter(Boolean);
+  const parts = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(LINE_BREAK) : [];
+  return parts.map(cleanLine).filter(Boolean);
+}
+
+/** Every Unicode line terminator. */
+const LINE_BREAK = /\r\n|[\n\r\u0085\u2028\u2029]/;
+
+/** Control and bidi characters: blanked, never passed through. THE character rule, defined once. */
+const HOSTILE_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g;
+
+function cleanLine(s) {
+  return String(s ?? "").replace(HOSTILE_CHARS, " ").trim();
+}
+
+/** The longest objective statement the teacher may write (the same bound intake.mjs puts on an outcome). */
+export const MAX_STATEMENT_CHARS = 2000;
+
+/** A teacher-typed statement was refused. `code` says why; the HTTP layer answers 422. */
+export class StatementError extends Error {
+  /** @param {string} code @param {string} message */
+  constructor(code, message) {
+    super(message);
+    this.name = "StatementError";
+    this.code = code;
+  }
+}
+
+/**
+ * The rule for a statement the teacher types for an objective (add, rename): it must be exactly ONE
+ * outcome sentence under outcomeSentences' own rule. Control and bidi characters are blanked the same
+ * way; a line break is refused rather than silently joining or splitting the teacher's words; the
+ * length is bounded by refusal, never by truncation (a cut sentence is not the teacher's sentence).
+ *
+ * @param {unknown} raw
+ * @returns {string} the cleaned statement
+ * @throws {StatementError}
+ */
+export function teacherStatement(raw) {
+  if (typeof raw !== "string") throw new StatementError("BAD_STATEMENT", "a statement must be text");
+  const lines = outcomeSentences(raw);
+  if (lines.length === 0) throw new StatementError("BAD_STATEMENT", "a statement must not be empty");
+  if (lines.length > 1) throw new StatementError("STATEMENT_NOT_ONE_LINE", "an objective is one sentence on one line");
+  if (lines[0].length > MAX_STATEMENT_CHARS) {
+    throw new StatementError("STATEMENT_TOO_LONG", `an objective may be at most ${MAX_STATEMENT_CHARS} characters`);
+  }
+  return lines[0];
 }
 
 /**

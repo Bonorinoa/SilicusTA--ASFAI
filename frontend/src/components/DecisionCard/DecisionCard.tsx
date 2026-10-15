@@ -35,6 +35,11 @@ export interface DecisionCardProps {
   courseLabel?: string;
   /** Parent-surfaced notice (e.g. a gate refusal), announced politely. */
   notice?: string | null;
+  /**
+   * Can a new lesson plan be drafted on this host? Only used to be honest about the cost of revoking an
+   * objective the current plan cites. Omitted means "yes"; `false` is a host with no drafting worker.
+   */
+  canRedraftPlan?: boolean;
 }
 
 const STATUS_LABEL: Record<ProposalView["status"], string> = {
@@ -58,6 +63,7 @@ export function DecisionCard({
   checkpointStatus = "open",
   courseLabel,
   notice = null,
+  canRedraftPlan = true,
 }: DecisionCardProps) {
   const [adding, setAdding] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -162,7 +168,7 @@ export function DecisionCard({
       ) : (
         <ol className={styles.rows} role="list">
           {rows.map((row, index) => (
-            <ProposalRow key={row.id} row={row} index={index + 1} onDispatch={onDispatch} />
+            <ProposalRow key={row.id} row={row} index={index + 1} onDispatch={onDispatch} canRedraftPlan={canRedraftPlan} />
           ))}
         </ol>
       )}
@@ -247,10 +253,12 @@ function ProposalRow({
   row,
   index,
   onDispatch,
+  canRedraftPlan,
 }: {
   row: ProposalView;
   index: number;
   onDispatch: (intent: DecisionIntent) => void;
+  canRedraftPlan: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.statement);
@@ -343,6 +351,14 @@ function ProposalRow({
     : null;
   const alignmentKey = row.alignment ? row.alignment.publicId : null;
 
+  // Revoking an objective the lesson plan cites invalidates that plan. Say what that costs BEFORE it is done.
+  const planCost =
+    dropIsRevoke && row.citedByPlan
+      ? canRedraftPlan
+        ? "The current lesson plan cites it, so that plan becomes invalid and a new one must be drafted and confirmed before you can publish."
+        : "The current lesson plan cites it, so that plan becomes invalid — and no drafting worker is configured on this host, so you could not publish again until one is."
+      : null;
+
   const actionsArea = () => {
     if (confirmingDrop) {
       return (
@@ -358,6 +374,7 @@ function ProposalRow({
             {dropIsRevoke
               ? "The objective leaves this plan and stops being part of it."
               : "It is removed from this plan and cannot be restored — you would have to write it again."}
+            {planCost ? ` ${planCost}` : null}
           </p>
           <div className={styles.actions}>
             <button

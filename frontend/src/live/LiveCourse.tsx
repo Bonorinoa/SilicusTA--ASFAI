@@ -20,6 +20,7 @@ import type { DecisionIntent } from "../gate/types";
 import { OnboardingChat } from "./OnboardingChat";
 import { MaterialsPanel } from "./MaterialsPanel";
 import { StudentChat } from "./StudentChat";
+import { RevisionPanel } from "./RevisionPanel";
 import { CourseLibrary } from "./CourseLibrary";
 import { buildHandoutHtml, handoutFilename } from "./handout";
 import styles from "./LiveCourse.module.css";
@@ -393,6 +394,13 @@ export function LiveCourse() {
             Re-confirm the lesson plan
           </button>
         ) : null}
+        {/* An invalidated plan cites a revoked objective, and a revoked objective cannot come back: the way
+            forward is a new plan. (Once a version is sealed the revision panel carries this button instead.) */}
+        {plan && plan.status === "invalidated" && !published && worker?.configured !== false ? (
+          <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
+            Draft a new plan from your confirmed objectives
+          </button>
+        ) : null}
         <button type="button" className={styles.textButton} onClick={verifyLog} disabled={busy}>
           Verify the event log
         </button>
@@ -434,8 +442,18 @@ export function LiveCourse() {
         </section>
       ) : null}
 
+      {published && view.revision ? (
+        <RevisionPanel
+          revision={view.revision}
+          workerConfigured={worker?.configured !== false}
+          busy={busy}
+          onDraftPlan={draftPlan}
+        />
+      ) : null}
+
       <div className={styles.grid}>
         <DecisionCard
+          canRedraftPlan={worker?.configured !== false}
           rows={view.proposals}
           onDispatch={dispatch}
           checkpointStatus={cp.objectives?.status}

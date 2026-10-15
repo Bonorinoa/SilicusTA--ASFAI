@@ -439,6 +439,42 @@ const sealed2 = await poll(async () => { const v = await getView(course2); retur
 check("local: all five checkpoints confirmed and sealed with no ASFAI",
   ["files", "outline", "objectives", "plan", "publish"].every((k) => sealed2.checkpoints[k].status === "confirmed"));
 check("local: the log verifies", (await get(`/api/courses/${encodeURIComponent(course2)}/verify`)).json.ok === true);
+// ---- revising the published course: a labelled action that changes nothing until the teacher acts ----
+await poll(async () => await bodyHas(page, "Revise this course"));
+check("revise: the published course says version 1 is unchanged, and students keep reading it",
+  (await bodyHas(page, "Version 1 is published and unchanged.")) && !(await bodyHas(page, "you are drafting")) && (await bodyHas(page, "A draft is never what students see")));
+const eventsBeforeOpen = (await getView(course2)).integrity.events;
+await clickText(page, "Revise this course");
+await poll(async () => await bodyHas(page, "Revising: what has changed since version 1"));
+check("revise: opening the revision tools wrote nothing to the host", (await getView(course2)).integrity.events === eventsBeforeOpen);
+await clickText(page, "Add a new local objective");
+await poll(() => page.evaluate(() => !!document.querySelector("#add-objective")));
+await page.type("#add-objective", "Students can debug a short program.");
+await clickText(page, "Add");
+const drafting = await poll(async () => { const v = await getView(course2); return v.revision?.drafting ? v : null; });
+check("revise: the host reads the record as drafting version 2, with the teacher's own objective added",
+  drafting.revision.sealedVersion === 1 && drafting.revision.nextVersion === 2 && drafting.revision.changes.objectivesAdded[0]?.statement === "Students can debug a short program.");
+await poll(async () => await bodyHas(page, "you are drafting version 2"));
+check("revise: the UI says you are drafting version 2, and version 1 is still the only sealed version",
+  (await bodyHas(page, "Version 1 is published and unchanged; you are drafting version 2.")) && drafting.versions.length === 1);
+const sealOpenV2 = await poll(async () => {
+  if (await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'))) return true;
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
+    if (btn) btn.click();
+  });
+  await sleep(250);
+  return null;
+}, 12000);
+check("revise: the seal confirm step appears for version 2", sealOpenV2 === true);
+await clickText(page, "Publish version 2");
+const sealedV2 = await poll(async () => { const v = await getView(course2); return v.versions.length === 2 ? v : null; });
+check("revise: version 2 is sealed by a teacher turn, linked to version 1, and version 1 is untouched",
+  sealedV2.versions[1].previousVersion === 1 && sealedV2.versions[1].objectiveRefs.length === 3
+    && JSON.stringify(sealedV2.versions[0]) === JSON.stringify(sealed2.versions[0])
+    && sealedV2.ledger.find((t) => t.id === sealedV2.versions[1].provenance.turnRef)?.role === "teacher");
+check("revise: the log still verifies and the UI now reports version 2", (await get(`/api/courses/${encodeURIComponent(course2)}/verify`)).json.ok === true
+  && await poll(async () => await bodyHas(page, "Version 2 is published and unchanged.")));
 check("local: not one request reached ASFAI during the whole local story", MOCK.st.calls.length === asfaiRequestsBefore,
   `before=${asfaiRequestsBefore} after=${MOCK.st.calls.length}`);
 

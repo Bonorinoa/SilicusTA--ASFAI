@@ -24,7 +24,7 @@ import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gat
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { CourseStore } from "./store.mjs";
 import { LessonIntake } from "./intake.mjs";
-import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "./proposer.mjs";
+import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, teacherStatement } from "./proposer.mjs";
 import { digestOf } from "./archive.mjs";
 import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 
@@ -427,7 +427,13 @@ export class CourseSession {
   /** Checkpoint 3: the teacher decides the proposals. The caller supplies NO provenance. */
   decideObjectives({ decisions, text, at } = {}) {
     const a = at ?? Date.now();
-    const event = { kind: "objectives.decided", decisions, text: requireMsg(text, "text"), at: a };
+    // The wording the teacher types (add, rename) is untrusted input: one line, bounded, control and bidi
+    // characters blanked by the SAME rule that cleans an outcome (proposer.teacherStatement). It reaches the
+    // log, the sealed package and every later prompt only after this, so a revision cannot smuggle a line in.
+    const cleaned = Array.isArray(decisions)
+      ? decisions.map((d) => (d && typeof d === "object" && (d.verb === "add" || d.verb === "rename") ? { ...d, statement: teacherStatement(d.statement) } : d))
+      : decisions;
+    const event = { kind: "objectives.decided", decisions: cleaned, text: requireMsg(text, "text"), at: a };
     this.#apply(event);
     this.#append(event);
     return this.view().decisions;
@@ -554,7 +560,13 @@ export class CourseSession {
     return rec?.statement ?? proposal?.publicId ?? rec?.publicId ?? id;
   }
 
+  /** Ids the current plan's activities cite (any plan status): host metadata for the row, never gate state. */
+  #citedByPlan() {
+    return new Set((this.#gate.currentPlan()?.activities ?? []).flatMap((a) => a.objectiveIds));
+  }
+
   #rows() {
+    const cited = this.#citedByPlan();
     const decisions = this.#gate.decisions();
     const rows = [];
     const seen = new Set();
@@ -584,6 +596,7 @@ export class CourseSession {
           ? { publicId: alignmentSource.publicId, relationship: alignmentSource.relationship, suggested: !alignmentSource.confirmedByEducator }
           : null,
         by: "ai",
+        citedByPlan: cited.has(id),
       });
     }
     for (const d of decisions) {
@@ -598,9 +611,43 @@ export class CourseSession {
         source: this.#sources.get(d.targetId) ?? "your own objective",
         alignment: null,
         by: "teacher",
+        citedByPlan: cited.has(d.targetId),
       });
     }
     return rows;
+  }
+
+  /**
+   * Where a PUBLISHED course stands against its last sealed version. Pure reading: derived from the sealed
+   * record and the live gate state, it writes nothing and takes nothing from a client. Revising has no
+   * switch of its own: the gate already reopens (the plan on a revoke or a new draft, the publish
+   * checkpoint on any change), so "drafting version N+1" is a fact about the record, not a mode a click sets.
+   *
+   * `drafting` is true only when the record really differs from the sealed version: an objective added
+   * or revoked since, or a plan that is not the sealed, confirmed one. Students read `sealedVersion`
+   * (latestSealedVersion), never anything here.
+   */
+  #revision() {
+    const sealed = this.latestSealedVersion();
+    if (!sealed) return { sealedVersion: null, nextVersion: 1, drafting: false, changes: null, notInPlan: [] };
+    const confirmed = this.#gate.confirmedObjectives();
+    const plan = this.#gate.currentPlan();
+    const sealedIds = new Set(sealed.objectiveRefs.map((o) => o.id));
+    const liveIds = new Set(confirmed.map((o) => o.id));
+    const said = (o) => ({ id: o.id, statement: o.statement ?? o.publicId ?? o.id });
+    const objectivesAdded = confirmed.filter((o) => !sealedIds.has(o.id)).map((o) => ({ id: o.id, statement: this.wording(o.id) }));
+    const objectivesRemoved = sealed.objectiveRefs.filter((o) => !liveIds.has(o.id)).map(said);
+    // The plan against the sealed one: the same confirmed plan, a different confirmed plan, or one still waiting on the teacher.
+    const planState = !plan || plan.status !== "confirmed" ? "unconfirmed" : plan.id !== sealed.lessonPlan?.id ? "replaced" : "same";
+    const cited = this.#citedByPlan();
+    const notInPlan = plan ? confirmed.filter((o) => !cited.has(o.id)).map((o) => ({ id: o.id, statement: this.wording(o.id) })) : [];
+    return {
+      sealedVersion: sealed.version,
+      nextVersion: sealed.version + 1,
+      drafting: objectivesAdded.length > 0 || objectivesRemoved.length > 0 || planState !== "same",
+      changes: { objectivesAdded, objectivesRemoved, plan: planState, planStatus: plan?.status ?? null },
+      notInPlan,
+    };
   }
 
   /** The current plan, plus the alignment suggestions it cited (only when there are some). */
@@ -662,6 +709,7 @@ export class CourseSession {
       plan: this.#planView(),
       invalidation: this.planInvalidation(),
       publish: this.#gate.publishStatus(),
+      revision: this.#revision(),
       versions: this.#gate.versions(),
       timeline: this.#timeline(),
       ledger: this.#ledger.list(),

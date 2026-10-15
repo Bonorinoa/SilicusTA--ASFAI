@@ -22,7 +22,7 @@
  * what that call returned and what the teacher answered. It never invents a field.
  */
 import { ResidualRuleGuard } from "../confirm-gate/host-guard.mjs";
-import { outcomeSentences } from "./proposer.mjs";
+import { outcomeSentences, MAX_STATEMENT_CHARS } from "./proposer.mjs";
 
 /**
  * The questions the HOST asks when ASFAI is not in the loop. Same ids and prompts as the
@@ -230,7 +230,7 @@ export class LessonIntake {
   }
 }
 
-const MAX_FIELD = 2000;
+const MAX_FIELD = MAX_STATEMENT_CHARS;
 const MAX_OUTCOMES = 12;
 const KNOWN = new Set(["topic", "course", "learning_outcomes"]);
 

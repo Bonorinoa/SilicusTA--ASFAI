@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { objectivesFromAnswers, outcomeSentences, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "../proposer.mjs";
+import { objectivesFromAnswers, outcomeSentences, teacherStatement, StatementError, MAX_STATEMENT_CHARS, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "../proposer.mjs";
 
 test("each teacher outcome sentence becomes one local proposal, verbatim", () => {
   const items = objectivesFromAnswers({
@@ -80,4 +80,19 @@ test("the two source labels are distinct and both honest", () => {
   assert.equal(SOURCE_FROM_ANSWERS, "from your answer to ASFAI");
   assert.equal(SOURCE_FROM_LOCAL_ANSWERS, "from your answer");
   assert.notEqual(SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS);
+});
+
+test("teacherStatement is outcomeSentences' own rule applied to ONE sentence, not a second rule", () => {
+  for (const raw of ["Students can sort.", "  padded  ", "bidi \u202e here", "ctrl\u0007char\u200b", "tab\tinside"]) {
+    assert.equal(teacherStatement(raw), outcomeSentences(raw)[0], JSON.stringify(raw));
+  }
+  // What the shared rule would SPLIT into several lines is refused, never joined.
+  for (const raw of ["a\nb", "a\u2028b", "a\u2029b", "a\u0085b", "a\r\nb"]) {
+    assert.throws(() => teacherStatement(raw), (e) => e instanceof StatementError && e.code === "STATEMENT_NOT_ONE_LINE");
+  }
+  // A trailing line break is just the end of the line.
+  assert.equal(teacherStatement("Students can sort.\n"), "Students can sort.");
+  assert.throws(() => teacherStatement("x".repeat(MAX_STATEMENT_CHARS + 1)), (e) => e.code === "STATEMENT_TOO_LONG");
+  assert.equal(teacherStatement("x".repeat(MAX_STATEMENT_CHARS)).length, MAX_STATEMENT_CHARS);
+  for (const bad of [undefined, null, 3, {}, [], "", " \u200b "]) assert.throws(() => teacherStatement(bad), (e) => e.code === "BAD_STATEMENT");
 });

@@ -491,4 +491,117 @@ describe("LiveCourse — thin client of the host", () => {
     expect(text).toContain(STATEMENT);
     expect((await screen.findAllByText(/Downloaded the student handout/)).length).toBeGreaterThan(0);
   });
+
+  /** A published course (v1) whose single objective is accepted and cited by the sealed, confirmed plan. */
+  function publishedView(revision: HostView["revision"]): HostView {
+    const v = stubView();
+    v.checkpoints.objectives.status = "confirmed";
+    v.checkpoints.plan.status = "confirmed";
+    v.checkpoints.publish.status = "confirmed";
+    v.proposals = [{ id: "urn:uuid:aaaa", kind: "local", status: "accepted", statement: STATEMENT, originalStatement: STATEMENT, source: "from your answer", alignment: null, by: "ai", citedByPlan: true }];
+    v.objectives = [{ id: "urn:uuid:aaaa", kind: "local", statement: STATEMENT }];
+    v.versions = [{
+      courseId: COURSE_ID, version: 1, previousVersion: null, title: "AI literacy", owner: "Ada", status: "published",
+      objectiveRefs: [{ id: "urn:uuid:aaaa", kind: "local", statement: STATEMENT }], lessonPlan: null, publishedAt: 1, note: null,
+      provenance: { turnRef: "t", decidedBy: "Ada", channel: "c", decidedAt: 1 },
+    }];
+    v.revision = revision;
+    return v;
+  }
+  const UNCHANGED: HostView["revision"] = { sealedVersion: 1, nextVersion: 2, drafting: false, changes: { objectivesAdded: [], objectivesRemoved: [], plan: "same", planStatus: "confirmed" }, notInPlan: [] };
+  const WRITES = (calls: Call[]) => calls.filter((c) => c.body !== undefined).length;
+
+  it("offers 'Revise this course' on a published course; opening it writes nothing and says nothing is being drafted", async () => {
+    const { calls } = mockHost(publishedView(UNCHANGED));
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    expect(await screen.findByText("Version 1 is published and unchanged.")).toBeInTheDocument();
+    const before = WRITES(calls);
+    await user.click(screen.getByRole("button", { name: "Revise this course" }));
+    expect(await screen.findByText(/Nothing yet\. Version 1 is still the latest/)).toBeInTheDocument();
+    expect(screen.queryByText(/you are drafting/)).not.toBeInTheDocument();
+    expect(WRITES(calls)).toBe(before);
+    // The sealed course still reads the same everywhere.
+    expect(screen.getByRole("button", { name: "Download student handout" })).toBeInTheDocument();
+  });
+
+  it("does not offer revision before anything is sealed, or on a host that does not report it", async () => {
+    mockHost(stubView());
+    const first = render(<LiveCourse />);
+    await screen.findByRole("heading", { level: 1, name: "Lesson 3 · AI literacy" });
+    expect(screen.queryByRole("button", { name: "Revise this course" })).not.toBeInTheDocument();
+    first.unmount();
+    const old = publishedView(UNCHANGED);
+    delete old.revision;
+    mockHost(old);
+    render(<LiveCourse />);
+    await screen.findByRole("heading", { level: 1, name: "Lesson 3 · AI literacy" });
+    expect(screen.queryByRole("button", { name: "Revise this course" })).not.toBeInTheDocument();
+  });
+
+  it("while drafting version 2 it says so, keeps students on version 1, and the draft button sends no content", async () => {
+    const drafting: HostView["revision"] = {
+      sealedVersion: 1, nextVersion: 2, drafting: true,
+      changes: { objectivesAdded: [], objectivesRemoved: [{ id: "urn:uuid:aaaa", statement: STATEMENT }], plan: "unconfirmed", planStatus: "invalidated" },
+      notInPlan: [],
+    };
+    const v = publishedView(drafting);
+    v.proposals[0] = { ...v.proposals[0], status: "dropped" };
+    v.objectives = [];
+    v.plan = { id: "urn:uuid:plan", courseId: COURSE_ID, courseVersion: 1, title: "Steps", status: "invalidated", activities: [], proposedBy: "ai", proposedAt: 1 };
+    const { calls } = mockHost(v);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    expect(await screen.findByText("Version 1 is published and unchanged; you are drafting version 2.")).toBeInTheDocument();
+    expect(screen.getByText(/keep reading it until you publish version 2/)).toBeInTheDocument();
+    // One way forward, not two: the revision panel owns the new-plan button once a version is sealed.
+    const draft = screen.getAllByRole("button", { name: /Draft a new (lesson )?plan from your confirmed objectives/ });
+    expect(draft).toHaveLength(1);
+    await user.click(draft[0]);
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/plan"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/plan"))!.body).toEqual({});
+  });
+
+  it("before the first seal, an invalidated plan offers a new plan (the revoked objective cannot come back)", async () => {
+    const v = stubView();
+    v.plan = { id: "urn:uuid:plan", courseId: COURSE_ID, courseVersion: 1, title: "Steps", status: "invalidated", activities: [], proposedBy: "ai", proposedAt: 1 };
+    mockHost(v);
+    render(<LiveCourse />);
+    expect(await screen.findByRole("button", { name: "Draft a new plan from your confirmed objectives" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Re-confirm the lesson plan" })).toBeInTheDocument();
+  });
+
+  it("with no worker, revoking a cited objective says what it costs BEFORE it is done, and does nothing until confirmed", async () => {
+    const { calls } = mockHost(publishedView(UNCHANGED), { workerConfigured: false });
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    const row = (await screen.findByRole("heading", { name: STATEMENT })).closest("li") as HTMLElement;
+    const before = WRITES(calls);
+    await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
+    expect(within(row).getByText(/no drafting worker is configured on this host, so you could not publish again until one is/)).toBeInTheDocument();
+    expect(WRITES(calls)).toBe(before);
+    await user.click(within(row).getByRole("button", { name: "Keep it" }));
+    expect(WRITES(calls)).toBe(before);
+  });
+
+  it("with a worker, the same revoke names the plan it will invalidate; an uncited objective has no such warning", async () => {
+    const view = publishedView(UNCHANGED);
+    mockHost(view);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    const row = (await screen.findByRole("heading", { name: STATEMENT })).closest("li") as HTMLElement;
+    await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
+    expect(within(row).getByText(/a new one must be drafted and confirmed before you can publish/)).toBeInTheDocument();
+  });
+
+  it("revoking an objective the plan does NOT cite carries no plan warning", async () => {
+    const view = publishedView(UNCHANGED);
+    view.proposals[0] = { ...view.proposals[0], citedByPlan: false };
+    mockHost(view);
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    const row = (await screen.findByRole("heading", { name: STATEMENT })).closest("li") as HTMLElement;
+    await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
+    expect(within(row).queryByText(/lesson plan cites it/)).not.toBeInTheDocument();
+  });
 });

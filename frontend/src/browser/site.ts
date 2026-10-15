@@ -36,6 +36,12 @@ export const MESSAGES = {
   wait: (seconds: number | null) => `Too many AI requests just now. Wait ${seconds ? `${seconds} seconds` : "a minute"} and try again.`,
 } as const;
 
+/** The site's own deadline for one network attempt (the model proxy itself gives up upstream at 55 s). */
+export const REQUEST_TIMEOUT_MS = 60_000;
+
+/** The request left the page and did not come back in time. */
+class SiteTimeout extends Error {}
+
 class PasscodeUnavailable extends Error {
   constructor(readonly rejected: boolean) { super(rejected ? "rejected" : "cancelled"); }
 }
@@ -62,7 +68,7 @@ export interface Site {
   resolveUrl(url: string): Promise<{ text: string; title: string; kind: string }>;
 }
 
-export function createSite({ origin, fetchImpl, passcode }: { origin: string; fetchImpl: typeof fetch; passcode: PasscodeKeeper }): Site {
+export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQUEST_TIMEOUT_MS }: { origin: string; fetchImpl: typeof fetch; passcode: PasscodeKeeper; requestTimeoutMs?: number }): Site {
   let known: SiteStatus | null = null;
 
   async function status(): Promise<SiteStatus> {
@@ -93,7 +99,17 @@ export function createSite({ origin, fetchImpl, passcode }: { origin: string; fe
       }
       const headers = new Headers(init.headers);
       if (code) headers.set("x-silicus-passcode", code);
-      const res = await fetchImpl(url, { ...init, headers });
+      // The deadline covers the NETWORK, never the teacher: start it now, after the passcode is in hand. The caller's
+      // signal (PlanWorker's AbortSignal.timeout) started before the dialog opened, so a teacher who took a minute to
+      // type the passcode used to find it already expired and nothing was sent ("signal timed out"; found live).
+      const signal = AbortSignal.timeout(requestTimeoutMs);
+      let res: Response;
+      try {
+        res = await fetchImpl(url, { ...init, headers, signal });
+      } catch (e) {
+        if (signal.aborted) throw new SiteTimeout();
+        throw e;
+      }
       if (res.status !== 401) return res;
       passcode.clear();
       required = true;
@@ -108,7 +124,8 @@ export function createSite({ origin, fetchImpl, passcode }: { origin: string; fe
       res = await withPasscode(url, init);
     } catch (e) {
       if (e instanceof PasscodeUnavailable) throw new WorkerError("PASSCODE_REQUIRED", e.rejected ? MESSAGES.rejected : MESSAGES.cancelled);
-      throw e;
+      if (e instanceof SiteTimeout) throw new WorkerError("WORKER_UNREACHABLE", MESSAGES.timeout);
+      throw new WorkerError("WORKER_UNREACHABLE", "The site could not be reached. Check the connection and try again.");
     }
     if (res.ok) return res;
     const err = await errorBody(res);
@@ -128,6 +145,7 @@ export function createSite({ origin, fetchImpl, passcode }: { origin: string; fe
       res = await withPasscode(`${origin}/api/fetch`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url }) });
     } catch (e) {
       if (e instanceof PasscodeUnavailable) throw new MaterialError("PASSCODE_REQUIRED", e.rejected ? "The demo passcode was not accepted, so the link was not read." : "Reading a link needs the demo passcode. Paste the text instead.");
+      if (e instanceof SiteTimeout) throw new MaterialError("URL_UNREACHABLE", "reading that link took too long");
       throw new MaterialError("URL_UNREACHABLE", "that link could not be reached");
     }
     if (res.ok) {

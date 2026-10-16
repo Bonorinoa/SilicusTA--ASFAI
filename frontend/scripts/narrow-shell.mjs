@@ -355,6 +355,7 @@ try {
   }, 12000);
   await clickText("Publish version 1");
   await poll(recorded("package.published"));
+  await clickText("Try the student helper"); // the helper is collapsed until opened
   await page.waitForSelector('section[aria-label="Try the student helper"] input');
   await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");
   await clickText("Ask");

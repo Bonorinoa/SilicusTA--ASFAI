@@ -10,8 +10,9 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DecisionCard } from "../components/DecisionCard";
-import { AiWaiting, newWaitClock, stopWaitClock, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitClock, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
+import { AiWaiting, newWaitClock, stopWaitClock, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, suggestReceipt, type ReceiptView, type WaitClock, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
 import { ActivityRail } from "../components/ActivityRail";
+import { relativeTime } from "../components/ActivityRail/copy";
 import { FirstRunTour } from "../components/FirstRunTour";
 import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
@@ -34,6 +35,8 @@ import { VersionDiffPanel } from "./VersionDiffPanel";
 import { stageOf, type Stage } from "./stage";
 import { StepIndex, STEPS, workStep, type StepId } from "./StepIndex";
 import { StageBar } from "./StageBar";
+import { BriefCard } from "./BriefCard";
+import { suggestOffer, suggestRefusalText } from "./suggest";
 import { EarlierSteps, type EarlierStep } from "./EarlierSteps";
 import { PublishedMoment } from "./PublishedMoment";
 import { RecordDetails } from "./RecordDetails";
@@ -66,6 +69,20 @@ function objectivesStep(materials: MaterialInput[], view: HostView): WaitingStep
     materials: materials.map((m) => ("url" in m ? { kind: "link" as const, url: m.url } : { kind: "text" as const, name: m.name, chars: m.text.length })),
     topic: answerText(answers.topic),
     course: answers.course === undefined ? view.course.title : answerText(answers.course),
+  };
+}
+
+/** What "suggest more" sends: the teacher's own outcomes, topic and course, and the count of wordings already listed (so nothing is offered twice). */
+function suggestStep(view: HostView): WaitingStep {
+  const answers = view.intake.answers ?? {};
+  const typed = Array.isArray(answers.learning_outcomes) ? answers.learning_outcomes : answerText(answers.learning_outcomes) ? [answerText(answers.learning_outcomes)] : [];
+  const added = view.proposals.filter((p) => p.source === "your own objective").map((p) => p.statement);
+  return {
+    kind: "suggest",
+    outcomes: [...typed, ...added],
+    topic: answerText(answers.topic),
+    course: answers.course === undefined ? view.course.title : answerText(answers.course),
+    alreadyListed: view.proposals.length,
   };
 }
 
@@ -213,11 +230,17 @@ export function LiveCourse() {
     if (!document.activeElement || document.activeElement === document.body) document.getElementById("onboarding-reply")?.focus();
   }, [focusReply]);
   const closeTour = () => { markTourSeen(); setTourOpen(false); setFocusReply(true); };
-  const tryAsStudent = () => {
+  // The student helper is collapsed until opened. Its primary opens it, then puts the cursor in the question box.
+  const [helperOpen, setHelperOpen] = useState(false);
+  const [focusHelper, setFocusHelper] = useState(false);
+  const tryAsStudent = () => { setHelperOpen(true); setFocusHelper(true); };
+  useEffect(() => {
+    if (!focusHelper || !helperOpen) return;
+    setFocusHelper(false);
     const box = document.getElementById(STUDENT_INPUT_ID);
     box?.scrollIntoView?.({ behavior: "smooth", block: "center" });
     box?.focus({ preventScroll: true });
-  };
+  }, [focusHelper, helperOpen]);
 
   const startCourse = (b: { owner: string; title: string; materials: { name: string }[] }) => run(async () => {
     const created = await host.createCourse(b);
@@ -242,8 +265,15 @@ export function LiveCourse() {
     await reload();
   });
   const confirmOutline = () => run(async () => {
-    await host.confirmCheckpoint(courseId!, { id: "outline", text: "Confirm the outline." });
+    await host.confirmCheckpoint(courseId!, { id: "outline", text: "Confirm the brief." });
     await reload();
+  });
+
+  /** Re-answer one question of the brief. The host takes it only while it still asks that question; the page then shows what it kept. */
+  const editBrief = (id: string, text: string) => run(async () => {
+    try { await host.answerIntake(courseId!, { text, answers: { [id]: text } }); }
+    catch (e) { setNotice(`Not saved. ${sentence((e as Error).message)}`); }
+    finally { await reload(); }
   });
 
   /** Ask ASFAI for the clarifying questions (round 1) or send the teacher's answers (round 2). */
@@ -348,6 +378,22 @@ export function LiveCourse() {
       }
     });
   };
+
+  /** The WORKER suggests up to 3 objectives that round out the teacher's own. Each waits for the teacher like any proposal. */
+  const suggestMore = () => run(async () => {
+    const wait = view ? startWait(suggestStep(view)) : null;
+    let ok = false;
+    try {
+      await host.suggestObjectives(courseId!);
+      ok = true;
+      setNotice(null);
+    } catch (e) {
+      setNotice(suggestRefusalText(e));
+    } finally {
+      let fresh: HostView | null = null;
+      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, suggestReceipt); }
+    }
+  });
 
   /** The WORKER drafts from the teacher's CONFIRMED objectives; the UI supplies no content. */
   const draftPlan = () => run(async () => {
@@ -583,13 +629,16 @@ export function LiveCourse() {
     />
   );
 
-  const validationNote = plan && (view.validations ?? []).filter((v) => v.planId === plan.id).slice(-1).map((v) => (
-    <p key={v.at} className={styles.intakeNote} role="status">
-      {v.valid
-        ? "ASFAI found the plan structurally sound. That is a format check, not a review — the decision is still yours."
-        : `ASFAI flagged the plan format: ${v.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
+  // The glossary's ASFAI sentence, next to the button; and, after a run, when it ran and what it found.
+  const lastCheck = plan ? (view.validations ?? []).filter((v) => v.planId === plan.id).at(-1) ?? null : null;
+  const asfaiExplainer = "ASFAI checks that the plan is in its shared lesson format and that each activity points to an objective. It does not judge whether the lesson is good.";
+  const validationNote = lastCheck ? (
+    <p className={styles.intakeNote} role="status">
+      {lastCheck.valid
+        ? `Checked ${relativeTime(lastCheck.at, Date.now())}: no format problems.`
+        : `Checked ${relativeTime(lastCheck.at, Date.now())}: ASFAI flagged these format problems: ${lastCheck.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
     </p>
-  ));
+  ) : null;
 
   /** A reword keeps the plan valid but leaves its text older than the wording: reading it again and confirming is the teacher's own act, never automatic. */
   const staleConfirm = plan && plan.status === "confirmed" && view.planWording?.stale ? (
@@ -599,6 +648,22 @@ export function LiveCourse() {
   ) : null;
 
   const showOnboarding = is("files", "pending") || is("files", "open") || ((is("outline", "pending") || is("outline", "open")) && !view.intake.outlineAuthorized);
+
+  const offer = suggestOffer(view.proposals, is("objectives", "confirmed"), worker?.configured === true);
+  const suggesting = waiting?.step.kind === "suggest";
+  // Above the decision list, because the checkpoint confirms itself the moment every proposal is decided.
+  const suggestBlock = offer.show ? (
+    <section className={styles.suggest} aria-label="Suggested objectives">
+      <div className={styles.suggestRow}>
+        <button type="button" className={styles.ghostButton} onClick={suggestMore} disabled={busy || offer.blockedBy !== null}>Suggest up to 3 more</button>
+        <p className={styles.suggestText}>
+          Silicus reads your outcomes and suggests ones that would round out the lesson. You decide.
+          Ask before you finish deciding: once every proposal is decided, the objectives are confirmed.
+        </p>
+      </div>
+      {offer.blockedBy ? <p className={styles.suggestText} role="status">{offer.blockedBy}</p> : null}
+    </section>
+  ) : null;
 
   // ---- the stage's own card -------------------------------------------------------------------------------
   let body: React.ReactNode = null;
@@ -621,18 +686,23 @@ export function LiveCourse() {
           />
         ) : null}
         {is("files", "confirmed") && !showOnboarding ? (
-          <StageBar status="Your answers are on the record. Confirm to go on to the objectives.">
-            <button type="button" className={styles.primaryButton} data-primary="true" onClick={confirmOutline} disabled={busy}>
-              Confirm the outline
-            </button>
-          </StageBar>
+          <BriefCard
+            answers={answers}
+            editable={(view.intake.questions ?? []).map((q) => q.id)}
+            source={view.intake.questionsFrom === "asfai"
+              ? "ASFAI asked these questions and has your answers. Confirming the brief is still your decision."
+              : "Silicus asked these questions itself. Nothing was sent to ASFAI."}
+            busy={busy}
+            onEdit={editBrief}
+            onConfirm={confirmOutline}
+          />
         ) : null}
       </>
     );
   } else if (stage === "material") {
     body = (
       <>
-        <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
+        <MaterialsPanel courseId={view.course.courseId} busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
         {waitingCard}
       </>
     );
@@ -649,8 +719,10 @@ export function LiveCourse() {
       </>
     ) : (
       <>
+        {suggestBlock}
+        {suggesting ? waitingCard : null}
         {objectivesCard({})}
-        {waitingCard}
+        {suggesting ? null : waitingCard}
       </>
     );
   } else if (stage === "plan" && !plan) {
@@ -683,6 +755,7 @@ export function LiveCourse() {
       <>
         {planCard(plan)}
         {waitingCard}
+        {plan.status === "draft" && asfaiAvailable ? <p className={styles.intakeNote}>{asfaiExplainer}</p> : null}
         {validationNote}
         <StageBar status={invalid
           ? "This plan cites an objective you dropped, so it cannot be published as it is."
@@ -692,7 +765,7 @@ export function LiveCourse() {
           ) : null}
           {plan.status === "draft" && asfaiAvailable ? (
             <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
-              Check the plan with ASFAI
+              {lastCheck ? "Check again" : "Check the plan with ASFAI"}
             </button>
           ) : null}
           {invalid && !published && worker?.configured !== false ? (
@@ -741,23 +814,14 @@ export function LiveCourse() {
     const sealedPlan = published.lessonPlan ?? plan;
     body = (
       <>
-        <PublishedMoment version={published} teacher={view.course.owner} busy={busy} onTry={tryAsStudent} onHandout={downloadHandout} onExport={exportPackage}>
-          {view.revision ? (
-            <RevisionPanel
-              bare
-              revision={view.revision}
-              workerConfigured={worker?.configured !== false}
-              planReworded={view.planWording?.objectives ?? []}
-              busy={busy}
-              onDraftPlan={draftPlan}
-              onOpenChange={setRevisionOpen}
-            />
-          ) : null}
-        </PublishedMoment>
+        <PublishedMoment version={published} />
+        {sealedPlan ? planCard(sealedPlan, new Date(published.publishedAt)) : null}
         <StudentChat
           inputId={STUDENT_INPUT_ID}
           courseId={view.course.courseId}
           courseTitle={view.course.title}
+          open={helperOpen}
+          onOpenChange={setHelperOpen}
           sealed={{
             version: published.version,
             title: published.title ?? view.course.title,
@@ -769,7 +833,22 @@ export function LiveCourse() {
           paused={passcodeOpen}
           onWorking={(w) => setWorking(w ? { actor: "worker", ...w } : null)}
         />
-        {sealedPlan ? planCard(sealedPlan, new Date(published.publishedAt)) : null}
+        {view.revision ? (
+          <RevisionPanel
+            bare
+            revision={view.revision}
+            workerConfigured={worker?.configured !== false}
+            planReworded={view.planWording?.objectives ?? []}
+            busy={busy}
+            onDraftPlan={draftPlan}
+            onOpenChange={setRevisionOpen}
+          />
+        ) : null}
+        <StageBar>
+          <button type="button" className={styles.primaryButton} data-primary="true" onClick={tryAsStudent}>Try the student helper</button>
+          <button type="button" className={styles.ghostButton} onClick={downloadHandout} disabled={busy}>Download the student handout</button>
+          <button type="button" className={styles.ghostButton} onClick={exportPackage} disabled={busy}>Export the published version</button>
+        </StageBar>
       </>
     );
   }
@@ -828,7 +907,7 @@ export function LiveCourse() {
     const told = rows.filter(([, v]) => v);
     earlier.push({
       id: "outline",
-      line: "Outline confirmed",
+      line: "Brief confirmed",
       body: told.length > 0 ? <dl className={stageStyles.earlierFacts}>{told.map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl> : undefined,
     });
   }

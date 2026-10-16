@@ -143,17 +143,17 @@ describe("narrow widths — the honesty copy is untouched", () => {
 
   it("the material panel's file chooser is still a labelled, reachable control", () => {
     render(<MaterialsPanel busy={false} zdr onPropose={() => {}} />);
-    const chooser = screen.getByLabelText("A text file");
+    const chooser = screen.getByLabelText("A file");
     expect(chooser).toBe(document.querySelector('input[type="file"]'));
     // The quiet label that drives it is on the page and names the act.
     expect(screen.getByText("Choose a file")).toBeInTheDocument();
   });
 
   it("the student chat still says an answer is not evidence of learning", () => {
-    render(<StudentChat courseId="c1" courseTitle="How plants eat" />);
+    render(<StudentChat courseId="c1" courseTitle="How plants eat" sealed={{ version: 1, title: "How plants eat", objectives: 3, activities: 2 }} />);
     const text = pageText();
-    expect(text).toContain("Answers come only from the version you published, and say what they rest on.");
-    expect(text).toContain("Asking here is not evidence of learning, and nothing you ask is saved.");
+    expect(text).toContain("Answers only from version 1 of this lesson: 3 objectives and 2 activities. It has not read your materials, and nothing a student asks is saved.");
+    expect(text).toContain("Asking here is not evidence of learning.");
     // The composer is reachable and labelled, which is what a narrow window must not lose.
     expect(screen.getByLabelText("Your question")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ask" })).toBeInTheDocument();

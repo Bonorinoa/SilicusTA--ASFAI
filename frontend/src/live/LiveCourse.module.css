@@ -159,3 +159,8 @@
   /* A full-height cell, so the rail (sticky inside it, with its own scroll) has room to stay put. */
   .shell > .side { grid-column: 3; align-self: stretch; }
 }
+
+/* Suggest up to 3 more: a quiet row above the decision list; the button is secondary, the words say who decides. */
+.suggest { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-rule); }
+.suggestRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.suggestText { margin: 0; flex: 1 1 18rem; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); max-width: 40rem; }

@@ -303,8 +303,8 @@ try {
   await setValue("#intake-course", "Science, ages 8-10"); await clickText("Record this answer");
   await poll(() => bodyHas("Propose these from my materials instead"));
   await clickText("Propose these from my materials instead");
-  await poll(() => bodyHas("Confirm the outline"));
-  await clickText("Confirm the outline");
+  await poll(() => bodyHas("Confirm the brief"));
+  await clickText("Confirm the brief");
 
   // ---- the material panel, at every width (with one item already added, so the rows are set)
   await poll(() => bodyHas("Add your material here")); // the intake-clarity round reworded this prompt

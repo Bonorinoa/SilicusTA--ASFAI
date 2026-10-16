@@ -255,8 +255,8 @@ await poll(async () => (await getView(courseId)).intake.outlineAuthorized === tr
 const sent = (MOCK.st.toolArgs ?? []).filter((a) => a.action === "prepare_outline").at(-1).payload;
 check("ASFAI received exactly the teacher's words", sent.topic === "how AI answers are built" && sent.learningOutcomes.length === 2, JSON.stringify(Object.keys(sent)));
 await page.reload({ waitUntil: "networkidle0" });
-await poll(async () => await bodyHas(page, "Confirm the outline"));
-await clickText(page, "Confirm the outline");
+await poll(async () => await bodyHas(page, "Confirm the brief"));
+await clickText(page, "Confirm the brief");
 await poll(async () => (await getView(courseId)).checkpoints.outline.status === "confirmed");
 check("outline confirmed IN THE HOST after the real intake round", true);
 
@@ -472,8 +472,8 @@ check("local: two of three answers do not open the outline", (await getView(cour
 await fill("learning_outcomes", "Students can explain what an algorithm is.\nLearners can find the claim in an AI answer.");
 await clickText(page, "Record this answer");
 await poll(async () => (await getView(course2)).intake.outlineAuthorized === true);
-await poll(async () => await bodyHas(page, "Confirm the outline"));
-await clickText(page, "Confirm the outline");
+await poll(async () => await bodyHas(page, "Confirm the brief"));
+await clickText(page, "Confirm the brief");
 await poll(async () => (await getView(course2)).checkpoints.outline.status === "confirmed");
 check("local: outline confirmed IN THE HOST on the teacher's own answers", true);
 

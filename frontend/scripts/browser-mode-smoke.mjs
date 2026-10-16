@@ -346,10 +346,10 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Propose these from my materials instead"));
   if (narrow) await checkNarrow("intake question 3: outcomes");
   await clickText("Propose these from my materials instead");
-  await poll(() => bodyHas("Confirm the outline"));
-  await primaryInViewport("confirm outline");
-  if (narrow) await checkNarrow("outline confirm");
-  await clickText("Confirm the outline");
+  await poll(() => bodyHas("Confirm the brief"));
+  await primaryInViewport("confirm brief");
+  if (narrow) await checkNarrow("brief confirm");
+  await clickText("Confirm the brief");
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
   check("outline confirmed on the record", true);
 
@@ -783,8 +783,8 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
     await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
     await poll(() => bodyHas("Propose these from my materials instead"));
     await clickText("Propose these from my materials instead");
-    await poll(() => bodyHas("Confirm the outline"));
-    await clickText("Confirm the outline");
+    await poll(() => bodyHas("Confirm the brief"));
+    await clickText("Confirm the brief");
 
     // ---- the material panel offers the files chosen at the naming question: no second upload
     await poll(() => bodyHas("Add your material here"));

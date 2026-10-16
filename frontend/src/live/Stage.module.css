@@ -61,10 +61,10 @@
 /* ---- the published moment ---- */
 .moment {
   display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-8) 0 var(--space-6); border-top: 2px solid var(--color-accent); border-bottom: 1px solid var(--color-rule);
+  padding: var(--space-4) 0; border-top: 2px solid var(--color-accent); border-bottom: 1px solid var(--color-rule);
 }
 .momentKicker { margin: 0; font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-accent-strong); }
-.momentTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-2xl); line-height: var(--leading-2xl); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); text-wrap: balance; }
+.momentTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); text-wrap: balance; }
 .momentLine { margin: 0; font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink-soft); }
 .momentActions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); }
 .primary, .ghost, .textButton {

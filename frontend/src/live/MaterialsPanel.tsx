@@ -124,7 +124,7 @@ export function MaterialsPanel({
       </div>
 
       <div className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor={ids.file}>A text file</label>
+        <label className={styles.fieldLabel} htmlFor={ids.file}>A file</label>
         {/* Label kept as is: src/live/narrow-width.test.tsx (outside this lane's fence) asserts it by name. The hint below says what is accepted. */}
         {/* The browser's own file chooser is driven by a quiet button, the way the record band's
             Import is: its "No file chosen" status truncates to "N...n" in a narrow column, and the

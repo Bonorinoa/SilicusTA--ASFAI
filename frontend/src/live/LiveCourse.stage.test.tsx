@@ -125,7 +125,7 @@ describe("D1: the confirm bar that says 'build the plan' does it, and only while
     first.unmount();
     mockHost(atPublished());
     render(<LiveCourse />);
-    await screen.findByRole("heading", { name: "Version 1 is published" });
+    await screen.findByText(/^Version 1 is published\./);
     expect(screen.queryByRole("button", { name: /build the plan/ })).not.toBeInTheDocument();
   });
 
@@ -240,7 +240,7 @@ describe("one stage at a time, one primary action", () => {
     const { container } = render(<LiveCourse />);
     await screen.findByRole("heading", { name: PLAN_TITLE });
     expect(screen.queryByRole("region", { name: /Course package/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Try it as a student" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Try the student helper" })).not.toBeInTheDocument();
     expect(primaries(container)).toHaveLength(1);
     expect(primaries(container)[0]).toHaveTextContent("Confirm the lesson plan");
   });
@@ -298,25 +298,36 @@ describe("one stage at a time, one primary action", () => {
 });
 
 describe("the published moment", () => {
-  it("says the version is published, who and when, then three actions in order, and Revise is secondary", async () => {
+  it("reads in the glossary's order: one status sentence, the lesson plan, the student helper, then the actions; Revise stays secondary", async () => {
     mockHost(atPublished());
     const { container } = render(<LiveCourse />);
-    const head = await screen.findByRole("heading", { name: "Version 1 is published" });
-    const moment = head.closest("section") as HTMLElement;
-    expect(moment).toHaveTextContent(/Ada Lovelace/);
-    expect(moment).toHaveTextContent(/16 October 2026/);
-    const names = within(moment).getAllByRole("button").map((b) => b.textContent);
-    expect(names.slice(0, 3)).toEqual(["Try it as a student", "Download the student handout", "Export the package"]);
-    expect(names).toContain("Revise this course");
+    const status = await screen.findByText("Version 1 is published. Students use this version; changes become version 2.");
+    // The old three sentences are gone.
+    expect(screen.queryByText(/Sealed 16 October 2026/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/is published and unchanged/)).not.toBeInTheDocument();
+    const plan = screen.getByRole("heading", { name: PLAN_TITLE });
+    const helper = screen.getByRole("region", { name: "Try the student helper" });
+    const bar = container.querySelector('[data-stage-bar="true"]') as HTMLElement;
+    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(status, plan)).toBe(true);
+    expect(before(plan, helper)).toBe(true);
+    expect(before(helper, bar)).toBe(true);
+    const names = within(bar).getAllByRole("button").map((b) => b.textContent);
+    expect(names).toEqual(["Try the student helper", "Download the student handout", "Export the published version"]);
+    expect(screen.getByRole("button", { name: "Revise this course" })).toBeInTheDocument();
     expect(primaries(container)).toHaveLength(1);
-    expect(primaries(container)[0]).toHaveTextContent("Try it as a student");
+    expect(primaries(container)[0]).toHaveTextContent("Try the student helper");
   });
 
-  it("'Try it as a student' puts the cursor in the student's question box", async () => {
+  it("the student helper is collapsed until opened, and 'Try the student helper' opens it and puts the cursor in the question box", async () => {
     mockHost(atPublished());
     const user = userEvent.setup();
-    render(<LiveCourse />);
-    await user.click(await screen.findByRole("button", { name: "Try it as a student" }));
+    const { container } = render(<LiveCourse />);
+    await screen.findByText(/^Version 1 is published\./);
+    const details = container.querySelector("section[aria-label='Try the student helper'] details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Try the student helper" }));
+    expect(details.open).toBe(true);
     expect(screen.getByLabelText("Your question")).toHaveFocus();
   });
 
@@ -324,7 +335,7 @@ describe("the published moment", () => {
     mockHost(atPublished());
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await screen.findByRole("heading", { name: "Version 1 is published" });
+    await screen.findByText(/^Version 1 is published\./);
     await user.click(screen.getByText(/Objectives/, { selector: "summary *, summary" }));
     await screen.findByRole("heading", { name: STATEMENT });
     expect(screen.queryByRole("button", { name: /Edit the wording/ })).not.toBeInTheDocument();
@@ -488,7 +499,7 @@ describe("the workspace: edit any stage without hunting for it", () => {
     mockHost(atPublished());
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await screen.findByRole("heading", { name: "Version 1 is published" });
+    await screen.findByText(/^Version 1 is published\./);
     await user.click((await stepsList()).getByRole("button", { name: /Objectives/ }));
     expect(await screen.findByRole("heading", { name: "Learning objectives" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Add objective/ })).not.toBeInTheDocument();

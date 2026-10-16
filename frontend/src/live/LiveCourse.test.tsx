@@ -342,12 +342,12 @@ describe("LiveCourse — thin client of the host", () => {
     expect(JSON.stringify(body)).not.toMatch(/payload|learningOutcomes|mode/);
   });
 
-  it("opens the outline confirm once the teacher's own answers are in, with ASFAI untouched", async () => {
+  it("opens the brief confirm once the teacher's own answers are in, with ASFAI untouched", async () => {
     const done = localView();
     done.intake = { ...done.intake, outlineAuthorized: true, answers: { topic: "t", course: "c", learning_outcomes: ["o"] } };
     mockHost(done, { asfaiConnected: false });
     render(<LiveCourse />);
-    expect(await screen.findByRole("button", { name: "Confirm the outline" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Confirm the brief" })).toBeEnabled();
     expect(screen.queryByText(/Connect ASFAI to continue/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: /course intake/i })).not.toBeInTheDocument();
   });
@@ -440,13 +440,15 @@ describe("LiveCourse — thin client of the host", () => {
     const { calls } = mockHost(v, { studentReply: { answer: "An algorithm is a list of steps.", grounded: true, cites: [{ id: "objective:1", label: "Objective 1" }], note: "Asking questions here is not evidence of learning." } });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.type(await screen.findByLabelText("Your question"), "What is an algorithm?");
+    await user.click(await screen.findByRole("button", { name: "Try the student helper" }));
+    await user.type(screen.getByLabelText("Your question"), "What is an algorithm?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
     expect(await screen.findByText("An algorithm is a list of steps.")).toBeInTheDocument();
-    expect(screen.getByText(/From Objective 1\./)).toBeInTheDocument();
+    expect(screen.getByText("From Objective 1")).toBeInTheDocument();
     const body = calls.find((c) => c.url.endsWith("/student/ask"))!.body as Record<string, unknown>;
     expect(body).toEqual({ question: "What is an algorithm?", history: [] });
-    expect(screen.getByText(/not evidence of learning, and nothing you ask is saved/i)).toBeInTheDocument();
+    expect(screen.getByText(/Asking here is not evidence of learning/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing a student asks is saved/)).toBeInTheDocument();
     expect(window.localStorage.length).toBe(0);
   });
 
@@ -455,9 +457,11 @@ describe("LiveCourse — thin client of the host", () => {
     mockHost(v, { studentReply: { answer: "That isn't part of this lesson. Ask your teacher.", grounded: false, cites: [], note: "n", refusal: "off_topic" } });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.type(await screen.findByLabelText("Your question"), "Who won in 1966?");
+    await user.click(await screen.findByRole("button", { name: "Try the student helper" }));
+    await user.type(screen.getByLabelText("Your question"), "Who won in 1966?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
-    expect(await screen.findByText(/Not covered by this course\./)).toBeInTheDocument();
+    expect(await screen.findByText("That isn't part of this lesson. Ask your teacher.")).toBeInTheDocument();
+    expect(screen.queryByText(/isn't in this course yet/)).not.toBeInTheDocument();
   });
 
   it("never claims zero-retention when the worker is not set to it: it says the provider's normal terms apply", async () => {
@@ -553,7 +557,7 @@ describe("LiveCourse — thin client of the host", () => {
     const { calls } = mockHost(publishedView(UNCHANGED));
     const user = userEvent.setup();
     render(<LiveCourse />);
-    expect(await screen.findByText("Version 1 is published and unchanged.")).toBeInTheDocument();
+    expect(await screen.findByText(/^Version 1 is published\./)).toBeInTheDocument();
     const before = WRITES(calls);
     await user.click(screen.getByRole("button", { name: "Revise this course" }));
     expect(await screen.findByText(/Nothing yet\. Version 1 is still the latest/)).toBeInTheDocument();
@@ -611,7 +615,7 @@ describe("LiveCourse — thin client of the host", () => {
       activities: [{ id: "act1", title: "Warm-up", minutes: 10, objectiveIds: ["urn:uuid:aaaa"], materialVersionIds: [], learnerDoes: "Do.", teacherDoes: "Ask.", evidenceIfAny: "none" }] };
     mockHost(v);
     render(<LiveCourse />);
-    await screen.findByText("Version 1 is published and unchanged.");
+    await screen.findByText(/^Version 1 is published\./);
     expect(screen.queryByRole("region", { name: /reworded since/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm the plan as it reads" })).not.toBeInTheDocument();
   });

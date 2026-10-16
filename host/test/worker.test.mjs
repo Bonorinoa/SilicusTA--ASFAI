@@ -458,3 +458,15 @@ test("answerStudent: basis and refusal are normalised before the caller sees the
     assert.deepEqual(await worker.answerStudent({ question: "q", items }), { answer: "", cites: [], refusal }, JSON.stringify(reply));
   }
 });
+
+test("suggestObjectives: a worker-side prompt of teacher words only; the reply is bare statements, at most 3, none a repeat", async () => {
+  const { mock, worker } = await workerWith({ objectives: [{ statement: "Students can explain what an algorithm is.", from: ["x.pdf"] }, { statement: "A." }, { statement: "B." }, { statement: "C." }, { statement: "D." }] });
+  const out = await worker.suggestObjectives({ topic: "Algorithms", course: "Grade 5", outcomes: ["Students can explain what an algorithm is."], existing: ["Students can trace a loop."] });
+  assert.deepEqual(out, ["A.", "B.", "C."], "the repeat is dropped, then three");
+  assert.match(mock.st.lastPrompt, /Topic: Algorithms/);
+  assert.match(mock.st.lastPrompt, /- Students can trace a loop\./);
+  assert.match(mock.st.lastPrompt, /untrusted/);
+  await assert.rejects(new PlanWorker({}).suggestObjectives({ outcomes: ["x"] }), { code: "WORKER_NOT_CONFIGURED" });
+  const none = await workerWith({ objectives: [{ statement: "Students can trace a loop" }] });
+  await assert.rejects(none.worker.suggestObjectives({ outcomes: [], existing: ["Students can trace a loop."] }), { code: "NO_USABLE_SUGGESTIONS" });
+});

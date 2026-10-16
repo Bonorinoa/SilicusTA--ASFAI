@@ -8,7 +8,7 @@
  * `facts` hold counts, names and flags ONLY. Never material text, a passcode, a key, or a teacher's
  * free-text answer (an objective statement is already in the view; it is not repeated here).
  */
-import { SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "./proposer.mjs";
+import { SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, SOURCE_SUGGESTED } from "./proposer.mjs";
 
 const CHECKPOINT_ARTIFACT = { files: "record", outline: "outline", objectives: "objectives", plan: "plan" };
 
@@ -38,6 +38,8 @@ function rowOf(event, published) {
         facts: { answers: event.answers && typeof event.answers === "object" ? Object.keys(event.answers).length : 0 } };
     case "objectives.proposed": {
       const facts = { count: count(event.items) };
+      // Suggestions complement the teacher's outcomes: a count only, never the statements (they are in the view).
+      if (event.sources?.[0] === SOURCE_SUGGESTED) return { actor: "worker", action: "objectives.suggested", artifact: "objectives", facts };
       if (event.assistantText) {
         const used = Array.isArray(event.materials) ? event.materials : [];
         if (used.length > 0) {

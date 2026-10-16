@@ -452,7 +452,7 @@ describe("LiveCourse — thin client of the host", () => {
 
   it("says plainly when the course does not cover a student's question", async () => {
     const v = publishedView(UNCHANGED);
-    mockHost(v, { studentReply: { answer: "That isn't in this course yet. Ask your teacher.", grounded: false, cites: [], note: "n" } });
+    mockHost(v, { studentReply: { answer: "That isn't part of this lesson. Ask your teacher.", grounded: false, cites: [], note: "n", refusal: "off_topic" } });
     const user = userEvent.setup();
     render(<LiveCourse />);
     await user.type(await screen.findByLabelText("Your question"), "Who won in 1966?");

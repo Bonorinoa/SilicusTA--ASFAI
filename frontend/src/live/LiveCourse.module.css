@@ -140,6 +140,10 @@
 /* The plan sheet centres itself in a column of its own measure; here the column is the measure, so it fills it and lines up with the bar under it. */
 .main > article { margin-left: 0; margin-right: 0; width: 100%; box-sizing: border-box; }
 .side { min-width: 0; }
+/* One column edge: the cards (44rem, 40rem, 46rem on their own), the waiting card, the record details and the browser
+   notice (42rem) all end where the plan sheet and the stage bar end. The notice also loses its own top margin: the column's gap is the rhythm. */
+.main > section, .main > article, .main > details { max-width: none; box-sizing: border-box; }
+.main > section[aria-label="Where your courses are kept"] { margin-top: 0; }
 
 @media (min-width: 68.75rem) {
   .live[data-wide] { max-width: 84rem; }
@@ -147,8 +151,19 @@
   .shell > .nav { position: sticky; top: var(--space-5); }
   /* The rail sits under the stage until there is room for a column (see the next block). */
   .shell > .side { grid-column: 2; }
-  /* The decision card's and the publish card's own bars (their markup is not this page's) stay in view too. */
-  .main [data-armed][data-print="hide"] { position: sticky; bottom: var(--space-4); z-index: 3; }
+  /* The decision card's and the publish card's own bars (their markup is not this page's) stay in view too, and read as a
+     layer: an opaque ground, a rule on top and a soft lift, like the stage bar. */
+  .main [data-armed][data-print="hide"] {
+    position: sticky; bottom: var(--space-4); z-index: 3;
+    background-color: var(--color-paper-raised); border-top: 1px solid var(--color-rule-strong); box-shadow: var(--shadow-lift);
+  }
+  .main [data-armed="true"][data-print="hide"] { background-color: var(--color-accent-soft); }
+  /* A control in the stage that takes focus (or is jumped to) scrolls clear of the sticky bar, not under it: the bar is at most
+     ~130 px tall and floats 16 px off the window's foot. The bars' own buttons keep no margin, or focusing the primary would
+     scroll the page to lift it out of its own bar. */
+  .main :where(a[href], button, input, textarea, select, summary, [tabindex]):not([data-stage-bar] *, [data-armed][data-print="hide"] *, [data-primary="true"]) {
+    scroll-margin-bottom: calc(var(--space-8) * 5);
+  }
   /* Intake and material: the cards that hold their primary are not this page's, so the button itself rides the foot of
      the window while its card is on screen (a sticky box stays inside the box it lives in, so it never leaves its card). */
   .live[data-stage="intake"] .main [data-primary="true"],

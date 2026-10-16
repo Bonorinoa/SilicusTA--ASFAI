@@ -265,6 +265,81 @@ const primaryInViewport = async (stage, { settled = false } = {}) => {
   await page.setViewport(orig);
   await page.evaluate(() => window.scrollTo(0, 0));
 };
+/**
+ * C-e (workspace polish): measured in a real 1440x900 VIEWPORT, scrolled the way a teacher scrolls.
+ * (A full-page capture draws a sticky bar mid-page, which is how this was first misread.) Wide pass only.
+ *  - the stage's sticky bar is a layer: an opaque background and a shadow;
+ *  - scrolled to the bottom, the last content of the open stage is fully above that bar;
+ *  - the page keeps scroll-padding under the bar, and a control focused from the top of the page ends up clear of it;
+ *  - everything in the stage column ends at one right edge, and there is no dead band above Record details.
+ * Captures: SILICUS_SMOKE_SHOTS=<dir> writes polish-<name>.png (top of the stage) and polish-<name>-bottom.png.
+ */
+const polishCheck = async (name) => {
+  const orig = page.viewport();
+  if (orig.width < 1100) return;
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await sleep(250);
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}.png`) });
+  const probe = () => page.evaluate(() => {
+    const bars = [...document.querySelectorAll('[data-stage-bar], [data-armed][data-print="hide"]')].filter((b) => b.offsetParent !== null);
+    const bar = bars[bars.length - 1];
+    if (!bar) return null;
+    const last = bar.previousElementSibling;
+    const cs = getComputedStyle(bar);
+    const b = bar.getBoundingClientRect();
+    const l = last ? last.getBoundingClientRect() : null;
+    const alpha = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return 0; const p = m[1].split(/[ ,\/]+/).filter(Boolean); return p.length > 3 ? Number(p[3]) : 1; };
+    return {
+      sticky: cs.position === "sticky", opaque: alpha(cs.backgroundColor) === 1, shadow: cs.boxShadow !== "none",
+      barTop: Math.round(b.top), barHeight: Math.round(b.height), lastBottom: l ? Math.round(l.bottom) : null, hasLast: !!last,
+    };
+  });
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(250);
+  const r = await probe();
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-bottom.png`) });
+  check(`polish ${name}: the stage's bar is a layer (sticky, opaque background, a shadow)`, !!r && r.sticky && r.opaque && r.shadow, JSON.stringify(r));
+  check(`polish ${name}: scrolled to the bottom, the last content of the open stage is fully above the bar`, !!r && r.hasLast && r.lastBottom <= r.barTop, JSON.stringify(r));
+  // A control in the stage's last content, focused from the top of the page, must come to rest clear of the bar.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await sleep(150);
+  const f = await page.evaluate(async () => {
+    const bars = [...document.querySelectorAll('[data-stage-bar], [data-armed][data-print="hide"]')].filter((b) => b.offsetParent !== null);
+    const bar = bars[bars.length - 1];
+    const last = bar?.previousElementSibling;
+    if (!last) return { ok: false, why: "no last content" };
+    const sel = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary';
+    const ctl = [...last.querySelectorAll(sel), ...(last.matches(sel) ? [last] : [])].filter((c) => c.offsetParent !== null).pop();
+    if (!ctl) return { ok: true, why: "the last content holds no control" };
+    // (the bar's own buttons must keep NO scroll margin: focusing the primary must not move the page)
+    ctl.focus();
+    await new Promise((res) => setTimeout(res, 400));
+    const c = ctl.getBoundingClientRect();
+    const b = bar.getBoundingClientRect();
+    const own = bar.querySelector('button'); const m = parseFloat(getComputedStyle(ctl).scrollMarginBottom) || 0;
+    return { ok: (c.bottom <= b.top || c.top >= b.bottom) && m >= b.height + 16 && (!own || !(parseFloat(getComputedStyle(own).scrollMarginBottom) > 0)), margin: m, ownMargin: own ? parseFloat(getComputedStyle(own).scrollMarginBottom) : null, ctl: ctl.textContent.trim().slice(0, 30), ctlTop: Math.round(c.top), ctlBottom: Math.round(c.bottom), barTop: Math.round(b.top), barBottom: Math.round(b.bottom) };
+  });
+  check(`polish ${name}: a control in the stage's last content, focused from the top, lands clear of the bar (scroll-margin >= bar + 16 px); the bar's own buttons keep none`, f.ok === true, JSON.stringify(f));
+  // The record sections close the stage column: they share its right edge and sit one rhythm step under the stage.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(150);
+  const e = await page.evaluate(() => {
+    const rd = document.querySelector('details[aria-label="Record details"]');
+    const main = rd?.parentElement;
+    const shown = main ? [...main.children].filter((k) => k.getBoundingClientRect().height > 0) : [];
+    const rights = shown.map((k) => Math.round(k.getBoundingClientRect().right));
+    const gaps = shown.slice(1).map((k, i) => Math.round(k.getBoundingClientRect().top - shown[i].getBoundingClientRect().bottom));
+    const at = shown.indexOf(rd);
+    return { rights, gaps, gapAboveDetails: at > 0 ? gaps[at - 1] : null, maxGap: gaps.length ? Math.max(...gaps) : null, kids: shown.length };
+  });
+  check(`polish ${name}: every block of the stage column, Record details and the browser notice included, ends at one right edge`,
+    e.kids >= 3 && Math.max(...e.rights) - Math.min(...e.rights) <= 1, JSON.stringify(e));
+  check(`polish ${name}: no dead band: no gap in the stage column is taller than 40 px, and Record details sits within 24 px of the stage`,
+    e.gapAboveDetails !== null && e.gapAboveDetails <= 24 && e.maxGap <= 40, JSON.stringify(e));
+  await page.setViewport(orig);
+  await page.evaluate(() => window.scrollTo(0, 0));
+};
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
 async function story(label, narrow) {
@@ -396,6 +471,7 @@ async function story(label, narrow) {
   await shot("11-receipt-proposals", 'section[data-phase="done"][data-variant="card"]');
   await stageShot("06-objectives-proposed");
   await primaryInViewport("objectives (proposed)");
+  await polishCheck("objectives");
   check("the worker proposed objectives through /api/worker, with the passcode header",
     api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
   let s = await stored();
@@ -475,6 +551,7 @@ async function story(label, narrow) {
   // C1.5 (new): the plan stage. The mock plan has 3 activities, each with one "Look at a leaf." line: the plan is on the page ONCE.
   await stageShot("09-plan-drafted");
   await primaryInViewport("plan");
+  await polishCheck("plan");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",
@@ -510,6 +587,7 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Review & publish"));
   await stageShot("10-publish");
   await primaryInViewport("publish");
+  await polishCheck("publish");
   check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   // ---- publish (review -> confirm step -> publish)

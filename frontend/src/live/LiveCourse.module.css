@@ -174,12 +174,13 @@
   /* The decision card's and the publish card's own bars (their markup is not this page's) stay in view too, and read as a
      layer: an opaque ground, a rule on top and a soft lift, like the stage bar. */
   .main [data-armed][data-print="hide"] {
-    position: sticky; bottom: var(--space-4); z-index: 3;
+    /* Docked on the window's foot (bottom: 0), not floating above it: a floating bar let a strip of the page show under it. */
+    position: sticky; bottom: 0; z-index: 3;
     background-color: var(--color-paper-raised); border-top: 1px solid var(--color-rule-strong); box-shadow: var(--shadow-lift);
   }
   .main [data-armed="true"][data-print="hide"] { background-color: var(--color-accent-soft); }
   /* A control in the stage that takes focus (or is jumped to) scrolls clear of the sticky bar, not under it: the bar is at most
-     ~130 px tall and floats 16 px off the window's foot. The bars' own buttons keep no margin, or focusing the primary would
+     ~130 px tall and docked on the window's foot. The bars' own buttons keep no margin, or focusing the primary would
      scroll the page to lift it out of its own bar. */
   .main :where(a[href], button, input, textarea, select, summary, [tabindex]):not([data-stage-bar] *, [data-armed][data-print="hide"] *, [data-primary="true"]) {
     scroll-margin-bottom: calc(var(--space-8) * 5);

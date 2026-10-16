@@ -125,7 +125,9 @@
   .earlierList:not([data-keep]) { display: none; }
 
   .bar {
-    position: sticky; bottom: var(--space-4); z-index: 3; padding: var(--space-3) var(--space-4);
-    background: var(--color-paper-raised); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow-lift);
+    /* Docked on the window's foot (bottom: 0): nothing of the page shows under it. Rounded on top only, so it reads as a tray. */
+    position: sticky; bottom: 0; z-index: 3; padding: var(--space-3) var(--space-4);
+    background: var(--color-paper-raised); border: 1px solid var(--color-rule-strong); border-bottom: 0;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0; box-shadow: var(--shadow-lift);
   }
 }

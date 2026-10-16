@@ -315,6 +315,16 @@ const polishCheck = async (name) => {
       barTop: Math.round(b.top), barHeight: Math.round(b.height), lastBottom: l ? Math.round(l.bottom) : null, hasLast: !!last,
     };
   });
+  // Docked, not floating: while the bar is stuck to the window (page at the top, long stage), it sits flush on the
+  // window's bottom edge, so no strip of the page shows under it (a 16 px gap did, at integration).
+  const dock = await page.evaluate(() => {
+    const bars = [...document.querySelectorAll('[data-stage-bar], [data-armed][data-print="hide"]')].filter((b) => b.offsetParent !== null);
+    const bar = bars[bars.length - 1];
+    if (!bar) return null;
+    const b = bar.getBoundingClientRect();
+    return { stuck: b.bottom > innerHeight - 40, gap: Math.round(innerHeight - b.bottom) };
+  });
+  check(`polish ${name}: a stuck bar is docked flush to the window's bottom edge (nothing shows under it)`, !dock || !dock.stuck || Math.abs(dock.gap) <= 1, JSON.stringify(dock));
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await sleep(250);
   const r = await probe();

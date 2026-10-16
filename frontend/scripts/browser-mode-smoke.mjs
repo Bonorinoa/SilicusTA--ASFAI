@@ -227,6 +227,19 @@ const shot = async (name, selector = null) => {
   const el = selector ? await page.$(selector) : null;
   await (el ?? page).screenshot({ path: join(SHOTS, `${name}.png`) });
 };
+/** Stage captures for docs/design/stage-page.md: the whole page (height-capped), named by stage and width; a .txt of its words beside each. */
+const stageShot = async (name, selector = null, viewportOnly = false) => {
+  if (!SHOTS) return;
+  const w = page.viewport().width;
+  const path = join(SHOTS, `stage-${name}-${w}.png`);
+  const el = selector ? await page.$(selector) : null;
+  writeFileSync(path.replace(/\.png$/, ".txt"), await page.evaluate((sel) => (sel ? document.querySelector(sel) : document.body).innerText, selector));
+  if (el) { await el.screenshot({ path }); return; }
+  // A modal is fixed to the viewport, so its capture is the viewport, not the scrolled-out page.
+  if (viewportOnly) { await page.screenshot({ path }); return; }
+  const h = await page.evaluate(() => document.documentElement.scrollHeight);
+  await page.screenshot({ path, captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: Math.min(h, 6000) } });
+};
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
 async function story(label, narrow) {
@@ -250,7 +263,9 @@ async function story(label, narrow) {
   check("tour: opens on the first visit, before any course exists", await poll(() => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"]'))));
   if (narrow) await checkNarrow("first-run tour");
   await shot("00b-tour");
+  await stageShot("01-tour", null, true);
   await page.click('button[aria-label="Close the tour"]');
+  await stageShot("02-landing-first-question");
   check("tour: closing it puts the cursor in the first question", await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]') && document.activeElement?.id === "onboarding-reply")));
   await page.reload({ waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
@@ -279,6 +294,7 @@ async function story(label, narrow) {
   check("no /api/courses request ever left the page", !api.calls.some((c) => c.path.startsWith("/api/courses")));
   await poll(() => bodyHas("Confirm the material list"));
   if (narrow) await checkNarrow("onboarding: confirm the material list");
+  await stageShot("03-confirm-material-list");
   await clickText("Confirm the material list");
   await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
   check("materials confirmed on the record", true);
@@ -286,6 +302,7 @@ async function story(label, narrow) {
   // ---- checkpoint 2: Silicus's own questions; ASFAI says it needs the local app
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
   await shot("01b-intake");
+  await stageShot("04-intake");
   if (narrow) await checkNarrow("intake question 1: topic");
   check("ASFAI says plainly it needs the local app, with no Connect button",
     (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
@@ -329,6 +346,7 @@ async function story(label, narrow) {
   await clickText("Add this text");
   await poll(() => bodyHas("Lesson notes ·"));
   await shot("06-material-panel", 'section[aria-label="Course material"]');
+  await stageShot("05-material");
   await clickText("Propose objectives from my materials");
   await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
   check("an AI action asks for the demo passcode", await bodyHas("Demo passcode"));
@@ -347,6 +365,7 @@ async function story(label, narrow) {
   check("proposing objectives ends with a true receipt: the proposals, none confirmed, what was read",
     /3 proposals\. None is confirmed until you decide\./.test(objReceipt) && /Drawn from 1 material/.test(objReceipt), objReceipt.replace(/\n+/g, " | "));
   await shot("11-receipt-proposals", 'section[data-phase="done"][data-variant="card"]');
+  await stageShot("06-objectives-proposed");
   check("the worker proposed objectives through /api/worker, with the passcode header",
     api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
   let s = await stored();
@@ -374,6 +393,7 @@ async function story(label, narrow) {
   // ---- plan: draft, confirm
   // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
   await poll(() => bodyHas("build the plan"));
+  await stageShot("07-objectives-decided");
   check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
   check("three confirmed objectives are on the page to be sent", confirmedStatements.length === 3 && confirmedStatements.every(Boolean), String(confirmedStatements.length));
@@ -390,6 +410,7 @@ async function story(label, narrow) {
   check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 5 to 25 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
   check("there is no progress bar and no percentage", !(await page.evaluate(() => !!document.querySelector('section[data-phase="running"] progress, section[data-phase="running"] [role="progressbar"]') || /%/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? ""))));
   await shot("10-waiting-plan", 'section[data-phase="running"][data-variant="card"]');
+  await stageShot("08-plan-drafting");
   await page.evaluate(() => { [...document.querySelectorAll('section[data-phase="running"] button')].find((b) => b.textContent.trim() === "What the model sees").click(); });
   const sees = await page.evaluate(() => { const b = document.querySelector('section[data-phase="running"] button[aria-expanded="true"]'); return b ? document.getElementById(b.getAttribute("aria-controls")).innerText : null; });
   check("'What the model sees' opens and lists the confirmed statements, the topic, the material names, and what it never sees",
@@ -421,6 +442,7 @@ async function story(label, narrow) {
   check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
   await poll(() => bodyHas("Confirm the lesson plan"));
   // C1.5 (new): the plan stage. The mock plan has 3 activities, each with one "Look at a leaf." line: the plan is on the page ONCE.
+  await stageShot("09-plan-drafted");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",
@@ -432,6 +454,7 @@ async function story(label, narrow) {
 
   if (narrow) await checkNarrow("plan card");
   await poll(() => bodyHas("Review & publish"));
+  await stageShot("10-publish");
   check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   // ---- publish (review -> confirm step -> publish)
@@ -448,6 +471,7 @@ async function story(label, narrow) {
     return null;
   }, 12000);
   if (narrow) await checkNarrow("seal confirm step");
+  await stageShot("11-seal-confirm", 'section[aria-label*="Course package"]');
   await clickText("Publish version 1");
   await poll(async () => kinds(await stored()).includes("package.published"));
   await poll(() => bodyHas("sealed and pinned on this device"));
@@ -455,6 +479,8 @@ async function story(label, narrow) {
   check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
 
   if (narrow) await checkNarrow("publish card, sealed");
+  await stageShot("12-published");
+  await page.evaluate(() => window.scrollTo(0, 0));
   check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   await clickText("Try it as a student");
@@ -479,6 +505,11 @@ async function story(label, narrow) {
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
   await poll(() => bodyHas("A plant uses light, water and air to make sugar."), 15000);
   check("the student gets an answer that cites the package", await bodyHas("From Objective 1, Activity 1"));
+  await stageShot("13-student-answer");
+  // The rail, open: at 380 it is a disclosure that starts closed; at 1440 it is already open.
+  await page.evaluate(() => { const t = document.querySelector('aside button[aria-expanded="false"]'); if (t) t.click(); });
+  await page.evaluate(() => document.querySelector("aside")?.scrollIntoView({ block: "start" }));
+  await stageShot("14-rail-open", "aside");
   check("student chat wrote nothing (IndexedDB and web storage identical before and after)", JSON.stringify(await stored()) === beforeAsk);
 
   // ---- the record verifies under node:crypto, too

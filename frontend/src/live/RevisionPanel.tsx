@@ -21,9 +21,16 @@ export interface RevisionPanelProps {
   planReworded?: readonly { id: string; before: string | null; after: string }[];
   busy: boolean;
   onDraftPlan: () => void;
+  /**
+   * Inside the published moment the panel is a quiet footer, not a card: no title (the moment already says
+   * "Version N is published"), no border. The words and the verbs are the same.
+   */
+  bare?: boolean;
+  /** Told whenever the revision tools open or close, so the page can offer the objectives for editing only then. */
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function RevisionPanel({ revision, workerConfigured, planReworded = [], busy, onDraftPlan }: RevisionPanelProps) {
+export function RevisionPanel({ revision, workerConfigured, planReworded = [], busy, onDraftPlan, bare = false, onOpenChange }: RevisionPanelProps) {
   const sealed = revision.sealedVersion;
   const [choice, setChoice] = useState<boolean | null>(null);
   const [focusAfter, setFocusAfter] = useState<"tools" | "open" | null>(null);
@@ -31,6 +38,8 @@ export function RevisionPanel({ revision, workerConfigured, planReworded = [], b
   const openRef = useRef<HTMLButtonElement>(null);
   // Open on the teacher's request, or by itself once there is a draft to look after (unless they closed it).
   const open = choice ?? revision.drafting;
+
+  useEffect(() => { onOpenChange?.(open); }, [open, onOpenChange]);
 
   // Focus follows the toggle: the button that was pressed disappears, so focus must go somewhere real.
   useEffect(() => {
@@ -59,17 +68,17 @@ export function RevisionPanel({ revision, workerConfigured, planReworded = [], b
           : "A new lesson plan is drafted and waiting for your confirmation.";
 
   return (
-    <section className={styles.panel} aria-label="Revise this course" data-drafting={revision.drafting ? "true" : "false"}>
-      <h2 className={styles.title}>Published: version {sealed}</h2>
+    <section className={styles.panel} aria-label="Revise this course" data-drafting={revision.drafting ? "true" : "false"} data-bare={bare ? "true" : undefined}>
+      {bare ? null : <h2 className={styles.title}>Published: version {sealed}</h2>}
       <p className={styles.status} role="status" aria-live="polite">
         {revision.drafting
           ? `Version ${sealed} is published and unchanged; you are drafting version ${next}.`
           : `Version ${sealed} is published and unchanged.`}
       </p>
-      <p className={styles.readers}>
+      {bare && !revision.drafting ? null : <p className={styles.readers}>
         The student chat and the handout read version {sealed}, and keep reading it until you publish version {next}.
         A draft is never what students see.
-      </p>
+      </p>}
 
       {!open ? (
         <div className={styles.row}>
@@ -102,7 +111,7 @@ export function RevisionPanel({ revision, workerConfigured, planReworded = [], b
           {needsPlan ? (
             workerConfigured ? (
               <div className={styles.row}>
-                <button type="button" className={styles.actionButton} onClick={onDraftPlan} disabled={busy}>
+                <button type="button" className={styles.actionButton} data-primary="true" onClick={onDraftPlan} disabled={busy}>
                   Draft a new lesson plan from your confirmed objectives
                 </button>
                 <span className={styles.hint}>The AI drafts; you still read and confirm the plan yourself.</span>

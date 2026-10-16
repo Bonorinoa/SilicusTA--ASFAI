@@ -120,7 +120,7 @@ export function MaterialsPanel({
       </div>
 
       {note ? <p className={styles.refusal} role="status">{note}</p> : null}
-      <button type="button" className={styles.send} disabled={busy || items.length === 0} onClick={() => onPropose(items)}>
+      <button type="button" className={styles.send} data-primary="true" disabled={busy || items.length === 0} onClick={() => onPropose(items)}>
         Propose objectives from my materials
       </button>
     </section>

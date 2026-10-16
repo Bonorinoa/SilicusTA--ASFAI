@@ -47,6 +47,17 @@ type OpeningId = (typeof OPENING)[number]["id"];
 const local = (text: string): string =>
   BROWSER_MODE ? text.replace(/\s*Not sent to ASFAI\.?/g, "").replace(/(Type a [a-z ]+ to continue|choose No materials)\. Not saved yet\./, "$1.").trim() : text;
 
+/**
+ * What the teacher reads when the intake guard refuses a step. By CODE, in a teacher's words (D4): the host's own
+ * `reason` is developer text ("Surface them and wait ... before calling prepare_outline again") and is shown
+ * only in Record details.
+ */
+export function refusalSentence(code: string): string {
+  if (code === "AWAITING_TEACHER_REPLY") return "Answer the questions above, then send them.";
+  if (code === "INCOMPLETE_ANSWERS") return "Answer every question before sending.";
+  return "Silicus could not continue the intake.";
+}
+
 const ORDER: OpeningId[] = ["title", "label", "materials"];
 /** Plain names for the intake's own three steps, in the order a teacher meets them. */
 const STEP_NAME: Record<OpeningId, string> = {
@@ -269,7 +280,7 @@ export function OnboardingChat({
             />
           )}
           <div className={styles.verbs}>
-            <button type="submit" className={styles.send} aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
+            <button type="submit" className={styles.send} data-primary="true" aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
               {opening.verb}
             </button>
             {step === "materials" ? (
@@ -284,7 +295,7 @@ export function OnboardingChat({
           <p className={styles.prompt}>Confirm this material list?</p>
           <p className={styles.said}>{confirmText}</p>
           <p className={styles.kept}>Confirming records your list. It does not send it to ASFAI.</p>
-          <button type="button" className={styles.send} disabled={busy} onClick={() => onConfirmFiles(confirmText)}>
+          <button type="button" className={styles.send} data-primary="true" disabled={busy} onClick={() => onConfirmFiles(confirmText)}>
             Confirm the material list
           </button>
         </div>
@@ -346,7 +357,7 @@ export function OnboardingChat({
                 onKeyDown={(e) => onKeyDown(e, submitAnswer)}
               />
               <div className={styles.verbs}>
-                <button type="submit" className={styles.send} aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
+                <button type="submit" className={styles.send} data-primary="true" aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
                   Record this answer
                 </button>
                 {!fromAsfai && openQuestion.id === "learning_outcomes" && workerConfigured ? (
@@ -360,12 +371,12 @@ export function OnboardingChat({
           {fromAsfai && roundComplete ? (
             <>
               <p className={styles.kept}>Every question you can answer is recorded. Sending them is a separate act.</p>
-              <button type="button" className={styles.send} onClick={onSendToAsfai} disabled={busy || view.intake.mayCallPrepareOutline === false}>
+              <button type="button" className={styles.send} data-primary="true" onClick={onSendToAsfai} disabled={busy || view.intake.mayCallPrepareOutline === false}>
                 Send your answers to ASFAI
               </button>
             </>
           ) : null}
-          {view.intake.refusal ? <p className={styles.refusal}>{view.intake.refusal.reason}</p> : null}
+          {view.intake.refusal ? <p className={styles.refusal}>{refusalSentence(view.intake.refusal.code)}</p> : null}
           {fromAsfai && view.intake.outlineAuthorized ? (
             <p className={styles.kept}>ASFAI has your answers. Confirming the outline is still your decision.</p>
           ) : null}

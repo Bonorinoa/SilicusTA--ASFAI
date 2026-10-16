@@ -10,7 +10,9 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { DecisionCard } from "../components/DecisionCard";
-import { AiWaiting, answerText, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
+import { AiWaiting, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
+import { ActivityRail } from "../components/ActivityRail";
+import { FirstRunTour } from "../components/FirstRunTour";
 import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
@@ -21,7 +23,7 @@ import { BROWSER_MODE } from "../gate/mode";
 import { plural } from "../lib/plural";
 import { BrowserRecord, type RecordStatus } from "../browser/BrowserRecord";
 import { PasscodeDialog } from "../browser/PasscodeDialog";
-import type { DecisionIntent } from "../gate/types";
+import type { ActivityActor, DecisionIntent } from "../gate/types";
 import { OnboardingChat } from "./OnboardingChat";
 import { MaterialsPanel } from "./MaterialsPanel";
 import { StudentChat } from "./StudentChat";
@@ -29,13 +31,23 @@ import { RevisionPanel } from "./RevisionPanel";
 import { CourseLibrary } from "./CourseLibrary";
 import { buildHandoutHtml, handoutFilename } from "./handout";
 import { VersionDiffPanel } from "./VersionDiffPanel";
+import { stageOf } from "./stage";
+import { StepIndex } from "./StepIndex";
+import { EarlierSteps, type EarlierStep } from "./EarlierSteps";
+import { PublishedMoment } from "./PublishedMoment";
+import { RecordDetails } from "./RecordDetails";
 import styles from "./LiveCourse.module.css";
+import stageStyles from "./Stage.module.css";
 /** One AI step in flight, or just finished: what the waiting card shows. `receipt` is computed from the resulting view. */
-interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[] }
+interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[]; startedAt: number }
+/** A step in flight that has no waiting card of its own (ASFAI's, a student's answer): the rail still says who is working. */
+interface Working { actor: ActivityActor; label: string; startedAt: number }
 
-const CHECKPOINT_LABEL: Record<string, string> = {
-  files: "Materials", outline: "Outline", objectives: "Objectives", plan: "Plan", publish: "Publish",
-};
+const STUDENT_INPUT_ID = "student-question";
+const TOUR_SEEN = "silicus.tour.seen";
+/** The tour's "seen" flag lives on this device, never in the record. A browser that will not store it just shows the tour again. */
+const tourSeen = (): boolean => { try { return window.localStorage.getItem(TOUR_SEEN) === "1"; } catch { return false; } };
+const markTourSeen = (): void => { try { window.localStorage.setItem(TOUR_SEEN, "1"); } catch { /* shown again next time; harmless */ } };
 /** What "propose objectives" sends, read from the page: the material in memory plus what the teacher already told the host. */
 function objectivesStep(materials: MaterialInput[], view: HostView): WaitingStep {
   const answers = view.intake.answers ?? {};
@@ -53,6 +65,8 @@ function planStep(view: HostView): WaitingStep {
     kind: "plan",
     objectives: view.objectives.map((o) => o.statement),
     topic: answerText(view.intake.answers?.topic),
+    // The host puts the teacher's course answer (its length, its audience) in the prompt, so the disclosure lists it too.
+    course: answerText(view.intake.answers?.course),
     materialNames: materialNamesOf(view.course.materials),
     referenceNotes: !BROWSER_MODE,
   };
@@ -64,7 +78,14 @@ const sentence = (m: string) => { const t = m.trim(); return t ? t.charAt(0).toU
 export function LiveCourse() {
   const [view, setView] = useState<HostView | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // A notice belongs to the stage that raised it: it clears when the stage changes (D8). `survive` is for a notice
+  // raised by the very act that moves the page on ("Version 1 sealed"), which must outlive that one change.
+  const [noticeState, setNoticeState] = useState<{ text: string; survive: boolean } | null>(null);
+  const notice = noticeState?.text ?? null;
+  const setNotice = (text: string | null, survive = false) => setNoticeState(text === null ? null : { text, survive });
+  const [tourOpen, setTourOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [working, setWorking] = useState<Working | null>(null);
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
@@ -72,8 +93,6 @@ export function LiveCourse() {
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   const [passcodeOpen, setPasscodeOpen] = useState(false);
   const waitIds = useRef(0);
-  // ASFAI is a local-app feature. The host says so (available: false) and the UI then offers no ASFAI button.
-  const asfaiOffered = asfai?.available !== false;
   const [library, setLibrary] = useState<CourseSummary[]>([]);
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
@@ -85,6 +104,8 @@ export function LiveCourse() {
       try {
         const { courses } = await host.listCourses();
         setLibrary(courses);
+        // A teacher's first visit, before any course: the tour opens once. (On this device; never in the record.)
+        if (courses.length === 0 && !tourSeen()) setTourOpen(true);
         if (courses.length > 0) {
           setCourseId(courses[0].courseId);
           setView(await host.getCourse(courses[0].courseId));
@@ -117,7 +138,7 @@ export function LiveCourse() {
   /** An AI step begins: the page shows what is happening, from data it already holds. */
   const startWait = (step: WaitingStep): number => {
     const id = (waitIds.current += 1);
-    setWaiting({ id, step, phase: "running", receipt: [] });
+    setWaiting({ id, step, phase: "running", receipt: [], startedAt: Date.now() });
     return id;
   };
   /** It ends: a receipt computed from the view the host just returned, or an honest "stopped". */
@@ -128,13 +149,32 @@ export function LiveCourse() {
 
   const cp = view?.checkpoints ?? {};
   const is = (id: string, status: string) => cp[id]?.status === status;
+  const asfaiAvailable = !BROWSER_MODE && asfai?.available !== false;
+
+  // D8: when the stage changes, last stage's notice goes (one raised by the act that moved the page on survives that one change).
+  const stageKey = view ? `${stageOf(view)}:${is("files", "confirmed")}` : "";
+  useEffect(() => { setNoticeState((n) => (n && n.survive ? { ...n, survive: false } : null)); }, [stageKey]);
+
+  // After the tour, the cursor goes to the first question, unless focus already went somewhere meaningful (the tour's opener).
+  const [focusReply, setFocusReply] = useState(false);
+  useEffect(() => {
+    if (!focusReply) return;
+    setFocusReply(false);
+    if (!document.activeElement || document.activeElement === document.body) document.getElementById("onboarding-reply")?.focus();
+  }, [focusReply]);
+  const closeTour = () => { markTourSeen(); setTourOpen(false); setFocusReply(true); };
+  const tryAsStudent = () => {
+    const box = document.getElementById(STUDENT_INPUT_ID);
+    box?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    box?.focus({ preventScroll: true });
+  };
 
   const startCourse = (b: { owner: string; title: string; materials: { name: string }[] }) => run(async () => {
     const created = await host.createCourse(b);
     setCourseId(created.courseId);
     setView(created.view);
     void host.listCourses().then((r) => setLibrary(r.courses)).catch(() => {});
-    setNotice("Course recorded. Confirm the material list when it is right.");
+    setNotice("Course recorded. Confirm the material list when it is right.", true);
   });
 
   /** Open another course from the library. Nothing is written: this only changes which record is shown. */
@@ -145,7 +185,7 @@ export function LiveCourse() {
     setPins(listPins(id));
   });
   /** Show the naming conversation again. The new course exists only once the teacher records it. */
-  const newCourse = () => { setView(null); setCourseId(null); setNotice(null); setPinReport([]); setWaiting(null); };
+  const newCourse = () => { setView(null); setCourseId(null); setNotice(null); setPinReport([]); setWaiting(null); setRevisionOpen(false); };
 
   const confirmFiles = (text: string) => run(async () => {
     await host.confirmCheckpoint(courseId!, { id: "files", text });
@@ -158,16 +198,18 @@ export function LiveCourse() {
 
   /** Ask ASFAI for the clarifying questions (round 1) or send the teacher's answers (round 2). */
   const askAsfai = () => run(async () => {
+    setWorking({ actor: "asfai", label: "Asking ASFAI for its questions about your course", startedAt: Date.now() });
     try { await host.callIntake(courseId!); }
     catch (e) { setNotice(`ASFAI: ${(e as Error).message}`); }
-    finally { await reload(); }
+    finally { try { await reload(); } finally { setWorking(null); } }
   });
 
   /** Ask ASFAI to format-check the drafted plan. A signal only; confirming is still the teacher's act. */
   const checkPlan = () => run(async () => {
+    setWorking({ actor: "asfai", label: "Checking the format of your lesson plan", startedAt: Date.now() });
     try { await host.validatePlan(courseId!); }
     catch (e) { setNotice(`ASFAI: ${(e as Error).message}`); }
-    finally { await reload(); }
+    finally { try { await reload(); } finally { setWorking(null); } }
   });
 
   /** Open ASFAI's consent screen in a new tab. Nothing is connected until the teacher clicks there. */
@@ -236,7 +278,7 @@ export function LiveCourse() {
     try {
       const r = await host.proposeFromMaterials(courseId!, { materials });
       ok = true;
-      setNotice(r.skipped.length ? `Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}` : null);
+      setNotice(r.skipped.length ? `Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}` : null, true);
     } catch (e) {
       setNotice(`Nothing was proposed. ${sentence((e as Error).message)}`);
     } finally {
@@ -286,9 +328,9 @@ export function LiveCourse() {
         const { anchor } = await host.anchor(courseId!, r.version.version);
         if (anchor && pinVersion(anchor)) {
           setPins(listPins(courseId!));
-          setNotice(`Version ${r.version.version} sealed and pinned on this device.`);
+          setNotice(`Version ${r.version.version} sealed and pinned on this device.`, true);
         } else {
-          setNotice(`Version ${r.version.version} sealed.`);
+          setNotice(`Version ${r.version.version} sealed.`, true);
         }
       } catch (e) {
         setNotice(`Refused by the confirm-gate: ${(e as Error).message}`);
@@ -366,10 +408,14 @@ export function LiveCourse() {
   });
   const browserRecord = BROWSER_MODE ? <BrowserRecord hasCourses={library.length > 0} onChanged={afterRecordChange} status={recordStatus} onStatus={setRecordStatus} /> : null;
   const passcodeDialog = BROWSER_MODE ? <PasscodeDialog onAsking={setPasscodeOpen} /> : null;
+  const tour = <FirstRunTour open={tourOpen} onClose={closeTour} asfaiAvailable={asfaiAvailable} />;
+  const howItWorks = <button type="button" className={styles.howItWorks} onClick={() => setTourOpen(true)}>How it works</button>;
 
   if (!view) {
     return (
       <div className={styles.live}>
+        {tour}
+        <div className={styles.topbar}>{howItWorks}</div>
         {BROWSER_MODE ? (
           <header className={styles.hero}>
             <p className={styles.kicker}>Course authoring, teacher in the loop</p>
@@ -420,140 +466,288 @@ export function LiveCourse() {
   const plan = view.plan;
   const published = view.versions.at(-1) ?? null;
   const objectives = view.objectives;
+  const stage = stageOf(view);
+  const workerMissing = worker !== null && !worker.configured;
+  // Revising a sealed course: the teacher pressed Revise (or the host says a draft of the next version exists).
+  const revising = published !== null && (revisionOpen || view.revision?.drafting === true);
+  const aiProposals = view.proposals.filter((p) => p.by === "ai").length;
 
-  return (
-    <div className={styles.live}>
-      {passcodeDialog}
-      <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
-      <header className={styles.stageHeader}>
-        <div className={styles.stageMeta}>
-          <h1 className={styles.title}>{view.course.title}</h1>
-          <p className={styles.sub}>
-            {BROWSER_MODE ? "kept in this browser" : "host"} · {view.course.owner} · course {view.course.courseId.slice(0, 18)}… · log {plural(view.integrity.events, "event")}
-          </p>
-        </div>
-        <ol className={styles.chips} aria-label="Checkpoints">
-          {["files", "outline", "objectives", "plan", "publish"].map((id) => (
-            <li key={id} className={styles.chip} data-status={cp[id]?.status ?? "pending"}>
-              <span className={styles.chipLabel}>{CHECKPOINT_LABEL[id]}</span>
-              <span className={styles.chipState}>{cp[id]?.status ?? "pending"}</span>
-            </li>
-          ))}
-        </ol>
-      </header>
+  const stepsDone = (id: string) => cp[id]?.status === "confirmed";
+  const materialNames = materialNamesOf(view.course.materials);
+  const answers = view.intake.answers ?? {};
 
-      {(is("files", "pending") || is("files", "open") || ((is("outline", "pending") || is("outline", "open")) && !view.intake.outlineAuthorized)) ? (
-        <OnboardingChat
-          view={view}
-          asfai={asfai}
-          busy={busy}
-          workerConfigured={worker?.configured === true}
-          onCreate={startCourse}
-          onConfirmFiles={confirmFiles}
-          onAsk={askAsfai}
-          onAnswer={sendAnswer}
-          onSendToAsfai={askAsfai}
-          onConnect={connectAsfai}
-          onRefresh={() => run(reload)}
-        />
-      ) : null}
+  // The step in flight, for the Behind-the-scenes rail: the drafting model's (from the waiting card), or ASFAI's / a student's answer.
+  const now = waiting && waiting.phase === "running"
+    ? { actor: "worker" as const, label: describeStep(waiting.step).title, startedAt: waiting.startedAt }
+    : working;
 
-      {waiting ? (
-        <div className={styles.waiting}>
-          <AiWaiting
-            key={waiting.id}
-            step={waiting.step}
-            phase={waiting.phase}
-            receipt={waiting.receipt}
-            typicalSeconds={worker?.typicalSeconds}
-            zdr={worker?.zdr ?? null}
-            paused={passcodeOpen}
+  const objectivesCard = (o: { readOnly?: boolean; hideBar?: boolean; onConfirm?: () => void }) => (
+    <DecisionCard
+      canRedraftPlan={worker?.configured !== false}
+      rows={view.proposals}
+      onDispatch={dispatch}
+      checkpointStatus={cp.objectives?.status}
+      {...o}
+    />
+  );
+
+  const waitingCard = waiting ? (
+    <div className={styles.waiting}>
+      <AiWaiting
+        key={waiting.id}
+        step={waiting.step}
+        phase={waiting.phase}
+        receipt={waiting.receipt}
+        typicalSeconds={worker?.typicalSeconds}
+        zdr={worker?.zdr ?? null}
+        paused={passcodeOpen}
+      />
+    </div>
+  ) : null;
+
+  const planCard = (p: NonNullable<typeof plan>, confirmedAt?: Date) => (
+    <PlanCard
+      plan={p}
+      objectives={objectives}
+      teacher={{ name: view.course.owner, confirmedAt }}
+      onPrint={() => window.print()}
+      invalidation={view.invalidation}
+      rewordedSince={view.planWording?.objectives}
+    />
+  );
+
+  const validationNote = plan && (view.validations ?? []).filter((v) => v.planId === plan.id).slice(-1).map((v) => (
+    <p key={v.at} className={styles.intakeNote} role="status">
+      {v.valid
+        ? "ASFAI found the plan structurally sound. That is a format check, not a review — the decision is still yours."
+        : `ASFAI flagged the plan format: ${v.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
+    </p>
+  ));
+
+  /** A reword keeps the plan valid but leaves its text older than the wording: reading it again and confirming is the teacher's own act, never automatic. */
+  const staleConfirm = plan && plan.status === "confirmed" && view.planWording?.stale ? (
+    <div className={styles.actions}>
+      <button type="button" className={styles.ghostButton} onClick={confirmPlan} disabled={busy}>Confirm the plan as it reads</button>
+    </div>
+  ) : null;
+
+  const showOnboarding = is("files", "pending") || is("files", "open") || ((is("outline", "pending") || is("outline", "open")) && !view.intake.outlineAuthorized);
+
+  // ---- the stage's own card -------------------------------------------------------------------------------
+  let body: React.ReactNode = null;
+  if (stage === "intake") {
+    body = (
+      <>
+        {showOnboarding ? (
+          <OnboardingChat
+            view={view}
+            asfai={asfai}
+            busy={busy}
+            workerConfigured={worker?.configured === true}
+            onCreate={startCourse}
+            onConfirmFiles={confirmFiles}
+            onAsk={askAsfai}
+            onAnswer={sendAnswer}
+            onSendToAsfai={askAsfai}
+            onConnect={connectAsfai}
+            onRefresh={() => run(reload)}
           />
-        </div>
-      ) : null}
-
-      <div className={styles.actions}>
-        {is("files", "confirmed") && (is("outline", "pending") || is("outline", "open")) && view.intake.outlineAuthorized ? (
-          <button type="button" className={styles.primaryButton} onClick={confirmOutline} disabled={busy}>
-            Confirm the outline
-          </button>
         ) : null}
-        {is("outline", "confirmed") && view.proposals.length === 0 && view.intake.answers?.outcomes_from === "materials" ? (
-          <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
+        {is("files", "confirmed") && !showOnboarding ? (
+          <div className={styles.actions}>
+            <button type="button" className={styles.primaryButton} data-primary="true" onClick={confirmOutline} disabled={busy}>
+              Confirm the outline
+            </button>
+          </div>
         ) : null}
-        {is("outline", "confirmed") && view.proposals.length === 0 && view.intake.answers?.outcomes_from !== "materials" ? (
-          <button type="button" className={styles.ghostButton} onClick={proposeObjectives} disabled={busy}>
+      </>
+    );
+  } else if (stage === "material") {
+    body = (
+      <>
+        <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
+        {waitingCard}
+      </>
+    );
+  } else if (stage === "objectives") {
+    body = view.proposals.length === 0 ? (
+      <>
+        {objectivesCard({ hideBar: true })}
+        <div className={styles.actions}>
+          <button type="button" className={styles.primaryButton} data-primary="true" onClick={proposeObjectives} disabled={busy}>
             Propose objectives from your answers
           </button>
-        ) : null}
-        {is("objectives", "confirmed") && !plan ? (
-          worker && !worker.configured ? (
-            <p className={styles.aside}>
-              {BROWSER_MODE
-                ? "AI drafting is not set up on this site, so the plan cannot be drafted here. Everything else still works."
-                : "No drafting worker is configured on this host, so the plan cannot be drafted here. Everything else still works."}
-            </p>
-          ) : (
-            <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
+        </div>
+        {waitingCard}
+      </>
+    ) : (
+      <>
+        {objectivesCard({})}
+        {waitingCard}
+      </>
+    );
+  } else if (stage === "plan" && !plan) {
+    // The objectives are decided. The confirm bar under them is the one primary here, and it builds the plan (D1).
+    body = (
+      <>
+        {objectivesCard({ hideBar: workerMissing || aiProposals === 0, onConfirm: workerMissing ? undefined : draftPlan })}
+        {workerMissing ? (
+          <p className={styles.aside}>
+            {BROWSER_MODE
+              ? "AI drafting is not set up on this site, so the plan cannot be drafted here. Everything else still works."
+              : "No drafting worker is configured on this host, so the plan cannot be drafted here. Everything else still works."}
+          </p>
+        ) : aiProposals === 0 ? (
+          // Objectives the teacher wrote themselves have no proposal bar to arm: the same act, plainly offered.
+          <div className={styles.actions}>
+            <button type="button" className={styles.primaryButton} data-primary="true" onClick={draftPlan} disabled={busy}>
               Draft the plan from your confirmed objectives
             </button>
-          )
+          </div>
         ) : null}
-        {plan && plan.status === "draft" ? (
-          <>
-            {asfaiOffered ? (
-              <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
-                Check the plan with ASFAI
-              </button>
-            ) : null}
-            <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
-              Confirm the lesson plan
+        {waitingCard}
+      </>
+    );
+  } else if (stage === "plan" && plan) {
+    // A draft, or one that cites an objective the teacher revoked. The plan once, then what happened, then the act.
+    const invalid = plan.status === "invalidated";
+    const draftIsPrimary = invalid && worker?.configured !== false;
+    body = (
+      <>
+        {planCard(plan)}
+        {waitingCard}
+        {validationNote}
+        <div className={styles.actions}>
+          {plan.status === "draft" && asfaiAvailable ? (
+            <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
+              Check the plan with ASFAI
             </button>
-          </>
-        ) : null}
-        {plan && (view.validations ?? []).filter((v) => v.planId === plan.id).slice(-1).map((v) => (
-          <p key={v.at} className={styles.intakeNote} role="status">
-            {v.valid
-              ? "ASFAI found the plan structurally sound. That is a format check, not a review — the decision is still yours."
-              : `ASFAI flagged the plan format: ${v.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
-          </p>
-        ))}
-        {plan && plan.status === "invalidated" ? (
-          <button type="button" className={styles.primaryButton} onClick={confirmPlan} disabled={busy}>
-            Re-confirm the lesson plan
-          </button>
-        ) : null}
-        {/* A reword keeps the plan valid but leaves its text older than the wording: reading it again and
-            confirming is the teacher's own act, never automatic. */}
-        {plan && plan.status === "confirmed" && view.planWording?.stale ? (
-          <button type="button" className={styles.ghostButton} onClick={confirmPlan} disabled={busy}>
-            Confirm the plan as it reads
-          </button>
-        ) : null}
-        {/* An invalidated plan cites a revoked objective, and a revoked objective cannot come back: the way
-            forward is a new plan. (Once a version is sealed the revision panel carries this button instead.) */}
-        {plan && plan.status === "invalidated" && !published && worker?.configured !== false ? (
-          <button type="button" className={styles.ghostButton} onClick={draftPlan} disabled={busy}>
-            Draft a new plan from your confirmed objectives
-          </button>
-        ) : null}
-        <button type="button" className={styles.textButton} onClick={verifyLog} disabled={busy}>
-          Verify the event log
-        </button>
-        {published ? (
-          <>
-            <button type="button" className={styles.ghostButton} onClick={downloadHandout} disabled={busy}>
-              Download student handout
+          ) : null}
+          {invalid && !published && worker?.configured !== false ? (
+            // An invalidated plan cites a revoked objective, and a revoked objective cannot come back: the way
+            // forward is a new plan. (Once a version is sealed the revision panel carries this button instead.)
+            <button type="button" className={styles.primaryButton} data-primary="true" onClick={draftPlan} disabled={busy}>
+              Draft a new plan from your confirmed objectives
             </button>
-            {BROWSER_MODE ? null : (
-              <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>
-                Archive the export
-              </button>
-            )}
-          </>
-        ) : null}
-      </div>
+          ) : null}
+          <button
+            type="button"
+            className={draftIsPrimary ? styles.ghostButton : styles.primaryButton}
+            data-primary={draftIsPrimary ? undefined : "true"}
+            onClick={confirmPlan}
+            disabled={busy}
+          >
+            {invalid ? "Re-confirm the lesson plan" : "Confirm the lesson plan"}
+          </button>
+        </div>
+      </>
+    );
+  } else if (stage === "publish") {
+    body = (
+      <>
+        <PublishCard
+          courseId={view.course.courseId}
+          title={plan?.title ?? view.course.title}
+          heading="Review and publish"
+          status={view.publish}
+          objectives={objectives}
+          activities={plan?.activities ?? []}
+          totalMinutes={(plan?.activities ?? []).reduce((n, a) => n + a.minutes, 0)}
+          plan={plan}
+          published={published}
+          unpublishedChanges={published !== null}
+          teacherName={view.course.owner}
+          onPublish={publish}
+          onExport={exportPackage}
+          invalidation={view.invalidation}
+          rewordedSince={view.planWording?.objectives}
+        />
+        {staleConfirm}
+      </>
+    );
+  } else if (stage === "published" && published) {
+    const sealedPlan = published.lessonPlan ?? plan;
+    body = (
+      <>
+        <PublishedMoment version={published} teacher={view.course.owner} busy={busy} onTry={tryAsStudent} onHandout={downloadHandout} onExport={exportPackage}>
+          {view.revision ? (
+            <RevisionPanel
+              bare
+              revision={view.revision}
+              workerConfigured={worker?.configured !== false}
+              planReworded={view.planWording?.objectives ?? []}
+              busy={busy}
+              onDraftPlan={draftPlan}
+              onOpenChange={setRevisionOpen}
+            />
+          ) : null}
+        </PublishedMoment>
+        <StudentChat
+          inputId={STUDENT_INPUT_ID}
+          courseId={view.course.courseId}
+          courseTitle={view.course.title}
+          sealed={{
+            version: published.version,
+            title: published.title ?? view.course.title,
+            objectives: published.objectiveRefs?.length ?? 0,
+            activities: published.lessonPlan?.activities?.length ?? 0,
+          }}
+          typicalSeconds={worker?.typicalSeconds}
+          zdr={worker?.zdr ?? null}
+          paused={passcodeOpen}
+          onWorking={(w) => setWorking(w ? { actor: "worker", ...w } : null)}
+        />
+        {sealedPlan ? planCard(sealedPlan, new Date(published.publishedAt)) : null}
+      </>
+    );
+  }
 
+  // ---- finished stages, one line each --------------------------------------------------------------------
+  const objectivesIsStage = stage === "objectives" || (stage === "plan" && !plan);
+  const earlier: EarlierStep[] = [];
+  if (stage !== "intake" && stepsDone("files")) {
+    earlier.push({
+      id: "files",
+      line: `Material list confirmed · ${materialNames.length === 0 ? "no materials" : plural(materialNames.length, "material")}`,
+      body: materialNames.length > 0 ? <ul className={stageStyles.earlierNames}>{materialNames.map((n) => <li key={n}>{n}</li>)}</ul> : undefined,
+    });
+  }
+  if (stage !== "intake" && stepsDone("outline")) {
+    const rows: [string, string][] = [
+      ["Topic", answerText(answers.topic)], ["Course", answerText(answers.course)],
+      ["Outcomes", Array.isArray(answers.learning_outcomes) ? answers.learning_outcomes.join("\n") : answerText(answers.learning_outcomes)],
+    ];
+    const told = rows.filter(([, v]) => v);
+    earlier.push({
+      id: "outline",
+      line: "Outline confirmed",
+      body: told.length > 0 ? <dl className={stageStyles.earlierFacts}>{told.map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl> : undefined,
+    });
+  }
+  if (stepsDone("objectives") && !objectivesIsStage) {
+    earlier.push({
+      id: "objectives",
+      line: `Objectives decided · ${plural(objectives.length, "objective")}`,
+      // Read-only until the teacher chooses to revise: the verbs are the same, they are just not offered.
+      body: objectivesCard({ readOnly: !revising, hideBar: true }),
+      forceOpen: revising,
+    });
+  }
+  if (plan && plan.status === "confirmed" && (stage === "publish" || stage === "published")) {
+    const minutes = plan.activities.reduce((n, a) => n + a.minutes, 0);
+    earlier.push({ id: "plan", line: `Lesson plan confirmed · ${plural(plan.activities.length, "activity", "activities")}, ${plural(minutes, "minute")}` });
+  }
+
+  const gateMessages = view.publish.canPublish ? [] : view.publish.blockers;
+  const recordDetails = (
+    <RecordDetails
+      courseId={view.course.courseId}
+      events={view.integrity.events}
+      busy={busy}
+      onVerify={verifyLog}
+      gateMessages={gateMessages}
+      intakeGuard={view.intake.refusal?.reason ?? null}
+    >
       {pins.length > 0 ? (
         <section className={styles.pins} aria-label="Pinned copies on this device">
           <h2 className={styles.pinTitle}>Pinned on this device</h2>
@@ -587,86 +781,62 @@ export function LiveCourse() {
           </button>
         </section>
       ) : null}
-
-      {published && view.revision ? (
-        <RevisionPanel
-          revision={view.revision}
-          workerConfigured={worker?.configured !== false}
-          planReworded={view.planWording?.objectives ?? []}
-          busy={busy}
-          onDraftPlan={draftPlan}
-        />
+      {published && !BROWSER_MODE ? (
+        <button type="button" className={styles.textButton} onClick={archiveCourse} disabled={busy}>Archive the export</button>
       ) : null}
+      {published ? <VersionDiffPanel versions={view.versions} courseId={view.course.courseId} /> : null}
+      {view.timeline.length > 0 ? <TimelineCard events={view.timeline} courseLabel={view.course.title} /> : null}
+    </RecordDetails>
+  );
 
-      <div className={styles.grid}>
-        {/* One course-level notice, shown once. It used to be echoed by every card it was passed to. */}
-        {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
-        <DecisionCard
-          canRedraftPlan={worker?.configured !== false}
-          rows={view.proposals}
-          onDispatch={dispatch}
-          checkpointStatus={cp.objectives?.status}
-          courseLabel={view.course.title}
-        />
+  const rail = (view.activity?.length ?? 0) > 0 || now ? (
+    <aside className={styles.side} aria-label="Behind the scenes">
+      <ActivityRail
+        key={view.course.courseId}
+        items={view.activity ?? []}
+        now={now}
+        worker={{ zdr: worker?.zdr ?? null }}
+        asfaiAvailable={asfaiAvailable}
+      />
+    </aside>
+  ) : null;
+
+  return (
+    <div className={styles.live} data-wide="true" data-stage={stage}>
+      {passcodeDialog}
+      {tour}
+      <div className={styles.topbar}>
+        <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
+        {howItWorks}
+      </div>
+      <header className={styles.stageHeader}>
+        <div className={styles.stageMeta}>
+          <h1 className={styles.title}>{view.course.title}</h1>
+          <p className={styles.sub}>{view.course.owner} · {BROWSER_MODE ? "kept in this browser" : "kept on this computer"}</p>
+        </div>
+        <StepIndex view={view} stage={stage} />
+      </header>
+
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+          {published && stage !== "published" && view.revision ? (
+            <RevisionPanel
+              revision={view.revision}
+              workerConfigured={worker?.configured !== false}
+              planReworded={view.planWording?.objectives ?? []}
+              busy={busy}
+              onDraftPlan={draftPlan}
+              onOpenChange={setRevisionOpen}
+            />
+          ) : null}
+          {body}
+          <EarlierSteps steps={earlier} />
+        </div>
+        {rail}
       </div>
 
-      {plan ? (
-        <div className={styles.grid}>
-          <PlanCard
-            plan={plan}
-            objectives={objectives}
-            teacher={{ name: view.course.owner, confirmedAt: cp.plan?.status === "confirmed" ? new Date() : undefined }}
-            onPrint={() => window.print()}
-            invalidation={view.invalidation}
-            rewordedSince={view.planWording?.objectives}
-          />
-        </div>
-      ) : null}
-
-      <div className={styles.grid}>
-        <PublishCard
-          courseLabel={view.course.title}
-          courseId={view.course.courseId}
-          title={plan?.title ?? view.course.title}
-          status={view.publish}
-          objectives={objectives}
-          activities={plan?.activities ?? []}
-          totalMinutes={(plan?.activities ?? []).reduce((n, a) => n + a.minutes, 0)}
-          plan={plan}
-          published={published}
-          unpublishedChanges={cp.publish?.status === "pending" && published !== null}
-          teacherName={view.course.owner}
-          onPublish={publish}
-          onExport={exportPackage}
-        />
-      </div>
-
-      {published ? <div className={styles.grid}><VersionDiffPanel versions={view.versions} courseId={view.course.courseId} /></div> : null}
-
-      {published ? (
-        <div className={styles.grid}>
-          <StudentChat
-            courseId={view.course.courseId}
-            courseTitle={view.course.title}
-            sealed={{
-              version: published.version,
-              title: published.title ?? view.course.title,
-              objectives: published.objectiveRefs?.length ?? 0,
-              activities: published.lessonPlan?.activities?.length ?? 0,
-            }}
-            typicalSeconds={worker?.typicalSeconds}
-            zdr={worker?.zdr ?? null}
-            paused={passcodeOpen}
-          />
-        </div>
-      ) : null}
-
-      {view.timeline.length > 0 ? (
-        <div className={styles.grid}>
-          <TimelineCard events={view.timeline} courseLabel={view.course.title} />
-        </div>
-      ) : null}
-
+      {recordDetails}
       {browserRecord}
     </div>
   );

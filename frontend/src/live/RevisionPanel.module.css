@@ -29,3 +29,9 @@
 .closeButton { align-self: flex-start; background: transparent; border: none; color: var(--color-ink-muted); text-decoration: underline; }
 .reviseButton:focus-visible, .actionButton:focus-visible, .closeButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .actionButton:disabled { opacity: 0.55; cursor: default; }
+
+/* Inside the published moment: a quiet footer to the page, not a second card. */
+.panel[data-bare="true"] { padding: 0; background: transparent; border: none; border-left: none; max-width: none; }
+.panel[data-drafting="true"][data-bare="true"] { border-left: none; }
+.actionButton[data-primary="true"] { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-paper-raised); }
+.actionButton[data-primary="true"]:hover { background: var(--color-accent-strong); color: var(--color-paper-raised); }

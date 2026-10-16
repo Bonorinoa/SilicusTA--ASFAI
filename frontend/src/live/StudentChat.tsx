@@ -13,7 +13,11 @@ interface Turn { role: "student" | "assistant"; text: string; answer?: StudentAn
 /** The sealed package a student is answered from, as the page already holds it (counts only: used to say what the model sees). */
 export interface SealedSummary { version: number; title: string; objectives: number; activities: number }
 
-export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr = null, paused = false }: {
+export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr = null, paused = false, inputId, onWorking }: {
+  /** Lets the page put the cursor in the question box ("Try it as a student"). */
+  inputId?: string;
+  /** Told when an answer is being drafted (and when it is not), so the page's rail can say who is working. */
+  onWorking?: (w: { label: string; startedAt: number } | null) => void;
   courseId: string;
   courseTitle: string;
   sealed?: SealedSummary;
@@ -35,6 +39,7 @@ export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr
     const question = q.trim();
     if (!question || busy) return;
     setBusy(true); setError(null); setQ("");
+    onWorking?.({ label: "Answering a question from your sealed version", startedAt: Date.now() });
     const history = turns.map(({ role, text }) => ({ role, text }));
     setTurns((t) => [...t, { role: "student", text: question }]);
     const n = (asks.current += 1);
@@ -49,6 +54,7 @@ export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr
       end("failed");
     } finally {
       setBusy(false);
+      onWorking?.(null);
     }
   };
 
@@ -74,9 +80,9 @@ export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr
       </ol>
       {wait ? <AiWaiting key={wait.n} variant="compact" step={wait.step} phase={wait.phase} typicalSeconds={typicalSeconds} zdr={zdr} paused={paused} /> : null}
       <form className={styles.composer} onSubmit={(e) => { e.preventDefault(); void ask(); }}>
-        <label className={styles.prompt} htmlFor={id}>Your question</label>
-        <input id={id} className={styles.box} type="text" value={q} maxLength={800} autoComplete="off" onChange={(e) => setQ(e.target.value)} />
-        <button type="submit" className={styles.send} disabled={busy || !q.trim()}>Ask</button>
+        <label className={styles.prompt} htmlFor={inputId ?? id}>Your question</label>
+        <input id={inputId ?? id} className={styles.box} type="text" value={q} maxLength={800} autoComplete="off" onChange={(e) => setQ(e.target.value)} />
+        <button type="submit" className={styles.quiet} disabled={busy || !q.trim()}>Ask</button>
       </form>
       {error ? <p className={styles.refusal} role="status">{error}</p> : null}
     </section>

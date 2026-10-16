@@ -147,6 +147,10 @@
   .shell > .side { grid-column: 2; }
   /* The decision card's and the publish card's own bars (their markup is not this page's) stay in view too. */
   .main [data-armed][data-print="hide"] { position: sticky; bottom: var(--space-4); z-index: 3; }
+  /* Intake and material: the cards that hold their primary are not this page's, so the button itself rides the foot of
+     the window while its card is on screen (a sticky box stays inside the box it lives in, so it never leaves its card). */
+  .live[data-stage="intake"] .main [data-primary="true"],
+  .live[data-stage="material"] .main [data-primary="true"] { position: sticky; bottom: var(--space-4); z-index: 3; box-shadow: var(--shadow-lift); }
 }
 @media (min-width: 80rem) {
   .shell { grid-template-columns: 13.5rem minmax(0, 46rem) minmax(15rem, 18rem); }

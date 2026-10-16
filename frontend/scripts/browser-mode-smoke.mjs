@@ -231,6 +231,7 @@ const shot = async (name, selector = null) => {
 const stageShot = async (name, selector = null, viewportOnly = false) => {
   if (!SHOTS) return;
   const w = page.viewport().width;
+  await page.evaluate(() => window.scrollTo(0, 0)); // the sticky navigator and rail are drawn where the window is: capture from the top
   const path = join(SHOTS, `stage-${name}-${w}.png`);
   const el = selector ? await page.$(selector) : null;
   writeFileSync(path.replace(/\.png$/, ".txt"), await page.evaluate((sel) => (sel ? document.querySelector(sel) : document.body).innerText, selector));
@@ -239,6 +240,28 @@ const stageShot = async (name, selector = null, viewportOnly = false) => {
   if (viewportOnly) { await page.screenshot({ path }); return; }
   const h = await page.evaluate(() => document.documentElement.scrollHeight);
   await page.screenshot({ path, captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: Math.min(h, 6000) } });
+};
+/** C-a (workspace): at the two laptop sizes, the stage's primary action is inside the window the moment the stage opens. */
+// `settled`: the stage is a conversation whose cards (OnboardingChat, MaterialsPanel) are not this page's: measured where the page
+// came to rest (their own autofocus scrolls their input into view). Every other stage is measured from the top of the page.
+const primaryInViewport = async (stage, { settled = false } = {}) => {
+  const orig = page.viewport();
+  if (orig.width < 1100) return; // narrow keeps its single column; its own checks are the narrow ones
+    for (const [w, h] of [[1440, 900], [1280, 800]]) {
+    await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
+    if (!settled) await page.evaluate(() => window.scrollTo(0, 0));
+    await sleep(200);
+    const r = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('[data-primary="true"]')].filter((b) => b.offsetParent !== null);
+      if (els.length === 0) return null;
+      const b = els[0].getBoundingClientRect();
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom), left: Math.round(b.left), right: Math.round(b.right), vh: innerHeight, vw: innerWidth, label: els[0].textContent.trim().slice(0, 40), count: els.length };
+    });
+    check(`workspace ${w}x${h}: the ${stage} primary is inside the window when the stage opens`,
+      !!r && r.count === 1 && r.top >= 0 && r.bottom <= r.vh && r.left >= 0 && r.right <= r.vw, JSON.stringify(r));
+  }
+  await page.setViewport(orig);
+  await page.evaluate(() => window.scrollTo(0, 0));
 };
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
@@ -295,6 +318,7 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Confirm the material list"));
   if (narrow) await checkNarrow("onboarding: confirm the material list");
   await stageShot("03-confirm-material-list");
+  await primaryInViewport("confirm material list", { settled: true });
   await clickText("Confirm the material list");
   await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
   check("materials confirmed on the record", true);
@@ -303,6 +327,7 @@ async function story(label, narrow) {
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
   await shot("01b-intake");
   await stageShot("04-intake");
+  await primaryInViewport("intake", { settled: true });
   if (narrow) await checkNarrow("intake question 1: topic");
   check("ASFAI says plainly it needs the local app, with no Connect button",
     (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
@@ -320,6 +345,7 @@ async function story(label, narrow) {
   if (narrow) await checkNarrow("intake question 3: outcomes");
   await clickText("Propose these from my materials instead");
   await poll(() => bodyHas("Confirm the outline"));
+  await primaryInViewport("confirm outline");
   if (narrow) await checkNarrow("outline confirm");
   await clickText("Confirm the outline");
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
@@ -347,6 +373,7 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Lesson notes ·"));
   await shot("06-material-panel", 'section[aria-label="Course material"]');
   await stageShot("05-material");
+  await primaryInViewport("material", { settled: true });
   await clickText("Propose objectives from my materials");
   await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
   check("an AI action asks for the demo passcode", await bodyHas("Demo passcode"));
@@ -366,6 +393,7 @@ async function story(label, narrow) {
     /3 proposals\. None is confirmed until you decide\./.test(objReceipt) && /Drawn from 1 material/.test(objReceipt), objReceipt.replace(/\n+/g, " | "));
   await shot("11-receipt-proposals", 'section[data-phase="done"][data-variant="card"]');
   await stageShot("06-objectives-proposed");
+  await primaryInViewport("objectives (proposed)");
   check("the worker proposed objectives through /api/worker, with the passcode header",
     api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
   let s = await stored();
@@ -394,6 +422,7 @@ async function story(label, narrow) {
   // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
   await poll(() => bodyHas("build the plan"));
   await stageShot("07-objectives-decided");
+  await primaryInViewport("objectives (decided)");
   check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
   check("three confirmed objectives are on the page to be sent", confirmedStatements.length === 3 && confirmedStatements.every(Boolean), String(confirmedStatements.length));
@@ -443,10 +472,33 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Confirm the lesson plan"));
   // C1.5 (new): the plan stage. The mock plan has 3 activities, each with one "Look at a leaf." line: the plan is on the page ONCE.
   await stageShot("09-plan-drafted");
+  await primaryInViewport("plan");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",
     await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && ![...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
+  // C-a (workspace): edit the objectives from the plan and come back: two clicks, and the page is where it was (within 40 px).
+  if (!narrow) {
+    const orig = page.viewport();
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    await sleep(200);
+    const y0 = await page.evaluate(() => { const y = Math.max(0, Math.min(700, document.documentElement.scrollHeight - innerHeight - 50)); window.scrollTo(0, y); return window.scrollY; });
+    await sleep(150);
+    check("workspace: the plan page is tall enough to scroll, so the return check means something", y0 >= 300, `scrollY ${y0}`);
+    await clickText("Edit objectives"); // click 1
+    await poll(() => bodyHas("Back to the plan"));
+    check("workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary",
+      (await page.evaluate(() => !!document.querySelector('section[aria-label="Objective proposals"]'))) && (await primaryCount()) === 1);
+    await stageShot("09b-edit-objectives");
+    await clickText("Back to the plan"); // click 2
+    await poll(() => bodyHas("Confirm the lesson plan"));
+    await sleep(250);
+    const y1 = await page.evaluate(() => window.scrollY);
+    check("workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px", Math.abs(y1 - y0) <= 40, `scrollY ${y0} -> ${y1}`);
+    check("workspace: looking wrote nothing (still exactly the three objective decisions)", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
+    await page.setViewport(orig);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
   if (narrow) await checkNarrow("plan card, drafted");
   await clickText("Confirm the lesson plan");
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
@@ -455,6 +507,7 @@ async function story(label, narrow) {
   if (narrow) await checkNarrow("plan card");
   await poll(() => bodyHas("Review & publish"));
   await stageShot("10-publish");
+  await primaryInViewport("publish");
   check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   // ---- publish (review -> confirm step -> publish)
@@ -480,6 +533,7 @@ async function story(label, narrow) {
 
   if (narrow) await checkNarrow("publish card, sealed");
   await stageShot("12-published");
+  await primaryInViewport("published");
   await page.evaluate(() => window.scrollTo(0, 0));
   check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);

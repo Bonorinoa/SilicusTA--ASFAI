@@ -173,7 +173,7 @@ export function LiveCourse() {
   const asfaiAvailable = !BROWSER_MODE && asfai?.available !== false;
 
   // D8: when the stage changes, last stage's notice goes (one raised by the act that moved the page on survives that one change).
-  const stageKey = view ? `${stageOf(view)}:${is("files", "confirmed")}` : "";
+  const stageKey = view ? `${stageOf(view)}:${is("files", "confirmed")}:${view.plan ? "plan" : "no-plan"}` : "";
   useEffect(() => { setNoticeState((n) => (n && n.survive ? { ...n, survive: false } : null)); }, [stageKey]);
   // A new stage opens at its top, with the viewing of another step ended; the stage bar then holds its primary in view.
   useEffect(() => {

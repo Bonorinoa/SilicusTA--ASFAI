@@ -36,7 +36,7 @@ export function modelReply(prompt) {
       activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation" })) };
   }
   if (p.startsWith("You are a study helper")) {
-    return { answer: "A plant uses light, water and air to make sugar.", cites: ["[objective:1]", "activity:1"] };
+    return { inScope: true, answer: "A plant uses light, water and air to make sugar.", cites: ["[objective:1]", "activity:1"] };
   }
   return { error: "unexpected prompt" };
 }

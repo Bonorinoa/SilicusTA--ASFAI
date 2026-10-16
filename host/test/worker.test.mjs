@@ -317,15 +317,15 @@ test("a student answer must cite the package; unknown ids are dropped, and no va
     { id: "objective:1", label: "Objective 1", text: "Students can explain what an algorithm is." },
     { id: "activity:1", label: "Activity 1", text: "Spot the claim. Learners mark the sentence that makes a claim." },
   ];
-  const { mock, worker } = await workerWith({ answer: "An algorithm is a list of steps.", cites: ["objective:1", "objective:ghost", "activity:1", 7] });
+  const { mock, worker } = await workerWith({ inScope: true, answer: "An algorithm is a list of steps.", cites: ["objective:1", "objective:ghost", "activity:1", 7] });
   const out = await worker.answerStudent({ question: "What is an algorithm?", history: [{ role: "student", text: "hi" }], title: "AI literacy", items });
   assert.deepEqual(out, { answer: "An algorithm is a list of steps.", cites: ["objective:1", "activity:1"] });
   assert.ok(mock.st.lastPrompt.includes("[objective:1]"));
   assert.ok(/ONLY from the COURSE PACKAGE/.test(mock.st.lastPrompt) && /not evidence/.test(mock.st.lastPrompt));
 
-  const { worker: w2 } = await workerWith({ answer: "Because.", cites: ["made:up"] });
+  const { worker: w2 } = await workerWith({ inScope: true, answer: "Because.", cites: ["made:up"] });
   assert.deepEqual(await w2.answerStudent({ question: "q", items }), { answer: "Because.", cites: [] });
-  const { worker: w3 } = await workerWith({ answer: "   " });
+  const { worker: w3 } = await workerWith({ inScope: true, answer: "   " });
   await assert.rejects(w3.answerStudent({ question: "q", items }), { code: "WORKER_BAD_OUTPUT" });
 });
 
@@ -393,6 +393,6 @@ test("workerFromEnv reasoning parity: OpenRouter defaults low; other presets req
 
 test("a real model echoes the prompt's [brackets] around a cited id: that still matches, and nothing else is loosened", async () => {
   const items = [{ id: "objective:1", label: "Objective 1", text: "x" }, { id: "activity:1", label: "Activity 1", text: "y" }];
-  const { worker } = await workerWith({ answer: "Steps.", cites: ["[objective:1]", " [activity:1] ", "objective:1", "[[objective:1]]", "[objective:ghost]", "[objective:1", "(objective:1)", "[ ]"] });
+  const { worker } = await workerWith({ inScope: true, answer: "Steps.", cites: ["[objective:1]", " [activity:1] ", "objective:1", "[[objective:1]]", "[objective:ghost]", "[objective:1", "(objective:1)", "[ ]"] });
   assert.deepEqual(await worker.answerStudent({ question: "q", items }), { answer: "Steps.", cites: ["objective:1", "activity:1"] });
 });

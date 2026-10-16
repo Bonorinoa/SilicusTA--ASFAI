@@ -803,7 +803,7 @@ export function LiveCourse() {
     body = (
       <>
         {lookBody}
-        <StageBar status={editing ? "Reword or drop an objective here; nothing changes until you do." : `A look at your ${label.toLowerCase()}. Nothing here changes.`}>
+        <StageBar status={editing ? "Edit an objective\u2019s wording, or revoke one, then go back to the plan." : `A look at your ${label.toLowerCase()}. Nothing here changes.`}>
           <button type="button" className={styles.primaryButton} data-primary="true" onClick={backToStage}>{BACK_LABEL[stage]}</button>
         </StageBar>
       </>

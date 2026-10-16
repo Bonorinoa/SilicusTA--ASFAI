@@ -257,6 +257,7 @@ const primaryInViewport = async (stage, { settled = false } = {}) => {
       const b = els[0].getBoundingClientRect();
       return { top: Math.round(b.top), bottom: Math.round(b.bottom), left: Math.round(b.left), right: Math.round(b.right), vh: innerHeight, vw: innerWidth, label: els[0].textContent.trim().slice(0, 40), count: els.length };
     });
+    if (SHOTS && w === 1440) await page.screenshot({ path: join(SHOTS, `ws-${stage.replace(/[^a-z]+/g, "-")}-1440x900.png`) });
     check(`workspace ${w}x${h}: the ${stage} primary is inside the window when the stage opens`,
       !!r && r.count === 1 && r.top >= 0 && r.bottom <= r.vh && r.left >= 0 && r.right <= r.vw, JSON.stringify(r));
   }

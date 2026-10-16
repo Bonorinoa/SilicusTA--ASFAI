@@ -120,14 +120,15 @@ const measure = () => {
     ["section[aria-label='Course onboarding']", "onboarding card"],
     ["ol[aria-label='How it goes']", "hero steps line"],
     ["section[aria-label='Course material']", "materials panel"],
-    ["section[aria-label='Try it as a student']", "student chat"],
+    ["section[aria-label='Try the student helper']", "student chat"],
     ["section[aria-label='Where your courses are kept']", "record band + data controls"],
     ["section[aria-label='Pinned copies on this device']", "pinned copies"],
     ["details", "course library"],
+    ["button[aria-haspopup='menu']", "course library"],
     ["ol[aria-label='Checkpoints']", "checkpoint chips"],
     ["article", "PlanCard (other agent)"],
     ["section[aria-label='Objective proposals']", "DecisionCard (other agent)"],
-    ["section[aria-label='Course package — preview and publish']", "PublishCard (other agent)"],
+    ["section[aria-label='Preview and publish']", "PublishCard (other agent)"],
     ["section[aria-label='Decision history']", "TimelineCard (other agent)"],
     ["section[aria-label='Revise this course']", "RevisionPanel"],
     ["section[data-variant]", "AiWaiting (other agent)"],
@@ -205,7 +206,7 @@ const SHOT_TARGETS = [
   ["ol[aria-label='How it goes']", "hero-steps"],
   ["section[aria-label='Course onboarding']", "onboarding-card"],
   ["section[aria-label='Course material']", "materials-panel"],
-  ["section[aria-label='Try it as a student']", "student-chat"],
+  ["section[aria-label='Try the student helper']", "student-chat"],
   ["section[aria-label='Where your courses are kept']", "record-band"],
   ["section[aria-label='Pinned copies on this device']", "pinned-copies"],
 ];
@@ -302,8 +303,8 @@ try {
   await setValue("#intake-course", "Science, ages 8-10"); await clickText("Record this answer");
   await poll(() => bodyHas("Propose these from my materials instead"));
   await clickText("Propose these from my materials instead");
-  await poll(() => bodyHas("Confirm the outline"));
-  await clickText("Confirm the outline");
+  await poll(() => bodyHas("Confirm the brief"));
+  await clickText("Confirm the brief");
 
   // ---- the material panel, at every width (with one item already added, so the rows are set)
   await poll(() => bodyHas("Add your material here")); // the intake-clarity round reworded this prompt
@@ -344,8 +345,8 @@ try {
     const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
     if (opened) return true;
     await page.evaluate(() => {
-      const sec = document.querySelector('section[aria-label*="Course package"]');
-      const armed = !!sec && /ready to seal/i.test(sec.innerText);
+      const sec = document.querySelector('section[aria-label*="Preview and publish"]');
+      const armed = !!sec && /ready to publish/i.test(sec.innerText);
       const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
       if (btn && armed) btn.click();
     });
@@ -354,14 +355,27 @@ try {
   }, 12000);
   await clickText("Publish version 1");
   await poll(recorded("package.published"));
-  await page.waitForSelector('section[aria-label="Try it as a student"] input');
-  await page.type('section[aria-label="Try it as a student"] input', "What do plants need to make food?");
+  await clickText("Try the student helper"); // the helper is collapsed until opened
+  await page.waitForSelector('section[aria-label="Try the student helper"] input');
+  await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");
   await clickText("Ask");
   await poll(() => bodyHas("A plant uses light"), 20000);
 
   // ---- the whole app at every width
-  check("the published course is on the page with a student answer", await bodyHas("From Objective 1, Activity 1"));
+  check("the published course is on the page with a student answer", await bodyHas("From Objective 1 \u00b7 Activity 1"));
   for (const w of WIDTHS) print(await at(w, "full live course"));
+  // C-a (workspace): at 380 the stage navigator is the stepper again: a row of labels, no summaries, nothing sticky.
+  await page.setViewport({ width: 380, height: 900, deviceScaleFactor: 1 });
+  const stepper = await page.evaluate(() => {
+    const ol = document.querySelector('ol[aria-label="Steps"]');
+    if (!ol) return null;
+    let sticky = false;
+    for (let e = ol; e && e !== document.body; e = e.parentElement) if (getComputedStyle(e).position === "sticky") sticky = true;
+    return { dir: getComputedStyle(ol).flexDirection, text: ol.innerText.replace(/\s+/g, " "), sticky, right: Math.round(ol.getBoundingClientRect().right), vw: innerWidth };
+  });
+  check("380px: the stage navigator collapses to the stepper (a row of labels, no summaries, nothing sticky)",
+    !!stepper && stepper.dir === "row" && /Material.*Brief.*Objectives.*Plan.*Publish/.test(stepper.text) && !/Version \d|confirmed|min\b/.test(stepper.text) && !stepper.sticky && stepper.right <= stepper.vw,
+    JSON.stringify(stepper));
   if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-course`, ["shell-header", "student-chat", "pinned-copies", "record-band"]); }
 
   // ---- the data controls in their confirm state (nothing is deleted: "Keep them" is pressed after)

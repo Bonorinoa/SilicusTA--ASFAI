@@ -1,6 +1,6 @@
 /**
  * TimelineCard.test.tsx — the audit trail renders real decisions, checkpoint
- * confirmations, and sealed versions as one chronological spine, with machine
+ * confirmations, and published versions as one chronological spine, with machine
  * keys demoted out of the reading path.
  */
 import { render, screen } from "@testing-library/react";
@@ -93,7 +93,7 @@ describe("TimelineCard", () => {
 
     // Both decisions bind to version 1 — the assertion is per-event line, not a single match.
     expect(screen.getAllByText(/binds to version 1/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/sealed as version 1/)).toBeInTheDocument();
+    expect(screen.getByText(/published as version 1/)).toBeInTheDocument();
     // Turn refs are present for audit but on the demoted line, not headline labels.
     expect(screen.getByText("urn:turn:5")).toBeInTheDocument();
     const label = screen.getByText("Renamed");
@@ -103,7 +103,7 @@ describe("TimelineCard", () => {
   it("renders an honest empty state", () => {
     render(<TimelineCard events={[]} />);
     expect(
-      screen.getByText(/nothing recorded yet — decisions and seals will appear here\./i),
+      screen.getByText(/nothing recorded yet — decisions and published versions will appear here\./i),
     ).toBeInTheDocument();
   });
 

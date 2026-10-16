@@ -189,7 +189,7 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
         />,
       );
       const region = screen.getByRole("region", { name: "Suggested alignment" });
-      expect(within(region).getByText(/not requirements, not objectives, and not part of the sealed package/i)).toBeInTheDocument();
+      expect(within(region).getByText(/not requirements, not objectives, and not part of the published version/i)).toBeInTheDocument();
       expect(within(region).getByText(/Following Steps \(ages 8–10\)/)).toBeInTheDocument();
       expect(within(region).getByText(/from ASFAI's skill map/)).toBeInTheDocument();
       expect(within(region).getByText(/from your ontology file/)).toBeInTheDocument();
@@ -264,5 +264,48 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
     const note = screen.getByText(/A revoked objective cannot be confirmed again/);
     expect(note).toHaveTextContent(/would not make it publishable/);
     expect(screen.queryByText(/Re-confirm this plan as it reads, or propose a new one/)).not.toBeInTheDocument();
+  });
+});
+
+describe("PlanCard in the workspace", () => {
+  const scenario = buildPlanScenario();
+
+  it("shows each activity's objectives as chips (Obj N) that carry the statement for hover and focus", () => {
+    render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
+    const chips = screen.getAllByText(/^Obj \d$/);
+    expect(chips.length).toBeGreaterThan(0);
+    const chip = chips[0];
+    expect(chip).toHaveAttribute("tabindex", "0"); // reachable by keyboard
+    const tip = document.getElementById(chip.getAttribute("aria-describedby")!)!;
+    expect(tip).toHaveAttribute("role", "tooltip");
+    expect(tip.textContent).toMatch(/\S/);
+    // The statement in the chip is the same one the key at the foot names for that number.
+    const n = Number(/\d/.exec(chip.textContent!)![0]);
+    const key = screen.getByRole("region", { name: "Objectives referenced" });
+    expect(within(key).getAllByRole("listitem")[n - 1].textContent).toContain(tip.textContent!.trim());
+  });
+
+  it("folds Suggested alignment away until asked for", () => {
+    render(<PlanCard plan={{ ...scenario.plan, citations: [{ ref: "a:1", label: "Following Steps", source: "asfai-graph", activityIndexes: [0], verified: true }] } as typeof scenario.plan} objectives={scenario.objectives} />);
+    const region = screen.getByRole("region", { name: "Suggested alignment" });
+    const details = region.querySelector("details")!;
+    expect(details.open).toBe(false);
+    expect(within(region).getByText("1 reference")).toBeInTheDocument();
+  });
+
+  it("with ids moved to Record details: no print note on screen, and the urns are marked print-only", () => {
+    const { container } = render(
+      <PlanCard plan={scenario.plan} objectives={scenario.objectives} onPrint={() => {}} ids="record"
+        teacher={{ name: "R. Okonkwo", confirmedAt: new Date("2026-10-09T10:00:00Z") }} />,
+    );
+    expect(screen.queryByText(/set to print cleanly/)).not.toBeInTheDocument();
+    const colophon = container.querySelector("footer p:nth-of-type(2)")!;
+    expect(colophon.querySelector('span[class*="printOnly"]')?.textContent).toMatch(/Silicus TA · plan/);
+    expect(colophon.textContent).toMatch(/confirmed 9 October 2026/);
+  });
+
+  it("by default keeps the print note and the ids in the footer, as before", () => {
+    render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} onPrint={() => {}} />);
+    expect(screen.getByText(/set to print cleanly/)).toBeInTheDocument();
   });
 });

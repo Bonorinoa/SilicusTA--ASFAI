@@ -7,6 +7,10 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HostView } from "../gate/transport";
+import type { ActivityItem, TimelineEvent } from "../gate/types";
+import { ActivityRail } from "../components/ActivityRail";
+import { ARTIFACT_LABEL } from "../components/ActivityRail/copy";
+import { TimelineCard } from "../components/TimelineCard";
 import { LiveCourse } from "./LiveCourse";
 
 const COURSE_ID = "urn:uuid:11111111-2222-3333-4444-555555555555";
@@ -125,7 +129,7 @@ describe("D1: the confirm bar that says 'build the plan' does it, and only while
     first.unmount();
     mockHost(atPublished());
     render(<LiveCourse />);
-    await screen.findByRole("heading", { name: "Version 1 is published" });
+    await screen.findByText(/^Version 1 is published\./);
     expect(screen.queryByRole("button", { name: /build the plan/ })).not.toBeInTheDocument();
   });
 
@@ -161,7 +165,7 @@ describe("D3 in words: the reasons a course cannot be sealed yet are plain sente
     } as HostView["publish"];
     mockHost(v);
     render(<LiveCourse />);
-    const list = await screen.findByRole("list", { name: "Why this package cannot be published" });
+    const list = await screen.findByRole("list", { name: "Why this version cannot be published" });
     expect(within(list).getByText("Confirm the material list")).toBeInTheDocument();
     expect(within(list).getByText("Decide the 2 proposed objectives still waiting")).toBeInTheDocument();
     expect(list.textContent).not.toMatch(/urn:|is not teacher-confirmed/);
@@ -240,7 +244,7 @@ describe("one stage at a time, one primary action", () => {
     const { container } = render(<LiveCourse />);
     await screen.findByRole("heading", { name: PLAN_TITLE });
     expect(screen.queryByRole("region", { name: /Course package/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Try it as a student" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Try the student helper" })).not.toBeInTheDocument();
     expect(primaries(container)).toHaveLength(1);
     expect(primaries(container)[0]).toHaveTextContent("Confirm the lesson plan");
   });
@@ -289,7 +293,7 @@ describe("one stage at a time, one primary action", () => {
     const steps = await screen.findByRole("list", { name: "Steps" });
     const items = within(steps).getAllByRole("listitem");
     expect(items.map((li) => li.textContent?.replace(/\s+/g, " ").trim())).toEqual([
-      expect.stringMatching(/Material/), expect.stringMatching(/Outline/), expect.stringMatching(/Objectives/), expect.stringMatching(/Plan/), expect.stringMatching(/Publish/),
+      expect.stringMatching(/Material/), expect.stringMatching(/Brief/), expect.stringMatching(/Objectives/), expect.stringMatching(/Plan/), expect.stringMatching(/Publish/),
     ]);
     expect(items[3]).toHaveAttribute("aria-current", "step");
     expect(items[0]).toHaveAttribute("data-state", "done");
@@ -298,25 +302,36 @@ describe("one stage at a time, one primary action", () => {
 });
 
 describe("the published moment", () => {
-  it("says the version is published, who and when, then three actions in order, and Revise is secondary", async () => {
+  it("reads in the glossary's order: one status sentence, the lesson plan, the student helper, then the actions; Revise stays secondary", async () => {
     mockHost(atPublished());
     const { container } = render(<LiveCourse />);
-    const head = await screen.findByRole("heading", { name: "Version 1 is published" });
-    const moment = head.closest("section") as HTMLElement;
-    expect(moment).toHaveTextContent(/Ada Lovelace/);
-    expect(moment).toHaveTextContent(/16 October 2026/);
-    const names = within(moment).getAllByRole("button").map((b) => b.textContent);
-    expect(names.slice(0, 3)).toEqual(["Try it as a student", "Download the student handout", "Export the package"]);
-    expect(names).toContain("Revise this course");
+    const status = await screen.findByText("Version 1 is published. Students use this version; changes become version 2.");
+    // The old three sentences are gone.
+    expect(screen.queryByText(/Sealed 16 October 2026/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/is published and unchanged/)).not.toBeInTheDocument();
+    const plan = screen.getByRole("heading", { name: PLAN_TITLE });
+    const helper = screen.getByRole("region", { name: "Try the student helper" });
+    const bar = container.querySelector('[data-stage-bar="true"]') as HTMLElement;
+    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(status, plan)).toBe(true);
+    expect(before(plan, helper)).toBe(true);
+    expect(before(helper, bar)).toBe(true);
+    const names = within(bar).getAllByRole("button").map((b) => b.textContent);
+    expect(names).toEqual(["Try the student helper", "Download the student handout", "Export the published version"]);
+    expect(screen.getByRole("button", { name: "Revise this course" })).toBeInTheDocument();
     expect(primaries(container)).toHaveLength(1);
-    expect(primaries(container)[0]).toHaveTextContent("Try it as a student");
+    expect(primaries(container)[0]).toHaveTextContent("Try the student helper");
   });
 
-  it("'Try it as a student' puts the cursor in the student's question box", async () => {
+  it("the student helper is collapsed until opened, and 'Try the student helper' opens it and puts the cursor in the question box", async () => {
     mockHost(atPublished());
     const user = userEvent.setup();
-    render(<LiveCourse />);
-    await user.click(await screen.findByRole("button", { name: "Try it as a student" }));
+    const { container } = render(<LiveCourse />);
+    await screen.findByText(/^Version 1 is published\./);
+    const details = container.querySelector("section[aria-label='Try the student helper'] details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Try the student helper" }));
+    expect(details.open).toBe(true);
     expect(screen.getByLabelText("Your question")).toHaveFocus();
   });
 
@@ -324,7 +339,7 @@ describe("the published moment", () => {
     mockHost(atPublished());
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await screen.findByRole("heading", { name: "Version 1 is published" });
+    await screen.findByText(/^Version 1 is published\./);
     await user.click(screen.getByText(/Objectives/, { selector: "summary *, summary" }));
     await screen.findByRole("heading", { name: STATEMENT });
     expect(screen.queryByRole("button", { name: /Edit the wording/ })).not.toBeInTheDocument();
@@ -420,5 +435,178 @@ describe("copy: the hint under an unanswered question promises, it does not repo
     expect(hint.textContent).toMatch(/recorded on this course when you press Record this answer/i);
     expect(hint.textContent).not.toMatch(/^Recorded on this course[.;]/);
     expect(hint.textContent).toMatch(/Not sent to ASFAI/); // the local app keeps its honesty line
+  });
+});
+
+describe("the workspace: edit any stage without hunting for it", () => {
+  const stepsList = async () => within(await screen.findByRole("list", { name: "Steps" }));
+
+  it("the navigator says where each step stands, in one line", async () => {
+    mockHost(atPlanDraft());
+    render(<LiveCourse />);
+    const steps = await stepsList();
+    const lines = steps.getAllByRole("listitem").map((li) => li.textContent?.replace(/\s+/g, " ").trim());
+    expect(lines[0]).toMatch(/Material.*1 material/);
+    expect(lines[1]).toMatch(/Brief.*how AI answers are built/);
+    expect(lines[2]).toMatch(/Objectives.*1 objective confirmed/);
+    expect(lines[3]).toMatch(/Plan.*1 activity · 20 min/);
+    expect(lines[3]).not.toMatch(/draft/i); // the plan stage says "draft" once: its tag and its bar, not the navigator
+    expect(lines[4]).toMatch(/Publish.*Not published/);
+  });
+
+  it("a step is a button only where there is something to look at", async () => {
+    mockHost(atPlanDraft());
+    render(<LiveCourse />);
+    const steps = await stepsList();
+    expect(steps.getByRole("button", { name: /Objectives/ })).toBeInTheDocument();
+    expect(steps.getByRole("button", { name: /Plan/ })).toBeInTheDocument();
+    expect(steps.queryByRole("button", { name: /Publish/ })).not.toBeInTheDocument(); // nothing to publish yet
+  });
+
+  it("edit objectives from the plan, and back: two clicks, one primary each time, the plan as it was", async () => {
+    const { calls } = mockHost(atPlanDraft());
+    const user = userEvent.setup();
+    const { container } = render(<LiveCourse />);
+    await screen.findByRole("heading", { name: PLAN_TITLE });
+    expect(primaries(container)).toHaveLength(1);
+    const writes = () => calls.filter((c) => c.method === "POST").length;
+    const before = writes();
+
+    await user.click(screen.getByRole("button", { name: "Edit objectives" })); // click 1
+    expect(await screen.findByRole("heading", { name: "Learning objectives" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: PLAN_TITLE })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Reword|Edit/ })).toBeInTheDocument(); // the objectives are editable here
+    expect(primaries(container)).toHaveLength(1);
+    expect(primaries(container)[0]).toHaveTextContent("Back to the plan");
+
+    await user.click(screen.getByRole("button", { name: "Back to the plan" })); // click 2
+    expect(await screen.findByRole("heading", { name: PLAN_TITLE })).toBeInTheDocument();
+    expect(primaries(container)).toHaveLength(1);
+    expect(primaries(container)[0]).toHaveTextContent("Confirm the lesson plan");
+    expect(writes()).toBe(before); // looking is not an act
+  });
+
+  it("the navigator opens a finished step as a look, and its one primary goes back", async () => {
+    mockHost(atPlanDraft());
+    const user = userEvent.setup();
+    const { container } = render(<LiveCourse />);
+    await screen.findByRole("heading", { name: PLAN_TITLE });
+    await user.click((await stepsList()).getByRole("button", { name: /Brief/ }));
+    expect(await screen.findByText("Topic")).toBeInTheDocument(); // the brief's own answers are what is on screen
+    expect(screen.queryByRole("heading", { name: PLAN_TITLE })).not.toBeInTheDocument();
+    expect(primaries(container)).toHaveLength(1);
+    expect((await stepsList()).getAllByRole("listitem")[1]).toHaveAttribute("aria-current", "step");
+    await user.click(screen.getByRole("button", { name: "Back to the plan" }));
+    expect(await screen.findByRole("heading", { name: PLAN_TITLE })).toBeInTheDocument();
+  });
+
+  it("once published, objectives are only a look: no verbs, no Edit objectives on the plan", async () => {
+    mockHost(atPublished());
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await screen.findByText(/^Version 1 is published\./);
+    await user.click((await stepsList()).getByRole("button", { name: /Objectives/ }));
+    expect(await screen.findByRole("heading", { name: "Learning objectives" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add objective/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to the published version" })).toBeInTheDocument();
+  });
+
+  it("a plan that cites an objective the teacher dropped says so in the bar, and offers a new draft first", async () => {
+    const v = atPlanDraft();
+    v.plan = planOf("invalidated");
+    mockHost(v);
+    const { container } = render(<LiveCourse />);
+    expect(await screen.findByText(/cites an objective you dropped, so it cannot be published as it is/)).toBeInTheDocument();
+    expect(primaries(container)).toHaveLength(1);
+    expect(primaries(container)[0]).toHaveTextContent("Draft a new plan from your confirmed objectives");
+  });
+
+  it("the plan sheet keeps its ids in Record details, not in the reading path", async () => {
+    mockHost(atPlanDraft());
+    render(<LiveCourse />);
+    await screen.findByRole("heading", { name: PLAN_TITLE });
+    const details = screen.getByRole("group", { name: "Record details" });
+    expect(within(details).getByText("Lesson plan")).toBeInTheDocument();
+    expect(within(details).getByText(/print cleanly/)).toBeInTheDocument();
+    expect(screen.queryByText(/This page is set to print cleanly — use your browser/)).not.toBeInTheDocument();
+  });
+});
+
+// ---- the glossary's retired words -----------------------------------------------------------------------------
+// Owner, 2026-10-16: "outline", "package", "sealed" and "yet" confused teachers. They live on in gate ids, file names
+// and Record details only. This renders every stage, opens everything that can be opened, and reads the text a
+// teacher can read (textContent also reads the closed <details>, so a negative check is never vacuous).
+describe("retired words: outline, package, sealed, yet are absent from every stage's teacher-facing text", () => {
+  const RETIRED = /\b(outlines?|packages?|seal(ed|s|ing)?|in this course yet)\b/i;
+  const stages: Array<[string, () => HostView]> = [
+    ["intake", () => { const v = baseView(); set(v, "files", "pending"); set(v, "outline", "pending"); set(v, "objectives", "pending"); v.proposals = []; return v; }],
+    ["brief", () => { const v = baseView(); set(v, "outline", "open"); set(v, "objectives", "pending"); v.proposals = []; v.intake = { ...v.intake, outlineAuthorized: true, answers: { topic: "t", course: "c", learning_outcomes: ["o"] } } as HostView["intake"]; return v; }],
+    ["brief with no outcome", () => { const v = baseView(); set(v, "outline", "open"); set(v, "objectives", "pending"); v.proposals = []; v.intake = { ...v.intake, outlineAuthorized: true, answers: { topic: "t", course: "c" } } as HostView["intake"]; return v; }],
+    ["objectives", () => { const v = baseView(); set(v, "objectives", "pending"); v.proposals = [
+      { id: A, kind: "local", status: "proposed", statement: STATEMENT, originalStatement: STATEMENT, source: "from your answer", alignment: null, by: "ai" },
+      { id: "urn:uuid:bbbb", kind: "local", status: "proposed", statement: "Students can name one thing.", originalStatement: "Students can name one thing.", source: "suggested by Silicus", alignment: null, by: "ai" },
+    ] as unknown as HostView["proposals"]; return v; }],
+    ["plan", () => baseView()],
+    ["plan draft", atPlanDraft],
+    ["publish", atPublish],
+    ["published", atPublished],
+  ];
+  for (const [name, make] of stages) {
+    it(`${name}`, async () => {
+      mockHost(make());
+      const { container } = render(<LiveCourse />);
+      await screen.findByRole("heading", { level: 1 }).catch(() => null);
+      await waitFor(() => expect(container.querySelector("[data-stage-bar='true'], section")).not.toBeNull());
+      await new Promise((r) => setTimeout(r, 50));
+      // Record details hold the machine words on purpose; they are a click away, not the reading path.
+      const clone = container.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("[data-record-details], [aria-label='Record details']").forEach((n) => n.remove());
+      const text = clone.textContent ?? "";
+      const hits = [...text.matchAll(new RegExp(RETIRED, "gi"))].map((m) => text.slice(Math.max(0, m.index! - 40), m.index! + 40));
+      expect(hits).toEqual([]);
+    });
+  }
+});
+
+// C-e: the same rule, for the two surfaces the stage render above does not always reach: the rail (every action it can say,
+// every tag it can wear) and the timeline (a published version, a decision, a checkpoint).
+describe("retired words: the rail and the timeline say published/brief, not sealed/outline/package", () => {
+  const RETIRED = /\b(outlines?|packages?|seal(ed|s|ing)?|in this course yet)\b/i;
+  const A_MIN = 60_000;
+  const ACTIONS: Array<[ActivityItem["action"], ActivityItem["artifact"], ActivityItem["facts"]]> = [
+    ["course.created", "record", {}], ["checkpoint.confirmed", "record", { checkpoint: "files" }], ["checkpoint.confirmed", "outline", { checkpoint: "outline" }],
+    ["checkpoint.confirmed", "objectives", { checkpoint: "objectives" }], ["checkpoint.confirmed", "plan", { checkpoint: "plan" }],
+    ["intake.asked", "outline", { questions: 3 }], ["intake.answered", "outline", {}], ["intake.sent", "outline", {}],
+    ["objectives.derived", "objectives", { count: 2 }], ["objectives.drafted", "objectives", { count: 3, materials: 1 }],
+    ["objectives.suggested", "objectives", { count: 2 }], ["objectives.decided", "objectives", { accepted: 2, dropped: 1 }],
+    ["plan.drafted", "plan", { activities: 3 }], ["plan.checked", "plan", { valid: true }], ["plan.confirmed", "plan", {}],
+    ["package.sealed", "package", { version: 1 }], ["package.sealed", "package", {}],
+  ];
+
+  it("the rail: every sentence and every tag", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("min-width"), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
+    const T = Date.now();
+    const items = ACTIONS.map(([action, artifact, facts], i) => ({ seq: i + 1, at: T - (ACTIONS.length - i) * 5 * A_MIN, actor: "teacher", action, artifact, facts }) as ActivityItem);
+    const { container } = render(<ActivityRail items={items} asfaiAvailable />);
+    await userEvent.click(screen.getByRole("button", { name: /earlier step/i })); // the rail folds a long history: open all of it
+    const text = container.textContent ?? "";
+    expect([...text.matchAll(new RegExp(RETIRED, "gi"))].map((m) => text.slice(Math.max(0, m.index! - 30), m.index! + 30))).toEqual([]);
+    expect(Object.values(ARTIFACT_LABEL).sort()).toEqual(["Brief", "Material", "Objectives", "Plan", "Version"]);
+    expect(text).toMatch(/Confirmed the brief/);
+    expect(text).toMatch(/Published version 1/);
+    vi.unstubAllGlobals();
+  });
+
+  it("the timeline: a published version, a decision and a checkpoint", () => {
+    const events: TimelineEvent[] = [
+      { id: "checkpoint:files", kind: "checkpoint", at: 1, label: "Checkpoint confirmed — files", turnRef: "t1", decidedBy: "teacher:tk-1", channel: "silicus-ui" },
+      { id: "dec-1", kind: "decision", verb: "accept", at: 2, label: "Accepted", version: 1, turnRef: "t2", decidedBy: "teacher:tk-1", channel: "silicus-ui" },
+      { id: "publish:1", kind: "publish", at: 3, label: "Published", version: 1, turnRef: "t3", decidedBy: "teacher:tk-1", channel: "silicus-ui" },
+    ];
+    const { container } = render(<TimelineCard events={events} courseLabel="Lesson 3" />);
+    expect(container.textContent).not.toMatch(RETIRED);
+    expect(container.textContent).toMatch(/published as version 1/);
+    const empty = render(<TimelineCard events={[]} />);
+    expect(empty.container.textContent).not.toMatch(RETIRED);
   });
 });

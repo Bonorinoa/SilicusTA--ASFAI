@@ -3,20 +3,45 @@
 
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* ---- the step index: a line of type, not five boxes ---- */
+/* ---- the step index ----
+   Narrow: a line of type, not five boxes. At 1100 px and up the same list is the stage navigator (see the end of this file). */
 .steps {
   display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); list-style: none; margin: 0; padding: var(--space-3) 0 0;
   border-top: 1px solid var(--color-rule);
   font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-muted);
 }
-.step { display: inline-flex; align-items: baseline; gap: var(--space-2); min-height: 1.75rem; }
+.step { display: inline-flex; align-items: baseline; min-height: 1.75rem; }
+.stepButton {
+  display: inline-flex; align-items: baseline; gap: var(--space-2); min-height: 44px; box-sizing: border-box; padding: 0; margin: 0;
+  background: transparent; border: none; font: inherit; color: inherit; text-align: left; cursor: pointer; max-width: 100%;
+}
+.stepButton[data-static] { cursor: default; }
+.stepButton:hover:not([data-static]) .stepLabel { text-decoration: underline; text-decoration-color: var(--color-accent-line); text-underline-offset: 4px; }
+.stepButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .stepMark { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); min-width: 1ch; text-align: center; }
+.stepText { display: inline-flex; flex-direction: column; min-width: 0; }
 .stepLabel { letter-spacing: 0; }
+.stepHead { display: inline-flex; align-items: baseline; gap: var(--space-2); }
+/* The check sits by the name and the number stays: finished is a state, not a different numbering. */
+.stepDone { color: var(--color-accepted); font-size: var(--text-sm); }
+/* A step you can open carries a chevron (navigator only): it is a link to a look, not a label. */
+.stepGo { display: none; flex: none; align-self: center; margin-left: auto; color: var(--color-ink-muted); font-size: var(--text-md); line-height: 1; transition: transform var(--duration-base) var(--ease-settle), color var(--duration-base) var(--ease-settle); }
+.stepButton:hover:not([data-static]) .stepGo, .stepButton:focus-visible .stepGo { color: var(--color-ink); transform: translateX(2px); }
+@media (prefers-reduced-motion: reduce) { .stepGo { transition: none; } }
+/* The one-line summaries are for the navigator; the stepper is a line of labels. */
+.stepSummary { display: none; font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); overflow-wrap: anywhere; }
 .step[data-state="done"] { color: var(--color-ink-soft); }
-.step[data-state="done"] .stepMark { color: var(--color-accepted); }
 .step[data-state="current"] { color: var(--color-ink); font-weight: var(--weight-semibold); }
 .step[data-state="current"] .stepLabel { border-bottom: 2px solid var(--color-accent); padding-bottom: 1px; }
 .step[data-state="current"] .stepMark { color: var(--color-accent-strong); }
+
+/* ---- the stage bar: the status sentence, the one primary, the quiet secondaries ---- */
+.bar { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) 0 0; border-top: 1px solid var(--color-rule); }
+.barStatus { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); overflow-wrap: anywhere; }
+.barActions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+
+/* ---- looking at another step: a quiet line above it that says so ---- */
+.looking { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
 
 /* ---- earlier steps: one line each ---- */
 .earlierWrap { display: block; }
@@ -42,10 +67,10 @@
 /* ---- the published moment ---- */
 .moment {
   display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-8) 0 var(--space-6); border-top: 2px solid var(--color-accent); border-bottom: 1px solid var(--color-rule);
+  padding: var(--space-4) 0; border-top: 2px solid var(--color-accent); border-bottom: 1px solid var(--color-rule);
 }
 .momentKicker { margin: 0; font-family: var(--font-ui); font-size: var(--text-2xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-accent-strong); }
-.momentTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-2xl); line-height: var(--leading-2xl); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); text-wrap: balance; }
+.momentTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); text-wrap: balance; }
 .momentLine { margin: 0; font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink-soft); }
 .momentActions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); }
 .primary, .ghost, .textButton {
@@ -75,10 +100,32 @@
 .mono { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var(--leading-sm); color: var(--color-ink-soft); overflow-wrap: anywhere; margin: 0; }
 
 @media (max-width: 40rem) {
-  .steps { gap: var(--space-1) var(--space-4); font-size: var(--text-xs); }
+  .steps { gap: 0 var(--space-4); font-size: var(--text-xs); }
   .momentTitle { font-size: var(--text-xl); line-height: var(--leading-xl); }
   .momentActions > * { flex: 1 1 100%; }
   .recordFacts > div { grid-template-columns: 1fr; gap: 0; }
   .earlierFacts { grid-template-columns: 1fr; gap: 0; }
   .earlierFacts dd { margin-bottom: var(--space-2); }
+}
+
+/* ---- 1100 px and up: the stage navigator (the step list, stood on end) and the sticky stage bar ---- */
+@media (min-width: 68.75rem) {
+  .steps { flex-direction: column; flex-wrap: nowrap; gap: 0; padding: var(--space-2) 0 0; font-size: var(--text-base); }
+  .step { display: block; min-height: 0; border-left: 2px solid transparent; }
+  .step[data-state="current"] { border-left-color: var(--color-accent); background: var(--color-accent-soft); }
+  .stepButton { display: flex; width: 100%; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-3); }
+  .stepMark { padding-top: 3px; min-width: 1.25ch; }
+  .stepSummary { display: block; margin-top: 2px; }
+  .stepGo { display: block; }
+  .stepText { flex: 1 1 auto; }
+  .step[data-state="current"] .stepLabel { border-bottom: none; padding-bottom: 0; }
+  .stepButton:hover:not([data-static]) { background: var(--color-sunken); }
+  .step[data-state="current"] .stepButton:hover { background: var(--color-accent-soft); }
+  /* The navigator reaches every finished stage, so the one-line list of them is not drawn twice (unless a revision keeps one open). */
+  .earlierList:not([data-keep]) { display: none; }
+
+  .bar {
+    position: sticky; bottom: var(--space-4); z-index: 3; padding: var(--space-3) var(--space-4);
+    background: var(--color-paper-raised); border: 1px solid var(--color-rule-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow-lift);
+  }
 }

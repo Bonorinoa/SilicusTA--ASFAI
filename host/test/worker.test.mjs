@@ -324,12 +324,12 @@ test("a student answer must cite the package; unknown ids are dropped, and no va
   ];
   const { mock, worker } = await workerWith({ inScope: true, answer: "An algorithm is a list of steps.", cites: ["objective:1", "objective:ghost", "activity:1", 7] });
   const out = await worker.answerStudent({ question: "What is an algorithm?", history: [{ role: "student", text: "hi" }], title: "AI literacy", items });
-  assert.deepEqual(out, { answer: "An algorithm is a list of steps.", cites: ["objective:1", "activity:1"] });
+  assert.deepEqual(out, { answer: "An algorithm is a list of steps.", cites: ["objective:1", "activity:1"], basis: "plan" });
   assert.ok(mock.st.lastPrompt.includes("[objective:1]"));
   assert.ok(/ONLY from the COURSE PACKAGE/.test(mock.st.lastPrompt) && /not evidence/.test(mock.st.lastPrompt));
 
   const { worker: w2 } = await workerWith({ inScope: true, answer: "Because.", cites: ["made:up"] });
-  assert.deepEqual(await w2.answerStudent({ question: "q", items }), { answer: "Because.", cites: [] });
+  assert.deepEqual(await w2.answerStudent({ question: "q", items }), { answer: "Because.", cites: [], basis: "plan" });
   const { worker: w3 } = await workerWith({ inScope: true, answer: "   " });
   await assert.rejects(w3.answerStudent({ question: "q", items }), { code: "WORKER_BAD_OUTPUT" });
 });
@@ -399,7 +399,7 @@ test("workerFromEnv reasoning parity: OpenRouter defaults low; other presets req
 test("a real model echoes the prompt's [brackets] around a cited id: that still matches, and nothing else is loosened", async () => {
   const items = [{ id: "objective:1", label: "Objective 1", text: "x" }, { id: "activity:1", label: "Activity 1", text: "y" }];
   const { worker } = await workerWith({ inScope: true, answer: "Steps.", cites: ["[objective:1]", " [activity:1] ", "objective:1", "[[objective:1]]", "[objective:ghost]", "[objective:1", "(objective:1)", "[ ]"] });
-  assert.deepEqual(await worker.answerStudent({ question: "q", items }), { answer: "Steps.", cites: ["objective:1", "activity:1"] });
+  assert.deepEqual(await worker.answerStudent({ question: "q", items }), { answer: "Steps.", cites: ["objective:1", "activity:1"], basis: "plan" });
 });
 
 /* ---- the teacher's course answer (length, audience) reaches the plan prompt ---- */
@@ -446,4 +446,27 @@ test("the host hands the teacher's course answer to the worker when it drafts th
     return seen.at(-1);
   };
   assert.equal((await run({ topic: "fractions", course: "Grade 3 math, one 45-minute lesson", learning_outcomes: "x" })).course, "Grade 3 math, one 45-minute lesson");
+});
+
+
+test("answerStudent: basis and refusal are normalised before the caller sees them (explanation kept; out of scope carries a known refusal)", async () => {
+  const items = [{ id: "objective:1", label: "Objective 1", text: "x" }];
+  const ex = await workerWith({ inScope: true, basis: "explanation", answer: "Idea.", cites: ["objective:1"] });
+  assert.deepEqual(await ex.worker.answerStudent({ question: "q", items }), { answer: "Idea.", cites: ["objective:1"], basis: "explanation" });
+  for (const [reply, refusal] of [[{ inScope: false, refusal: "assessment", answer: "" }, "assessment"], [{ inScope: false, refusal: "off_topic", answer: "" }, "off_topic"], [{ inScope: false, refusal: "weird", answer: "" }, "off_topic"], [{ inScope: false, answer: "" }, "off_topic"], [{ inScope: true, refusal: "assessment", answer: "You passed", cites: ["objective:1"] }, "assessment"]]) {
+    const { worker } = await workerWith(reply);
+    assert.deepEqual(await worker.answerStudent({ question: "q", items }), { answer: "", cites: [], refusal }, JSON.stringify(reply));
+  }
+});
+
+test("suggestObjectives: a worker-side prompt of teacher words only; the reply is bare statements, at most 3, none a repeat", async () => {
+  const { mock, worker } = await workerWith({ objectives: [{ statement: "Students can explain what an algorithm is.", from: ["x.pdf"] }, { statement: "A." }, { statement: "B." }, { statement: "C." }, { statement: "D." }] });
+  const out = await worker.suggestObjectives({ topic: "Algorithms", course: "Grade 5", outcomes: ["Students can explain what an algorithm is."], existing: ["Students can trace a loop."] });
+  assert.deepEqual(out, ["A.", "B.", "C."], "the repeat is dropped, then three");
+  assert.match(mock.st.lastPrompt, /Topic: Algorithms/);
+  assert.match(mock.st.lastPrompt, /- Students can trace a loop\./);
+  assert.match(mock.st.lastPrompt, /untrusted/);
+  await assert.rejects(new PlanWorker({}).suggestObjectives({ outcomes: ["x"] }), { code: "WORKER_NOT_CONFIGURED" });
+  const none = await workerWith({ objectives: [{ statement: "Students can trace a loop" }] });
+  await assert.rejects(none.worker.suggestObjectives({ outcomes: [], existing: ["Students can trace a loop."] }), { code: "NO_USABLE_SUGGESTIONS" });
 });

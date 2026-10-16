@@ -9,7 +9,7 @@ import { reasonText, reasonsFor } from "./reasonText";
 describe("reasonText: one sentence per code", () => {
   const cases: [PublishReason, string][] = [
     [{ code: "CHECKPOINT_UNCONFIRMED", checkpoint: "files" }, "Confirm the material list"],
-    [{ code: "CHECKPOINT_UNCONFIRMED", checkpoint: "outline" }, "Confirm the outline"],
+    [{ code: "CHECKPOINT_UNCONFIRMED", checkpoint: "outline" }, "Confirm the brief"],
     [{ code: "CHECKPOINT_UNCONFIRMED", checkpoint: "objectives" }, "Decide every proposed objective"],
     [{ code: "UNDECIDED_PROPOSALS", count: 3 }, "Decide the 3 proposed objectives still waiting"],
     [{ code: "NO_CONFIRMED_PLAN" }, "Confirm a lesson plan"],

@@ -70,11 +70,11 @@ export function RevisionPanel({ revision, workerConfigured, planReworded = [], b
   return (
     <section className={styles.panel} aria-label="Revise this course" data-drafting={revision.drafting ? "true" : "false"} data-bare={bare ? "true" : undefined}>
       {bare ? null : <h2 className={styles.title}>Published: version {sealed}</h2>}
-      <p className={styles.status} role="status" aria-live="polite">
+      {bare && !revision.drafting ? null : <p className={styles.status} role="status" aria-live="polite">
         {revision.drafting
           ? `Version ${sealed} is published and unchanged; you are drafting version ${next}.`
           : `Version ${sealed} is published and unchanged.`}
-      </p>
+      </p>}
       {bare && !revision.drafting ? null : <p className={styles.readers}>
         The student chat and the handout read version {sealed}, and keep reading it until you publish version {next}.
         A draft is never what students see.

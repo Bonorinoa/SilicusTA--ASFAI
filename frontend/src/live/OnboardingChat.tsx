@@ -13,6 +13,10 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject 
 import type { AsfaiStatus, HostView } from "../gate/transport";
 import styles from "./OnboardingChat.module.css";
 import { BROWSER_MODE } from "../gate/mode";
+import { describeFile } from "../materials/display";
+import { extractText, type ExtractResult } from "../materials/extract";
+import { ACCEPTED_FILE_TYPES } from "../materials/extract.types";
+import { adoptForCourse, holdForNewCourse } from "../materials/session";
 
 const FORWARDABLE = new Set(["topic", "course", "learning_outcomes"]);
 
@@ -58,6 +62,7 @@ export function refusalSentence(code: string): string {
   return "Silicus could not continue the intake.";
 }
 
+const FILES_ID = "onboarding-files";
 const ORDER: OpeningId[] = ["title", "label", "materials"];
 /** Plain names for the intake's own three steps, in the order a teacher meets them. */
 const STEP_NAME: Record<OpeningId, string> = {
@@ -115,6 +120,10 @@ export function OnboardingChat({
   const [live, setLive] = useState("Naming the course. Step 1 of 3. Not saved yet.");
   const box = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const hintId = useId();
+  // Files chosen beside the typed names: read here, in this tab. Only their NAMES go on the course; the text waits in tab memory.
+  const [picked, setPicked] = useState<Extract<ExtractResult, { ok: true }>[]>([]);
+  const [fileNotes, setFileNotes] = useState<string[]>([]);
+  const [reading, setReading] = useState(false);
 
   const opening = OPENING.find((s) => s.id === step)!;
   const filesOpen = !!view && (view.checkpoints.files?.status === "pending" || view.checkpoints.files?.status === "open");
@@ -130,21 +139,45 @@ export function OnboardingChat({
   const fromAsfai = view?.intake.questionsFrom === "asfai";
   const asker = fromAsfai ? "ASFAI" : "Silicus";
   const multiline = openQuestion?.id === "learning_outcomes" || (!view && step === "materials");
-  const canRecord = reply.trim().length > 0 && !busy;
+  const canRecord = reply.trim().length > 0 && !busy && !reading;
 
   useEffect(() => { box.current?.focus(); }, [step, openQuestion?.id, view?.course.courseId]);
+  // The course just recorded appears: it takes the files chosen while naming it (same title, same name), once.
+  useEffect(() => {
+    if (view) adoptForCourse({ courseId: view.course.courseId, title: view.course.title, owner: view.course.owner });
+  }, [view?.course.courseId]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const finish = (all: Partial<Record<OpeningId, string>>, materialsText: string) => {
-    onCreate({
-      owner: (all.label ?? "").trim().slice(0, 80),
-      title: (all.title ?? "").trim().slice(0, 120),
-      materials: parseMaterials(materialsText),
-    });
+    const owner = (all.label ?? "").trim().slice(0, 80);
+    const title = (all.title ?? "").trim().slice(0, 120);
+    const materials = parseMaterials(materialsText);
+    // Text is kept only for a file whose name is still on the list the teacher is recording.
+    const names = new Set(materials.map((m) => m.name));
+    holdForNewCourse({ title, owner }, picked.filter((f) => names.has(f.name.slice(0, 200))).map((f) => ({ name: f.name, kind: f.kind, text: f.text, chars: f.chars })));
+    onCreate({ owner, title, materials });
+  };
+
+  const addFiles = async (list: FileList | null) => {
+    const chosen = Array.from(list ?? []);
+    const input = document.getElementById(FILES_ID) as HTMLInputElement | null;
+    if (input) input.value = "";
+    setReading(true);
+    setFileNotes([]);
+    try {
+      for (const f of chosen) {
+        const r = await extractText(f);
+        if (!r.ok) { setFileNotes((n) => [...n, `${r.name}: ${r.message}`]); continue; }
+        setPicked((p) => [...p.filter((x) => x.name !== r.name), r]);
+        // The name lands on its own line, exactly as a typed name would.
+        setReply((t) => (t.split("\n").some((l) => l.trim() === r.name) ? t : (t.trim() ? t.replace(/\s*$/, "\n") : "") + r.name));
+      }
+    } finally { setReading(false); }
   };
 
   const submitOpening = () => {
     const text = reply.trim();
-    if (!text) return;
+    // A file still being read adds its name to the list when it lands: recording now would leave it out.
+    if (!text || reading) return;
     const nextDrafts = { ...drafts, [step]: text };
     setDrafts(nextDrafts);
     setReply("");
@@ -159,7 +192,7 @@ export function OnboardingChat({
   };
 
   const noMaterials = () => {
-    if (!drafts.title || !drafts.label) return;
+    if (!drafts.title || !drafts.label || reading) return;
     setLive(local("Recorded. Saving this course with no materials. Not sent to ASFAI."));
     finish({ ...drafts, materials: "none" }, "none");
   };
@@ -220,7 +253,7 @@ export function OnboardingChat({
       )}
       {view ? null : (
         <p className={styles.railNote}>
-          After this: the material list, the outline, your objectives, the lesson plan, then publish.
+          After this: the material list, the brief, your objectives, the lesson plan, then publish.
         </p>
       )}
       <ol className={styles.turns}>
@@ -279,6 +312,23 @@ export function OnboardingChat({
               onKeyDown={(e) => onKeyDown(e, submitOpening)}
             />
           )}
+          {step === "materials" ? (
+            <div className={styles.field}>
+              <input id={FILES_ID} className={styles.fileHidden} type="file" multiple accept={ACCEPTED_FILE_TYPES} aria-describedby={`${FILES_ID}-hint`}
+                onChange={(e) => void addFiles(e.target.files)} />
+              <p className={styles.fieldHint} id={`${FILES_ID}-hint`}>
+                {local("Or add the files themselves (PDF, Word, PowerPoint or text). Only their names are recorded now; the text stays in this tab, is not saved, and is used only if you ask for objectives from your materials. Not sent to ASFAI.")}
+              </p>
+              {picked.length > 0 ? (
+                <ul className={styles.turns} aria-label="Files added">
+                  {picked.map((f) => <li key={f.name} className={styles.said}>{describeFile(f)}</li>)}
+                </ul>
+              ) : null}
+              {reading ? <p className={styles.fieldHint} aria-live="polite">Reading the file…</p> : null}
+              {fileNotes.map((n, i) => <p key={i} className={styles.refusal} role="status">{n}</p>)}
+              <div className={styles.verbs}><label className={styles.quiet} htmlFor={FILES_ID}>Add files</label></div>
+            </div>
+          ) : null}
           <div className={styles.verbs}>
             <button type="submit" className={styles.send} data-primary="true" aria-disabled={!canRecord || undefined} aria-describedby={hintId}>
               {opening.verb}
@@ -309,7 +359,7 @@ export function OnboardingChat({
           {!fromAsfai && asfai?.connected ? (
             <p className={styles.kept}>
               <span className={styles.recommended}>Recommended:</span> let ASFAI ask. It aligns the lesson to its skill map
-              and checks the outline. Only your answers are sent.{" "}
+              and checks the plan against its format. Only your answers are sent.{" "}
               <button type="button" className={styles.quiet} onClick={onAsk} disabled={busy}>Use ASFAI's questionnaire</button>
             </p>
           ) : null}
@@ -322,7 +372,7 @@ export function OnboardingChat({
           {!fromAsfai && asfai && !asfai.connected && asfai.available !== false ? (
             <p className={styles.kept}>
               <span className={styles.recommended}>Recommended:</span> connect ASFAI to align the lesson to its skill map and have
-              the outline checked. Nothing waits on it — you can answer below now. Nothing is sent until you approve it.{" "}
+              the plan checked against its format. Nothing waits on it — you can answer below now. Nothing is sent until you approve it.{" "}
               <button type="button" className={styles.quiet} onClick={onConnect} disabled={busy}>Connect ASFAI</button>{" "}
               <button type="button" className={styles.quiet} onClick={onRefresh} disabled={busy}>I approved it</button>
             </p>
@@ -378,7 +428,7 @@ export function OnboardingChat({
           ) : null}
           {view.intake.refusal ? <p className={styles.refusal}>{refusalSentence(view.intake.refusal.code)}</p> : null}
           {fromAsfai && view.intake.outlineAuthorized ? (
-            <p className={styles.kept}>ASFAI has your answers. Confirming the outline is still your decision.</p>
+            <p className={styles.kept}>ASFAI has your answers. Confirming the brief is still your decision.</p>
           ) : null}
         </section>
       ) : null}

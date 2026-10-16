@@ -8,10 +8,11 @@
  * (accept / rename / drop / add / confirm / publish) all go through the host's
  * inbound-message hook, which is the only place a teacher turn can be recorded.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DecisionCard } from "../components/DecisionCard";
-import { AiWaiting, newWaitClock, stopWaitClock, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitClock, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
+import { AiWaiting, newWaitClock, stopWaitClock, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, suggestReceipt, type ReceiptView, type WaitClock, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
 import { ActivityRail } from "../components/ActivityRail";
+import { relativeTime } from "../components/ActivityRail/copy";
 import { FirstRunTour } from "../components/FirstRunTour";
 import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
@@ -31,18 +32,33 @@ import { RevisionPanel } from "./RevisionPanel";
 import { CourseLibrary } from "./CourseLibrary";
 import { buildHandoutHtml, handoutFilename } from "./handout";
 import { VersionDiffPanel } from "./VersionDiffPanel";
-import { stageOf } from "./stage";
-import { StepIndex } from "./StepIndex";
+import { stageOf, type Stage } from "./stage";
+import { StepIndex, STEPS, workStep, type StepId } from "./StepIndex";
+import { StageBar } from "./StageBar";
+import { BriefCard } from "./BriefCard";
+import { suggestOffer, suggestRefusalText } from "./suggest";
 import { EarlierSteps, type EarlierStep } from "./EarlierSteps";
 import { PublishedMoment } from "./PublishedMoment";
 import { RecordDetails } from "./RecordDetails";
 import styles from "./LiveCourse.module.css";
 import stageStyles from "./Stage.module.css";
+/** The plan stage's bar and the plan's DRAFT tag already say "draft": the receipt keeps its check, not that sentence. */
+const STAYS_A_DRAFT = "It stays a draft until you confirm it.";
+const planReceiptOnStage = (v: ReceiptView): string[] => planReceipt(v).filter((l) => l !== STAYS_A_DRAFT);
+
 /** One AI step in flight, or just finished: what the waiting card shows. `receipt` is computed from the resulting view. */
 /** `clock` is the step's own: the card is remounted in whichever stage is open, so the card cannot own the time. */
 interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[]; startedAt: number; clock: WaitClock }
 /** A step in flight that has no waiting card of its own (ASFAI's, a student's answer): the rail still says who is working. */
 interface Working { actor: ActivityActor; label: string; startedAt: number }
+
+/** Move the page. A no-op where there is no layout to move (the test DOM). */
+const scrollToY = (y: number): void => { if (!/jsdom/i.test(navigator.userAgent)) window.scrollTo({ top: y, left: 0 }); };
+/** Where "Back" goes, in the teacher's words, by the stage the work is in. */
+const BACK_LABEL: Record<Stage, string> = {
+  intake: "Back to the brief", material: "Back to the material", objectives: "Back to the objectives",
+  plan: "Back to the plan", publish: "Back to publishing", published: "Back to the published version",
+};
 
 const STUDENT_INPUT_ID = "student-question";
 const TOUR_SEEN = "silicus.tour.seen";
@@ -57,6 +73,20 @@ function objectivesStep(materials: MaterialInput[], view: HostView): WaitingStep
     materials: materials.map((m) => ("url" in m ? { kind: "link" as const, url: m.url } : { kind: "text" as const, name: m.name, chars: m.text.length })),
     topic: answerText(answers.topic),
     course: answers.course === undefined ? view.course.title : answerText(answers.course),
+  };
+}
+
+/** What "suggest more" sends: the teacher's own outcomes, topic and course, and the count of wordings already listed (so nothing is offered twice). */
+function suggestStep(view: HostView): WaitingStep {
+  const answers = view.intake.answers ?? {};
+  const typed = Array.isArray(answers.learning_outcomes) ? answers.learning_outcomes : answerText(answers.learning_outcomes) ? [answerText(answers.learning_outcomes)] : [];
+  const added = view.proposals.filter((p) => p.source === "your own objective").map((p) => p.statement);
+  return {
+    kind: "suggest",
+    outcomes: [...typed, ...added],
+    topic: answerText(answers.topic),
+    course: answers.course === undefined ? view.course.title : answerText(answers.course),
+    alreadyListed: view.proposals.length,
   };
 }
 
@@ -98,6 +128,11 @@ export function LiveCourse() {
   const [pins, setPins] = useState<CoursePin[]>([]);
   const [pinReport, setPinReport] = useState<{ version: number; status: string; detail: string }[]>([]);
   const [recordStatus, setRecordStatus] = useState<RecordStatus>(null);
+  // Looking at another step than the one the work is in (from the navigator, or "Edit objectives"). A look is never an act.
+  const [viewing, setViewing] = useState<StepId | null>(null);
+  const cameFromY = useRef(0);          // where the page was scrolled when the look began
+  const pendingY = useRef<number | null>(null); // where to put it once the next view is on screen
+  const lastStageKey = useRef("");
 
   // Discover an existing course on load. NEVER writes on load.
   useEffect(() => {
@@ -159,8 +194,37 @@ export function LiveCourse() {
   const asfaiAvailable = !BROWSER_MODE && asfai?.available !== false;
 
   // D8: when the stage changes, last stage's notice goes (one raised by the act that moved the page on survives that one change).
-  const stageKey = view ? `${stageOf(view)}:${is("files", "confirmed")}` : "";
+  const stageKey = view ? `${stageOf(view)}:${is("files", "confirmed")}:${view.plan ? "plan" : "no-plan"}` : "";
   useEffect(() => { setNoticeState((n) => (n && n.survive ? { ...n, survive: false } : null)); }, [stageKey]);
+  // A new stage opens at its top, with the viewing of another step ended; the stage bar then holds its primary in view.
+  useEffect(() => {
+    if (lastStageKey.current && stageKey && lastStageKey.current !== stageKey) { setViewing(null); scrollToY(0); }
+    if (stageKey) lastStageKey.current = stageKey;
+  }, [stageKey]);
+  // The conversation stages (intake, material) keep their cards' own markup, so their primary can sit below the fold
+  // of a laptop window. At workspace widths the page brings it into view when the stage opens, when the record moves on
+  // (the next question) and when the window is resized, and leaves it alone once it is on screen.
+  const recordEvents = view?.integrity.events ?? 0;
+  const conversational = view ? ["intake", "material"].includes(stageOf(view)) : false;
+  useEffect(() => {
+    if (!conversational || typeof window.matchMedia !== "function") return;
+    const keepInView = () => {
+      if (!window.matchMedia("(min-width: 68.75rem)").matches) return;
+      const el = document.querySelector<HTMLElement>('[data-primary="true"]');
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.bottom > window.innerHeight || r.top < 0) el.scrollIntoView({ block: "nearest" });
+    };
+    keepInView();
+    window.addEventListener("resize", keepInView);
+    return () => window.removeEventListener("resize", keepInView);
+  }, [conversational, recordEvents, stageKey]);
+  // A look at another step starts at the top; coming back puts the page exactly where it was.
+  useLayoutEffect(() => {
+    if (pendingY.current === null) return;
+    scrollToY(pendingY.current);
+    pendingY.current = null;
+  }, [viewing]);
 
   // After the tour, the cursor goes to the first question, unless focus already went somewhere meaningful (the tour's opener).
   const [focusReply, setFocusReply] = useState(false);
@@ -170,11 +234,17 @@ export function LiveCourse() {
     if (!document.activeElement || document.activeElement === document.body) document.getElementById("onboarding-reply")?.focus();
   }, [focusReply]);
   const closeTour = () => { markTourSeen(); setTourOpen(false); setFocusReply(true); };
-  const tryAsStudent = () => {
+  // The student helper is collapsed until opened. Its primary opens it, then puts the cursor in the question box.
+  const [helperOpen, setHelperOpen] = useState(false);
+  const [focusHelper, setFocusHelper] = useState(false);
+  const tryAsStudent = () => { setHelperOpen(true); setFocusHelper(true); };
+  useEffect(() => {
+    if (!focusHelper || !helperOpen) return;
+    setFocusHelper(false);
     const box = document.getElementById(STUDENT_INPUT_ID);
     box?.scrollIntoView?.({ behavior: "smooth", block: "center" });
     box?.focus({ preventScroll: true });
-  };
+  }, [focusHelper, helperOpen]);
 
   const startCourse = (b: { owner: string; title: string; materials: { name: string }[] }) => run(async () => {
     const created = await host.createCourse(b);
@@ -186,21 +256,28 @@ export function LiveCourse() {
 
   /** Open another course from the library. Nothing is written: this only changes which record is shown. */
   const openCourse = (id: string) => run(async () => {
-    setNotice(null); setPinReport([]);
+    setNotice(null); setPinReport([]); setViewing(null);
     setView(await host.getCourse(id));
     setCourseId(id);
     setPins(listPins(id));
   });
   /** Show the naming conversation again. The new course exists only once the teacher records it. */
-  const newCourse = () => { setView(null); setCourseId(null); setNotice(null); setPinReport([]); setWaiting(null); setRevisionOpen(false); };
+  const newCourse = () => { setViewing(null); setView(null); setCourseId(null); setNotice(null); setPinReport([]); setWaiting(null); setRevisionOpen(false); };
 
   const confirmFiles = (text: string) => run(async () => {
     await host.confirmCheckpoint(courseId!, { id: "files", text });
     await reload();
   });
   const confirmOutline = () => run(async () => {
-    await host.confirmCheckpoint(courseId!, { id: "outline", text: "Confirm the outline." });
+    await host.confirmCheckpoint(courseId!, { id: "outline", text: "Confirm the brief." });
     await reload();
+  });
+
+  /** Re-answer one question of the brief. The host takes it only while it still asks that question; the page then shows what it kept. */
+  const editBrief = (id: string, text: string) => run(async () => {
+    try { await host.answerIntake(courseId!, { text, answers: { [id]: text } }); }
+    catch (e) { setNotice(`Not saved. ${sentence((e as Error).message)}`); }
+    finally { await reload(); }
   });
 
   /** Ask ASFAI for the clarifying questions (round 1) or send the teacher's answers (round 2). */
@@ -306,6 +383,22 @@ export function LiveCourse() {
     });
   };
 
+  /** The WORKER suggests up to 3 objectives that round out the teacher's own. Each waits for the teacher like any proposal. */
+  const suggestMore = () => run(async () => {
+    const wait = view ? startWait(suggestStep(view)) : null;
+    let ok = false;
+    try {
+      await host.suggestObjectives(courseId!);
+      ok = true;
+      setNotice(null);
+    } catch (e) {
+      setNotice(suggestRefusalText(e));
+    } finally {
+      let fresh: HostView | null = null;
+      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, suggestReceipt); }
+    }
+  });
+
   /** The WORKER drafts from the teacher's CONFIRMED objectives; the UI supplies no content. */
   const draftPlan = () => run(async () => {
     const wait = view ? startWait(planStep(view)) : null;
@@ -317,7 +410,7 @@ export function LiveCourse() {
       setNotice(`No plan was drafted: ${(e as Error).message}`);
     } finally {
       let fresh: HostView | null = null;
-      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, planReceipt); }
+      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, planReceiptOnStage); }
     }
   });
 
@@ -335,9 +428,9 @@ export function LiveCourse() {
         const { anchor } = await host.anchor(courseId!, r.version.version);
         if (anchor && pinVersion(anchor)) {
           setPins(listPins(courseId!));
-          setNotice(`Version ${r.version.version} sealed and pinned on this device.`, true);
+          setNotice(`Version ${r.version.version} published and pinned on this device.`, true);
         } else {
-          setNotice(`Version ${r.version.version} sealed.`, true);
+          setNotice(`Version ${r.version.version} published.`, true);
         }
       } catch (e) {
         setNotice(`Refused by the confirm-gate: ${(e as Error).message}`);
@@ -357,7 +450,7 @@ export function LiveCourse() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    setNotice("Exported the course package (tamper-evident JSON).");
+    setNotice("Exported the published version (tamper-evident JSON).");
   });
 
   /** A standalone student page from the SEALED version. No AI, no host needed to read it. */
@@ -429,13 +522,13 @@ export function LiveCourse() {
             <h1 className={styles.heroTitle}>Build a course, one decision at a time.</h1>
             <p className={styles.heroLede}>
               Bring your material. An AI proposes learning objectives and drafts a lesson plan; you confirm every step.
-              Publishing seals a version, and a student can ask questions answered only from what you sealed.
+              Publishing makes a version students can use, and a student can ask questions answered only from what you published.
             </p>
             <ol className={styles.moves} aria-label="How it goes">
               <li>Bring your material</li>
               <li>Confirm the objectives</li>
               <li>Confirm the plan</li>
-              <li>Publish a sealed version</li>
+              <li>Publish a version</li>
             </ol>
             <p className={styles.assure}>
               Your words stay on this record. Nothing leaves this browser until you ask the AI for a draft,
@@ -451,7 +544,7 @@ export function LiveCourse() {
             </p>
           </header>
         )}
-        <CourseLibrary courses={library} currentId={null} busy={busy} onOpen={openCourse} onNew={newCourse} open />
+        <CourseLibrary courses={library} currentId={null} busy={busy} onOpen={openCourse} onNew={newCourse} />
         <OnboardingChat
           view={null}
           asfai={asfai}
@@ -483,6 +576,21 @@ export function LiveCourse() {
   const materialNames = materialNamesOf(view.course.materials);
   const answers = view.intake.answers ?? {};
 
+  // ---- looking at another step (the navigator, "Edit objectives") ----
+  const work = workStep(stage, view);
+  // The stage's own card already shows these: asking for them is just "go to the stage".
+  const isTheStage = (id: StepId) => id === work || (stage === "plan" && !plan && id === "objectives") || (stage === "published" && id === "publish");
+  const openStep = (id: StepId) => {
+    if (isTheStage(id)) { if (viewing !== null) { pendingY.current = cameFromY.current; setViewing(null); } else scrollToY(0); return; }
+    if (viewing === null) cameFromY.current = window.scrollY;
+    pendingY.current = 0;
+    setViewing(id);
+  };
+  const backToStage = () => { pendingY.current = cameFromY.current; setViewing(null); };
+  const look = viewing !== null && !isTheStage(viewing) ? viewing : null;
+  // Objectives can be edited from the plan while nothing is published, or while a revision is open; otherwise a look is only a look.
+  const objectivesEditable = revising || (!published && stage === "plan");
+
   // The step in flight, for the Behind-the-scenes rail: the drafting model's (from the waiting card), or ASFAI's / a student's answer.
   const now = waiting && waiting.phase === "running"
     ? { actor: "worker" as const, label: describeStep(waiting.step).title, startedAt: waiting.startedAt }
@@ -499,7 +607,7 @@ export function LiveCourse() {
   );
 
   const waitingCard = waiting ? (
-    <div className={styles.waiting}>
+    <div className={styles.waiting} data-compact={stage === "plan" && waiting.phase === "done" ? "true" : undefined}>
       <AiWaiting
         key={waiting.id}
         step={waiting.step}
@@ -521,16 +629,20 @@ export function LiveCourse() {
       onPrint={() => window.print()}
       invalidation={view.invalidation}
       rewordedSince={view.planWording?.objectives}
+      ids="record"
     />
   );
 
-  const validationNote = plan && (view.validations ?? []).filter((v) => v.planId === plan.id).slice(-1).map((v) => (
-    <p key={v.at} className={styles.intakeNote} role="status">
-      {v.valid
-        ? "ASFAI found the plan structurally sound. That is a format check, not a review — the decision is still yours."
-        : `ASFAI flagged the plan format: ${v.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
+  // The glossary's ASFAI sentence, next to the button; and, after a run, when it ran and what it found.
+  const lastCheck = plan ? (view.validations ?? []).filter((v) => v.planId === plan.id).at(-1) ?? null : null;
+  const asfaiExplainer = "ASFAI checks that the plan is in its shared lesson format and that each activity points to an objective. It does not judge whether the lesson is good.";
+  const validationNote = lastCheck ? (
+    <p className={styles.intakeNote} role="status">
+      {lastCheck.valid
+        ? `Checked ${relativeTime(lastCheck.at, Date.now())}: no format problems.`
+        : `Checked ${relativeTime(lastCheck.at, Date.now())}: ASFAI flagged these format problems: ${lastCheck.issues.join("; ") || "no detail given"}. Nothing is blocked; you decide.`}
     </p>
-  ));
+  ) : null;
 
   /** A reword keeps the plan valid but leaves its text older than the wording: reading it again and confirming is the teacher's own act, never automatic. */
   const staleConfirm = plan && plan.status === "confirmed" && view.planWording?.stale ? (
@@ -540,6 +652,22 @@ export function LiveCourse() {
   ) : null;
 
   const showOnboarding = is("files", "pending") || is("files", "open") || ((is("outline", "pending") || is("outline", "open")) && !view.intake.outlineAuthorized);
+
+  const offer = suggestOffer(view.proposals, is("objectives", "confirmed"), worker?.configured === true);
+  const suggesting = waiting?.step.kind === "suggest";
+  // Above the decision list, because the checkpoint confirms itself the moment every proposal is decided.
+  const suggestBlock = offer.show ? (
+    <section className={styles.suggest} aria-label="Suggested objectives">
+      <div className={styles.suggestRow}>
+        <button type="button" className={styles.ghostButton} onClick={suggestMore} disabled={busy || offer.blockedBy !== null}>Suggest up to 3 more</button>
+        <p className={styles.suggestText}>
+          Silicus reads your outcomes and suggests ones that would round out the lesson. You decide.
+          Ask before you finish deciding: once every proposal is decided, the objectives are confirmed.
+        </p>
+      </div>
+      {offer.blockedBy ? <p className={styles.suggestText} role="status">{offer.blockedBy}</p> : null}
+    </section>
+  ) : null;
 
   // ---- the stage's own card -------------------------------------------------------------------------------
   let body: React.ReactNode = null;
@@ -562,18 +690,23 @@ export function LiveCourse() {
           />
         ) : null}
         {is("files", "confirmed") && !showOnboarding ? (
-          <div className={styles.actions}>
-            <button type="button" className={styles.primaryButton} data-primary="true" onClick={confirmOutline} disabled={busy}>
-              Confirm the outline
-            </button>
-          </div>
+          <BriefCard
+            answers={answers}
+            editable={(view.intake.questions ?? []).map((q) => q.id)}
+            source={view.intake.questionsFrom === "asfai"
+              ? "ASFAI asked these questions and has your answers. Confirming the brief is still your decision."
+              : "Silicus asked these questions itself. Nothing was sent to ASFAI."}
+            busy={busy}
+            onEdit={editBrief}
+            onConfirm={confirmOutline}
+          />
         ) : null}
       </>
     );
   } else if (stage === "material") {
     body = (
       <>
-        <MaterialsPanel busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
+        <MaterialsPanel courseId={view.course.courseId} busy={busy} zdr={worker?.zdr ?? null} youtube={!BROWSER_MODE} onPropose={proposeFromMaterials} />
         {waitingCard}
       </>
     );
@@ -581,17 +714,19 @@ export function LiveCourse() {
     body = view.proposals.length === 0 ? (
       <>
         {objectivesCard({ hideBar: true })}
-        <div className={styles.actions}>
+        <StageBar status="Nothing is proposed yet. Silicus lists objectives from your own answers; you decide each one.">
           <button type="button" className={styles.primaryButton} data-primary="true" onClick={proposeObjectives} disabled={busy}>
             Propose objectives from your answers
           </button>
-        </div>
+        </StageBar>
         {waitingCard}
       </>
     ) : (
       <>
+        {suggestBlock}
+        {suggesting ? waitingCard : null}
         {objectivesCard({})}
-        {waitingCard}
+        {suggesting ? null : waitingCard}
       </>
     );
   } else if (stage === "plan" && !plan) {
@@ -607,11 +742,11 @@ export function LiveCourse() {
           </p>
         ) : aiProposals === 0 ? (
           // Objectives the teacher wrote themselves have no proposal bar to arm: the same act, plainly offered.
-          <div className={styles.actions}>
+          <StageBar status="Your objectives are confirmed. The next step drafts a lesson plan from them; you confirm the plan.">
             <button type="button" className={styles.primaryButton} data-primary="true" onClick={draftPlan} disabled={busy}>
               Draft the plan from your confirmed objectives
             </button>
-          </div>
+          </StageBar>
         ) : null}
         {waitingCard}
       </>
@@ -624,11 +759,17 @@ export function LiveCourse() {
       <>
         {planCard(plan)}
         {waitingCard}
+        {plan.status === "draft" && asfaiAvailable ? <p className={styles.intakeNote}>{asfaiExplainer}</p> : null}
         {validationNote}
-        <div className={styles.actions}>
+        <StageBar status={invalid
+          ? "This plan cites an objective you dropped, so it cannot be published as it is."
+          : `Draft plan · ${plural(plan.activities.length, "activity", "activities")}, ${plan.activities.reduce((n, a) => n + a.minutes, 0)} min. It is a draft until you confirm it.`}>
+          {objectivesEditable ? (
+            <button type="button" className={styles.ghostButton} onClick={() => openStep("objectives")} disabled={busy}>Edit objectives</button>
+          ) : null}
           {plan.status === "draft" && asfaiAvailable ? (
             <button type="button" className={styles.ghostButton} onClick={checkPlan} disabled={busy || asfai?.connected === false}>
-              Check the plan with ASFAI
+              {lastCheck ? "Check again" : "Check the plan with ASFAI"}
             </button>
           ) : null}
           {invalid && !published && worker?.configured !== false ? (
@@ -647,7 +788,7 @@ export function LiveCourse() {
           >
             {invalid ? "Re-confirm the lesson plan" : "Confirm the lesson plan"}
           </button>
-        </div>
+        </StageBar>
       </>
     );
   } else if (stage === "publish") {
@@ -677,23 +818,14 @@ export function LiveCourse() {
     const sealedPlan = published.lessonPlan ?? plan;
     body = (
       <>
-        <PublishedMoment version={published} teacher={view.course.owner} busy={busy} onTry={tryAsStudent} onHandout={downloadHandout} onExport={exportPackage}>
-          {view.revision ? (
-            <RevisionPanel
-              bare
-              revision={view.revision}
-              workerConfigured={worker?.configured !== false}
-              planReworded={view.planWording?.objectives ?? []}
-              busy={busy}
-              onDraftPlan={draftPlan}
-              onOpenChange={setRevisionOpen}
-            />
-          ) : null}
-        </PublishedMoment>
+        <PublishedMoment version={published} />
+        {sealedPlan ? planCard(sealedPlan, new Date(published.publishedAt)) : null}
         <StudentChat
           inputId={STUDENT_INPUT_ID}
           courseId={view.course.courseId}
           courseTitle={view.course.title}
+          open={helperOpen}
+          onOpenChange={setHelperOpen}
           sealed={{
             version: published.version,
             title: published.title ?? view.course.title,
@@ -705,7 +837,58 @@ export function LiveCourse() {
           paused={passcodeOpen}
           onWorking={(w) => setWorking(w ? { actor: "worker", ...w } : null)}
         />
-        {sealedPlan ? planCard(sealedPlan, new Date(published.publishedAt)) : null}
+        {view.revision ? (
+          <RevisionPanel
+            bare
+            revision={view.revision}
+            workerConfigured={worker?.configured !== false}
+            planReworded={view.planWording?.objectives ?? []}
+            busy={busy}
+            onDraftPlan={draftPlan}
+            onOpenChange={setRevisionOpen}
+          />
+        ) : null}
+        <StageBar>
+          <button type="button" className={styles.primaryButton} data-primary="true" onClick={tryAsStudent}>Try the student helper</button>
+          <button type="button" className={styles.ghostButton} onClick={downloadHandout} disabled={busy}>Download the student handout</button>
+          <button type="button" className={styles.ghostButton} onClick={exportPackage} disabled={busy}>Export the published version</button>
+        </StageBar>
+      </>
+    );
+  }
+
+  // ---- a look at another step: what it holds, and one way back ----
+  if (look !== null) {
+    const label = STEPS.find((x) => x.id === look)!.label;
+    const told: [string, string][] = [
+      ["Topic", answerText(answers.topic)], ["Course", answerText(answers.course)],
+      ["Outcomes", Array.isArray(answers.learning_outcomes) ? answers.learning_outcomes.join("\n") : answerText(answers.learning_outcomes)],
+    ];
+    const lookPlan = look === "plan" ? (plan ?? published?.lessonPlan ?? null) : null;
+    const editing = look === "objectives" && objectivesEditable;
+    let lookBody: React.ReactNode = null;
+    if (look === "files") {
+      lookBody = materialNames.length > 0
+        ? <ul className={stageStyles.earlierNames}>{materialNames.map((n) => <li key={n}>{n}</li>)}</ul>
+        : <p className={styles.notice}>No materials were listed.</p>;
+    } else if (look === "outline") {
+      const rows = told.filter(([, v]) => v);
+      lookBody = rows.length > 0
+        ? <dl className={stageStyles.earlierFacts}>{rows.map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        : <p className={styles.notice}>No answers are on the record.</p>;
+    } else if (look === "objectives") {
+      lookBody = objectivesCard({ readOnly: !editing, hideBar: true });
+    } else if (look === "plan") {
+      lookBody = lookPlan ? planCard(lookPlan, published?.lessonPlan === lookPlan ? new Date(published.publishedAt) : undefined) : null;
+    } else if (published) {
+      lookBody = <p className={styles.notice}>Version {published.version} is published. It can{"\u2019"}t be changed; changes become version {published.version + 1}.</p>;
+    }
+    body = (
+      <>
+        {lookBody}
+        <StageBar status={editing ? "Edit an objective\u2019s wording, or revoke one, then go back to the plan." : `A look at your ${label.toLowerCase()}. Nothing here changes.`}>
+          <button type="button" className={styles.primaryButton} data-primary="true" onClick={backToStage}>{BACK_LABEL[stage]}</button>
+        </StageBar>
       </>
     );
   }
@@ -728,7 +911,7 @@ export function LiveCourse() {
     const told = rows.filter(([, v]) => v);
     earlier.push({
       id: "outline",
-      line: "Outline confirmed",
+      line: "Brief confirmed",
       body: told.length > 0 ? <dl className={stageStyles.earlierFacts}>{told.map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt>{k}</dt><dd>{v}</dd></div>)}</dl> : undefined,
     });
   }
@@ -750,6 +933,7 @@ export function LiveCourse() {
   const recordDetails = (
     <RecordDetails
       courseId={view.course.courseId}
+      planId={plan?.id ?? null}
       events={view.integrity.events}
       busy={busy}
       onVerify={verifyLog}
@@ -761,13 +945,13 @@ export function LiveCourse() {
           <h2 className={styles.pinTitle}>Pinned on this device</h2>
           {BROWSER_MODE ? (
             <p className={styles.pinNote}>
-              Your own copies of each sealed version, kept in this browser apart from the course record. Re-check
+              Your own copies of each published version, kept in this browser apart from the course record. Re-check
               them to detect a record that was rewritten or shortened — the record’s own check cannot tell you that.
               Both live in this browser, so export to keep a copy elsewhere.
             </p>
           ) : (
             <p className={styles.pinNote}>
-              Your own copies of each sealed version, held outside the host. Re-check them to
+              Your own copies of each published version, held outside the host. Re-check them to
               detect a record that was rewritten or shortened — the host cannot tell you that.
             </p>
           )}
@@ -798,7 +982,7 @@ export function LiveCourse() {
   );
 
   const rail = (view.activity?.length ?? 0) > 0 || now ? (
-    <aside className={styles.side} aria-label="Behind the scenes">
+    <div className={styles.side}>
       <ActivityRail
         key={view.course.courseId}
         items={view.activity ?? []}
@@ -806,26 +990,28 @@ export function LiveCourse() {
         worker={{ zdr: worker?.zdr ?? null }}
         asfaiAvailable={asfaiAvailable}
       />
-    </aside>
+    </div>
   ) : null;
 
   return (
     <div className={styles.live} data-wide="true" data-stage={stage}>
       {passcodeDialog}
       {tour}
-      <div className={styles.topbar}>
-        <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
-        {howItWorks}
-      </div>
-      <header className={styles.stageHeader}>
-        <div className={styles.stageMeta}>
-          <h1 className={styles.title}>{view.course.title}</h1>
-          <p className={styles.sub}>{view.course.owner} · {BROWSER_MODE ? "kept in this browser" : "kept on this computer"}</p>
+      <div className={styles.shell}>
+        <div className={styles.nav}>
+          <div className={styles.topbar}>
+            <CourseLibrary courses={library} currentId={view.course.courseId} busy={busy} onOpen={openCourse} onNew={newCourse} />
+            {howItWorks}
+          </div>
+          <header className={styles.stageHeader}>
+            <div className={styles.stageMeta}>
+              <h1 className={styles.title}>{view.course.title}</h1>
+              <p className={styles.sub}><span>{view.course.owner}</span><span className={styles.subDot}> · </span><span className={styles.subWhere}>{BROWSER_MODE ? "kept in this browser" : "kept on this computer"}</span></p>
+            </div>
+            <StepIndex view={view} stage={stage} open={look ?? work} onOpen={openStep} />
+          </header>
         </div>
-        <StepIndex view={view} stage={stage} />
-      </header>
 
-      <div className={styles.layout}>
         <div className={styles.main}>
           {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
           {published && stage !== "published" && view.revision ? (
@@ -840,12 +1026,11 @@ export function LiveCourse() {
           ) : null}
           {body}
           <EarlierSteps steps={earlier} />
+          {recordDetails}
+          {browserRecord}
         </div>
         {rail}
       </div>
-
-      {recordDetails}
-      {browserRecord}
     </div>
   );
 }

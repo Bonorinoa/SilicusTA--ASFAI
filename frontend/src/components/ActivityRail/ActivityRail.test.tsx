@@ -76,8 +76,8 @@ describe("ActivityRail — rows", () => {
     expect(r.map((li) => li.getAttribute("data-seq"))).toEqual([...HISTORY].reverse().map((h) => String(h.seq)));
     const sealed = r[0];
     expect(sealed).toHaveAttribute("data-actor", "teacher");
-    expect(within(sealed).getByText("Sealed version 1")).toBeInTheDocument();
-    expect(sealed.querySelector("[data-artifact]")?.textContent).toMatch(/Package/);
+    expect(within(sealed).getByText("Published version 1")).toBeInTheDocument();
+    expect(sealed.querySelector("[data-artifact]")?.textContent).toMatch(/Version/); // the glossary's word, not the host's "package"
     const drafted = r.find((li) => li.getAttribute("data-action") === "objectives.drafted")!;
     expect(drafted).toHaveAttribute("data-actor", "worker");
     expect(within(drafted).getByText("Drafting model")).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("ActivityRail — rows", () => {
       sentenceOf({ seq: 1, at: 0, actor: "teacher", artifact: "record", action, facts });
     expect(t("course.created")).toBe("Started this course");
     expect(t("checkpoint.confirmed", { checkpoint: "files" })).toBe("Confirmed the material list");
-    expect(t("checkpoint.confirmed", { checkpoint: "outline" })).toBe("Confirmed the outline");
+    expect(t("checkpoint.confirmed", { checkpoint: "outline" })).toBe("Confirmed the brief");
     expect(t("checkpoint.confirmed", { checkpoint: "objectives" })).toBe("Confirmed the objectives");
     expect(t("checkpoint.confirmed", { checkpoint: "plan" })).toBe("Confirmed the lesson plan");
     expect(t("intake.asked", { questions: 1 })).toBe("Asked 1 question about your course");
@@ -116,7 +116,7 @@ describe("ActivityRail — rows", () => {
     expect(t("plan.checked", { valid: true })).toBe("Checked the plan\u2019s format: no problems reported");
     expect(t("plan.checked", { valid: false, issues: 1 })).toBe("Checked the plan\u2019s format: 1 problem reported");
     expect(t("plan.confirmed")).toBe("Confirmed the lesson plan");
-    expect(t("package.sealed", { version: 2 })).toBe("Sealed version 2");
+    expect(t("package.sealed", { version: 2 })).toBe("Published version 2");
   });
 
   it("never invents a number: a missing or malformed fact drops its clause instead of printing undefined or NaN", () => {
@@ -128,7 +128,7 @@ describe("ActivityRail — rows", () => {
     expect(t("objectives.decided")).toBe("Decided on the proposed objectives");
     expect(t("plan.drafted", { activities: Number.NaN })).toBe("Drafted a lesson plan");
     expect(t("plan.checked")).toBe("Checked the plan\u2019s format");
-    expect(t("package.sealed")).toBe("Sealed a version for students");
+    expect(t("package.sealed")).toBe("Published a version for students");
     expect(t("checkpoint.confirmed")).toBe("Confirmed a step");
     expect(t("intake.asked")).toBe("Asked questions about your course");
     const all = (["course.created", "checkpoint.confirmed", "intake.asked", "intake.answered", "intake.sent", "objectives.derived", "objectives.drafted", "objectives.decided", "plan.drafted", "plan.checked", "plan.confirmed", "package.sealed"] as const).map((a) => t(a)).join(" | ");
@@ -165,14 +165,14 @@ describe("ActivityRail — rows", () => {
   });
 
   it("shows up to eight steps whole, with no fold that hides just one or two", () => {
-    const eight = Array.from({ length: 8 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 20 - i));
+    const eight = Array.from({ length: 8 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, (20 - i) * 3));
     render(<ActivityRail items={eight} asfaiAvailable />);
     expect(rows()).toHaveLength(8);
     expect(screen.queryByRole("button", { name: /earlier step/ })).toBeNull();
   });
 
   it("folds a long history: the newest six, then a button for the earlier steps", () => {
-    const many = Array.from({ length: 11 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 20 - i));
+    const many = Array.from({ length: 11 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, (30 - i) * 3));
     render(<ActivityRail items={many} asfaiAvailable />);
     expect(rows()).toHaveLength(6);
     fireEvent.click(screen.getByRole("button", { name: "Show 5 earlier steps" }));
@@ -327,5 +327,111 @@ describe("ActivityRail — narrow screens collapse, wide screens do not", () => 
     stubMedia({ wide: false });
     render(<ActivityRail items={[item("course.created", "teacher", "record")]} asfaiAvailable />);
     expect(screen.getByRole("button", { name: /Behind the scenes/ }).textContent).toMatch(/1 step\b/);
+  });
+});
+
+describe("ActivityRail — consecutive alike steps are one row", () => {
+  it("folds three decisions made within two minutes into one row with the counts added", () => {
+    const three = [
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 4),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 3),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 2),
+    ];
+    render(<ActivityRail items={three} asfaiAvailable />);
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].textContent).toMatch(/Your decisions: 3 accepted/);
+    expect(rows()[0].getAttribute("data-seq")).toBe(String(three[2].seq)); // the newest of the three stands for the row
+  });
+
+  it("adds the different verbs separately, and reads the head count of steps after grouping", () => {
+    const mixed = [
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 5),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, renamed: 1 }, 4),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 3),
+    ];
+    render(<ActivityRail items={mixed} asfaiAvailable />);
+    expect(rows()[0].textContent).toMatch(/Your decisions: 2 accepted, 1 renamed/);
+    expect(screen.getByText("1 step", { exact: false, selector: "p" }).textContent).toBe("1 step, newest first");
+  });
+
+  it("keeps decisions apart when more than two minutes pass between them", () => {
+    render(<ActivityRail items={[
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 10),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 2),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(2);
+  });
+
+  it("never folds different actors, actions or checkpoints into each other", () => {
+    render(<ActivityRail items={[
+      item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 6),
+      item("checkpoint.confirmed", "teacher", "record", { checkpoint: "outline" }, 5),
+      item("plan.drafted", "worker", "plan", { activities: 3 }, 4),
+      item("plan.confirmed", "teacher", "plan", {}, 3),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(4);
+  });
+
+  it("does not add counts that are not a tally (two plans drafted are two plans, not six activities)", () => {
+    render(<ActivityRail items={[
+      item("plan.drafted", "worker", "plan", { activities: 3 }, 3),
+      item("plan.drafted", "worker", "plan", { activities: 4 }, 2),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(2);
+  });
+
+  it("says how many times when identical steps with nothing to add repeat", () => {
+    render(<ActivityRail items={[
+      item("intake.answered", "teacher", "outline", {}, 3),
+      item("intake.answered", "teacher", "outline", {}, 2),
+      item("intake.answered", "teacher", "outline", {}, 1),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].textContent).toMatch(/Answered the questions · 3 times/);
+  });
+});
+
+describe("ActivityRail — it owns its scroll and sits still while the stage scrolls", () => {
+  it("is sticky inside its own full-height cell, with a max height of the window minus its margins", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "ActivityRail.module.css"), "utf8");
+    const wide = css.slice(css.indexOf("@media (min-width: 80rem)"));
+    expect(wide).toMatch(/\.root\s*\{[^}]*position:\s*sticky/);
+    expect(wide).toMatch(/\.root\s*\{[^}]*max-height:\s*calc\(100vh/);
+    expect(wide).toMatch(/\.root\s*\{[^}]*overflow-y:\s*auto/);
+  });
+});
+
+describe("ActivityRail — C-e: the glossary's words, a clock when the words say nothing, a header on one line", () => {
+  it("tags a row with the stage vocabulary: Material, Brief, Objectives, Plan, Version; never Outline, Record or Package", () => {
+    const all: ActivityItem[] = [
+      item("course.created", "teacher", "record", {}, 50), item("checkpoint.confirmed", "teacher", "outline", { checkpoint: "outline" }, 40),
+      item("objectives.decided", "teacher", "objectives", { accepted: 1 }, 30), item("plan.drafted", "worker", "plan", { activities: 2 }, 20),
+      item("package.sealed", "teacher", "package", { version: 1 }, 10),
+    ];
+    render(<ActivityRail items={all} asfaiAvailable />);
+    expect(rows().map((li) => li.querySelector("[data-artifact]")?.textContent?.replace("Changed: ", ""))).toEqual(["Version", "Plan", "Objectives", "Brief", "Material"]);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/\b(outline|package|sealed|record)\b(?! and the rules)/i);
+  });
+
+  it("when every row would say \"just now\", shows the clock (with seconds if they share a minute), and goes back to words as time passes", () => {
+    const fresh = [item("course.created", "teacher", "record", {}, 0), item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 0)];
+    render(<ActivityRail items={fresh} asfaiAvailable />);
+    const times = () => rows().map((li) => li.querySelector("time")?.textContent ?? "");
+    expect(times().every((t) => /^\d\d:\d\d:\d\d$/.test(t))).toBe(true);
+    expect(times().join(" ")).not.toMatch(/just now/);
+    act(() => { vi.advanceTimersByTime(3 * 60_000); });
+    expect(times().every((t) => t === "3 minutes ago")).toBe(true);
+  });
+
+  it("does not use the clock when the rows differ, or when there is only one row", () => {
+    render(<ActivityRail items={[item("course.created", "teacher", "record", {}, 0)]} asfaiAvailable />);
+    expect(screen.getByText("just now")).toBeInTheDocument();
+    cleanup();
+    render(<ActivityRail items={[item("course.created", "teacher", "record", {}, 5), item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 0)]} asfaiAvailable />);
+    expect(rows().map((li) => li.querySelector("time")?.textContent)).toEqual(["just now", "5 minutes ago"]);
   });
 });

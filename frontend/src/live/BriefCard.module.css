@@ -1,0 +1,30 @@
+/* BriefCard — the teacher's own answers as a quiet ledger: label gutter, the words, a small Edit. Tokens only. */
+.card { display: flex; flex-direction: column; gap: var(--space-5); }
+.heading { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); }
+.lede { margin: var(--space-2) 0 0; font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md); color: var(--color-ink-soft); max-width: 40rem; }
+.rows { margin: 0; border-top: 1px solid var(--color-rule); }
+.row { display: grid; grid-template-columns: 11rem 1fr; gap: var(--space-4); padding: var(--space-4) 0; border-bottom: 1px solid var(--color-rule); }
+.label { font-family: var(--font-ui); font-size: var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted); padding-top: 4px; }
+.value { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.said { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink); white-space: pre-line; overflow-wrap: anywhere; flex: 1 1 14rem; min-width: 0; }
+.none { font-family: var(--font-ui); font-size: var(--text-base); color: var(--color-ink-muted); font-style: italic; flex: 1 1 14rem; }
+.edit, .quiet {
+  min-height: 44px; padding: 0 var(--space-3); background: transparent; border: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-soft);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--color-accent-line);
+}
+.edit:hover, .quiet:hover { color: var(--color-ink); }
+.edit:focus-visible, .quiet:focus-visible, .primary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.edit:disabled, .quiet:disabled { opacity: 0.55; cursor: default; }
+.form { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
+.box { width: 100%; box-sizing: border-box; padding: var(--space-3); font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink); background: var(--color-paper-raised); border: 1px solid var(--color-border-control); border-radius: var(--radius-sm); resize: vertical; }
+.box:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.hint, .note { margin: 0; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-muted); }
+.verbs { display: flex; gap: var(--space-2); }
+.primary { min-height: 44px; padding: 0 var(--space-5); font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer; border-radius: var(--radius-sm); background: var(--color-accent); border: 1px solid var(--color-accent); color: var(--color-paper-raised); }
+.primary:hover:not(:disabled) { background: var(--color-accent-strong); }
+.primary:disabled { opacity: 0.55; cursor: default; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (max-width: 36rem) {
+  .row { grid-template-columns: 1fr; gap: var(--space-1); }
+}

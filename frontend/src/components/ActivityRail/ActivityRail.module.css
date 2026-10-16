@@ -11,10 +11,10 @@
 }
 
 /* ---- the title ---- */
-.head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0 var(--space-2); }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0 var(--space-2); container-type: inline-size; }
 .title {
-  margin: 0; flex: 1 1 auto; min-width: 0;
-  font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--leading-lg);
+  margin: 0; flex: 1 1 auto; min-width: 0; white-space: nowrap; /* the header is one line: the title, then the count */
+  font-family: var(--font-display); font-size: var(--text-md); line-height: var(--leading-md);
   font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink);
 }
 .meta {
@@ -28,7 +28,7 @@
   background: transparent; border: none; cursor: pointer; text-align: left;
   font: inherit; letter-spacing: inherit; color: inherit;
 }
-.toggle > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.toggle > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; white-space: normal; } /* one line at every width that has room; at 320px it may wrap rather than overflow */
 .toggle:hover > span:first-child { text-decoration: underline; text-decoration-color: var(--color-accent-line); text-underline-offset: 4px; }
 .toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .chevron {
@@ -115,8 +115,14 @@
 .more:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* ---- wide: a quiet sticky column the page places; narrow: a disclosure under the stage ---- */
-@media (min-width: 72rem) {
-  .root { position: sticky; top: var(--space-6); align-self: start; max-height: calc(100vh - var(--space-12)); overflow-y: auto; }
+/* The rail owns its own scroll: pinned from the top of the content, as tall as the window minus its margins. The page
+   lays it in a full-height cell so it has room to stay put while the stage scrolls. */
+@media (min-width: 80rem) {
+  .root { position: sticky; top: var(--space-5); max-height: calc(100vh - var(--space-10)); overflow-y: auto; overscroll-behavior: contain; }
 }
+.times { color: var(--color-ink-muted); white-space: nowrap; } /* " · 2 times" moves as one piece */
+/* ", newest first" shows when the header has the room for it; the count is always there. */
+.order { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@container (min-width: 17.5rem) { .order { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; } }
 
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

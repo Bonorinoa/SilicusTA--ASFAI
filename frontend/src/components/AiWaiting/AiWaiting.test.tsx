@@ -53,7 +53,7 @@ describe("AiWaiting — plain words with real numbers", () => {
 
   it("names the published version a student's answer comes from (compact)", () => {
     render(<AiWaiting step={ANSWER_STEP} phase="running" variant="compact" />);
-    expect(screen.getByText("Looking for the answer in this course (version 1)")).toBeInTheDocument();
+    expect(screen.getByText("Looking for the answer in version 1 of this lesson")).toBeInTheDocument();
   });
 
   it("shows no progress bar and no percentage, ever", () => {
@@ -441,4 +441,34 @@ describe("every text pair the waiting card sets is AA (>= 4.5:1)", () => {
     ["accent-strong", "paper-raised"], ["accent-strong", "paper"],                           // the disclosure button
   ];
   it.each(PAIRS)("%s on %s", (fg, bg) => { expect(ratio(fg, bg)).toBeGreaterThanOrEqual(4.5); });
+});
+
+describe("AiWaiting — the suggest step (sprint weekend-share)", () => {
+  const SUGGEST: WaitingStep = { kind: "suggest", outcomes: ["Name a unit fraction."], topic: "Unit fractions", course: "Grade 3 math", alreadyListed: 2 };
+
+  it("says what is sent: the teacher's outcomes, topic, course and the wording already on the page", () => {
+    const t = describeStep(SUGGEST);
+    expect(t.title).toBe("Suggesting up to 3 objectives that round out yours");
+    const sent = t.sends.map((g) => g.heading);
+    expect(sent).toEqual(["Your outcomes", "Named by you", "Already listed", "Instructions"]);
+    expect(t.sends.find((g) => g.heading === "Already listed")!.items[0]).toContain("2 objectives");
+    expect(t.never).toContain("The text of your materials");
+  });
+
+  it("reuses the objectives timing (the worker status may name 'suggest' or not)", () => {
+    expect(typicalRange("suggest")).toEqual(DEFAULT_TYPICAL.objectives);
+    expect(typicalRange("suggest", { objectives: [4, 9] })).toEqual([4, 9]);
+  });
+
+  it("never claims the AI decided anything while it runs", () => {
+    render(<AiWaiting step={SUGGEST} phase="running" />);
+    expect(screen.getByText(/nothing is decided yet/i)).toBeInTheDocument();
+  });
+
+  it("the student's answer step tells the truth about the new prompt (a cited idea may be explained)", () => {
+    const t = describeStep(ANSWER_STEP);
+    const text = JSON.stringify(t);
+    expect(text).toContain("explain it in plain words for the learners");
+    expect(text).not.toMatch(/package/i);
+  });
 });

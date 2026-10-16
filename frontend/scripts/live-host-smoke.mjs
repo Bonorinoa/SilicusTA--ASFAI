@@ -105,6 +105,10 @@ const clickText = (page, text) => page.evaluate((t) => {
   return true;
 }, text);
 
+// C1.5 helpers: the stage page marks exactly one primary action; the plan's title is the plan's text.
+const primaryCount = () => page.evaluate(() => [...document.querySelectorAll('[data-primary="true"]')].filter((b) => b.offsetParent !== null).length);
+const countIn = (t) => page.evaluate((s) => document.body.innerText.split(s).length - 1, t);
+const PLAN_TITLE = "Seeing the claim: how AI answers are built";
 const bodyHas = (page, t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
 
 // ---------------------------------------------------------------- boot both
@@ -140,6 +144,20 @@ await page.waitForFunction(() => document.querySelector("button") !== null);
 
 check("Live tab reaches the host (not the offline notice)",
   !(await bodyHas(page, "host is not reachable")) && (await bodyHas(page, "What should we call this course")));
+
+// C1.5 (new): the tour opens on a teacher's first visit, never on a reload, and is one link away.
+check("tour: opens on the first visit, before any course exists",
+  await poll(() => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"]'))));
+await page.click('button[aria-label="Close the tour"]');
+check("tour: closing it puts the cursor in the first question",
+  await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]') && document.activeElement?.id === "onboarding-reply")));
+await page.reload({ waitUntil: "networkidle0" });
+await poll(async () => await bodyHas(page, "What should we call this course"));
+check("tour: does not open again on reload", await page.evaluate(() => !document.querySelector('[role="dialog"]')));
+await clickText(page, "How it works");
+check("tour: 'How it works' reopens it on demand", await poll(() => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"]'))));
+await page.click('button[aria-label="Close the tour"]');
+await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]')));
 
 const reply = async (text, button) => {
   await page.waitForSelector("#onboarding-reply");
@@ -228,6 +246,8 @@ await poll(async () => await bodyHas(page, "Propose objectives from your answers
 await clickText(page, "Propose objectives from your answers");
 await poll(async () => (await getView(courseId)).proposals.length === 2);
 check("the host proposed 2 objectives, one per recorded outcome line", true);
+await poll(async () => await bodyHas(page, "Accept objective") || await page.evaluate(() => !!document.querySelector('button[aria-label^="Accept objective"]')));
+check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
 
 // teacher decides: accept every awaiting proposal through the UI. State-driven,
 // because each accept triggers an async reload and re-render.
@@ -248,12 +268,17 @@ check("every decision cites a real teacher turn",
   decided.decisions.every((d) => d.provenance && /^urn:turn:\d+$/.test(d.provenance.turnRef)));
 
 // AI drafts the plan
-await poll(async () => await bodyHas(page, "Draft the plan from your confirmed objectives"));
-await clickText(page, "Draft the plan from your confirmed objectives");
+// C1.5: the confirm bar under the decided objectives now carries this act (it used to be a separate button).
+await poll(async () => await bodyHas(page, "build the plan"));
+await clickText(page, "Confirm 2 objectives · build the plan");
 await poll(async () => (await getView(courseId)).plan?.status === "draft");
 check("plan drafted on the host", true);
 await poll(async () => await bodyHas(page, "Seeing the claim: how AI answers are built"));
 check("PlanCard renders the host's plan", true);
+check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
+check("rail: a worker row names the drafting model after drafting, and ASFAI has its own lane when connected",
+  await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && [...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
 await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
 check("the plan shows suggested alignment from ASFAI's graph, labelled as a suggestion",
   (await bodyHas(page, "from ASFAI's skill map")) && (await bodyHas(page, "not part of the sealed package")));
@@ -274,6 +299,8 @@ const armed = await poll(async () => {
 });
 check("host arms publish once the plan is confirmed", armed.publish.canPublish === true,
   armed.publish.blockers.join("; ") || "no blockers");
+check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
 check("UI reflects the armed publish checkpoint",
   await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("ready to seal")), 8000));
 
@@ -303,6 +330,13 @@ check("package sealed as version 1 on the host", sealed.versions[0].version === 
 check("all five checkpoints confirmed after publish",
   ["files", "outline", "objectives", "plan", "publish"].every((k) => sealed.checkpoints[k].status === "confirmed"));
 
+await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent ?? "").trim().startsWith("Try it as a student"))));
+check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
+await clickText(page, "Try it as a student");
+check("'Try it as a student' puts the cursor in the student's question box",
+  await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
+
 // Sprint 2a: the export archives with an atomic write + read-back verified digest.
 const arch = await post(`/api/courses/${courseId}/archive`, {});
 check("export archived with a verified read-back digest", arch.status === 200 && arch.json.verified === true, `digest=${String(arch.json.digest ?? "").slice(0, 12)}`);
@@ -315,6 +349,8 @@ const ver = await (await fetch(`${HOST}/api/courses/${encodeURIComponent(courseI
 check("event-log hash chain verifies", ver.ok === true, `events=${ver.events}`);
 
 // ---- the PIN (the trust anchor): the teacher's device holds a reference the host cannot reach ----
+// C1.5: pinned copies now live under "Record details" (a disclosure): open it, then read the same line.
+await page.evaluate(() => { const d = document.querySelector('details[aria-label="Record details"]'); if (d) d.open = true; });
 await poll(() => page.evaluate(() => document.body.innerText.includes("Pinned on this device")));
 check("the sealed version is pinned on the device", await page.evaluate(() => document.body.innerText.includes("v1")));
 
@@ -336,6 +372,8 @@ const verAfter = await get(`/api/courses/${encodeURIComponent(courseId)}/verify`
 check("the host still blesses the rewritten chain (this is the ledger problem)", verAfter.json.ok === true);
 
 await page.reload({ waitUntil: "networkidle0" });
+// C1.5: the pin check lives under "Record details"; a reload closes the disclosure, so open it again.
+await page.evaluate(() => { const d = document.querySelector('details[aria-label="Record details"]'); if (d) d.open = true; });
 await poll(async () => await bodyHas(page, "Check my pinned copies"));
 await clickText(page, "Check my pinned copies");
 await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("differs from what you pinned")));
@@ -375,7 +413,8 @@ await poll(async () => (await getView(course2)).checkpoints.files.status === "co
 await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Course intake"]') && !!document.querySelector("#intake-topic")));
 check("local: the host's own questions are live with ASFAI unconnected, and are not attributed to ASFAI",
   (await getView(course2)).intake.questionsFrom === "local" &&
-  !(await page.evaluate(() => [...document.querySelectorAll("span")].some((x) => (x.textContent ?? "").trim() === "ASFAI"))));
+  // C1.5: the rail's lane key now also names "ASFAI" (it is a lane of the local app); the attribution lives in the intake card.
+  !(await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Course intake"] span')].some((x) => (x.textContent ?? "").trim() === "ASFAI"))));
 check("local: ASFAI is recommended, not required (Connect ASFAI is offered beside the live questions)",
   (await bodyHas(page, "Recommended:")) && (await bodyHas(page, "Connect ASFAI")) && (await bodyHas(page, "Nothing waits on it")));
 const premature2 = await post(`/api/courses/${course2}/checkpoints`, { id: "outline", text: "Confirm the outline." });
@@ -413,10 +452,13 @@ const decided2 = await poll(async () => {
   return null;
 }, 25000);
 check("local: objectives confirmed through the gate", decided2.checkpoints.objectives.status === "confirmed");
-await poll(async () => await bodyHas(page, "Draft the plan from your confirmed objectives"));
-await clickText(page, "Draft the plan from your confirmed objectives");
+// C1.5: the confirm bar under the decided objectives now carries this act (it used to be a separate button).
+await poll(async () => await bodyHas(page, "build the plan"));
+await clickText(page, "Confirm 2 objectives · build the plan");
 await poll(async () => (await getView(course2)).plan?.status === "draft");
 await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
+check("rail (local): a worker row names the drafting model after drafting, and no ASFAI step is shown that never happened",
+  await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && !document.querySelector('li[data-actor="asfai"]')));
 check("local: the plan is aligned from the ontology file alone, with no ASFAI",
   (await bodyHas(page, "from your ontology file")) && !(await bodyHas(page, "from ASFAI's skill map")));
 await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
@@ -442,7 +484,7 @@ check("local: the log verifies", (await get(`/api/courses/${encodeURIComponent(c
 // ---- revising the published course: a labelled action that changes nothing until the teacher acts ----
 await poll(async () => await bodyHas(page, "Revise this course"));
 check("revise: the published course says version 1 is unchanged, and students keep reading it",
-  (await bodyHas(page, "Version 1 is published and unchanged.")) && !(await bodyHas(page, "you are drafting")) && (await bodyHas(page, "A draft is never what students see")));
+  (await bodyHas(page, "Version 1 is published and unchanged.")) && !(await bodyHas(page, "you are drafting")) && (await bodyHas(page, "Students read this version")));
 const eventsBeforeOpen = (await getView(course2)).integrity.events;
 await clickText(page, "Revise this course");
 await poll(async () => await bodyHas(page, "Revising: what has changed since version 1"));
@@ -455,6 +497,7 @@ const drafting = await poll(async () => { const v = await getView(course2); retu
 check("revise: the host reads the record as drafting version 2, with the teacher's own objective added",
   drafting.revision.sealedVersion === 1 && drafting.revision.nextVersion === 2 && drafting.revision.changes.objectivesAdded[0]?.statement === "Students can debug a short program.");
 await poll(async () => await bodyHas(page, "you are drafting version 2"));
+check("revise: while drafting, the page says a draft is never what students see", await bodyHas(page, "A draft is never what students see"));
 check("revise: the UI says you are drafting version 2, and version 1 is still the only sealed version",
   (await bodyHas(page, "Version 1 is published and unchanged; you are drafting version 2.")) && drafting.versions.length === 1);
 const sealOpenV2 = await poll(async () => {
@@ -478,6 +521,9 @@ check("revise: the log still verifies and the UI now reports version 2", (await 
 // ---- reword a CONFIRMED objective in place, in the browser: same id, the plan keeps citing it, v2 untouched ----
 const beforeReword = await getView(course2);
 const rewordTarget = beforeReword.proposals.find((r) => r.status === "accepted");
+// C1.5: decided objectives are read-only on a published course until the teacher opens the revision tools.
+await clickText(page, "Revise this course");
+await poll(async () => await bodyHas(page, "Revising: what has changed since version 2"));
 await clickText(page, "Edit the wording of objective 1");
 await poll(() => page.evaluate(() => document.activeElement?.tagName === "TEXTAREA"));
 await page.keyboard.type(" with one example.");

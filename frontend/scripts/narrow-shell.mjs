@@ -333,8 +333,9 @@ try {
     await sleep(150);
     return null;
   }, 25000);
-  await poll(() => bodyHas("Draft the plan from your confirmed objectives"));
-  await clickText("Draft the plan from your confirmed objectives");
+  // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
+  await poll(() => bodyHas("build the plan"));
+  await clickText("Confirm 3 objectives · build the plan");
   await poll(recorded("plan.proposed"), 20000);
   await poll(() => bodyHas("Confirm the lesson plan"));
   await clickText("Confirm the lesson plan");

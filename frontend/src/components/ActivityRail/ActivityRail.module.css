@@ -24,7 +24,7 @@
 /* Narrow: the whole title is the disclosure (44px tall, full width). */
 .toggle {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);
-  width: 100%; min-height: 44px; margin: 0; padding: 0; box-sizing: border-box;
+  width: 100%; min-height: 44px; margin: 0; padding: 0 var(--space-1) 0 0; box-sizing: border-box; /* room for the rotated chevron, whose box would otherwise overflow by 2px */
   background: transparent; border: none; cursor: pointer; text-align: left;
   font: inherit; letter-spacing: inherit; color: inherit;
 }

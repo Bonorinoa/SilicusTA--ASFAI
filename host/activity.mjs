@@ -13,7 +13,8 @@ import { SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS } from "./proposer.mjs";
 const CHECKPOINT_ARTIFACT = { files: "record", outline: "outline", objectives: "objectives", plan: "plan" };
 
 /** Decision verbs, counted when present, in a fixed order so the output is stable. */
-const VERBS = ["accept", "rename", "reword", "drop", "add"];
+/** Decision verb -> the past-participle key the rail reads (feat/rail-tour copy.ts). */
+const VERBS = { accept: "accepted", rename: "renamed", reword: "reworded", drop: "dropped", add: "added" };
 
 const count = (x) => (Array.isArray(x) ? x.length : 0);
 
@@ -53,9 +54,9 @@ function rowOf(event, published) {
     case "objectives.decided": {
       const decisions = Array.isArray(event.decisions) ? event.decisions : [];
       const facts = { decisions: decisions.length };
-      for (const verb of VERBS) {
+      for (const [verb, key] of Object.entries(VERBS)) {
         const n = decisions.filter((d) => d?.verb === verb).length;
-        if (n > 0) facts[verb] = n;
+        if (n > 0) facts[key] = n;
       }
       return { actor: "teacher", action: "objectives.decided", artifact: "objectives", facts };
     }

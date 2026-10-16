@@ -4,10 +4,53 @@
  */
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Workbench from "./Workbench";
 
+/** The bare URL shows the landing (product decision, C-d). These tests are about the workbench, so they open its hash. */
+const ok = (o: unknown) => ({ ok: true, status: 200, json: async () => o }) as unknown as Response;
+afterEach(() => { vi.unstubAllGlobals(); window.localStorage.clear(); window.location.hash = ""; });
+
+describe("the bare URL and #/live", () => {
+  beforeEach(() => {
+    window.localStorage.setItem("silicus.tour.seen", "1");
+    vi.stubGlobal("fetch", vi.fn(async (input: unknown) => {
+      const url = String(input);
+      if (url === "/api/courses") return ok({ courses: [] });
+      if (url === "/api/worker/status") return ok({ configured: false });
+      if (url === "/api/asfai/status") return ok({ connected: false, expiresAt: null, scope: null, canRefresh: false });
+      return ok({});
+    }));
+  });
+
+  it("no hash at all, '#' and '#/' show the landing", () => {
+    for (const hash of ["", "#", "#/"]) {
+      window.location.hash = hash;
+      const { unmount } = render(<Workbench />);
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Plan a lesson/);
+      expect(screen.queryByRole("heading", { name: "Learning objectives" })).toBeNull();
+      unmount();
+    }
+  });
+
+  it("#/live still opens the app (the course), with the wordmark linking back to the landing", async () => {
+    window.location.hash = "#/live";
+    render(<Workbench />);
+    await screen.findByLabelText("What should we call this course?");
+    expect(screen.queryByText(/^Plan a lesson/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Silicus TA, home" })).toHaveAttribute("href", "#/");
+  });
+
+  it("an unknown hash does not show the landing", () => {
+    window.location.hash = "#/nope";
+    render(<Workbench />);
+    expect(screen.queryByText(/^Plan a lesson/)).toBeNull();
+  });
+});
+
 describe("workbench gallery route", () => {
+  beforeEach(() => { window.location.hash = "#/decision"; });
+
   it("shows DecisionCard live against the real gate, and it is interactive", async () => {
     const user = userEvent.setup();
     render(<Workbench />);

@@ -34,12 +34,12 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "tokens", label: "Tokens" },
 ];
 
-/** The online app opens on the live course; the local app and its tests keep opening on the decision card. */
+/** An unknown hash (#/nope) still opens where it always did: the live course online, the decision card locally. */
 const HOME: TabId = BROWSER_MODE ? "live" : "decision";
 
 function tabFromHash(): TabId {
-  // The landing is the explicit "#/". No hash at all keeps opening where it always did (HOME).
-  if (window.location.hash === "#/") return "landing";
+  // The landing is the bare URL ("" or "#" or "#/"): it is the link people paste. The app is "#/live".
+  if (/^#?\/?$/.test(window.location.hash)) return "landing";
   const raw = window.location.hash.replace(/^#\/?/, "");
   return TABS.some((t) => t.id === raw) ? (raw as TabId) : HOME;
 }
@@ -78,7 +78,7 @@ export function Workbench() {
     <div className={styles.shell}>
       {product ? (
         <header className={styles.masthead} data-print="hide">
-          <a className={styles.wordmark} href="#/live" aria-label="Silicus TA, home">
+          <a className={styles.wordmark} href="#/" aria-label="Silicus TA, home">
             <Mark />
             <span className={styles.wordmarkName}>Silicus <span className={styles.wordmarkTa}>TA</span></span>
           </a>

@@ -15,13 +15,15 @@ describe("the page", () => {
     render(<Landing />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Plan a lesson with an AI that proposes. You decide.");
+    // two deliberate lines: the sentence, then the decision
+    expect([...document.querySelectorAll("h1 > span")].map((n) => n.textContent)).toEqual(["Plan a lesson with an AI that proposes.", "You decide."]);
     expect(screen.getAllByRole("banner")).toHaveLength(1);
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(screen.getAllByRole("contentinfo")).toHaveLength(1);
     const main = screen.getByRole("main");
     const regions = within(main).getAllByRole("region");
     expect(regions.map((r) => r.getAttribute("aria-labelledby")).every(Boolean)).toBe(true);
-    expect(regions).toHaveLength(5);
+    expect(regions).toHaveLength(6);
   });
 
   it("shows the five steps in order, the three nevers, the age range, and says prototype plainly", () => {
@@ -29,28 +31,77 @@ describe("the page", () => {
     const names = [...document.querySelectorAll("ol > li > h3")].map((h) => h.textContent);
     expect(names).toEqual(["Course", "Brief", "Objectives", "Lesson plan", "Version"]);
     expect(screen.getByRole("heading", { name: "What Silicus never does" })).toBeInTheDocument();
-    for (const t of ["Decide for you", "Keep your files", "Grade or save student questions"]) expect(screen.getByRole("heading", { name: t })).toBeInTheDocument();
+    for (const t of ["Never decides for you", "Never keeps your files", "Never grades or saves student questions"]) expect(screen.getByRole("heading", { name: t })).toBeInTheDocument();
     expect(screen.getByText(/aged\s5–14/, { selector: "p" })).toBeInTheDocument();
     expect(screen.getAllByText(/prototype/i).length).toBeGreaterThanOrEqual(3);
   });
 
-  it("offers Try it (to the app) and the local setup, and nothing like sign-in", () => {
+  it("offers Try it (to the app) and See the five steps, and nothing like sign-in", () => {
     render(<Landing />);
     expect(screen.getByRole("link", { name: "Try it" })).toHaveAttribute("href", "#/live");
-    expect(screen.getByRole("link", { name: "Run it on your computer (with ASFAI)" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See the five steps" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /run it on your computer/i })).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
     expect(document.body.textContent).not.toMatch(/sign[ -]?in|log[ -]?in|sign up|create an account/i);
-    expect(document.querySelector("img")).toBeNull();
   });
 
-  it("the secondary action moves to the local setup and puts focus on its heading, without changing the route", () => {
+  it("the hero carries one real capture of the Objectives step, with alt text, and no other image", () => {
+    render(<Landing />);
+    const imgs = document.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    const img = imgs[0] as HTMLImageElement;
+    expect(img.getAttribute("src")).toMatch(/hero-objectives/);
+    expect(img.getAttribute("alt")).toMatch(/Objectives step/);
+    expect(img.getAttribute("alt")).toMatch(/Accept, Rename and Drop/);
+    expect(img.getAttribute("width") && img.getAttribute("height")).toBeTruthy(); // no layout shift
+    // the words on the buttons in the capture are the words in the copy
+    expect(document.body.textContent).toMatch(/accept, rename or drop/);
+    expect(document.body.textContent).not.toMatch(/reword/i);
+  });
+
+  it("See the five steps moves to the steps and puts focus on their heading, without changing the route", () => {
     window.location.hash = "#/";
     render(<Landing />);
-    const heading = screen.getByRole("heading", { name: "Run it on your computer" });
+    const heading = screen.getByRole("heading", { name: /^Five steps/ });
     heading.scrollIntoView = vi.fn();
-    screen.getByRole("link", { name: "Run it on your computer (with ASFAI)" }).click();
+    screen.getByRole("link", { name: "See the five steps" }).click();
     expect(heading).toHaveFocus();
+    expect(heading.scrollIntoView).toHaveBeenCalled();
     expect(window.location.hash).toBe("#/");
+  });
+
+  it("the local setup is one collapsed disclosure at the bottom, and ASFAI is defined where it first appears", () => {
+    render(<Landing />);
+    const summary = screen.getByText("For developers: run it locally");
+    const details = summary.closest("details") as HTMLDetailsElement;
+    expect(details).not.toBeNull();
+    expect(details.open).toBe(false);
+    expect(details.getAttribute("open")).toBeNull();
+    // it is the last section on the page
+    const regions = within(screen.getByRole("main")).getAllByRole("region");
+    expect(regions[regions.length - 1].contains(details)).toBe(true);
+    // ASFAI: the first mention is its one-sentence definition; it is in no earlier text
+    const text = document.body.textContent ?? "";
+    const first = text.indexOf("ASFAI");
+    expect(text.slice(first, first + 90)).toMatch(/^ASFAI is a separate lesson-records product/);
+    expect(text.match(/ASFAI is a separate lesson-records product[^.]*\./g)).toHaveLength(1);
+  });
+
+  it("'you decide' is said at most three times: the headline, the steps title and the never-does heading", () => {
+    render(<Landing />);
+    const text = document.body.textContent ?? "";
+    expect(text.match(/decid/gi)?.length ?? 0).toBeLessThanOrEqual(3);
+    expect(text).toMatch(/You decide\./);
+    expect(text).toMatch(/Five steps, and you decide at every one/);
+    expect(text).toMatch(/Never decides for you/);
+  });
+
+  it("claims only what Silicus controls: no retention promise, and the provider's terms are named where the drafting model is", () => {
+    render(<Landing />);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/zero[- ]?retention|not retained|never stored|never leaves|private by|confidential/i);
+    expect(text).toMatch(/Silicus does not keep it/);
+    expect(text.match(/provider’s terms apply/g)?.length).toBe(2);
   });
 });
 
@@ -64,32 +115,34 @@ describe("copy contract (docs/design/glossary.md)", () => {
     }
   });
 
-  it("says where the record is kept, truthfully for each build", async () => {
+  it("says where the record is kept once, truthfully for each build, and the demo passcode only where there is one", async () => {
     for (const [mode, kept, other] of [["browser", /kept in this browser/, /on this computer/], ["", /kept on this computer/, /in this browser/]] as const) {
       vi.resetModules();
       vi.stubEnv("VITE_SILICUS_MODE", mode);
       const { Landing: L } = await import("./Landing");
       const { unmount } = render(<L />);
-      const footer = screen.getByRole("contentinfo").textContent ?? "";
-      expect(footer).toMatch(kept);
-      expect(footer).not.toMatch(other);
-      expect(/demo passcode/.test(document.body.textContent ?? "")).toBe(mode === "browser");
+      const where = screen.getByRole("region", { name: "Where your work lives" }).textContent ?? "";
+      expect(where).toMatch(kept);
+      expect(where).toMatch(/Material text you add is used for one request and is gone when you reload\./);
+      const all = screen.getByRole("main").textContent ?? "";
+      expect(all.match(/kept (in this browser|on this computer)/g)).toHaveLength(1);
+      expect(screen.getByRole("contentinfo").textContent).not.toMatch(kept);
+      expect(all.replace(/The online version keeps your record in the browser[^.]*\./, "")).not.toMatch(other);
+      const hasPasscode = /The AI steps ask for a demo passcode\. Ask the person who shared this link\./.test(document.body.textContent ?? "");
+      expect(hasPasscode).toBe(mode === "browser");
       unmount();
     }
   });
 });
 
 describe("routing (Workbench.tsx)", () => {
-  it("#/ shows the landing; the workbench hashes do not, and no hash at all opens where it always did", () => {
-    window.location.hash = "#/";
-    const first = render(<Workbench />);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Plan a lesson/);
-    first.unmount();
-    window.location.hash = "";
-    const bare = render(<Workbench />);
-    expect(screen.queryByText(/^Plan a lesson/)).toBeNull();
-    expect(screen.getByRole("heading", { name: "Learning objectives" })).toBeInTheDocument();
-    bare.unmount();
+  it("the bare URL, '#' and '#/' show the landing; #/decision and an unknown hash do not (#/live: Workbench.test.tsx)", () => {
+    for (const hash of ["", "#", "#/"]) {
+      window.location.hash = hash;
+      const { unmount } = render(<Workbench />);
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Plan a lesson/);
+      unmount();
+    }
     window.location.hash = "#/decision";
     const { unmount } = render(<Workbench />);
     expect(screen.queryByText(/^Plan a lesson/)).toBeNull();

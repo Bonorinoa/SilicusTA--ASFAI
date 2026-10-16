@@ -40,7 +40,7 @@ function rowOf(event, published) {
       if (event.assistantText) {
         const used = Array.isArray(event.materials) ? event.materials : [];
         if (used.length > 0) {
-          facts.materials = used.map((m) => String(m?.name ?? "")).join(", ");
+          facts.materials = used.length;   // a count: the rail's contract (names are already in the view's course)
           facts.characters = used.reduce((n, m) => n + (Number.isFinite(m?.chars) ? m.chars : 0), 0);
         }
         return { actor: "worker", action: "objectives.drafted", artifact: "objectives", facts };

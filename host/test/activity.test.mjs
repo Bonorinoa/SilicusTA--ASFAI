@@ -96,7 +96,7 @@ test("a proposal the teacher's own answers produced is Silicus, not the drafting
   assert.deepEqual(row.facts, { count: 1, source: "local" });
 });
 
-test("objectives drafted from material: count and material NAMES, never the material text", async () => {
+test("objectives drafted from material: counts only (the rail's contract), never names or the material text", async () => {
   const session = CourseSession.create(newStore(), { owner: OWNER, title: "T", materials: [{ name: MATERIAL.name }] });
   session.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
   session.answerIntake({ text: "x", answers: { topic: "t", course: "c", outcomes_from: "materials" }, at: 1100 });
@@ -106,7 +106,9 @@ test("objectives drafted from material: count and material NAMES, never the mate
   assert.equal(r.ok, true);
   const row = session.view().activity.at(-1);
   assert.deepEqual([row.actor, row.action], ["worker", "objectives.drafted"]);
-  assert.deepEqual(row.facts, { count: 1, materials: MATERIAL.name, characters: MATERIAL.text.length });
+  // The rail (feat/rail-tour copy.ts) reads `materials` as a NUMBER; a string silently drops its clause.
+  assert.deepEqual(row.facts, { count: 1, materials: 1, characters: MATERIAL.text.length });
+  assert.equal(typeof row.facts.materials, "number");
   assert.equal(JSON.stringify(session.view().activity).includes(MATERIAL_SECRET), false);
 });
 
@@ -142,7 +144,7 @@ test("the whole HTTP story (material in, decisions, plan, publish): the secret n
     const views = transcript.filter((t) => t.method === "GET" && t.json?.activity);
     assert.ok(views.length > 0, "a course view carries activity");
     const activity = views.at(-1).json.activity;
-    assert.ok(activity.some((r) => r.action === "objectives.drafted" && r.facts.materials === MATERIAL.name));
+    assert.ok(activity.some((r) => r.action === "objectives.drafted" && r.facts.materials === 1));
     for (const t of transcript) if (t.json?.activity) assert.equal(JSON.stringify(t.json.activity).includes(MATERIAL_SECRET), false);
   } finally {
     app.closeAllConnections?.();

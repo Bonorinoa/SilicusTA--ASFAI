@@ -319,6 +319,7 @@ check("stage: the lesson plan's text appears exactly once on the plan stage", (a
 check("rail: a worker row names the drafting model after drafting, and ASFAI has its own lane when connected",
   await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && [...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
 await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
+await page.evaluate(() => document.querySelectorAll('section[aria-label="Suggested alignment"] details').forEach((d) => { d.open = true; })); // collapsed by default (workspace); open it as a teacher would, or innerText hides it and the negative half passes vacuously
 check("the plan shows suggested alignment from ASFAI's graph, labelled as a suggestion",
   (await bodyHas(page, "from ASFAI's skill map")) && (await bodyHas(page, "not part of the sealed package")));
 check("the publish preview does NOT show the suggestions (they are not in the package)",
@@ -500,6 +501,7 @@ await poll(async () => (await getView(course2)).plan?.status === "draft");
 await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
 check("rail (local): a worker row names the drafting model after drafting, and no ASFAI step is shown that never happened",
   await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && !document.querySelector('li[data-actor="asfai"]')));
+await page.evaluate(() => document.querySelectorAll('section[aria-label="Suggested alignment"] details').forEach((d) => { d.open = true; })); // collapsed by default (workspace); open it as a teacher would, or innerText hides it and the negative half passes vacuously
 check("local: the plan is aligned from the ontology file alone, with no ASFAI",
   (await bodyHas(page, "from your ontology file")) && !(await bodyHas(page, "from ASFAI's skill map")));
 await poll(async () => await bodyHas(page, "Confirm the lesson plan"));

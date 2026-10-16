@@ -355,6 +355,9 @@ try {
   }, 12000);
   await clickText("Publish version 1");
   await poll(recorded("package.published"));
+  // The host records the publish before the page re-renders the published view: wait for the button, then click
+  // (clicking on the record alone raced the render, about 1 run in 5).
+  await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((x) => (x.textContent ?? "").trim() === "Try the student helper")));
   await clickText("Try the student helper"); // the helper is collapsed until opened
   await page.waitForSelector('section[aria-label="Try the student helper"] input');
   await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");

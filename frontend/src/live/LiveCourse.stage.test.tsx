@@ -404,3 +404,21 @@ describe("Behind the scenes", () => {
 });
 
 void countOf;
+
+describe("copy: the hint under an unanswered question promises, it does not report", () => {
+  it("says the answer is recorded WHEN the teacher presses the button, not that it already was", async () => {
+    const v = baseView();
+    set(v, "outline", "pending"); set(v, "objectives", "pending");
+    v.proposals = []; v.objectives = [];
+    v.intake = { ...v.intake, outlineAuthorized: false, mayCallPrepareOutline: false, answers: { topic: "t" },
+      questions: [{ id: "topic", prompt: "What topic should this lesson cover?", reason: null }, { id: "course", prompt: "Which course is this part of?", reason: null }],
+      refusal: null } as HostView["intake"];
+    mockHost(v);
+    render(<LiveCourse />);
+    const box = await screen.findByLabelText("Which course is this part of?");
+    const hint = document.getElementById(box.getAttribute("aria-describedby")!.split(" ")[0])!;
+    expect(hint.textContent).toMatch(/recorded on this course when you press Record this answer/i);
+    expect(hint.textContent).not.toMatch(/^Recorded on this course[.;]/);
+    expect(hint.textContent).toMatch(/Not sent to ASFAI/); // the local app keeps its honesty line
+  });
+});

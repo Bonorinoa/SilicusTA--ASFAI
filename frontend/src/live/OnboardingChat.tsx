@@ -344,7 +344,7 @@ export function OnboardingChat({
               {openQuestion.reason ? <p className={styles.kept}>{openQuestion.reason}</p> : null}
               <p className={styles.kept} id={hintId}>
                 {openQuestion.id === "learning_outcomes" ? "One outcome per line — each line becomes an objective you confirm. " : ""}
-                {fromAsfai ? "Recorded on this course; sent only when you send the round." : local("Recorded on this course. Not sent to ASFAI.")}
+                {fromAsfai ? "Recorded on this course when you press Record this answer; sent only when you send the round." : local("Recorded on this course when you press Record this answer. Not sent to ASFAI.")}
               </p>
               <textarea
                 id={`intake-${openQuestion.id}`}

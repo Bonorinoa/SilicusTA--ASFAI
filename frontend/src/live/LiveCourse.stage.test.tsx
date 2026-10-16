@@ -7,6 +7,10 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HostView } from "../gate/transport";
+import type { ActivityItem, TimelineEvent } from "../gate/types";
+import { ActivityRail } from "../components/ActivityRail";
+import { ARTIFACT_LABEL } from "../components/ActivityRail/copy";
+import { TimelineCard } from "../components/TimelineCard";
 import { LiveCourse } from "./LiveCourse";
 
 const COURSE_ID = "urn:uuid:11111111-2222-3333-4444-555555555555";
@@ -562,4 +566,47 @@ describe("retired words: outline, package, sealed, yet are absent from every sta
       expect(hits).toEqual([]);
     });
   }
+});
+
+// C-e: the same rule, for the two surfaces the stage render above does not always reach: the rail (every action it can say,
+// every tag it can wear) and the timeline (a published version, a decision, a checkpoint).
+describe("retired words: the rail and the timeline say published/brief, not sealed/outline/package", () => {
+  const RETIRED = /\b(outlines?|packages?|seal(ed|s|ing)?|in this course yet)\b/i;
+  const A_MIN = 60_000;
+  const ACTIONS: Array<[ActivityItem["action"], ActivityItem["artifact"], ActivityItem["facts"]]> = [
+    ["course.created", "record", {}], ["checkpoint.confirmed", "record", { checkpoint: "files" }], ["checkpoint.confirmed", "outline", { checkpoint: "outline" }],
+    ["checkpoint.confirmed", "objectives", { checkpoint: "objectives" }], ["checkpoint.confirmed", "plan", { checkpoint: "plan" }],
+    ["intake.asked", "outline", { questions: 3 }], ["intake.answered", "outline", {}], ["intake.sent", "outline", {}],
+    ["objectives.derived", "objectives", { count: 2 }], ["objectives.drafted", "objectives", { count: 3, materials: 1 }],
+    ["objectives.suggested", "objectives", { count: 2 }], ["objectives.decided", "objectives", { accepted: 2, dropped: 1 }],
+    ["plan.drafted", "plan", { activities: 3 }], ["plan.checked", "plan", { valid: true }], ["plan.confirmed", "plan", {}],
+    ["package.sealed", "package", { version: 1 }], ["package.sealed", "package", {}],
+  ];
+
+  it("the rail: every sentence and every tag", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("min-width"), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
+    const T = Date.now();
+    const items = ACTIONS.map(([action, artifact, facts], i) => ({ seq: i + 1, at: T - (ACTIONS.length - i) * 5 * A_MIN, actor: "teacher", action, artifact, facts }) as ActivityItem);
+    const { container } = render(<ActivityRail items={items} asfaiAvailable />);
+    await userEvent.click(screen.getByRole("button", { name: /earlier step/i })); // the rail folds a long history: open all of it
+    const text = container.textContent ?? "";
+    expect([...text.matchAll(new RegExp(RETIRED, "gi"))].map((m) => text.slice(Math.max(0, m.index! - 30), m.index! + 30))).toEqual([]);
+    expect(Object.values(ARTIFACT_LABEL).sort()).toEqual(["Brief", "Material", "Objectives", "Plan", "Version"]);
+    expect(text).toMatch(/Confirmed the brief/);
+    expect(text).toMatch(/Published version 1/);
+    vi.unstubAllGlobals();
+  });
+
+  it("the timeline: a published version, a decision and a checkpoint", () => {
+    const events: TimelineEvent[] = [
+      { id: "checkpoint:files", kind: "checkpoint", at: 1, label: "Checkpoint confirmed — files", turnRef: "t1", decidedBy: "teacher:tk-1", channel: "silicus-ui" },
+      { id: "dec-1", kind: "decision", verb: "accept", at: 2, label: "Accepted", version: 1, turnRef: "t2", decidedBy: "teacher:tk-1", channel: "silicus-ui" },
+      { id: "publish:1", kind: "publish", at: 3, label: "Published", version: 1, turnRef: "t3", decidedBy: "teacher:tk-1", channel: "silicus-ui" },
+    ];
+    const { container } = render(<TimelineCard events={events} courseLabel="Lesson 3" />);
+    expect(container.textContent).not.toMatch(RETIRED);
+    expect(container.textContent).toMatch(/published as version 1/);
+    const empty = render(<TimelineCard events={[]} />);
+    expect(empty.container.textContent).not.toMatch(RETIRED);
+  });
 });

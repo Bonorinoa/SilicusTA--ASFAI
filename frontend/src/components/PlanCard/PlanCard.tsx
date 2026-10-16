@@ -33,7 +33,7 @@ export interface PlanCardProps {
    */
   rewordedSince?: readonly { id: string; before: string | null; after: string }[];
   /**
-   * Show the worker's alignment suggestions. They are NOT part of a sealed package, so a surface
+   * Show the worker's alignment suggestions. They are NOT part of a published version, so a surface
    * that previews "exactly what will be published" must pass false, or it would imply they are.
    */
   showAlignment?: boolean;
@@ -233,7 +233,7 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
             </summary>
             <p className={styles.alignmentNote}>
               References the drafting assistant suggested. They are not requirements, not objectives, and
-              not part of the sealed package; you decide whether any of them fits.
+              not part of the published version; you decide whether any of them fits.
             </p>
             <ul className={styles.keyList}>
               {plan.citations.map((c) => (

@@ -426,6 +426,41 @@ const draftOnceCheck = async (name) => {
     !!d.card && !/draft ready|stays a draft|nothing is decided yet/i.test(d.card) && /Took\s*\d+ s/.test(d.card) && /each cites only objectives you confirmed/.test(d.card) && d.cardHeight <= 130, JSON.stringify(d));
   await page.setViewport(orig);
 };
+/**
+ * C-e item 5, the rail at 1440x900: the header is one line; a row's tag is a stage word (Material, Brief, Objectives, Plan, Version);
+ * when every row would say "just now" the rows show the clock; " · 2 times" is not broken across lines.
+ */
+const railCheck = async (name) => {
+  const orig = page.viewport();
+  if (orig.width < 1100) return;
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await sleep(250);
+  const r = await page.evaluate(() => {
+    const aside = document.querySelector("aside");
+    if (!aside) return null;
+    const h2 = aside.querySelector("h2");
+    const meta = h2?.nextElementSibling;
+    const lineOf = (el) => { const rs = [...el.getClientRects()]; return rs.length; };
+    const rows = [...aside.querySelectorAll("li[data-action]")];
+    const tags = rows.map((li) => li.querySelector("[data-artifact]")?.textContent.replace("Changed: ", "").trim());
+    const times = rows.map((li) => li.querySelector("time")?.textContent.trim());
+    const timesSpan = [...aside.querySelectorAll('[class*="_times_"]')];
+    const hb = h2.getBoundingClientRect(); const mb = meta ? meta.getBoundingClientRect() : null;
+    return {
+      headOneLine: !!mb && Math.abs(hb.top - mb.top) < 12 && hb.height < 36 && meta.getBoundingClientRect().height < 24, titleH: Math.round(hb.height), metaH: mb ? Math.round(mb.height) : null,
+      tags: [...new Set(tags)], times, timesCount: timesSpan.length, timesBroken: timesSpan.some((t) => t.getClientRects().length > 1),
+      nowrap: timesSpan.every((t) => getComputedStyle(t).whiteSpace === "nowrap"), rows: rows.length,
+    };
+  });
+  const okTags = ["Material", "Brief", "Objectives", "Plan", "Version"];
+  check(`rail ${name}: the header ("Behind the scenes" and the count) is on one line`, !!r && r.headOneLine, JSON.stringify(r));
+  check(`rail ${name}: every tag is a stage word (Material, Brief, Objectives, Plan, Version), never Outline, Record or Package`, !!r && r.tags.length > 0 && r.tags.every((t) => okTags.includes(t)), JSON.stringify(r?.tags));
+  check(`rail ${name}: rows do not all say "just now": the clock is shown instead`, !!r && r.rows > 1 && r.times.every((t) => /^\d\d:\d\d(:\d\d)?$/.test(t) || !/just now/.test(t)) && !r.times.every((t) => t === "just now"), JSON.stringify(r?.times));
+  check(`rail ${name}: " · 2 times" stays whole (no break inside it)`, !!r && (r.timesCount === 0 || (r.nowrap && !r.timesBroken)), `times spans: ${r?.timesCount}, nowrap ${r?.nowrap}, broken ${r?.timesBroken}`);
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-rail.png`), clip: { x: 1060, y: 60, width: 380, height: 700 } });
+  await page.setViewport(orig);
+};
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
 async function story(label, narrow) {
@@ -640,6 +675,7 @@ async function story(label, narrow) {
   await polishCheck("plan");
   await navigatorCheck("plan");
   await draftOnceCheck("plan");
+  await railCheck("plan");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",

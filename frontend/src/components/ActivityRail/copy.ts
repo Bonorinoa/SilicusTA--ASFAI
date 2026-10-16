@@ -33,7 +33,7 @@ function num(facts: Facts, key: string): number | null {
 
 const CHECKPOINT_PHRASE: Readonly<Record<string, string>> = {
   files: "Confirmed the material list",
-  outline: "Confirmed the outline",
+  outline: "Confirmed the brief", // the gate's checkpoint is `outline`; the teacher's word is the glossary's: brief
   objectives: "Confirmed the objectives",
   plan: "Confirmed the lesson plan",
 };
@@ -88,19 +88,20 @@ export function sentenceOf(it: Pick<ActivityItem, "action" | "facts"> & Partial<
       return "Confirmed the lesson plan";
     case "package.sealed": {
       const v = num(facts, "version");
-      return v === null ? "Sealed a version for students" : `Sealed version ${v}`;
+      return v === null ? "Published a version for students" : `Published version ${v}`; // glossary: "sealed" appears only in the publish confirmation
     }
     default:
       return "Did something to the course"; // an action this build does not know: say so, never guess
   }
 }
 
+/** The tag on a row: the glossary's stage vocabulary (Material, Brief, Objectives, Plan, Version). The host's artifact ids stay as they are. */
 export const ARTIFACT_LABEL: Readonly<Record<ActivityItem["artifact"], string>> = {
-  record: "Record",
-  outline: "Outline",
+  record: "Material",
+  outline: "Brief",
   objectives: "Objectives",
   plan: "Plan",
-  package: "Package",
+  package: "Version",
 };
 
 /** "just now", "5 minutes ago", "1 hour ago", "2 days ago". A clock a little ahead of the host is still "just now". */
@@ -113,6 +114,10 @@ export function relativeTime(at: number, now: number): string {
   if (hours < 24) return `${plural(hours, "hour")} ago`;
   return `${plural(Math.floor(hours / 24), "day")} ago`;
 }
+
+/** "13:05" (24-hour, local): what a row says when every row would say "just now". With `seconds`, "13:05:12", for rows that share a minute. */
+export const clockTime = (at: number, seconds = false): string =>
+  new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}) });
 
 /** A full local date and time for the `title` of a row, so the exact moment is one hover away. */
 export const exactTime = (at: number): string => new Date(at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });

@@ -138,9 +138,13 @@ export function DecisionCard({
             ? `${decided} of ${proposals.length} decided · ${awaiting} awaiting your decision.`
             : `All ${plural(proposals.length, "proposal")} decided — every objective carries your decision.`;
 
+  // Once the teacher has confirmed: one plain sentence of what was decided (not "checkpoint 3 of 5", which is the gate's counting).
+  const kept = proposals.filter((r) => r.status === "accepted" || r.status === "renamed").length;
   const statusLine =
-    checkpointStatus === "confirmed"
-      ? `${restingLine} Objectives checkpoint confirmed (3 of 5).`
+    checkpointStatus === "confirmed" && allDecided
+      ? proposals.length === 1
+        ? `The objective is decided: ${kept === 1 ? "kept" : "dropped"}.`
+        : `All ${plural(proposals.length, "objective")} decided: ${kept} kept.`
       : restingLine;
 
   const confirmLabel =

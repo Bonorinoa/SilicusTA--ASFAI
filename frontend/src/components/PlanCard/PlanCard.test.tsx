@@ -189,7 +189,7 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
         />,
       );
       const region = screen.getByRole("region", { name: "Suggested alignment" });
-      expect(within(region).getByText(/not requirements, not objectives, and not part of the sealed package/i)).toBeInTheDocument();
+      expect(within(region).getByText(/not requirements, not objectives, and not part of the published version/i)).toBeInTheDocument();
       expect(within(region).getByText(/Following Steps \(ages 8–10\)/)).toBeInTheDocument();
       expect(within(region).getByText(/from ASFAI's skill map/)).toBeInTheDocument();
       expect(within(region).getByText(/from your ontology file/)).toBeInTheDocument();

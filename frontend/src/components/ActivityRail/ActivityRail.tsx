@@ -16,7 +16,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import type { ActivityActor, ActivityItem } from "../../gate/types";
 import { plural } from "../../lib/plural";
-import { ARTIFACT_LABEL, exactTime, relativeTime, sentenceOf } from "./copy";
+import { ARTIFACT_LABEL, clockTime, exactTime, relativeTime, sentenceOf } from "./copy";
 import { laneOf, lanesFor, type Lane } from "./lanes";
 import { useMediaQuery } from "./useMediaQuery";
 import styles from "./ActivityRail.module.css";
@@ -125,6 +125,10 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
   const earlier = newestFirst.length - rows.length;
   const bodyOpen = wide || open;
   const steps = plural(groupRows(shown).length, "step");
+  // When every row would say "just now" the words tell the teacher nothing: show the clock instead (seconds only if the rows share a minute).
+  const allJustNow = rows.length > 1 && rows.every((r) => relativeTime(r.item.at, clock) === "just now");
+  const sameMinute = allJustNow && new Set(rows.map((r) => clockTime(r.item.at))).size === 1;
+  const whenOf = (at: number) => (allJustNow ? clockTime(at, sameMinute) : relativeTime(at, clock));
 
   return (
     <aside className={styles.root} aria-labelledby={ids.title} data-layout={wide ? "wide" : "narrow"}>
@@ -134,7 +138,7 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
         {wide ? (
           <>
             <h2 id={ids.title} className={styles.title}>Behind the scenes</h2>
-            {shown.length > 0 ? <p className={styles.meta}>{steps}, newest first</p> : null}
+            {shown.length > 0 ? <p className={styles.meta}>{steps}<span className={styles.order}>, newest first</span></p> : null}
           </>
         ) : (
           <h2 id={ids.title} className={styles.title}>
@@ -199,7 +203,7 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
                 <div className={styles.text}>
                   <p className={styles.who}>
                     <span>{laneOf(it.actor).name}</span>
-                    <time className={styles.when} dateTime={new Date(it.at).toISOString()} title={exactTime(it.at)}>{relativeTime(it.at, clock)}</time>
+                    <time className={styles.when} dateTime={new Date(it.at).toISOString()} title={exactTime(it.at)}>{whenOf(it.at)}</time>
                   </p>
                   <p className={styles.sentence}>{sentenceOf(it)}{times > 1 && !SUMMABLE.has(it.action) ? <span className={styles.times}>{` · ${times} times`}</span> : null}</p>
                   <p className={styles.artifactLine}>

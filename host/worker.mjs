@@ -123,10 +123,10 @@ export class PlanWorker {
    * else: it is framed as untrusted background in the prompt, and any citation the model
    * emits must be one we supplied. Absent or empty, the call is exactly what it was before.
    *
-   * @param {{objectives: {id: string, statement: string}[], topic?: string, materials?: string[],
+   * @param {{objectives: {id: string, statement: string}[], topic?: string, materials?: string[], course?: string,
    *          context?: {ref: string, label: string, text: string, source: string}[]}} input
    */
-  async draft({ objectives = [], topic = "", materials = [], context = [] } = {}) {
+  async draft({ objectives = [], topic = "", materials = [], course = "", context = [] } = {}) {
     if (!this.enabled) {
       throw new WorkerError(
         "WORKER_NOT_CONFIGURED",
@@ -137,7 +137,7 @@ export class PlanWorker {
       throw new WorkerError("NO_CONFIRMED_OBJECTIVES", "there are no confirmed objectives to draft from");
     }
 
-    const spec = await this.#json(buildPrompt({ objectives, topic, materials, context }));
+    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context }));
     return validateSpec(spec, objectives, context);
   }
 
@@ -262,7 +262,10 @@ function contextBlock(context) {
   ];
 }
 
-function buildPrompt({ objectives, topic, materials, context = [] }) {
+function buildPrompt({ objectives, topic, materials, course = "", context = [] }) {
+  // The teacher's own answer to "which course is this?" ("Grade 3 math, one 45-minute lesson") carries the length and
+  // audience they want. Rendered ONLY when there is one, so without it the prompt is byte-identical to before.
+  const courseLine = oneLine(course, 300);
   return [
     "Draft one lesson plan for a teacher, using ONLY the objectives below.",
     "Cite each activity's objectiveIds exactly as given. Do not invent objectives.",
@@ -275,8 +278,10 @@ function buildPrompt({ objectives, topic, materials, context = [] }) {
     "",
     `Topic: ${topic || "(not given)"}`,
     `Materials: ${materials.length ? materials.join("; ") : "(none named)"}`,
+    ...(courseLine ? [`Course: ${courseLine}`] : []),
     "Objectives:",
     ...objectives.map((o) => `- ${o.id}: ${o.statement}`),
+    ...(courseLine ? ["Fit the plan to any length or audience the teacher states above."] : []),
     ...contextBlock(context),
   ].join("\n");
 }

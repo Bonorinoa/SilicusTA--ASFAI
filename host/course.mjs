@@ -482,6 +482,8 @@ export class CourseSession {
       .map((m) => (m && typeof m === "object" && typeof m.name === "string" ? m.name : null))
       .filter(Boolean);
     const topic = String(this.#intake.answers()?.topic ?? "");
+    // What the teacher SAID the course is (its length, its audience): their answer only, never the course title.
+    const course = String(this.#intake.answers()?.course ?? "");
 
     // Retrieval is per request and is NOT written to the log. A source that sends the teacher's
     // words to ASFAI is consulted only for a course whose answers the teacher has already sent
@@ -492,7 +494,7 @@ export class CourseSession {
 
     let drafted;
     try {
-      drafted = await worker.draft({ objectives, topic, materials, context });
+      drafted = await worker.draft({ objectives, topic, materials, course, context });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }

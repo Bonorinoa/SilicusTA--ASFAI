@@ -27,6 +27,7 @@ import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, 
 import { digestOf } from "./digest.mjs";
 import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 import { reasonsOf } from "./reasons.mjs";
+import { activityOf } from "./activity.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -749,6 +750,7 @@ export class CourseSession {
       revision: this.#revision(),
       versions: this.#gate.versions(),
       timeline: this.#timeline(),
+      activity: activityOf(this.#log.read()),
       ledger: this.#ledger.list(),
       integrity: { events: this.#log.count, head: this.#log.headDigest },
     };

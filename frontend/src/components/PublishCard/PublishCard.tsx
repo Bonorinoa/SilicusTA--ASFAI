@@ -233,7 +233,7 @@ export function PublishCard({
               {status.canPublish
                 ? isSealed
                   ? "Any change ships as a new version."
-                  : "Sealing is irreversible — preview is below."
+                  : "Sealing is irreversible — check the preview above."
                 : "Resolve the blockers above to arm this button."}
             </span>
             <button

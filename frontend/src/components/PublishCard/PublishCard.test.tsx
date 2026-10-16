@@ -121,6 +121,16 @@ describe("PublishCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("points to the preview where it is: above the publish bar, not below", () => {
+    const { container } = render(<PublishCard {...baseProps()} />);
+    const hint = screen.getByText(/sealing is irreversible/i);
+    expect(hint.textContent).not.toMatch(/below/i);
+    expect(hint.textContent).toMatch(/preview above/i);
+    // The claim is about layout: the preview really does precede the hint in reading order.
+    const preview = container.querySelector('[data-print="show"]')!;
+    expect(preview.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("uses singular labels for a one-objective, one-activity, one-minute plan", () => {
     const [objective] = OBJECTIVES;
     const activity = { ...ACTIVITIES[0], minutes: 1 };

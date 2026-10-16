@@ -289,7 +289,7 @@ describe("one stage at a time, one primary action", () => {
     const steps = await screen.findByRole("list", { name: "Steps" });
     const items = within(steps).getAllByRole("listitem");
     expect(items.map((li) => li.textContent?.replace(/\s+/g, " ").trim())).toEqual([
-      expect.stringMatching(/Material/), expect.stringMatching(/Outline/), expect.stringMatching(/Objectives/), expect.stringMatching(/Plan/), expect.stringMatching(/Publish/),
+      expect.stringMatching(/Material/), expect.stringMatching(/Brief/), expect.stringMatching(/Objectives/), expect.stringMatching(/Plan/), expect.stringMatching(/Publish/),
     ]);
     expect(items[3]).toHaveAttribute("aria-current", "step");
     expect(items[0]).toHaveAttribute("data-state", "done");
@@ -420,5 +420,98 @@ describe("copy: the hint under an unanswered question promises, it does not repo
     expect(hint.textContent).toMatch(/recorded on this course when you press Record this answer/i);
     expect(hint.textContent).not.toMatch(/^Recorded on this course[.;]/);
     expect(hint.textContent).toMatch(/Not sent to ASFAI/); // the local app keeps its honesty line
+  });
+});
+
+describe("the workspace: edit any stage without hunting for it", () => {
+  const stepsList = async () => within(await screen.findByRole("list", { name: "Steps" }));
+
+  it("the navigator says where each step stands, in one line", async () => {
+    mockHost(atPlanDraft());
+    render(<LiveCourse />);
+    const steps = await stepsList();
+    const lines = steps.getAllByRole("listitem").map((li) => li.textContent?.replace(/\s+/g, " ").trim());
+    expect(lines[0]).toMatch(/Material.*1 material/);
+    expect(lines[1]).toMatch(/Brief.*how AI answers are built/);
+    expect(lines[2]).toMatch(/Objectives.*1 objective confirmed/);
+    expect(lines[3]).toMatch(/Plan.*Draft · 1 activity · 20 min/);
+    expect(lines[4]).toMatch(/Publish.*Not published/);
+  });
+
+  it("a step is a button only where there is something to look at", async () => {
+    mockHost(atPlanDraft());
+    render(<LiveCourse />);
+    const steps = await stepsList();
+    expect(steps.getByRole("button", { name: /Objectives/ })).toBeInTheDocument();
+    expect(steps.getByRole("button", { name: /Plan/ })).toBeInTheDocument();
+    expect(steps.queryByRole("button", { name: /Publish/ })).not.toBeInTheDocument(); // nothing to publish yet
+  });
+
+  it("edit objectives from the plan, and back: two clicks, one primary each time, the plan as it was", async () => {
+    const { calls } = mockHost(atPlanDraft());
+    const user = userEvent.setup();
+    const { container } = render(<LiveCourse />);
+    await screen.findByRole("heading", { name: PLAN_TITLE });
+    expect(primaries(container)).toHaveLength(1);
+    const writes = () => calls.filter((c) => c.method === "POST").length;
+    const before = writes();
+
+    await user.click(screen.getByRole("button", { name: "Edit objectives" })); // click 1
+    expect(await screen.findByRole("heading", { name: "Learning objectives" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: PLAN_TITLE })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Reword|Edit/ })).toBeInTheDocument(); // the objectives are editable here
+    expect(primaries(container)).toHaveLength(1);
+    expect(primaries(container)[0]).toHaveTextContent("Back to the plan");
+
+    await user.click(screen.getByRole("button", { name: "Back to the plan" })); // click 2
+    expect(await screen.findByRole("heading", { name: PLAN_TITLE })).toBeInTheDocument();
+    expect(primaries(container)).toHaveLength(1);
+    expect(primaries(container)[0]).toHaveTextContent("Confirm the lesson plan");
+    expect(writes()).toBe(before); // looking is not an act
+  });
+
+  it("the navigator opens a finished step as a look, and its one primary goes back", async () => {
+    mockHost(atPlanDraft());
+    const user = userEvent.setup();
+    const { container } = render(<LiveCourse />);
+    await screen.findByRole("heading", { name: PLAN_TITLE });
+    await user.click((await stepsList()).getByRole("button", { name: /Brief/ }));
+    expect(await screen.findByText("Topic")).toBeInTheDocument(); // the brief's own answers are what is on screen
+    expect(screen.queryByRole("heading", { name: PLAN_TITLE })).not.toBeInTheDocument();
+    expect(primaries(container)).toHaveLength(1);
+    expect((await stepsList()).getAllByRole("listitem")[1]).toHaveAttribute("aria-current", "step");
+    await user.click(screen.getByRole("button", { name: "Back to the plan" }));
+    expect(await screen.findByRole("heading", { name: PLAN_TITLE })).toBeInTheDocument();
+  });
+
+  it("once published, objectives are only a look: no verbs, no Edit objectives on the plan", async () => {
+    mockHost(atPublished());
+    const user = userEvent.setup();
+    render(<LiveCourse />);
+    await screen.findByRole("heading", { name: "Version 1 is published" });
+    await user.click((await stepsList()).getByRole("button", { name: /Objectives/ }));
+    expect(await screen.findByRole("heading", { name: "Learning objectives" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add objective/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to the published version" })).toBeInTheDocument();
+  });
+
+  it("a plan that cites an objective the teacher dropped says so in the bar, and offers a new draft first", async () => {
+    const v = atPlanDraft();
+    v.plan = planOf("invalidated");
+    mockHost(v);
+    const { container } = render(<LiveCourse />);
+    expect(await screen.findByText(/cites an objective you dropped, so it cannot be published as it is/)).toBeInTheDocument();
+    expect(primaries(container)).toHaveLength(1);
+    expect(primaries(container)[0]).toHaveTextContent("Draft a new plan from your confirmed objectives");
+  });
+
+  it("the plan sheet keeps its ids in Record details, not in the reading path", async () => {
+    mockHost(atPlanDraft());
+    render(<LiveCourse />);
+    await screen.findByRole("heading", { name: PLAN_TITLE });
+    const details = screen.getByRole("group", { name: "Record details" });
+    expect(within(details).getByText("Lesson plan")).toBeInTheDocument();
+    expect(within(details).getByText(/print cleanly/)).toBeInTheDocument();
+    expect(screen.queryByText(/This page is set to print cleanly — use your browser/)).not.toBeInTheDocument();
   });
 });

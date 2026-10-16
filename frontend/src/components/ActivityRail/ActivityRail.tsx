@@ -42,9 +42,43 @@ const LINES: readonly (readonly number[])[] = [
   [4, 2, 5, 3, 2],
   [3, 5, 2, 4],
 ];
-const WIDE = "(min-width: 72rem)";
+// Three columns (stage navigator, stage, rail) need 80rem; below it the rail is a disclosure under the stage.
+const WIDE = "(min-width: 80rem)";
+/** Rows of the same actor, action and artifact this close together are one decision made in several clicks. */
+const GROUP_GAP_MS = 2 * 60_000;
+/** Actions whose counts add up honestly when merged. Any other action merges only when its rows are identical (then it says how many). */
+const SUMMABLE: ReadonlySet<ActivityItem["action"]> = new Set(["objectives.decided"]);
 const REDUCED = "(prefers-reduced-motion: reduce)";
 const COUNT_WORD: Readonly<Record<number, string>> = { 3: "three", 4: "four" };
+
+/** One row of the rail: a run of consecutive, alike steps (usually just one). `times` > 1 only for identical rows. */
+export interface RailRow { item: ActivityItem; times: number }
+
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const sameKind = (a: ActivityItem, b: ActivityItem) => a.actor === b.actor && a.action === b.action && a.artifact === b.artifact;
+/** Every non-numeric fact (a checkpoint name, a valid flag) must agree: "confirmed the material list" and "confirmed the outline" are two rows. */
+const sameLabels = (a: ActivityItem["facts"], b: ActivityItem["facts"]) => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  const tally = (v: unknown) => v === undefined || isNum(v); // a count may be missing on one side: that side counted none
+  return [...keys].every((k) => (tally(a[k]) && tally(b[k])) || a[k] === b[k]);
+};
+const sameNumbers = (a: ActivityItem["facts"], b: ActivityItem["facts"]) => Object.keys(a).every((k) => !isNum(a[k]) || a[k] === b[k]);
+
+/** Fold consecutive alike steps into one (oldest first in, oldest first out). Pure; the host's list is never changed. */
+export function groupRows(items: readonly ActivityItem[]): RailRow[] {
+  const out: RailRow[] = [];
+  for (const it of items) {
+    const last = out[out.length - 1];
+    const prev = last?.item;
+    const alike = prev && sameKind(prev, it) && it.at - prev.at <= GROUP_GAP_MS && sameLabels(prev.facts, it.facts);
+    const summable = !!prev && (SUMMABLE.has(it.action) || sameNumbers(prev.facts, it.facts));
+    if (!last || !alike || !summable) { out.push({ item: it, times: 1 }); continue; }
+    const facts: Record<string, string | number | boolean> = { ...prev.facts };
+    for (const [k, v] of Object.entries(it.facts)) facts[k] = isNum(v) && isNum(facts[k]) ? (facts[k] as number) + v : v;
+    out[out.length - 1] = { item: { ...it, facts }, times: last.times + 1 };
+  }
+  return out;
+}
 
 /** A dot in the actor's column: who, at a glance, with no colour doing the work alone (the name is always written too). */
 function Track({ lanes, actor }: { lanes: readonly Lane[]; actor?: ActivityActor }) {
@@ -86,11 +120,11 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
 
   if (shown.length === 0 && !working) return null;
 
-  const newestFirst = [...shown].reverse();
+  const newestFirst = groupRows(shown).reverse();
   const rows = all || newestFirst.length <= FOLD_AT ? newestFirst : newestFirst.slice(0, RECENT);
   const earlier = newestFirst.length - rows.length;
   const bodyOpen = wide || open;
-  const steps = plural(shown.length, "step");
+  const steps = plural(groupRows(shown).length, "step");
 
   return (
     <aside className={styles.root} aria-labelledby={ids.title} data-layout={wide ? "wide" : "narrow"}>
@@ -159,7 +193,7 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
 
         {rows.length > 0 ? (
           <ol className={styles.rows}>
-            {rows.map((it) => (
+            {rows.map(({ item: it, times }) => (
               <li key={it.seq} className={styles.row} data-seq={it.seq} data-actor={it.actor} data-action={it.action}>
                 <Track lanes={lanes} actor={it.actor} />
                 <div className={styles.text}>
@@ -167,7 +201,7 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
                     <span>{laneOf(it.actor).name}</span>
                     <time className={styles.when} dateTime={new Date(it.at).toISOString()} title={exactTime(it.at)}>{relativeTime(it.at, clock)}</time>
                   </p>
-                  <p className={styles.sentence}>{sentenceOf(it)}</p>
+                  <p className={styles.sentence}>{sentenceOf(it)}{times > 1 && !SUMMABLE.has(it.action) ? <span className={styles.times}>{` · ${times} times`}</span> : null}</p>
                   <p className={styles.artifactLine}>
                     <span className={styles.artifact} data-artifact=""><span className={styles.srOnly}>Changed: </span>{ARTIFACT_LABEL[it.artifact]}</span>
                   </p>

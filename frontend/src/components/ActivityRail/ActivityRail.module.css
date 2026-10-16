@@ -115,8 +115,11 @@
 .more:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* ---- wide: a quiet sticky column the page places; narrow: a disclosure under the stage ---- */
-@media (min-width: 72rem) {
-  .root { position: sticky; top: var(--space-6); align-self: start; max-height: calc(100vh - var(--space-12)); overflow-y: auto; }
+/* The rail owns its own scroll: pinned from the top of the content, as tall as the window minus its margins. The page
+   lays it in a full-height cell so it has room to stay put while the stage scrolls. */
+@media (min-width: 80rem) {
+  .root { position: sticky; top: var(--space-5); max-height: calc(100vh - var(--space-10)); overflow-y: auto; overscroll-behavior: contain; }
 }
+.times { color: var(--color-ink-muted); }
 
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

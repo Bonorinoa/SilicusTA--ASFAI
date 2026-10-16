@@ -1,0 +1,122 @@
+/* ActivityRail — a marginal note in a well-set book, not a dashboard. Hairlines, paper and ink; one accent.
+   Serif is the sentence (the record's voice), sans is the chrome. Tokens only: no colour is written here.
+   The one thing that moves is the step in flight: lines of type taking ink. It is still under
+   prefers-reduced-motion, and it carries no measure of progress on purpose. */
+
+.root {
+  box-sizing: border-box; width: 100%; min-width: 0;
+  display: flex; flex-direction: column;
+  border-top: 2px solid var(--color-rule-strong);
+  font-family: var(--font-ui); color: var(--color-ink);
+}
+
+/* ---- the title ---- */
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0 var(--space-2); }
+.title {
+  margin: 0; flex: 1 1 auto; min-width: 0;
+  font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--leading-lg);
+  font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink);
+}
+.meta {
+  margin: 0; font-family: var(--font-ui); font-size: var(--text-xs); line-height: var(--leading-xs);
+  font-weight: var(--weight-regular); letter-spacing: 0; color: var(--color-ink-muted); white-space: nowrap;
+}
+/* Narrow: the whole title is the disclosure (44px tall, full width). */
+.toggle {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);
+  width: 100%; min-height: 44px; margin: 0; padding: 0 var(--space-1) 0 0; box-sizing: border-box; /* room for the rotated chevron, whose box would otherwise overflow by 2px */
+  background: transparent; border: none; cursor: pointer; text-align: left;
+  font: inherit; letter-spacing: inherit; color: inherit;
+}
+.toggle > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.toggle:hover > span:first-child { text-decoration: underline; text-decoration-color: var(--color-accent-line); text-underline-offset: 4px; }
+.toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.chevron {
+  flex: none; align-self: center; width: 0.5rem; height: 0.5rem;
+  border-right: 1.5px solid var(--color-ink-soft); border-bottom: 1.5px solid var(--color-ink-soft);
+  transform: rotate(-45deg); transition: transform var(--duration-base) var(--ease-settle);
+}
+.toggle[aria-expanded="true"] .chevron { transform: rotate(45deg); }
+
+/* ---- the lanes: a dot in the actor's column, a hairline per column ---- */
+.track { flex: none; display: flex; align-self: stretch; margin-left: 4px; border-right: 1px solid var(--color-rule); }
+.lane { position: relative; flex: none; width: 0.875rem; border-left: 1px solid var(--color-rule); }
+.lane[data-on]::after {
+  content: ""; position: absolute; top: calc(var(--space-3) + 3px); left: -4px;
+  width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--color-ink-soft);
+}
+.lane[data-on][data-lane="teacher"]::after { background: var(--color-accent); } /* the teacher acts: the one accent */
+.key .lane[data-on]::after { top: 50%; margin-top: -3.5px; }
+
+.key { list-style: none; margin: 0; padding: 0 0 var(--space-3); display: flex; flex-direction: column; border-bottom: 1px solid var(--color-rule); }
+.keyItem { display: flex; align-items: stretch; min-height: 2.25rem; }
+.keyText { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); padding: var(--space-2) 0 var(--space-2) var(--space-3); min-width: 0; }
+.keyName { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-micro); color: var(--color-ink); }
+.keyBlurb { font-family: var(--font-display); font-style: italic; font-size: var(--text-base); line-height: var(--leading-sm); color: var(--color-ink-soft); overflow-wrap: anywhere; }
+
+/* ---- rows ---- */
+.body { display: flex; flex-direction: column; }
+.body[hidden] { display: none; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row, .now { display: flex; align-items: stretch; min-width: 0; }
+.row + .row { border-top: 1px solid var(--color-rule); }
+.text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) 0 var(--space-3) var(--space-3); }
+.who {
+  margin: 0; display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; column-gap: var(--space-3);
+  font-size: var(--text-2xs); line-height: var(--leading-2xs); font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--color-ink-muted);
+}
+.when { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: var(--weight-regular); letter-spacing: 0; text-transform: none; color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+.sentence {
+  margin: 0; font-family: var(--font-display); font-size: var(--text-base); line-height: var(--leading-base);
+  color: var(--color-ink); overflow-wrap: anywhere;
+}
+.artifactLine { margin: 0; }
+.artifact {
+  display: inline-block; padding: 0 var(--space-2); border: 1px solid var(--color-rule); border-radius: var(--radius-xs);
+  font-size: var(--text-xs); line-height: var(--leading-xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-soft);
+}
+.fine { margin: 0; font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-soft); overflow-wrap: anywhere; }
+
+/* ---- the step in flight ---- */
+.now { background: var(--color-accent-soft); border-bottom: 1px solid var(--color-accent-line); margin-bottom: var(--space-3); }
+.now .who { color: var(--color-accent-strong); justify-content: flex-start; }
+.status { margin-left: var(--space-3); font-weight: var(--weight-regular); letter-spacing: var(--tracking-micro); text-transform: none; font-size: var(--text-xs); }
+.now .sentence { font-weight: var(--weight-medium); }
+.now .fine { color: var(--color-ink-soft); }
+.sees { display: flex; flex-direction: column; gap: var(--space-1); padding-top: var(--space-2); margin-top: var(--space-1); border-top: 1px solid var(--color-accent-line); }
+
+/* Two ragged lines of greeked type; each word takes ink at its own scattered moment, then dries. No direction, so no hint of progress. */
+.ink { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0 var(--space-1); min-width: 0; }
+.line { display: flex; gap: 0.6ch; align-items: center; height: 0.25rem; flex-wrap: nowrap; overflow: hidden; min-width: 0; }
+.word { flex: none; height: 0.25rem; border-radius: 0; background: var(--color-accent-line); }
+.now[data-motion="live"] .word { animation: set 3.9s var(--ease-standard) infinite; animation-delay: calc(var(--d) * 230ms); }
+@keyframes set {
+  0%   { background: var(--color-rule); }
+  12%  { background: var(--color-accent); }
+  36%  { background: var(--color-accent-line); }
+  68%  { background: var(--color-accent-line); }
+  90%  { background: var(--color-rule); }
+  100% { background: var(--color-rule); }
+}
+.now[data-motion="still"] .word { animation: none; background: var(--color-accent-line); }
+@media (prefers-reduced-motion: reduce) {
+  .word { animation: none; background: var(--color-accent-line); }
+  .chevron { transition: none; }
+}
+
+/* ---- earlier steps ---- */
+.more {
+  align-self: flex-start; min-height: 44px; margin-left: calc(var(--space-1) * -1); padding: 0 var(--space-1);
+  background: transparent; border: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-accent-strong);
+}
+.more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.more:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ---- wide: a quiet sticky column the page places; narrow: a disclosure under the stage ---- */
+@media (min-width: 72rem) {
+  .root { position: sticky; top: var(--space-6); align-self: start; max-height: calc(100vh - var(--space-12)); overflow-y: auto; }
+}
+
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

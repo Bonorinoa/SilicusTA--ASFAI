@@ -64,8 +64,9 @@ export function Workbench() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  // The online app reads as the product: a masthead, no tabs. The component workbench stays one quiet link away.
-  const product = BROWSER_MODE && tab === "live";
+  // The course page reads as the product in BOTH apps (online and local): a masthead, no tabs. The component
+  // workbench stays one quiet footer link away, and its hash routes (#/decision, #/publish, ...) still work.
+  const product = tab === "live";
 
   return (
     <div className={styles.shell}>
@@ -115,7 +116,8 @@ export function Workbench() {
       {product ? (
         <footer className={styles.colophon} data-print="hide">
           <p className={styles.colophonText}>
-            A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+            A prototype. Teachers decide every step; the AI only proposes and drafts.{" "}
+            {BROWSER_MODE ? "Your record stays in this browser." : "Your record stays on this computer."}
           </p>
           <a className={styles.colophonLink} href="#/decision" onClick={() => setTab("decision")}>Design system</a>
         </footer>

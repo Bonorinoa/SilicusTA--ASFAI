@@ -184,6 +184,9 @@ const checkNarrow = async (stage) => {
   }
 };
 
+// C1.5 helpers: the stage page marks exactly one primary action; the plan's title is the plan's text.
+const primaryCount = () => page.evaluate(() => [...document.querySelectorAll('[data-primary="true"]')].filter((b) => b.offsetParent !== null).length);
+const countIn = (t) => page.evaluate((s) => document.body.innerText.split(s).length - 1, t);
 const bodyHas = (t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
 const clickText = (text) => page.evaluate((t) => {
   const b = [...document.querySelectorAll("button")].find((x) =>
@@ -243,6 +246,15 @@ async function story(label, narrow) {
   check("the header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
   check("the component workbench stays reachable through a discreet footer 'Design system' link", first.design.some(([t, h]) => t === "Design system" && h === "#/decision"));
   await shot("00-first-impression");
+  // C1.5 (new): the tour opens on a teacher's first visit and not on a reload; the passes use a fresh context each.
+  check("tour: opens on the first visit, before any course exists", await poll(() => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"]'))));
+  if (narrow) await checkNarrow("first-run tour");
+  await shot("00b-tour");
+  await page.click('button[aria-label="Close the tour"]');
+  check("tour: closing it puts the cursor in the first question", await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]') && document.activeElement?.id === "onboarding-reply")));
+  await page.reload({ waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector("h1") !== null);
+  check("tour: does not open again on reload", await page.evaluate(() => !document.querySelector('[role="dialog"]')));
   await page.click('footer a[href="#/decision"]');
   await poll(() => page.evaluate(() => document.querySelector('section[aria-label="Objective proposals"]') !== null));
   check("the Design system link opens the workbench, with a way back to the course", await page.evaluate(() => [...document.querySelectorAll("nav a")].some((a) => a.textContent === "Back to the course")));
@@ -360,11 +372,13 @@ async function story(label, narrow) {
 
   if (narrow) await checkNarrow("confirmed objectives");
   // ---- plan: draft, confirm
-  await poll(() => bodyHas("Draft the plan from your confirmed objectives"));
+  // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
+  await poll(() => bodyHas("build the plan"));
+  check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
   check("three confirmed objectives are on the page to be sent", confirmedStatements.length === 3 && confirmedStatements.every(Boolean), String(confirmedStatements.length));
   const planBodiesBefore = api.workerBodies.length;
-  await clickText("Draft the plan from your confirmed objectives");
+  await clickText("Confirm 3 objectives · build the plan");
   await page.waitForSelector('section[data-phase="running"][data-variant="card"]', { timeout: 5000 });
   if (narrow) await checkNarrow("waiting card, drafting the plan");
   const running = () => page.evaluate(() => document.querySelector('section[data-phase="running"][data-variant="card"]')?.innerText ?? "");
@@ -406,12 +420,20 @@ async function story(label, narrow) {
   await poll(() => bodyHas("How plants eat"));
   check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
   await poll(() => bodyHas("Confirm the lesson plan"));
+  // C1.5 (new): the plan stage. The mock plan has 3 activities, each with one "Look at a leaf." line: the plan is on the page ONCE.
+  check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+  check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
+  check("rail: a worker row after drafting, and no ASFAI lane in the online app",
+    await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && ![...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
   if (narrow) await checkNarrow("plan card, drafted");
   await clickText("Confirm the lesson plan");
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
   check("plan confirmed on the record", true);
 
   if (narrow) await checkNarrow("plan card");
+  await poll(() => bodyHas("Review & publish"));
+  check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+  check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   // ---- publish (review -> confirm step -> publish)
   await poll(async () => {
     const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
@@ -433,6 +455,10 @@ async function story(label, narrow) {
   check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
 
   if (narrow) await checkNarrow("publish card, sealed");
+  check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+  check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
+  await clickText("Try it as a student");
+  check("'Try it as a student' puts the cursor in the student's question box", await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
   // ---- a student asks; nothing is written
   const beforeAsk = JSON.stringify(await stored());
   await page.waitForSelector('section[aria-label="Try it as a student"] input');
@@ -465,6 +491,8 @@ async function story(label, narrow) {
   await page.reload({ waitUntil: "networkidle0" });
   await poll(() => bodyHas("How plants eat"));
   check("after a reload the published course is still there", (await bodyHas("published, version 1")) || (await bodyHas("Version 1")));
+  // C1.5: "Verify the event log" lives under Record details (a disclosure); a reload closes it, so open it.
+  await page.evaluate(() => { const d = document.querySelector('details[aria-label="Record details"]'); if (d) d.open = true; });
   await poll(() => bodyHas("Verify the event log"));
   await clickText("Verify the event log");
   await poll(() => bodyHas("chain intact"));
@@ -519,6 +547,8 @@ async function story(label, narrow) {
   await poll(() => bodyHas("How plants eat"));
   s = await stored();
   check("import brings the course back, record intact", s.events.length === v.events && verifyRecords(s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line))).head === v.head);
+  // C1.5: "Verify the event log" lives under Record details (a disclosure); a reload closes it, so open it.
+  await page.evaluate(() => { const d = document.querySelector('details[aria-label="Record details"]'); if (d) d.open = true; });
   await poll(() => bodyHas("Verify the event log"));
   await clickText("Verify the event log");
   await poll(() => bodyHas("chain intact"));
@@ -556,6 +586,7 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
     await story(label, label.startsWith("narrow"));
     check("the whole flow completed", true);
   } catch (e) {
+    console.log("[dump] " + (await page.evaluate(() => location.hash + " :: " + document.body.innerText.slice(0, 1500)).catch(() => "?")));
     console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
     check("the whole flow completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
   }

@@ -75,6 +75,13 @@ try {
       say(m.clipped.length === 0, `${name}: nothing clips its own content`, m.clipped.map((o) => `${o.tag}.${o.cls} ${o.content}>${o.box} "${o.text}"`).join(" | "));
     };
     await measure("landing");
+    // C1.5: the stage page opens a first-run tour on a first visit (an older deployed build has none). Measure it, then
+    // close it the way a teacher does, so the onboarding below is what is measured.
+    if (await page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"]'))) {
+      await measure("first-run tour");
+      await page.evaluate(() => document.querySelector('button[aria-label="Close the tour"]').click());
+      await page.waitForFunction(() => !document.querySelector('[role="dialog"]'));
+    }
 
     // The onboarding the product owner was looking at when they reported the layout.
     const reply = async (text) => {

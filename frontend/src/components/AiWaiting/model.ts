@@ -59,7 +59,7 @@ export type SentMaterial = { kind: "text"; name: string; chars: number } | { kin
 
 export type WaitingStep =
   | { kind: "objectives"; materials: readonly SentMaterial[]; topic: string; course: string }
-  | { kind: "plan"; objectives: readonly string[]; topic: string; materialNames: readonly string[]; referenceNotes: boolean }
+  | { kind: "plan"; objectives: readonly string[]; topic: string; materialNames: readonly string[]; referenceNotes: boolean; course?: string }
   | { kind: "answer"; question: string; earlierTurns: number; title: string; version: number; objectives: number; activities: number };
 
 export interface SentGroup {
@@ -92,9 +92,19 @@ export function describeStep(step: WaitingStep): StepText {
       { heading: "Objectives", items: step.objectives, quote: true, ordered: true },
     ];
     if (step.topic) sends.push({ heading: "Topic", items: [step.topic], quote: true });
+    // The host sends the teacher's course answer (its length, its audience) only when there is one; so does this list.
+    const course = step.course?.trim() ?? "";
+    if (course) sends.push({ heading: "Course", items: [course], quote: true });
     if (step.materialNames.length) sends.push({ heading: "Material names", items: step.materialNames });
     if (step.referenceNotes) sends.push({ heading: "Reference notes", items: ["Short excerpts from this host\u2019s reference sources, only where one matches. The plan marks them as suggestions."] });
-    sends.push({ heading: "Instructions", items: ["Use only these objectives and cite each by its internal id.", "Student chat is never evidence of learning."] });
+    sends.push({
+      heading: "Instructions",
+      items: [
+        "Use only these objectives and cite each by its internal id.",
+        "Student chat is never evidence of learning.",
+        ...(course ? ["Fit the plan to any length or audience you state in your course answer."] : []),
+      ],
+    });
     return {
       title: `Drafting a lesson plan from your ${plural(n, "confirmed objective", "confirmed objectives")}`,
       doneTitle: `Drafted a lesson plan from your ${plural(n, "confirmed objective", "confirmed objectives")}`,

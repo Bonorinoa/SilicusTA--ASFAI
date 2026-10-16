@@ -164,6 +164,26 @@ describe("AiWaiting — what the model sees", () => {
     expect(within(panel).getByText("What it never sees")).toBeInTheDocument();
   });
 
+  it("plan: the teacher's course answer is listed, quoted, with the instruction that goes with it; absent, nothing changes", () => {
+    const withCourse = describeStep({ ...PLAN_STEP, course: "Grade 3 math, one 45-minute lesson" });
+    const group = withCourse.sends.find((g) => g.heading === "Course");
+    expect(group).toEqual({ heading: "Course", items: ["Grade 3 math, one 45-minute lesson"], quote: true });
+    expect(withCourse.sends.map((g) => g.heading)).toEqual(["Objectives", "Topic", "Course", "Material names", "Instructions"]);
+    expect(withCourse.sends.at(-1)?.items).toContain("Fit the plan to any length or audience you state in your course answer.");
+
+    for (const course of [undefined, "", "   "]) {
+      const t = describeStep({ ...PLAN_STEP, course });
+      expect(t.sends.map((g) => g.heading)).toEqual(["Objectives", "Topic", "Material names", "Instructions"]);
+      expect(t.sends.at(-1)?.items).toEqual(["Use only these objectives and cite each by its internal id.", "Student chat is never evidence of learning."]);
+    }
+  });
+
+  it("plan: the open disclosure shows the course", () => {
+    render(<AiWaiting step={{ ...PLAN_STEP, course: "Grade 3 math, one 45-minute lesson" }} phase="running" />);
+    fireEvent.click(screen.getByRole("button", { name: "What the model sees" }));
+    expect(screen.getByText(/Grade 3 math, one 45-minute lesson/)).toBeInTheDocument();
+  });
+
   it("objectives: lists each material with its character count, and a link as a link", () => {
     const t = describeStep(OBJ_STEP);
     expect(t.sends[0].items).toEqual([

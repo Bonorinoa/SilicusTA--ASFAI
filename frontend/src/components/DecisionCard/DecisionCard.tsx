@@ -42,6 +42,14 @@ export interface DecisionCardProps {
    * objective the current plan cites. Omitted means "yes"; `false` is a host with no drafting worker.
    */
   canRedraftPlan?: boolean;
+  /**
+   * Show the decisions and nothing else: no verbs, no Add, no confirm bar. Used for objectives the teacher has
+   * already decided, until they choose to revise (the verbs and their meaning are unchanged; they are only not
+   * offered). Display only: the gate still decides what a verb does.
+   */
+  readOnly?: boolean;
+  /** Leave the CONFIRM bar out (the verbs stay). Used where the page's own primary action is elsewhere. */
+  hideBar?: boolean;
 }
 
 const STATUS_LABEL: Record<ProposalView["status"], string> = {
@@ -65,6 +73,8 @@ export function DecisionCard({
   checkpointStatus = "open",
   courseLabel,
   canRedraftPlan = true,
+  readOnly = false,
+  hideBar = false,
 }: DecisionCardProps) {
   const [adding, setAdding] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -163,8 +173,9 @@ export function DecisionCard({
         {courseLabel ? <p className={styles.eyebrow}>{courseLabel}</p> : null}
         <h2 className={styles.heading}>Learning objectives</h2>
         <p className={styles.subhead}>
-          Proposed for your course. Nothing is confirmed until you decide — accept, rename in your
-          own words, drop, or add one of your own. Once confirmed, an objective's wording can still be edited.
+          {readOnly
+            ? "Your decisions on each objective. Choose Revise this course to change one."
+            : "Proposed for your course. Nothing is confirmed until you decide — accept, rename in your own words, drop, or add one of your own. Once confirmed, an objective's wording can still be edited."}
         </p>
       </header>
 
@@ -173,12 +184,12 @@ export function DecisionCard({
       ) : (
         <ol className={styles.rows} role="list">
           {rows.map((row, index) => (
-            <ProposalRow key={row.id} row={row} index={index + 1} onDispatch={onDispatch} canRedraftPlan={canRedraftPlan} />
+            <ProposalRow key={row.id} row={row} index={index + 1} onDispatch={onDispatch} canRedraftPlan={canRedraftPlan} readOnly={readOnly} />
           ))}
         </ol>
       )}
 
-      <div className={styles.addRow}>
+      {readOnly ? null : <div className={styles.addRow}>
         {adding ? (
           <AddEditor
             onCancel={() => setAdding(false)}
@@ -199,9 +210,9 @@ export function DecisionCard({
             <span>Add objective</span>
           </button>
         )}
-      </div>
+      </div>}
 
-      <footer
+      {readOnly || hideBar ? null : <footer
         className={styles.confirmBar}
         data-armed={allDecided ? "true" : "false"}
         data-print="hide"
@@ -227,6 +238,7 @@ export function DecisionCard({
           <button
             type="button"
             className={styles.confirmButton}
+            data-primary="true"
             data-armed={allDecided ? "true" : "false"}
             aria-disabled={!allDecided}
             aria-describedby="confirm-hint"
@@ -241,7 +253,7 @@ export function DecisionCard({
             {confirmLabel}
           </button>
         </div>
-      </footer>
+      </footer>}
 
     </section>
   );
@@ -254,11 +266,13 @@ function ProposalRow({
   index,
   onDispatch,
   canRedraftPlan,
+  readOnly,
 }: {
   row: ProposalView;
   index: number;
   onDispatch: (intent: DecisionIntent) => void;
   canRedraftPlan: boolean;
+  readOnly: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   // Which verb the open editor will send: rename answers a PROPOSAL, reword edits a CONFIRMED objective.
@@ -579,14 +593,14 @@ function ProposalRow({
           </p>
           {alignmentKey ? <p className={styles.alignmentKey}>{alignmentKey}</p> : null}
 
-          {actionsArea()}
+          {readOnly ? null : actionsArea()}
 
           {row.status === "dropped" ? (
             <p className={styles.droppedNote}>
               Dropped. Dropped objectives cannot be revived — add a new objective to replace it.
             </p>
           ) : null}
-          {decided && row.status !== "dropped" && !editing && !confirmingDrop ? (
+          {!readOnly && decided && row.status !== "dropped" && !editing && !confirmingDrop ? (
             <p className={styles.decidedNote}>
               {canReword
                 ? "Decided. You can edit its wording, or revoke it."

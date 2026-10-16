@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import type {
   ActivityView,
   LessonPlanView,
+  PlanInvalidationView,
   ObjectiveCiteView,
   PackageVersionView,
   PublishStatusView,
 } from "../../gate/types";
 import { PlanCard } from "../PlanCard";
 import { plural } from "../../lib/plural";
+import { reasonsFor } from "../../live/reasonText";
 import styles from "./PublishCard.module.css";
 
 /**
@@ -37,6 +39,11 @@ export interface PublishCardProps {
   courseId: string;
   /** The course package title (what gets sealed). */
   title: string;
+  /**
+   * The card's own heading. Defaults to the package title; a page that already shows the plan sheet under it
+   * passes a heading of its own so the title is not set twice in a row.
+   */
+  heading?: string;
   /** Live `publishStatus()` from the gate. */
   status: PublishStatusView;
   /** Confirmed objectives — the citation key of what ships. */
@@ -55,6 +62,9 @@ export interface PublishCardProps {
   onPublish: () => void;
   /** Parent downloads the sealed package as JSON with a sha-256 digest. */
   onExport?: () => void;
+  /** Passed through to the embedded plan sheet, so the preview says what the plan page itself would say. */
+  invalidation?: PlanInvalidationView | null;
+  rewordedSince?: readonly { id: string; before: string | null; after: string }[];
 }
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -67,6 +77,7 @@ export function PublishCard({
   courseLabel,
   courseId,
   title,
+  heading,
   status,
   objectives,
   activities,
@@ -77,6 +88,8 @@ export function PublishCard({
   teacherName,
   onPublish,
   onExport,
+  invalidation,
+  rewordedSince,
 }: PublishCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -118,12 +131,15 @@ export function PublishCard({
     flashTimer.current = setTimeout(() => setHintFlash(false), 1200);
   };
 
+  // The reasons in a teacher's words (the host classifies each gate blocker; the raw text lives in Record details).
+  const reasons = reasonsFor(status);
+
   const reviewClick = () => {
     if (!status.canPublish) {
       const text =
-        status.blockers.length === 1
-          ? `Cannot publish yet: ${status.blockers[0]}`
-          : `Cannot publish yet — ${status.blockers.length} things need your attention first.`;
+        reasons.length === 1
+          ? `Cannot publish yet: ${reasons[0]}`
+          : `Cannot publish yet — ${reasons.length} things need your attention first.`;
       flashHint(text);
       return;
     }
@@ -157,7 +173,7 @@ export function PublishCard({
       <header className={styles.header}>
         {courseLabel ? <p className={styles.eyebrow}>{courseLabel}</p> : null}
         <div className={styles.titleRow}>
-          <h2 className={styles.heading}>{title}</h2>
+          <h2 className={styles.heading}>{heading ?? title}</h2>
           <p className={styles.statusChip} data-status={chipState}>
             {statusChip}
           </p>
@@ -176,15 +192,17 @@ export function PublishCard({
             objectives={objectives}
             teacher={teacherName ? { name: teacherName } : undefined}
             showAlignment={false}
+            invalidation={invalidation}
+            rewordedSince={rewordedSince}
           />
         </div>
       ) : (
         <p className={styles.empty}>No confirmed lesson plan yet — publish is blocked until a plan is confirmed.</p>
       )}
 
-      {!status.canPublish && status.blockers.length > 0 ? (
+      {!status.canPublish && reasons.length > 0 ? (
         <ul className={styles.blockers} data-print="hide" aria-label="Why this package cannot be published">
-          {status.blockers.map((reason) => (
+          {reasons.map((reason) => (
             <li key={reason}>{reason}</li>
           ))}
         </ul>
@@ -204,7 +222,7 @@ export function PublishCard({
               ? `Version ${published!.version} is sealed. Unpublished changes are ready for ${nextVersionLabel.toLowerCase()}.`
               : status.canPublish
                 ? `Ready — ${plural(objectives.length, "objective")}, ${plural(activities.length, "activity", "activities")}, ${plural(totalMinutes, "minute")}.`
-                : `Blocked — ${plural(status.blockers.length, "reason")} the teacher must resolve first.`}
+                : `Blocked — ${plural(reasons.length, "reason")} the teacher must resolve first.`}
           </p>
           <div className={styles.confirmActions}>
             <span
@@ -221,6 +239,7 @@ export function PublishCard({
             <button
               type="button"
               className={styles.confirmButton}
+              data-primary="true"
               data-armed={status.canPublish ? "true" : "false"}
               aria-disabled={!status.canPublish}
               aria-describedby="publish-hint"

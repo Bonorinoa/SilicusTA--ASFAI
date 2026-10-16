@@ -321,7 +321,7 @@ check("rail: a worker row names the drafting model after drafting, and ASFAI has
 await poll(() => page.evaluate(() => !!document.querySelector('section[aria-label="Suggested alignment"]')));
 await page.evaluate(() => document.querySelectorAll('section[aria-label="Suggested alignment"] details').forEach((d) => { d.open = true; })); // collapsed by default (workspace); open it as a teacher would, or innerText hides it and the negative half passes vacuously
 check("the plan shows suggested alignment from ASFAI's graph, labelled as a suggestion",
-  (await bodyHas(page, "from ASFAI's skill map")) && (await bodyHas(page, "not part of the sealed package")));
+  (await bodyHas(page, "from ASFAI's skill map")) && (await bodyHas(page, "not part of the published version")));
 check("the publish preview does NOT show the suggestions (they are not in the package)",
   await page.evaluate(() => document.querySelectorAll('section[aria-label="Suggested alignment"]').length === 1));
 

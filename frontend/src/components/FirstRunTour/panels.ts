@@ -41,8 +41,8 @@ export const PANELS: readonly TourPanel[] = [
   {
     title: "Publish, then let students ask.",
     body: [
-      "Publishing seals a version.",
-      "Students\u2019 questions are answered only from what you sealed; asking is never evidence of learning.",
+      "Publishing makes a version that cannot change; changes become the next version.",
+      "Students\u2019 questions are answered only from the version you published; asking is never evidence of learning.",
     ],
     actors: ["teacher", "silicus"],
   },

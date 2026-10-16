@@ -63,5 +63,5 @@ when it ran ("Checked 2 minutes ago: no format problems").
 | suggested by Silicus | drafting model, complementing the teacher's outcomes | model |
 
 Suggested objectives: the teacher must have at least one outcome of their own first; Silicus suggests at most
-three; each one is accepted, reworded or dropped like any other proposal. Button: "Suggest up to 3 more".
+three; each one is accepted, renamed or dropped like any other proposal (the buttons say Accept, Rename, Drop). Button: "Suggest up to 3 more".
 Explainer under it: "Silicus reads your outcomes and suggests ones that would round out the lesson. You decide."

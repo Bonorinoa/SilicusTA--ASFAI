@@ -269,7 +269,7 @@ export function PublishCard({
               ref={keepRef}
               onClick={() => {
                 setConfirming(false);
-                flashHint("Seal cancelled — nothing was published.");
+                flashHint("Cancelled — nothing was published.");
               }}
             >
               Keep editing

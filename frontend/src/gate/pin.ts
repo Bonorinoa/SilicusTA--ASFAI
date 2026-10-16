@@ -92,7 +92,7 @@ export function comparePin(pin: CoursePin, current: CourseAnchor | null): PinCom
   if (current.versionDigest !== pin.versionDigest) {
     return {
       status: "changed",
-      detail: `the sealed record for version ${pin.version} differs from what you pinned`,
+      detail: `the published record for version ${pin.version} differs from what you pinned`,
     };
   }
   if (current.events < pin.events) {
@@ -107,5 +107,5 @@ export function comparePin(pin: CoursePin, current: CourseAnchor | null): PinCom
       detail: `the record has grown since you pinned (${pin.events} to ${current.events} events) — expected if you have worked since`,
     };
   }
-  return { status: "ok", detail: `version ${pin.version} is exactly as you sealed it` };
+  return { status: "ok", detail: `version ${pin.version} is exactly as you published it` };
 }

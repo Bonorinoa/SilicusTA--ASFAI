@@ -253,7 +253,7 @@ export function OnboardingChat({
       )}
       {view ? null : (
         <p className={styles.railNote}>
-          After this: the material list, the outline, your objectives, the lesson plan, then publish.
+          After this: the material list, the brief, your objectives, the lesson plan, then publish.
         </p>
       )}
       <ol className={styles.turns}>
@@ -359,7 +359,7 @@ export function OnboardingChat({
           {!fromAsfai && asfai?.connected ? (
             <p className={styles.kept}>
               <span className={styles.recommended}>Recommended:</span> let ASFAI ask. It aligns the lesson to its skill map
-              and checks the outline. Only your answers are sent.{" "}
+              and checks the plan against its format. Only your answers are sent.{" "}
               <button type="button" className={styles.quiet} onClick={onAsk} disabled={busy}>Use ASFAI's questionnaire</button>
             </p>
           ) : null}
@@ -372,7 +372,7 @@ export function OnboardingChat({
           {!fromAsfai && asfai && !asfai.connected && asfai.available !== false ? (
             <p className={styles.kept}>
               <span className={styles.recommended}>Recommended:</span> connect ASFAI to align the lesson to its skill map and have
-              the outline checked. Nothing waits on it — you can answer below now. Nothing is sent until you approve it.{" "}
+              the plan checked against its format. Nothing waits on it — you can answer below now. Nothing is sent until you approve it.{" "}
               <button type="button" className={styles.quiet} onClick={onConnect} disabled={busy}>Connect ASFAI</button>{" "}
               <button type="button" className={styles.quiet} onClick={onRefresh} disabled={busy}>I approved it</button>
             </p>
@@ -428,7 +428,7 @@ export function OnboardingChat({
           ) : null}
           {view.intake.refusal ? <p className={styles.refusal}>{refusalSentence(view.intake.refusal.code)}</p> : null}
           {fromAsfai && view.intake.outlineAuthorized ? (
-            <p className={styles.kept}>ASFAI has your answers. Confirming the outline is still your decision.</p>
+            <p className={styles.kept}>ASFAI has your answers. Confirming the brief is still your decision.</p>
           ) : null}
         </section>
       ) : null}

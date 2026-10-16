@@ -224,7 +224,7 @@ export function VersionDiffPanel({ versions, courseId }: { versions: readonly Pa
     <section className={styles.panel} aria-labelledby={`${fromId}-h`}>
       <h2 id={`${fromId}-h`} className={styles.heading}>What changed between versions</h2>
       <p className={styles.lede}>
-        Worked out from the sealed versions themselves. No assistant is involved and nothing here is saved.
+        Worked out from the published versions themselves. No assistant is involved and nothing here is saved.
       </p>
 
       <div className={styles.controls}>

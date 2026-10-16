@@ -352,6 +352,15 @@ describe("LiveCourse — thin client of the host", () => {
     expect(screen.queryByRole("region", { name: /course intake/i })).not.toBeInTheDocument();
   });
 
+  it("a course with no outcome on record shows a disabled 'Confirm the brief' and the plain reason, never a live confirm", async () => {
+    const empty = localView();
+    empty.intake = { ...empty.intake, outlineAuthorized: true, answers: { topic: "t", course: "c" } };
+    mockHost(empty, { asfaiConnected: false });
+    render(<LiveCourse />);
+    expect(await screen.findByRole("button", { name: "Confirm the brief" })).toBeDisabled();
+    expect(screen.getByText(/Nothing to confirm yet: no outcome is on record/)).toBeInTheDocument();
+  });
+
   it("once ASFAI has asked, its questions are attributed to it and no recommendation is repeated", async () => {
     const asked = stubView();
     asked.checkpoints.outline.status = "pending";

@@ -147,10 +147,10 @@ export function PublishCard({
   };
 
   const statusChip = isSealed
-    ? `Sealed · version ${published!.version}`
+    ? `Published · version ${published!.version}`
     : status.canPublish
-      ? "Ready to seal"
-      : "Not ready to seal";
+      ? "Ready to publish"
+      : "Not ready to publish";
   const chipState = isSealed ? "sealed" : status.canPublish ? "ready" : "blocked";
 
   const sealCopy = (
@@ -163,7 +163,7 @@ export function PublishCard({
   );
 
   return (
-    <section className={styles.card} aria-label="Course package — preview and publish">
+    <section className={styles.card} aria-label="Preview and publish">
       {/* The card's ONE live region: seal results and refusals. The parent
           notice is authoritative; the local flash covers blocked-hint clicks. */}
       <p className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">
@@ -179,9 +179,8 @@ export function PublishCard({
           </p>
         </div>
         <p className={styles.subhead}>
-          Everything below is exactly what the sealed package will contain — only objectives you
-          confirmed, and a lesson plan you confirmed. Sealing is the teacher’s act; nothing is
-          published until you do it.
+          Everything below is exactly what will be published — only objectives you confirmed,
+          and a lesson plan you confirmed. Publishing is your act; nothing is published until you do it.
         </p>
       </header>
 
@@ -201,7 +200,7 @@ export function PublishCard({
       )}
 
       {!status.canPublish && reasons.length > 0 ? (
-        <ul className={styles.blockers} data-print="hide" aria-label="Why this package cannot be published">
+        <ul className={styles.blockers} data-print="hide" aria-label="Why this version cannot be published">
           {reasons.map((reason) => (
             <li key={reason}>{reason}</li>
           ))}
@@ -219,7 +218,7 @@ export function PublishCard({
         <div className={styles.confirmBar} data-armed={status.canPublish ? "true" : "false"} data-print="hide">
           <p className={styles.confirmStatus}>
             {isSealed
-              ? `Version ${published!.version} is sealed. Unpublished changes are ready for ${nextVersionLabel.toLowerCase()}.`
+              ? `Version ${published!.version} is published. Unpublished changes are ready for ${nextVersionLabel.toLowerCase()}.`
               : status.canPublish
                 ? `Ready — ${plural(objectives.length, "objective")}, ${plural(activities.length, "activity", "activities")}, ${plural(totalMinutes, "minute")}.`
                 : `Blocked — ${plural(reasons.length, "reason")} the teacher must resolve first.`}
@@ -233,7 +232,7 @@ export function PublishCard({
               {status.canPublish
                 ? isSealed
                   ? "Any change ships as a new version."
-                  : "Sealing is irreversible — check the preview above."
+                  : "Publishing can’t be undone — check the preview above."
                 : "Resolve the blockers above to arm this button."}
             </span>
             <button
@@ -311,7 +310,7 @@ function SealedPanel({
   return (
     <div className={styles.sealPanel} data-print="hide">
       <h3 className={styles.sealHeading} tabIndex={-1} ref={panelRef}>
-        Sealed — version {version.version}
+        Published — version {version.version}
       </h3>
       <p className={styles.sealLead}>
         This version is immutable. Nothing in it can be edited; any later change ships as a new
@@ -326,7 +325,7 @@ function SealedPanel({
           </dd>
         </div>
         <div className={styles.line}>
-          <dt className={styles.lineLabel}>Sealed on</dt>
+          <dt className={styles.lineLabel}>Published on</dt>
           <dd className={styles.lineText}>
             {new Date(version.publishedAt).toLocaleDateString("en-GB", DATE_FORMAT)}
           </dd>
@@ -349,7 +348,7 @@ function SealedPanel({
       {/* Machine keys demoted out of the reading path (A2): the human words
           carry the meaning; ids live on their own quiet line. */}
       <p className={styles.colophon}>
-        course <span className={styles.monoId}>{courseId}</span> · sealed by{" "}
+        course <span className={styles.monoId}>{courseId}</span> · published by{" "}
         {version.provenance.decidedBy} · {version.provenance.channel} · turn{" "}
         <span className={styles.monoId}>{version.provenance.turnRef}</span>
       </p>
@@ -357,7 +356,7 @@ function SealedPanel({
       {onExport ? (
         <div className={styles.exportRow}>
           <button type="button" className={styles.exportButton} onClick={onExport}>
-            Export package (JSON)
+            Export the published version (JSON)
           </button>
           <p className={styles.exportHint} id="export-hint">
             Includes a sha-256 digest over the payload — anyone can verify the file is unaltered.

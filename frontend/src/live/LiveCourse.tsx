@@ -424,9 +424,9 @@ export function LiveCourse() {
         const { anchor } = await host.anchor(courseId!, r.version.version);
         if (anchor && pinVersion(anchor)) {
           setPins(listPins(courseId!));
-          setNotice(`Version ${r.version.version} sealed and pinned on this device.`, true);
+          setNotice(`Version ${r.version.version} published and pinned on this device.`, true);
         } else {
-          setNotice(`Version ${r.version.version} sealed.`, true);
+          setNotice(`Version ${r.version.version} published.`, true);
         }
       } catch (e) {
         setNotice(`Refused by the confirm-gate: ${(e as Error).message}`);
@@ -446,7 +446,7 @@ export function LiveCourse() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    setNotice("Exported the course package (tamper-evident JSON).");
+    setNotice("Exported the published version (tamper-evident JSON).");
   });
 
   /** A standalone student page from the SEALED version. No AI, no host needed to read it. */
@@ -518,13 +518,13 @@ export function LiveCourse() {
             <h1 className={styles.heroTitle}>Build a course, one decision at a time.</h1>
             <p className={styles.heroLede}>
               Bring your material. An AI proposes learning objectives and drafts a lesson plan; you confirm every step.
-              Publishing seals a version, and a student can ask questions answered only from what you sealed.
+              Publishing makes a version students can use, and a student can ask questions answered only from what you published.
             </p>
             <ol className={styles.moves} aria-label="How it goes">
               <li>Bring your material</li>
               <li>Confirm the objectives</li>
               <li>Confirm the plan</li>
-              <li>Publish a sealed version</li>
+              <li>Publish a version</li>
             </ol>
             <p className={styles.assure}>
               Your words stay on this record. Nothing leaves this browser until you ask the AI for a draft,
@@ -941,13 +941,13 @@ export function LiveCourse() {
           <h2 className={styles.pinTitle}>Pinned on this device</h2>
           {BROWSER_MODE ? (
             <p className={styles.pinNote}>
-              Your own copies of each sealed version, kept in this browser apart from the course record. Re-check
+              Your own copies of each published version, kept in this browser apart from the course record. Re-check
               them to detect a record that was rewritten or shortened — the record’s own check cannot tell you that.
               Both live in this browser, so export to keep a copy elsewhere.
             </p>
           ) : (
             <p className={styles.pinNote}>
-              Your own copies of each sealed version, held outside the host. Re-check them to
+              Your own copies of each published version, held outside the host. Re-check them to
               detect a record that was rewritten or shortened — the host cannot tell you that.
             </p>
           )}

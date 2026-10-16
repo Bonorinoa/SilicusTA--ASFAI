@@ -13,7 +13,7 @@ const sentenceCase = (t: string): string => { const s = t.trim(); return s ? s.c
 export function reasonText(r: PublishReason): string {
   switch (r.code) {
     case "CHECKPOINT_UNCONFIRMED":
-      return r.checkpoint === "files" ? "Confirm the material list" : r.checkpoint === "outline" ? "Confirm the outline" : "Decide every proposed objective";
+      return r.checkpoint === "files" ? "Confirm the material list" : r.checkpoint === "outline" ? "Confirm the brief" : "Decide every proposed objective";
     case "UNDECIDED_PROPOSALS":
       return r.count === 1 ? "Decide the proposed objective still waiting" : `Decide the ${plural(r.count, "proposed objective")} still waiting`;
     case "NO_CONFIRMED_PLAN":

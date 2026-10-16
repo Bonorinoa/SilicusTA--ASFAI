@@ -161,7 +161,7 @@ describe("D3 in words: the reasons a course cannot be sealed yet are plain sente
     } as HostView["publish"];
     mockHost(v);
     render(<LiveCourse />);
-    const list = await screen.findByRole("list", { name: "Why this package cannot be published" });
+    const list = await screen.findByRole("list", { name: "Why this version cannot be published" });
     expect(within(list).getByText("Confirm the material list")).toBeInTheDocument();
     expect(within(list).getByText("Decide the 2 proposed objectives still waiting")).toBeInTheDocument();
     expect(list.textContent).not.toMatch(/urn:|is not teacher-confirmed/);
@@ -525,4 +525,40 @@ describe("the workspace: edit any stage without hunting for it", () => {
     expect(within(details).getByText(/print cleanly/)).toBeInTheDocument();
     expect(screen.queryByText(/This page is set to print cleanly — use your browser/)).not.toBeInTheDocument();
   });
+});
+
+// ---- the glossary's retired words -----------------------------------------------------------------------------
+// Owner, 2026-10-16: "outline", "package", "sealed" and "yet" confused teachers. They live on in gate ids, file names
+// and Record details only. This renders every stage, opens everything that can be opened, and reads the text a
+// teacher can read (textContent also reads the closed <details>, so a negative check is never vacuous).
+describe("retired words: outline, package, sealed, yet are absent from every stage's teacher-facing text", () => {
+  const RETIRED = /\b(outlines?|packages?|seal(ed|s|ing)?|in this course yet)\b/i;
+  const stages: Array<[string, () => HostView]> = [
+    ["intake", () => { const v = baseView(); set(v, "files", "pending"); set(v, "outline", "pending"); set(v, "objectives", "pending"); v.proposals = []; return v; }],
+    ["brief", () => { const v = baseView(); set(v, "outline", "open"); set(v, "objectives", "pending"); v.proposals = []; v.intake = { ...v.intake, outlineAuthorized: true, answers: { topic: "t", course: "c", learning_outcomes: ["o"] } } as HostView["intake"]; return v; }],
+    ["brief with no outcome", () => { const v = baseView(); set(v, "outline", "open"); set(v, "objectives", "pending"); v.proposals = []; v.intake = { ...v.intake, outlineAuthorized: true, answers: { topic: "t", course: "c" } } as HostView["intake"]; return v; }],
+    ["objectives", () => { const v = baseView(); set(v, "objectives", "pending"); v.proposals = [
+      { id: A, kind: "local", status: "proposed", statement: STATEMENT, originalStatement: STATEMENT, source: "from your answer", alignment: null, by: "ai" },
+      { id: "urn:uuid:bbbb", kind: "local", status: "proposed", statement: "Students can name one thing.", originalStatement: "Students can name one thing.", source: "suggested by Silicus", alignment: null, by: "ai" },
+    ] as unknown as HostView["proposals"]; return v; }],
+    ["plan", () => baseView()],
+    ["plan draft", atPlanDraft],
+    ["publish", atPublish],
+    ["published", atPublished],
+  ];
+  for (const [name, make] of stages) {
+    it(`${name}`, async () => {
+      mockHost(make());
+      const { container } = render(<LiveCourse />);
+      await screen.findByRole("heading", { level: 1 }).catch(() => null);
+      await waitFor(() => expect(container.querySelector("[data-stage-bar='true'], section")).not.toBeNull());
+      await new Promise((r) => setTimeout(r, 50));
+      // Record details hold the machine words on purpose; they are a click away, not the reading path.
+      const clone = container.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("[data-record-details], [aria-label='Record details']").forEach((n) => n.remove());
+      const text = clone.textContent ?? "";
+      const hits = [...text.matchAll(new RegExp(RETIRED, "gi"))].map((m) => text.slice(Math.max(0, m.index! - 40), m.index! + 40));
+      expect(hits).toEqual([]);
+    });
+  }
 });

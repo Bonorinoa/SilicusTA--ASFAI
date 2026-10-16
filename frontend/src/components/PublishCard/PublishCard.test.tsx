@@ -123,7 +123,7 @@ describe("PublishCard", () => {
 
   it("points to the preview where it is: above the publish bar, not below", () => {
     const { container } = render(<PublishCard {...baseProps()} />);
-    const hint = screen.getByText(/sealing is irreversible/i);
+    const hint = screen.getByText(/publishing can.t be undone/i);
     expect(hint.textContent).not.toMatch(/below/i);
     expect(hint.textContent).toMatch(/preview above/i);
     // The claim is about layout: the preview really does precede the hint in reading order.
@@ -198,7 +198,7 @@ describe("PublishCard", () => {
     const onExport = vi.fn();
     render(<PublishCard {...baseProps({ published: publishedVersion(), onExport })} />);
 
-    expect(screen.getByRole("heading", { name: /sealed — version 2/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /published — version 2/i })).toBeInTheDocument();
     expect(screen.getByText("version 1")).toBeInTheDocument(); // previous version
     expect(screen.getByText(/2 objectives · 2 activities/i)).toBeInTheDocument();
     expect(
@@ -206,7 +206,7 @@ describe("PublishCard", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /review & publish/i })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /export package \(json\)/i }));
+    await user.click(screen.getByRole("button", { name: /export the published version \(json\)/i }));
     expect(onExport).toHaveBeenCalledTimes(1);
   });
 

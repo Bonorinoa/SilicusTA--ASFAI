@@ -555,7 +555,7 @@ async function story(label, narrow) {
     return { text: el.innerText, motion: el.getAttribute("data-motion"), anim: getComputedStyle(word).animationName, live: el.querySelectorAll('[aria-live="polite"]').length };
   });
   check("a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–8 seconds",
-    /Looking for the answer in this course \(version 1\)/.test(compact.text) && /usually 2\u20138 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
+    /Looking for the answer in version 1 of this lesson/.test(compact.text) && /usually 2\u20138 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
   check("under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation)", compact.motion === "still" && compact.anim === "none", `${compact.motion} / ${compact.anim}`);
   await shot("15-waiting-student", 'section[data-variant="compact"][data-phase="running"]');
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);

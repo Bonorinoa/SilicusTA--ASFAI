@@ -438,6 +438,11 @@ export class CourseSession {
       return { ok: false, code: "OBJECTIVES_CONFIRMED", reason: "the objectives are already confirmed" };
     }
     const rows = this.#rows();
+    // Suggestions round out a FIRST round (the teacher's derived outcomes, or the material path); they are never the
+    // first round, because the first round is what the derive route checks with ALREADY_PROPOSED.
+    if (rows.length === 0) {
+      return { ok: false, code: "PROPOSE_FIRST", reason: "propose objectives from your answers or materials first; suggestions round them out" };
+    }
     if (rows.some((r) => r.source === SOURCE_SUGGESTED && r.status === "proposed")) {
       return { ok: false, code: "SUGGESTIONS_PENDING", reason: "the earlier suggestions are still waiting for your decision" };
     }

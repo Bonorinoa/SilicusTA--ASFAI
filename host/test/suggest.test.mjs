@@ -83,6 +83,23 @@ test("suggest reads NO body, and what the model is told is the teacher's recorde
   assert.equal(body.status, 409, "the second call is refused (pending), and the body never mattered");
 });
 
+test("409 PROPOSE_FIRST before any objectives are proposed: a suggestion can never take the slot of the teacher's own", async () => {
+  // Found at integration: suggesting first made the later derive answer ALREADY_PROPOSED, so the teacher's own
+  // outcomes never became proposals. Suggestions round out a first round; they never are the first round.
+  const t = await boot(three);
+  const c = await atObjectives(t, { derive: false });
+  const before = (await t.get(c)).json.integrity;
+  const r = await t.post(`${c}/objectives/suggest`, {});
+  assert.equal(r.status, 409, JSON.stringify(r.json));
+  assert.equal(r.json.code, "PROPOSE_FIRST");
+  assert.equal(t.seen.length, 0, "the model is not called");
+  assert.deepEqual((await t.get(c)).json.integrity, before, "nothing is written");
+  const own = await t.post(`${c}/objectives`, {});
+  assert.equal(own.status, 200, "the teacher's own outcomes still become proposals");
+  assert.ok(own.json.proposals.length >= 2);
+  assert.equal((await t.post(`${c}/objectives/suggest`, {})).status, 200, "and then suggestions round them out");
+});
+
 test("409 NO_TEACHER_OUTCOMES without an outcome of the teacher's own; nothing is written, the model is not called", async () => {
   const t = await boot(three);
   const c = await atObjectives(t, { outcomes: null });

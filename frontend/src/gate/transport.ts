@@ -232,7 +232,8 @@ export const host = {
   /**
    * Contract 2026-10-16: the WORKER suggests up to 3 objectives that complement the teacher's own. No body: the
    * host reads the teacher's recorded outcomes, topic and course. 409 NO_TEACHER_OUTCOMES until the teacher has at
-   * least one outcome of their own on record; 409 SUGGESTIONS_PENDING while earlier suggestions are undecided.
+   * least one outcome of their own on record; 409 PROPOSE_FIRST until a first round of objectives is proposed
+   * (derive or materials; a suggestion never takes that slot); 409 SUGGESTIONS_PENDING while earlier suggestions are undecided.
    * Each suggestion is a proposal labelled SOURCE_SUGGESTED (host/proposer.mjs) and waits for the teacher.
    */
   suggestObjectives: (id: string) =>

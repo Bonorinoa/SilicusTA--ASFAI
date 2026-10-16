@@ -176,6 +176,8 @@ export interface ActivityItem {
     | "intake.sent"
     | "objectives.derived"
     | "objectives.drafted"
+    /** Contract 2026-10-16: the worker suggested objectives that complement the teacher's. facts: `count` (number). */
+    | "objectives.suggested"
     | "objectives.decided"
     | "plan.drafted"
     | "plan.checked"

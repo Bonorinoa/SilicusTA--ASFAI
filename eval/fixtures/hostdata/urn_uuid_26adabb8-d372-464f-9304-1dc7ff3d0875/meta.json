@@ -1,0 +1,16 @@
+{
+  "courseId": "urn:uuid:26adabb8-d372-464f-9304-1dc7ff3d0875",
+  "owner": "Ms. Rivera",
+  "title": "Fractions on a number line",
+  "description": "",
+  "materials": [
+    {
+      "name": "Unit 4 slides"
+    },
+    {
+      "name": "Number line worksheet"
+    }
+  ],
+  "seed": "urn:uuid:082c2515-6171-4316-beff-8bde91fccfd1",
+  "createdAt": 1792179522168
+}

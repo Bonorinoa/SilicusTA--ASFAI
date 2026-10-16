@@ -72,12 +72,26 @@ export interface IntakeStatus {
 /** One thing a teacher hands over: their own text (named), or a public link the host fetches. */
 export type MaterialInput = { name: string; text: string } | { url: string; name?: string };
 
-/** A student's answer from the host: grounded in the sealed package, or the fixed "ask your teacher". */
+/** A student's answer from the host: grounded in the sealed package, or a fixed refusal. */
 export interface StudentAnswer {
   answer: string;
   grounded: boolean;
   cites: { id: string; label: string }[];
   note: string;
+  /**
+   * Contract 2026-10-16 (sprint weekend-share), set by the host whenever `grounded` is true:
+   * "plan" = the answer restates what a cited package item says;
+   * "explanation" = it explains a word or idea that a cited item NAMES, at the learners' level. The cite is the
+   * anchor that keeps it on topic; the explanation itself is the model's, and the UI must label it so.
+   * Absent = a host older than this contract (treat as "plan").
+   */
+  basis?: "plan" | "explanation";
+  /**
+   * Set by the host whenever `grounded` is false. "off_topic" = no package item covers or names it;
+   * "assessment" = the student asked to be graded, told they passed, or to have mastery judged.
+   * The `answer` text is the fixed sentence for that refusal (docs/design/glossary.md). Absent = legacy host.
+   */
+  refusal?: "off_topic" | "assessment";
 }
 
 /**
@@ -215,6 +229,14 @@ export const host = {
   /** The HOST derives the objectives from the teacher's recorded answers; the UI sends no body. */
   proposeObjectives: (id: string) =>
     call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives`, {}),
+  /**
+   * Contract 2026-10-16: the WORKER suggests up to 3 objectives that complement the teacher's own. No body: the
+   * host reads the teacher's recorded outcomes, topic and course. 409 NO_TEACHER_OUTCOMES until the teacher has at
+   * least one outcome of their own on record; 409 SUGGESTIONS_PENDING while earlier suggestions are undecided.
+   * Each suggestion is a proposal labelled SOURCE_SUGGESTED (host/proposer.mjs) and waits for the teacher.
+   */
+  suggestObjectives: (id: string) =>
+    call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives/suggest`, {}),
   decide: (id: string, b: { decisions: unknown[]; text: string }) =>
     call<{ decisions: unknown[] }>("POST", `/courses/${enc(id)}/decisions`, b),
   /** The OSS WORKER drafts the plan from the teacher's confirmed objectives; the UI sends no body. */

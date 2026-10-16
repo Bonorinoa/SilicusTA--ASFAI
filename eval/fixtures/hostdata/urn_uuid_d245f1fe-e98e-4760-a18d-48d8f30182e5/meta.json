@@ -1,0 +1,13 @@
+{
+  "courseId": "urn:uuid:d245f1fe-e98e-4760-a18d-48d8f30182e5",
+  "owner": "intermediate macroeconomics",
+  "title": "econ 101",
+  "description": "",
+  "materials": [
+    {
+      "name": "gregory mankiw's textbooks, my own notes on solow-swan model, and basic history of economics to compare schools of thought"
+    }
+  ],
+  "seed": "urn:uuid:0f9a262a-310d-4574-9c3d-3820c942a873",
+  "createdAt": 1792180789483
+}

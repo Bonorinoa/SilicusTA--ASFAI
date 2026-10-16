@@ -78,7 +78,8 @@ test("one row per mapped event: oldest first, seq strictly increasing, the right
   assert.deepEqual(f("intake.answered"), { answers: 3 });
   assert.deepEqual(f("intake.sent"), { fields: 3 });
   assert.deepEqual(f("objectives.drafted"), { count: 2 });
-  assert.deepEqual(f("objectives.decided"), { decisions: 3, accept: 1, rename: 1, add: 1 });
+  // Past participles: the rail's contract (feat/rail-tour copy.ts reads accepted/renamed/dropped/added).
+  assert.deepEqual(f("objectives.decided"), { decisions: 3, accepted: 1, renamed: 1, added: 1 });
   assert.deepEqual(f("plan.drafted"), { activities: 2 });
   assert.deepEqual(f("plan.checked"), { valid: true, issues: 0 });
   assert.deepEqual(rows.filter((r) => r.action === "checkpoint.confirmed").map((r) => r.facts.checkpoint), ["files", "outline"]);

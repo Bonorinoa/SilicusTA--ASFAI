@@ -340,6 +340,67 @@ const polishCheck = async (name) => {
   await page.setViewport(orig);
   await page.evaluate(() => window.scrollTo(0, 0));
 };
+/**
+ * C-e items 2 and 3, in a real 1440x900 viewport at the plan stage (steps 1-3 finished):
+ *  - a finished step keeps its number, shows it is finished, and looks openable (a chevron, a pointer, a hover state);
+ *  - the left column's course title is at the navigator's scale, on one line, and the byline does not orphan a word.
+ */
+const navigatorCheck = async (name) => {
+  const orig = page.viewport();
+  if (orig.width < 1100) return;
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await sleep(250);
+  const a = await page.evaluate(() => {
+    const items = [...document.querySelectorAll('ol[aria-label="Steps"] > li')];
+    const done = items.filter((li) => li.dataset.state === "done");
+    const mk = (li) => li.querySelector('[aria-hidden="true"]')?.textContent?.trim();
+    const go = (li) => { const g = [...li.querySelectorAll('[aria-hidden="true"]')].find((x) => x.textContent.trim() === "\u203a"); return !!g && getComputedStyle(g).display !== "none"; };
+    return {
+      count: done.length,
+      numbers: items.map(mk),
+      doneHaveChevron: done.every(go), doneAreButtons: done.every((li) => li.querySelector("button")),
+      cursor: done[0] ? getComputedStyle(done[0].querySelector("button")).cursor : null,
+      doneCheck: done.every((li) => li.textContent.includes("\u2713")),
+    };
+  });
+  check(`navigator ${name}: finished steps keep their numbers 1-5 and say they are finished`, a.count >= 3 && a.numbers.join(",") === "1,2,3,4,5" && a.doneCheck, JSON.stringify(a));
+  check(`navigator ${name}: finished steps look openable (a chevron, a pointer)`, a.doneHaveChevron && a.doneAreButtons && a.cursor === "pointer", JSON.stringify(a));
+  const bg = () => page.evaluate(() => getComputedStyle(document.querySelector('ol[aria-label="Steps"] li[data-state="done"] button')).backgroundColor);
+  await page.mouse.move(5, 5);
+  const rest = await bg();
+  await page.hover('ol[aria-label="Steps"] li[data-state="done"] button');
+  await sleep(250);
+  const hov = await bg();
+  await page.mouse.move(5, 5);
+  check(`navigator ${name}: a finished step has a hover state`, rest !== hov, `${rest} -> ${hov}`);
+  const t = await page.evaluate(() => {
+    const h1 = document.querySelector("h1");
+    const label = document.querySelector('ol[aria-label="Steps"] li[data-state="current"] [class*="stepLabel"]');
+    const lines = (el) => {
+      const r = document.createRange(); const rows = new Map();
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        const re = /\S+/g; let m;
+        while ((m = re.exec(n.textContent))) { r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); const top = Math.round(r.getBoundingClientRect().top); rows.set(top, (rows.get(top) ?? 0) + 1); }
+      }
+      return [...rows.entries()].sort((x, y) => x[0] - y[0]).map((x) => x[1]);
+    };
+    const sub = h1.nextElementSibling;
+    const stepFont = parseFloat(getComputedStyle(label).fontSize);
+    const docTitle = document.querySelector('article h1, article h2');
+    return {
+      titleFont: parseFloat(getComputedStyle(h1).fontSize), stepFont, titleLines: lines(h1), subLines: lines(sub),
+      docFont: docTitle ? parseFloat(getComputedStyle(docTitle).fontSize) : null, colWidth: Math.round(h1.getBoundingClientRect().width),
+    };
+  });
+  check(`navigator ${name}: the left column's course title is at the navigator's scale (at most 1.25x a step name), on one line, and no louder than the document title`,
+    t.titleFont <= t.stepFont * 1.25 && t.titleLines.length === 1 && (t.docFont === null || t.titleFont <= t.docFont), JSON.stringify(t));
+  check(`navigator ${name}: the byline never leaves one word alone on a line`, t.subLines.length <= 2 && t.subLines.every((n) => n >= 2), JSON.stringify(t));
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-navigator.png`), clip: { x: 0, y: 0, width: 330, height: 520 } });
+  await page.setViewport(orig);
+  await page.evaluate(() => window.scrollTo(0, 0));
+};
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
 async function story(label, narrow) {
@@ -552,6 +613,7 @@ async function story(label, narrow) {
   await stageShot("09-plan-drafted");
   await primaryInViewport("plan");
   await polishCheck("plan");
+  await navigatorCheck("plan");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",

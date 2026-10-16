@@ -92,20 +92,26 @@ export function StepIndex({ view, stage, open, onOpen }: {
         const done = s.id !== open && view.checkpoints[s.id]?.status === "confirmed";
         const state = s.id === open ? "current" : done ? "done" : "todo";
         const summary = summaryOf(s.id, view);
+        // A finished step keeps its number (the check sits by its name), and one you can open says so with a chevron.
+        const clickable = !!onOpen && reachable(s.id, view, work);
         const inner = (
           <>
-            <span className={styles.stepMark} aria-hidden="true">{done ? "\u2713" : i + 1}</span>
+            <span className={styles.stepMark} aria-hidden="true">{i + 1}</span>
             <span className={styles.stepText}>
-              <span className={styles.stepLabel}>{s.label}</span>
+              <span className={styles.stepHead}>
+                <span className={styles.stepLabel}>{s.label}</span>
+                {done ? <span className={styles.stepDone} aria-hidden="true">{"\u2713"}</span> : null}
+              </span>
               <span className={styles.stepSummary}>{summary}</span>
             </span>
+            {clickable && state !== "current" ? <span className={styles.stepGo} aria-hidden="true">{"\u203a"}</span> : null}
             {done ? <span className={styles.srOnly}>, done</span> : null}
           </>
         );
         return (
           <li key={s.id} className={styles.step} data-state={state} data-work={s.id === work ? "true" : undefined} aria-current={state === "current" ? "step" : undefined}>
-            {onOpen && reachable(s.id, view, work) ? (
-              <button type="button" className={styles.stepButton} onClick={() => onOpen(s.id)}>{inner}</button>
+            {clickable ? (
+              <button type="button" className={styles.stepButton} onClick={() => onOpen?.(s.id)}>{inner}</button>
             ) : (
               <span className={styles.stepButton} data-static="true">{inner}</span>
             )}

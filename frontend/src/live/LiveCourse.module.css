@@ -14,7 +14,7 @@
 .title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin: 0; color: var(--color-ink); overflow-wrap: anywhere; text-wrap: balance; }
 .lede { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); margin: 0; overflow-wrap: anywhere; }
 /* The meta line carries an unbreakable urn, so it must be allowed to break anywhere. */
-.sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; overflow-wrap: anywhere; text-wrap: balance; }
 /* The other display headings are the teacher's words too. */
 .heroTitle, .intakeTitle, .pinTitle, .offlineTitle { overflow-wrap: anywhere; }
 
@@ -149,6 +149,8 @@
   .live[data-wide] { max-width: 84rem; }
   .shell { display: grid; grid-template-columns: 13.5rem minmax(0, 46rem); gap: var(--space-8); justify-content: center; align-items: start; }
   .shell > .nav { position: sticky; top: var(--space-5); }
+  /* The course switcher above already names the course, so its title here is the navigator's own size, not a headline. */
+  .stageMeta .title { font-size: var(--text-md); line-height: var(--leading-md); letter-spacing: 0; text-wrap: balance; }
   /* The rail sits under the stage until there is room for a column (see the next block). */
   .shell > .side { grid-column: 2; }
   /* The decision card's and the publish card's own bars (their markup is not this page's) stay in view too, and read as a

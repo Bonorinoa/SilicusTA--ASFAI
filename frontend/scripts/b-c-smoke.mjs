@@ -35,8 +35,8 @@ check("publish tab: preview renders the plan sheet", await page.evaluate(() =>
 check("publish tab: objectives referenced present", await page.evaluate(() =>
   document.body.innerText.toLowerCase().includes("objectives referenced")
 ));
-check("publish tab: ready to seal (armed)", await page.evaluate(() =>
-  document.body.innerText.toLowerCase().includes("ready to seal")
+check("publish tab: ready to publish (armed)", await page.evaluate(() =>
+  document.body.innerText.toLowerCase().includes("ready to publish")
 ));
 
 await page.screenshot({ path: "/Users/bonorinoa/.hermes/profiles/silicus-ta/cache/scratch/b-publish-preview.png", fullPage: true });

@@ -343,7 +343,7 @@ check("stage: the publish stage has exactly one primary action", await poll(asyn
 await primaryInViewport("publish");
 check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
 check("UI reflects the armed publish checkpoint",
-  await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("ready to seal")), 8000));
+  await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("ready to publish")), 8000));
 
 // Open the seal step. State-driven: a pending reload can leave one stale
 // render where the button is not yet armed, so retry while the chip is armed.

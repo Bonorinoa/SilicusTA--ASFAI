@@ -57,14 +57,14 @@ await page.evaluate(() => {
     b.textContent?.trim() === "Publish version 1");
   if (btn) btn.click();
 });
-await page.waitForFunction(() => document.body.innerText.includes("Sealed — version 1"), { timeout: 8000 });
+await page.waitForFunction(() => document.body.innerText.includes("Published — version 1"), { timeout: 8000 });
 check("seal flow: version 1 sealed after review+confirm", true);
 
 await page.screenshot({ path: "/Users/bonorinoa/.hermes/profiles/silicus-ta/cache/scratch/b-publish-sealed.png", fullPage: true });
 
 // Export button present on the sealed panel
 check("seal flow: export button present", await page.evaluate(() =>
-  document.body.innerText.includes("Export package (JSON)")
+  document.body.innerText.includes("Export the published version (JSON)")
 ));
 check("seal flow: immutable contract stated", await page.evaluate(() =>
   document.body.innerText.includes("later change ships as a new version")
@@ -132,7 +132,7 @@ const printText = await page.evaluate(() => document.body.innerText.toLowerCase(
 check("print: plan markers survive (objectives referenced + honesty)", 
   printText.includes("objectives referenced") && printText.includes("asking the assistant a question is not evidence"));
 check("print: publish chrome hidden", 
-  !printText.includes("review & publish") && !printText.includes("sealed — version 1"));
+  !printText.includes("review & publish") && !printText.includes("published — version 1"));
 
 await browser.close();
 console.log(results.join("\n"));

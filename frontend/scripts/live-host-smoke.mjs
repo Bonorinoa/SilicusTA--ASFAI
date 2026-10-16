@@ -351,7 +351,7 @@ const sealOpen = await poll(async () => {
   const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
   if (opened) return true;
   await page.evaluate(() => {
-    const sec = document.querySelector('section[aria-label*="Course package"]');
+    const sec = document.querySelector('section[aria-label*="Preview and publish"]');
     const armed = !!sec && /ready to seal/i.test(sec.innerText);
     const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
     if (btn && armed) btn.click();
@@ -510,7 +510,7 @@ await poll(async () => (await getView(course2)).plan?.status === "confirmed");
 const sealOpen2 = await poll(async () => {
   if (await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'))) return true;
   await page.evaluate(() => {
-    const sec = document.querySelector('section[aria-label*="Course package"]');
+    const sec = document.querySelector('section[aria-label*="Preview and publish"]');
     const armed = !!sec && /ready to seal/i.test(sec.innerText);
     const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
     if (btn && armed) btn.click();
@@ -527,7 +527,7 @@ check("local: the log verifies", (await get(`/api/courses/${encodeURIComponent(c
 // ---- revising the published course: a labelled action that changes nothing until the teacher acts ----
 await poll(async () => await bodyHas(page, "Revise this course"));
 check("revise: the published course says version 1 is unchanged, and students keep reading it",
-  (await bodyHas(page, "Version 1 is published and unchanged.")) && !(await bodyHas(page, "you are drafting")) && (await bodyHas(page, "Students read this version")));
+  (await bodyHas(page, "Version 1 is published. Students use this version; changes become version 2.")) && !(await bodyHas(page, "you are drafting")));
 const eventsBeforeOpen = (await getView(course2)).integrity.events;
 await clickText(page, "Revise this course");
 await poll(async () => await bodyHas(page, "Revising: what has changed since version 1"));
@@ -560,7 +560,7 @@ check("revise: version 2 is sealed by a teacher turn, linked to version 1, and v
     && JSON.stringify(sealedV2.versions[0]) === JSON.stringify(sealed2.versions[0])
     && sealedV2.ledger.find((t) => t.id === sealedV2.versions[1].provenance.turnRef)?.role === "teacher");
 check("revise: the log still verifies and the UI now reports version 2", (await get(`/api/courses/${encodeURIComponent(course2)}/verify`)).json.ok === true
-  && await poll(async () => await bodyHas(page, "Version 2 is published and unchanged.")));
+  && await poll(async () => await bodyHas(page, "Version 2 is published. Students use this version; changes become version 3.")));
 // ---- reword a CONFIRMED objective in place, in the browser: same id, the plan keeps citing it, v2 untouched ----
 const beforeReword = await getView(course2);
 const rewordTarget = beforeReword.proposals.find((r) => r.status === "accepted");

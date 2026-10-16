@@ -128,7 +128,7 @@ const measure = () => {
     ["ol[aria-label='Checkpoints']", "checkpoint chips"],
     ["article", "PlanCard (other agent)"],
     ["section[aria-label='Objective proposals']", "DecisionCard (other agent)"],
-    ["section[aria-label='Course package — preview and publish']", "PublishCard (other agent)"],
+    ["section[aria-label='Preview and publish']", "PublishCard (other agent)"],
     ["section[aria-label='Decision history']", "TimelineCard (other agent)"],
     ["section[aria-label='Revise this course']", "RevisionPanel"],
     ["section[data-variant]", "AiWaiting (other agent)"],
@@ -345,7 +345,7 @@ try {
     const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
     if (opened) return true;
     await page.evaluate(() => {
-      const sec = document.querySelector('section[aria-label*="Course package"]');
+      const sec = document.querySelector('section[aria-label*="Preview and publish"]');
       const armed = !!sec && /ready to seal/i.test(sec.innerText);
       const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
       if (btn && armed) btn.click();

@@ -517,7 +517,7 @@ async function story(label, narrow) {
     const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
     if (opened) return true;
     await page.evaluate(() => {
-      const sec = document.querySelector('section[aria-label*="Course package"]');
+      const sec = document.querySelector('section[aria-label*="Preview and publish"]');
       const armed = !!sec && /ready to seal/i.test(sec.innerText);
       const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
       if (btn && armed) btn.click();
@@ -526,10 +526,10 @@ async function story(label, narrow) {
     return null;
   }, 12000);
   if (narrow) await checkNarrow("seal confirm step");
-  await stageShot("11-seal-confirm", 'section[aria-label*="Course package"]');
+  await stageShot("11-seal-confirm", 'section[aria-label*="Preview and publish"]');
   await clickText("Publish version 1");
   await poll(async () => kinds(await stored()).includes("package.published"));
-  await poll(() => bodyHas("sealed and pinned on this device"));
+  await poll(() => bodyHas("published and pinned on this device"));
   s = await stored();
   check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
 

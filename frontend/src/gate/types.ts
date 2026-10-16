@@ -137,6 +137,52 @@ export interface ProvenanceView {
 export interface PublishStatusView {
   canPublish: boolean;
   blockers: readonly string[];
+  /**
+   * The same blockers, classified by the HOST so the UI can say them in plain words (contract 2026-10-16).
+   * One entry per `blockers` entry, same order. `OTHER` carries the gate's raw text for a blocker the host
+   * does not recognise, so a new gate rule is never silently dropped. Absent on an older host.
+   */
+  reasons?: readonly PublishReason[];
+}
+
+export type PublishReason =
+  | { code: "CHECKPOINT_UNCONFIRMED"; checkpoint: "files" | "outline" | "objectives" }
+  | { code: "UNDECIDED_PROPOSALS"; count: number }
+  | { code: "NO_CONFIRMED_PLAN" }
+  | { code: "PLAN_INVALIDATED" }
+  | { code: "PLAN_EMPTY" }
+  | { code: "PLAN_CITES_UNCONFIRMED"; count: number }
+  | { code: "OTHER"; text: string };
+
+/** Who did something to the course: the teacher, Silicus itself, the drafting model, or ASFAI. */
+export type ActivityActor = "teacher" | "silicus" | "worker" | "asfai";
+
+/**
+ * One thing a component did, derived by the HOST from the course's event log (contract 2026-10-16).
+ * It is what makes the background work visible: every row names its actor and the artifact it changed.
+ * `facts` hold counts, names and flags only — never material text, never a passcode, never a key.
+ */
+export interface ActivityItem {
+  /** 1-based position in the event log; stable and unique within a course. */
+  seq: number;
+  /** Epoch ms. */
+  at: number;
+  actor: ActivityActor;
+  action:
+    | "course.created"
+    | "checkpoint.confirmed"
+    | "intake.asked"
+    | "intake.answered"
+    | "intake.sent"
+    | "objectives.derived"
+    | "objectives.drafted"
+    | "objectives.decided"
+    | "plan.drafted"
+    | "plan.checked"
+    | "plan.confirmed"
+    | "package.sealed";
+  artifact: "record" | "outline" | "objectives" | "plan" | "package";
+  facts: Readonly<Record<string, string | number | boolean>>;
 }
 
 /** A published `CoursePackage` version record (immutable, from the gate). */

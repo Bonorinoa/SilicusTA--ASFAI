@@ -16,7 +16,7 @@ import { BROWSER_MODE } from "./mode";
 import type { CourseAnchor } from "./pin";
 import type {
   LessonPlanView, ObjectiveCiteView, PackageVersionView, PlanInvalidationView,
-  ProposalView, PublishStatusView, TimelineEvent, TypicalSeconds,
+  ActivityItem, ProposalView, PublishStatusView, TimelineEvent, TypicalSeconds,
 } from "./types";
 
 export interface HostCheckpoint {
@@ -128,6 +128,8 @@ export interface HostView {
   timeline: TimelineEvent[];
   ledger: HostLedgerTurn[];
   integrity: { events: number; head: string };
+  /** What each component did, oldest first (contract 2026-10-16). Absent on an older host: the UI then hides the rail. */
+  activity?: ActivityItem[];
 }
 
 /** `available: false` means this host does not offer ASFAI at all (the online build): say so, offer no button. */

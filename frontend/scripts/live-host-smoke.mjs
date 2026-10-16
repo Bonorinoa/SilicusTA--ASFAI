@@ -352,7 +352,7 @@ const sealOpen = await poll(async () => {
   if (opened) return true;
   await page.evaluate(() => {
     const sec = document.querySelector('section[aria-label*="Preview and publish"]');
-    const armed = !!sec && /ready to seal/i.test(sec.innerText);
+    const armed = !!sec && /ready to publish/i.test(sec.innerText);
     const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
     if (btn && armed) btn.click();
   });
@@ -511,7 +511,7 @@ const sealOpen2 = await poll(async () => {
   if (await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'))) return true;
   await page.evaluate(() => {
     const sec = document.querySelector('section[aria-label*="Preview and publish"]');
-    const armed = !!sec && /ready to seal/i.test(sec.innerText);
+    const armed = !!sec && /ready to publish/i.test(sec.innerText);
     const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
     if (btn && armed) btn.click();
   });

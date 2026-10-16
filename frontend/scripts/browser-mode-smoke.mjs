@@ -518,7 +518,7 @@ async function story(label, narrow) {
     if (opened) return true;
     await page.evaluate(() => {
       const sec = document.querySelector('section[aria-label*="Preview and publish"]');
-      const armed = !!sec && /ready to seal/i.test(sec.innerText);
+      const armed = !!sec && /ready to publish/i.test(sec.innerText);
       const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
       if (btn && armed) btn.click();
     });

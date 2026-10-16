@@ -26,6 +26,7 @@ import { LessonIntake } from "./intake.mjs";
 import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, teacherStatement } from "./proposer.mjs";
 import { digestOf } from "./digest.mjs";
 import { retrieveAll, verifyCitations } from "./knowledge.mjs";
+import { reasonsOf } from "./reasons.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -744,7 +745,7 @@ export class CourseSession {
       plan: this.#planView(),
       planWording: this.#planWording(),
       invalidation: this.planInvalidation(),
-      publish: this.#gate.publishStatus(),
+      publish: (() => { const s = this.#gate.publishStatus(); return { ...s, reasons: reasonsOf(s.blockers) }; })(),
       revision: this.#revision(),
       versions: this.#gate.versions(),
       timeline: this.#timeline(),

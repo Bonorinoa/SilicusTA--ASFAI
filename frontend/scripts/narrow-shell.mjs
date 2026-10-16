@@ -120,7 +120,7 @@ const measure = () => {
     ["section[aria-label='Course onboarding']", "onboarding card"],
     ["ol[aria-label='How it goes']", "hero steps line"],
     ["section[aria-label='Course material']", "materials panel"],
-    ["section[aria-label='Try it as a student']", "student chat"],
+    ["section[aria-label='Try the student helper']", "student chat"],
     ["section[aria-label='Where your courses are kept']", "record band + data controls"],
     ["section[aria-label='Pinned copies on this device']", "pinned copies"],
     ["details", "course library"],
@@ -206,7 +206,7 @@ const SHOT_TARGETS = [
   ["ol[aria-label='How it goes']", "hero-steps"],
   ["section[aria-label='Course onboarding']", "onboarding-card"],
   ["section[aria-label='Course material']", "materials-panel"],
-  ["section[aria-label='Try it as a student']", "student-chat"],
+  ["section[aria-label='Try the student helper']", "student-chat"],
   ["section[aria-label='Where your courses are kept']", "record-band"],
   ["section[aria-label='Pinned copies on this device']", "pinned-copies"],
 ];
@@ -355,8 +355,8 @@ try {
   }, 12000);
   await clickText("Publish version 1");
   await poll(recorded("package.published"));
-  await page.waitForSelector('section[aria-label="Try it as a student"] input');
-  await page.type('section[aria-label="Try it as a student"] input', "What do plants need to make food?");
+  await page.waitForSelector('section[aria-label="Try the student helper"] input');
+  await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");
   await clickText("Ask");
   await poll(() => bodyHas("A plant uses light"), 20000);
 

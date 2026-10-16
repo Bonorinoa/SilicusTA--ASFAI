@@ -539,12 +539,12 @@ async function story(label, narrow) {
   await page.evaluate(() => window.scrollTo(0, 0));
   check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
-  await clickText("Try it as a student");
-  check("'Try it as a student' puts the cursor in the student's question box", await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
+  await clickText("Try the student helper");
+  check("'Try the student helper' puts the cursor in the student's question box", await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
   // ---- a student asks; nothing is written
   const beforeAsk = JSON.stringify(await stored());
-  await page.waitForSelector('section[aria-label="Try it as a student"] input');
-  await page.type('section[aria-label="Try it as a student"] input', "What do plants need to make food?");
+  await page.waitForSelector('section[aria-label="Try the student helper"] input');
+  await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   await clickText("Ask");
   await page.waitForSelector('section[data-variant="compact"][data-phase="running"]', { timeout: 5000 });

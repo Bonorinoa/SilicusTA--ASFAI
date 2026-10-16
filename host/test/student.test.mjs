@@ -238,6 +238,16 @@ test("an explanation with no valid cite fails closed to off_topic", async () => 
   }
 });
 
+test("the answer speaks the student's words: the prompt forbids package, version, sealed and item ids in the answer", async () => {
+  // D2 eval (eval/student-helper/compare.md, econ-def-02): a real answer said "In this package, ..." because the prompt
+  // calls the material a COURSE PACKAGE. That header is an internal key; the student must never read machine words.
+  const t = await boot({ inScope: true, answer: "ok", cites: ["objective:1"] });
+  await t.post(`${await published(t)}/student/ask`, { question: "What is an algorithm?" });
+  const prompt = t.seen[0];
+  assert.match(prompt, /In the answer, say "this lesson" or "your teacher's plan"/);
+  for (const w of ["package", "version", "sealed", "objective:1"]) assert.ok(prompt.includes(`"${w}"`), `the rule names ${w}`);
+});
+
 test("the prompt allows an explanation only of a named idea, at the package's age, in 3 sentences, and names both refusals", async () => {
   const t = await boot({ inScope: true, answer: "ok", cites: ["objective:1"] });
   await t.post(`${await published(t)}/student/ask`, { question: "What is an algorithm?" });

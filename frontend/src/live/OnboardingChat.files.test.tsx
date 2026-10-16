@@ -6,9 +6,16 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HostView } from "../gate/transport";
+import * as extractModule from "../materials/extract";
 import { ACCEPTED_FILE_TYPES } from "../materials/extract.types";
 import { adoptForCourse, forgetEverything, heldFor } from "../materials/session";
 import { OnboardingChat } from "./OnboardingChat";
+
+// The real extractor, wrapped so one test can hold a file "in the middle of being read".
+vi.mock("../materials/extract", async (importOriginal) => {
+  const m = await importOriginal<typeof import("../materials/extract")>();
+  return { ...m, extractText: vi.fn(m.extractText) };
+});
 
 afterEach(() => forgetEverything());
 
@@ -91,6 +98,27 @@ describe("Add files at the materials question", () => {
     await user.upload(adder(), new File(["x"], "old.doc"));
     expect(await screen.findByText(/old\.doc.*\.docx/s)).toBeInTheDocument();
     expect(box.value).toBe("");
+  });
+});
+
+describe("while a file is still being read", () => {
+  it("Record waits, so a name that is about to appear is never left out of the course", async () => {
+    let finish!: (r: Awaited<ReturnType<typeof extractModule.extractText>>) => void;
+    vi.mocked(extractModule.extractText).mockImplementationOnce(() => new Promise((res) => { finish = res; }));
+    const onCreate = intake();
+    const user = userEvent.setup();
+    const box = await toMaterialsStep(user);
+    await user.type(box, "Textbook");
+    await user.upload(adder(), new File(["x"], "slow.pdf"));
+    expect(await screen.findByText(/reading the file/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /record these names/i }));
+    expect(onCreate).not.toHaveBeenCalled();
+
+    finish({ ok: true, name: "slow.pdf", kind: "pdf", text: "Slow text", chars: 9 });
+    expect(await screen.findByText("slow.pdf · PDF · 9 characters")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /record these names/i }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ materials: [{ name: "Textbook" }, { name: "slow.pdf" }] }));
   });
 });
 

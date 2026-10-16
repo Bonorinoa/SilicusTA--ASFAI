@@ -139,7 +139,7 @@ export function OnboardingChat({
   const fromAsfai = view?.intake.questionsFrom === "asfai";
   const asker = fromAsfai ? "ASFAI" : "Silicus";
   const multiline = openQuestion?.id === "learning_outcomes" || (!view && step === "materials");
-  const canRecord = reply.trim().length > 0 && !busy;
+  const canRecord = reply.trim().length > 0 && !busy && !reading;
 
   useEffect(() => { box.current?.focus(); }, [step, openQuestion?.id, view?.course.courseId]);
   // The course just recorded appears: it takes the files chosen while naming it (same title, same name), once.
@@ -176,7 +176,8 @@ export function OnboardingChat({
 
   const submitOpening = () => {
     const text = reply.trim();
-    if (!text) return;
+    // A file still being read adds its name to the list when it lands: recording now would leave it out.
+    if (!text || reading) return;
     const nextDrafts = { ...drafts, [step]: text };
     setDrafts(nextDrafts);
     setReply("");
@@ -191,7 +192,7 @@ export function OnboardingChat({
   };
 
   const noMaterials = () => {
-    if (!drafts.title || !drafts.label) return;
+    if (!drafts.title || !drafts.label || reading) return;
     setLive(local("Recorded. Saving this course with no materials. Not sent to ASFAI."));
     finish({ ...drafts, materials: "none" }, "none");
   };

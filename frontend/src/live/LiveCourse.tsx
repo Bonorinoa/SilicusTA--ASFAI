@@ -180,6 +180,24 @@ export function LiveCourse() {
     if (lastStageKey.current && stageKey && lastStageKey.current !== stageKey) { setViewing(null); scrollToY(0); }
     if (stageKey) lastStageKey.current = stageKey;
   }, [stageKey]);
+  // The conversation stages (intake, material) keep their cards' own markup, so their primary can sit below the fold
+  // of a laptop window. At workspace widths the page brings it into view when the stage opens, when the record moves on
+  // (the next question) and when the window is resized, and leaves it alone once it is on screen.
+  const recordEvents = view?.integrity.events ?? 0;
+  const conversational = view ? ["intake", "material"].includes(stageOf(view)) : false;
+  useEffect(() => {
+    if (!conversational || typeof window.matchMedia !== "function") return;
+    const keepInView = () => {
+      if (!window.matchMedia("(min-width: 68.75rem)").matches) return;
+      const el = document.querySelector<HTMLElement>('[data-primary="true"]');
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.bottom > window.innerHeight || r.top < 0) el.scrollIntoView({ block: "nearest" });
+    };
+    keepInView();
+    window.addEventListener("resize", keepInView);
+    return () => window.removeEventListener("resize", keepInView);
+  }, [conversational, recordEvents, stageKey]);
   // A look at another step starts at the top; coming back puts the page exactly where it was.
   useLayoutEffect(() => {
     if (pendingY.current === null) return;

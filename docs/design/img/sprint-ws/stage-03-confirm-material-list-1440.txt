@@ -1,0 +1,92 @@
+Silicus TA
+
+The AI proposes. You decide.
+
+COURSE
+How plants eat
+How it works
+How plants eat
+
+Ada Lovelace
+kept in this browser
+
+1
+Material
+Not confirmed
+2
+Brief
+Not confirmed
+3
+Objectives
+Not started
+4
+Plan
+Not started
+5
+Publish
+Not published
+
+Course recorded. Confirm the material list when it is right.
+
+On this device.
+
+SILICUS
+What should we call this course?
+
+YOU
+
+How plants eat
+
+SILICUS
+What name should this course show for you?
+
+YOU
+
+Ada Lovelace
+
+SILICUS
+What is this course built from? Name the materials, one per line.
+
+YOU
+
+Lesson notes
+
+Confirm this material list?
+
+Lesson notes
+
+Confirming records your list. It does not send it to ASFAI.
+
+Confirm the material list
+Record details
+
+THIS BROWSER KEEPS THE RECORD
+
+Your courses are stored in this browser only, not on a server. Export to keep a copy: clearing this browser’s data, or using another browser, starts empty.
+
+Export all courses
+Import
+Delete all data from this browser
+
+Behind the scenes
+
+1 step, newest first
+
+You
+your decisions
+Silicus
+keeps the record and the rules
+Drafting model
+proposes and drafts, never decides
+
+YOU
+just now
+
+Started this course
+
+Changed:
+Material
+
+A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+
+Design system

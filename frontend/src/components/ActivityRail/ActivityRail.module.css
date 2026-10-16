@@ -28,7 +28,7 @@
   background: transparent; border: none; cursor: pointer; text-align: left;
   font: inherit; letter-spacing: inherit; color: inherit;
 }
-.toggle > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.toggle > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; white-space: normal; } /* one line at every width that has room; at 320px it may wrap rather than overflow */
 .toggle:hover > span:first-child { text-decoration: underline; text-decoration-color: var(--color-accent-line); text-underline-offset: 4px; }
 .toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .chevron {

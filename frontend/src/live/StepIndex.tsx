@@ -68,7 +68,8 @@ export function summaryOf(id: StepId, v: HostView): string {
       if (!p) return "Not started";
       if (p.status === "invalidated") return "Needs a new plan";
       const mins = p.activities.reduce((n, a) => n + a.minutes, 0);
-      return `${p.status === "confirmed" ? "" : "Draft · "}${plural(p.activities.length, "activity", "activities")} · ${mins} min`;
+      // No "Draft": the plan's own DRAFT tag and the stage bar say it, once.
+      return `${plural(p.activities.length, "activity", "activities")} · ${mins} min`;
     }
     case "publish": {
       const n = v.versions.length;

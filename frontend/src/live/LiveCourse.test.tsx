@@ -121,7 +121,7 @@ describe("LiveCourse — thin client of the host", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Lesson 3 · AI literacy" })).toBeInTheDocument();
     // D3/stage page: the machine's words (course id, log length) are in Record details, not in the heading's meta line.
-    expect(screen.getByText(/teacher:tk-1 · kept on this computer/)).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "P" && /teacher:tk-1 · kept on this computer/.test(el.textContent ?? ""))).toBeInTheDocument();
     // The proposal row comes straight from the host view.
     expect(screen.getByRole("heading", { name: STATEMENT })).toBeInTheDocument();
     // The step index reflects the host's checkpoints, not local state; the log length is under Record details.

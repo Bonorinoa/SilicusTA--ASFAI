@@ -68,7 +68,8 @@ describe("browser mode", () => {
     render(<LiveCourse />);
     expect(await screen.findByText(/needs the local Silicus app/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Connect ASFAI/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/kept in this browser/)).toBeInTheDocument();
+    // the byline keeps "kept in this browser" in its own nowrap span, so match the paragraph's whole text
+    expect(screen.getByText((_, el) => el?.tagName === "P" && /kept in this browser/.test(el.textContent ?? ""))).toBeInTheDocument();
   });
 });
 

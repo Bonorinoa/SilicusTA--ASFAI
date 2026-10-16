@@ -445,7 +445,8 @@ describe("the workspace: edit any stage without hunting for it", () => {
     expect(lines[0]).toMatch(/Material.*1 material/);
     expect(lines[1]).toMatch(/Brief.*how AI answers are built/);
     expect(lines[2]).toMatch(/Objectives.*1 objective confirmed/);
-    expect(lines[3]).toMatch(/Plan.*Draft · 1 activity · 20 min/);
+    expect(lines[3]).toMatch(/Plan.*1 activity · 20 min/);
+    expect(lines[3]).not.toMatch(/draft/i); // the plan stage says "draft" once: its tag and its bar, not the navigator
     expect(lines[4]).toMatch(/Publish.*Not published/);
   });
 

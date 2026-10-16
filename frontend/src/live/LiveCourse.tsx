@@ -42,6 +42,10 @@ import { PublishedMoment } from "./PublishedMoment";
 import { RecordDetails } from "./RecordDetails";
 import styles from "./LiveCourse.module.css";
 import stageStyles from "./Stage.module.css";
+/** The plan stage's bar and the plan's DRAFT tag already say "draft": the receipt keeps its check, not that sentence. */
+const STAYS_A_DRAFT = "It stays a draft until you confirm it.";
+const planReceiptOnStage = (v: ReceiptView): string[] => planReceipt(v).filter((l) => l !== STAYS_A_DRAFT);
+
 /** One AI step in flight, or just finished: what the waiting card shows. `receipt` is computed from the resulting view. */
 /** `clock` is the step's own: the card is remounted in whichever stage is open, so the card cannot own the time. */
 interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[]; startedAt: number; clock: WaitClock }
@@ -406,7 +410,7 @@ export function LiveCourse() {
       setNotice(`No plan was drafted: ${(e as Error).message}`);
     } finally {
       let fresh: HostView | null = null;
-      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, planReceipt); }
+      try { fresh = await reload(); } finally { finishWait(wait, ok, fresh, planReceiptOnStage); }
     }
   });
 
@@ -603,7 +607,7 @@ export function LiveCourse() {
   );
 
   const waitingCard = waiting ? (
-    <div className={styles.waiting}>
+    <div className={styles.waiting} data-compact={stage === "plan" && waiting.phase === "done" ? "true" : undefined}>
       <AiWaiting
         key={waiting.id}
         step={waiting.step}
@@ -1002,7 +1006,7 @@ export function LiveCourse() {
           <header className={styles.stageHeader}>
             <div className={styles.stageMeta}>
               <h1 className={styles.title}>{view.course.title}</h1>
-              <p className={styles.sub}>{view.course.owner} · {BROWSER_MODE ? "kept in this browser" : "kept on this computer"}</p>
+              <p className={styles.sub}><span>{view.course.owner}</span><span className={styles.subDot}> · </span><span className={styles.subWhere}>{BROWSER_MODE ? "kept in this browser" : "kept on this computer"}</span></p>
             </div>
             <StepIndex view={view} stage={stage} open={look ?? work} onOpen={openStep} />
           </header>

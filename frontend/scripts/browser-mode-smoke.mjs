@@ -382,7 +382,7 @@ const navigatorCheck = async (name) => {
       const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       for (let n = walk.nextNode(); n; n = walk.nextNode()) {
         const re = /\S+/g; let m;
-        while ((m = re.exec(n.textContent))) { r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); const top = Math.round(r.getBoundingClientRect().top); rows.set(top, (rows.get(top) ?? 0) + 1); }
+        while ((m = re.exec(n.textContent))) { r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); const bb = r.getBoundingClientRect(); if (bb.width === 0) continue; const top = Math.round(bb.top); rows.set(top, (rows.get(top) ?? 0) + 1); }
       }
       return [...rows.entries()].sort((x, y) => x[0] - y[0]).map((x) => x[1]);
     };
@@ -396,10 +396,35 @@ const navigatorCheck = async (name) => {
   });
   check(`navigator ${name}: the left column's course title is at the navigator's scale (at most 1.25x a step name), on one line, and no louder than the document title`,
     t.titleFont <= t.stepFont * 1.25 && t.titleLines.length === 1 && (t.docFont === null || t.titleFont <= t.docFont), JSON.stringify(t));
-  check(`navigator ${name}: the byline never leaves one word alone on a line`, t.subLines.length <= 2 && t.subLines.every((n) => n >= 2), JSON.stringify(t));
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-navigator.png`), clip: { x: 0, y: 0, width: 330, height: 520 } });
+  check(`navigator ${name}: the byline is two deliberate lines (who, then where it is kept) and leaves no word alone`, t.subLines.length <= 2 && t.subLines.every((n) => n >= 2), JSON.stringify(t));
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-navigator.png`), clip: { x: 40, y: 60, width: 290, height: 520 } });
   await page.setViewport(orig);
   await page.evaluate(() => window.scrollTo(0, 0));
+};
+/**
+ * C-e item 4, plan stage, 1440x900: "draft" is said once per surface. The navigator's line for the plan does not say it, and the finished
+ * waiting card is a short receipt (no "Draft ready" eyebrow, no "stays a draft" line), not a second page.
+ */
+const draftOnceCheck = async (name) => {
+  const orig = page.viewport();
+  if (orig.width < 1100) return;
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await sleep(250);
+  const d = await page.evaluate(() => {
+    const steps = [...document.querySelectorAll('ol[aria-label="Steps"] > li')].find((li) => /^\s*4?\s*Plan/.test(li.innerText) || li.innerText.includes("Plan"));
+    const card = document.querySelector('section[data-phase="done"][data-variant="card"]');
+    const bar = document.querySelector("[data-stage-bar]");
+    return {
+      navPlan: steps ? steps.innerText.replace(/\s+/g, " ").trim() : null,
+      card: card ? card.innerText.replace(/\s+/g, " ").trim() : null, cardHeight: card ? Math.round(card.getBoundingClientRect().height) : null,
+      barSaysDraft: bar ? /draft/i.test(bar.innerText) : null,
+    };
+  });
+  check(`draft-once ${name}: the navigator's plan line does not say "draft" (the tag and the bar do)`, !!d.navPlan && !/draft/i.test(d.navPlan) && d.barSaysDraft === true, JSON.stringify(d));
+  check(`draft-once ${name}: the finished waiting card is a receipt: no "Draft ready" eyebrow, no "stays a draft" line, at most 130 px tall`,
+    !!d.card && !/draft ready|stays a draft|nothing is decided yet/i.test(d.card) && /Took\s*\d+ s/.test(d.card) && /each cites only objectives you confirmed/.test(d.card) && d.cardHeight <= 130, JSON.stringify(d));
+  await page.setViewport(orig);
 };
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
@@ -595,8 +620,8 @@ async function story(label, narrow) {
   }
   await poll(async () => kinds(await stored()).includes("plan.proposed"), PLAN_MS + 15000);
   const planReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
-  check("drafting the plan ends with a true receipt computed from the resulting view",
-    /Checked: \d+ activit(y|ies), each cites only objectives you confirmed \(\d+ citations?\)\./.test(planReceipt) && /It stays a draft until you confirm it\./.test(planReceipt), planReceipt.replace(/\n+/g, " | "));
+  check("drafting the plan ends with a true receipt computed from the resulting view (C-e: it no longer repeats \"It stays a draft until you confirm it.\"; the stage bar and the DRAFT tag say it)",
+    /Checked: \d+ activit(y|ies), each cites only objectives you confirmed \(\d+ citations?\)\./.test(planReceipt) && !/It stays a draft until you confirm it\./.test(planReceipt), planReceipt.replace(/\n+/g, " | "));
   const announced = await poll(async () => {
     const t = await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? "");
     return /^Finished after \d+ s\. Checked:/.test(t) ? t : null;
@@ -614,6 +639,7 @@ async function story(label, narrow) {
   await primaryInViewport("plan");
   await polishCheck("plan");
   await navigatorCheck("plan");
+  await draftOnceCheck("plan");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",

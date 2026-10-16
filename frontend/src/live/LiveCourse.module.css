@@ -15,6 +15,7 @@
 .lede { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); margin: 0; overflow-wrap: anywhere; }
 /* The meta line carries an unbreakable urn, so it must be allowed to break anywhere. */
 .sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; overflow-wrap: anywhere; text-wrap: balance; }
+.subWhere { white-space: nowrap; } /* where the course is kept reads as one phrase, never split */
 /* The other display headings are the teacher's words too. */
 .heroTitle, .intakeTitle, .pinTitle, .offlineTitle { overflow-wrap: anywhere; }
 
@@ -22,6 +23,20 @@
 .stageMeta { min-width: 0; }
 
 .waiting { display: flex; flex-direction: column; }
+/* The plan stage, once drafted: the finished waiting card is a receipt, not a second page. Its eyebrow (which says "draft"
+   again) goes; the title and the time share one line, the check and the model's list share the next. Nothing is removed from
+   the card's text but the eyebrow; the live region still announces it all. */
+.waiting[data-compact] > section {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-4); box-shadow: none;
+}
+.waiting[data-compact] [class*="_eyebrow_"] { display: none; }
+.waiting[data-compact] [class*="_title_"] { grid-column: 1; grid-row: 1; font-size: var(--text-base); line-height: var(--leading-base); font-weight: var(--weight-semibold); }
+.waiting[data-compact] [class*="_toggle_"] { grid-column: 2; grid-row: 1; align-self: center; margin-left: 0; }
+.waiting[data-compact] [class*="_receipt_"] { grid-column: 1; grid-row: 2; padding: 0; background: transparent; align-items: baseline; }
+.waiting[data-compact] [class*="_receipt_"] p { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
+.waiting[data-compact] [class*="_clock_"] { grid-column: 2; grid-row: 2; font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); white-space: nowrap; }
+.waiting[data-compact] [class*="_sees_"] { grid-column: 1 / -1; grid-row: 3; }
 .actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 
 .primaryButton, .ghostButton, .textButton {
@@ -150,6 +165,9 @@
   .shell { display: grid; grid-template-columns: 13.5rem minmax(0, 46rem); gap: var(--space-8); justify-content: center; align-items: start; }
   .shell > .nav { position: sticky; top: var(--space-5); }
   /* The course switcher above already names the course, so its title here is the navigator's own size, not a headline. */
+  /* In the left column the byline is two lines on purpose: who, then where it is kept (the dot between them is for the stacked layout). */
+  .stageMeta .subDot { display: none; }
+  .stageMeta .subWhere { display: block; }
   .stageMeta .title { font-size: var(--text-md); line-height: var(--leading-md); letter-spacing: 0; text-wrap: balance; }
   /* The rail sits under the stage until there is room for a column (see the next block). */
   .shell > .side { grid-column: 2; }

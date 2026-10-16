@@ -35,6 +35,29 @@ export interface AiWaitingProps {
   zdr?: boolean | null;
   /** "compact" is the in-chat variant for a student's answer. */
   variant?: "card" | "compact";
+  /**
+   * The STEP's clock, owned by the caller and kept for the step's whole life. The stage page mounts the card in
+   * whichever stage is open, so a finished step's card is often a NEW card: a card-local clock would read 0 s.
+   * Omitted = a card-local clock (fine when the card lives for the whole step).
+   */
+  clock?: WaitClock;
+}
+
+/** Milliseconds of actual waiting, banked across card remounts; `stopped` once the step left "running". */
+export interface WaitClock { spent: number; last: number; stopped: boolean }
+
+/** A fresh clock for one AI step; create it when the step starts (not at render). */
+export function newWaitClock(now: number = Date.now()): WaitClock {
+  return { spent: 0, last: now, stopped: false };
+}
+
+/** Bank the time up to `now` and stop the clock. Idempotent. The caller stops it at the step's real finish, so the
+ *  receipt is right even when no card was mounted at that moment; a mounted card stops it too. */
+export function stopWaitClock(c: WaitClock, now: number = Date.now()): void {
+  if (c.stopped) return;
+  c.spent += now - c.last;
+  c.last = now;
+  c.stopped = true;
 }
 
 /** Lines of type: the width of each word, in ch. Fixed, decorative, and meaningless on purpose. */
@@ -59,7 +82,7 @@ function useReducedMotion(): boolean {
 }
 
 export function AiWaiting({
-  step, phase, typicalSeconds, paused = false, receipt = [], zdr = null, variant = "card",
+  step, phase, typicalSeconds, paused = false, receipt = [], zdr = null, variant = "card", clock,
 }: AiWaitingProps) {
   const text = describeStep(step);
   const range = typicalRange(step.kind, typicalSeconds);
@@ -67,23 +90,26 @@ export function AiWaiting({
   const compact = variant === "compact";
   const ids = { title: useId(), panel: useId() };
 
-  // ---- a real clock: milliseconds of ACTUAL waiting, held while the teacher is at the passcode dialog
-  const [seconds, setSeconds] = useState(0);
-  const spent = useRef(0);
-  const last = useRef(Date.now());
+  // ---- a real clock: milliseconds of ACTUAL waiting, held while the teacher is at the passcode dialog.
+  // It is the step's clock when the caller passes one (it survives this card being remounted in another stage),
+  // and it STOPS once the step leaves "running", so a card remounted later never adds reading time.
+  const own = useRef<WaitClock | null>(null);
+  if (!clock && !own.current) own.current = newWaitClock();
+  const c = clock ?? own.current!;
+  const [seconds, setSeconds] = useState(() => Math.floor(c.spent / 1000));
   const holding = useRef(paused);
   const tick = () => {
     const now = Date.now();
-    if (!holding.current) spent.current += now - last.current;
-    last.current = now;
-    setSeconds(Math.floor(spent.current / 1000));
+    if (!c.stopped && !holding.current) c.spent += now - c.last;
+    c.last = now;
+    setSeconds(Math.floor(c.spent / 1000));
   };
   useEffect(() => {
     tick(); // bank the time up to now under the OLD state before the state changes
     holding.current = paused;
   }, [paused]);
   useEffect(() => {
-    if (phase !== "running") { tick(); return; }
+    if (phase !== "running") { if (!holding.current) stopWaitClock(c); else c.stopped = true; tick(); return; }
     const t = setInterval(tick, 250);
     return () => clearInterval(t);
   }, [phase]);
@@ -91,13 +117,15 @@ export function AiWaiting({
   // ---- one polite live region, written at the start and at the finish only
   const [announcement, setAnnouncement] = useState("");
   const title = text.title;
-  useEffect(() => { setAnnouncement(startAnnouncement(title, range)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const finishedAt = useRef<WaitingPhase>("running");
+  // A card remounted for a step that already finished (another stage opened) announces nothing new: it was said.
+  const remountedAfterFinish = useRef(c.stopped).current;
+  useEffect(() => { if (!remountedAfterFinish) setAnnouncement(startAnnouncement(title, range)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const finishedAt = useRef<WaitingPhase>(remountedAfterFinish ? phase : "running");
   useEffect(() => {
     if (phase === finishedAt.current) return;
     finishedAt.current = phase;
-    if (phase === "done") setAnnouncement(`Finished after ${formatElapsed(Math.floor(spent.current / 1000))}. ${receipt.join(" ")}`.trim());
-    if (phase === "failed") setAnnouncement(`Stopped after ${formatElapsed(Math.floor(spent.current / 1000))}.`);
+    if (phase === "done") setAnnouncement(`Finished after ${formatElapsed(Math.floor(c.spent / 1000))}. ${receipt.join(" ")}`.trim());
+    if (phase === "failed") setAnnouncement(`Stopped after ${formatElapsed(Math.floor(c.spent / 1000))}.`);
   }); // after every render: cheap, and it must see the receipt that arrives WITH the phase
 
   // ---- bring a card the teacher did not scroll to into view (never steals focus)

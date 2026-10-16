@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AiWaiting } from "./AiWaiting";
+import { AiWaiting, newWaitClock, stopWaitClock } from "./AiWaiting";
 import { DEFAULT_TYPICAL, describeStep, planReceipt, proposalsReceipt, typicalRange, type ReceiptView, type WaitingStep } from "./model";
 
 const OBJECTIVES = [
@@ -229,6 +229,74 @@ describe("AiWaiting — motion", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none/);
     // the only place an animation is switched ON is the live-motion rule
     expect(css.match(/animation: [^n;][^;]*;/g)).toEqual(['animation: set 3.9s var(--ease-standard) infinite;']);
+  });
+});
+
+describe("AiWaiting — the clock belongs to the step, not to the card", () => {
+  // The stage page renders the waiting card in whichever stage is open, so a step that finishes moves the card
+  // to the next stage and React mounts a NEW card already "done". A card-local clock then said "Took 0 s" after
+  // an 18 s plan (seen in a real-model run). The caller passes the step's clock; the card only reads and banks it.
+  it("a card remounted after the step finished says the real time, not 0 s", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(18_000);
+    first.rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    first.unmount();
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("a card that unmounts mid-step and remounts done still counts the whole wait", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(10_000);
+    first.unmount();                 // the stage changed while the model was still working
+    advance(8_000);                  // ...and the model kept working with no card mounted
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("a finished clock stops: remounting minutes later adds nothing", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(18_000);
+    first.rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    first.unmount();
+    advance(5 * 60_000);             // the teacher reads the plan for five minutes, then opens another stage
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("a card remounted after the finish does not announce again (it was already said)", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(18_000);
+    first.rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    first.unmount();
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect((document.querySelector("[aria-live='polite']") as HTMLElement).textContent).toBe("");
+  });
+
+  it("the caller stops the clock at the real finish, even when no card is mounted then", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(10_000);
+    first.unmount();
+    advance(8_000);
+    stopWaitClock(clock);            // LiveCourse.finishWait: the host answered at 18 s
+    advance(60_000);                 // the next stage opens a minute later
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("time at the passcode dialog is still held out of a shared clock", () => {
+    const clock = newWaitClock();
+    const { rerender } = render(<AiWaiting step={PLAN_STEP} phase="running" paused clock={clock} />);
+    advance(30_000);                 // the teacher types the passcode
+    rerender(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(6_000);
+    rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("6 s").parentElement).toHaveTextContent("Took 6 s");
   });
 });
 

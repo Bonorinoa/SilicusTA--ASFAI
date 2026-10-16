@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { DecisionCard } from "../components/DecisionCard";
-import { AiWaiting, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
+import { AiWaiting, newWaitClock, stopWaitClock, answerText, describeStep, materialNamesOf, planReceipt, proposalsReceipt, type ReceiptView, type WaitClock, type WaitingPhase, type WaitingStep } from "../components/AiWaiting";
 import { ActivityRail } from "../components/ActivityRail";
 import { FirstRunTour } from "../components/FirstRunTour";
 import { PlanCard } from "../components/PlanCard";
@@ -39,7 +39,8 @@ import { RecordDetails } from "./RecordDetails";
 import styles from "./LiveCourse.module.css";
 import stageStyles from "./Stage.module.css";
 /** One AI step in flight, or just finished: what the waiting card shows. `receipt` is computed from the resulting view. */
-interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[]; startedAt: number }
+/** `clock` is the step's own: the card is remounted in whichever stage is open, so the card cannot own the time. */
+interface Waiting { id: number; step: WaitingStep; phase: WaitingPhase; receipt: string[]; startedAt: number; clock: WaitClock }
 /** A step in flight that has no waiting card of its own (ASFAI's, a student's answer): the rail still says who is working. */
 interface Working { actor: ActivityActor; label: string; startedAt: number }
 
@@ -138,13 +139,19 @@ export function LiveCourse() {
   /** An AI step begins: the page shows what is happening, from data it already holds. */
   const startWait = (step: WaitingStep): number => {
     const id = (waitIds.current += 1);
-    setWaiting({ id, step, phase: "running", receipt: [], startedAt: Date.now() });
+    const startedAt = Date.now();
+    setWaiting({ id, step, phase: "running", receipt: [], startedAt, clock: newWaitClock(startedAt) });
     return id;
   };
   /** It ends: a receipt computed from the view the host just returned, or an honest "stopped". */
   const finishWait = (id: number | null, ok: boolean, fresh: ReceiptView | null, receiptOf: (v: ReceiptView) => string[]) => {
     if (id === null) return;
-    setWaiting((w) => (w && w.id === id ? { ...w, phase: ok ? "done" : "failed", receipt: ok && fresh ? receiptOf(fresh) : [] } : w));
+    const finishedAt = Date.now(); // the real finish, whether or not a card is mounted right now
+    setWaiting((w) => {
+      if (!w || w.id !== id) return w;
+      stopWaitClock(w.clock, finishedAt);
+      return { ...w, phase: ok ? "done" : "failed", receipt: ok && fresh ? receiptOf(fresh) : [] };
+    });
   };
 
   const cp = view?.checkpoints ?? {};
@@ -501,6 +508,7 @@ export function LiveCourse() {
         typicalSeconds={worker?.typicalSeconds}
         zdr={worker?.zdr ?? null}
         paused={passcodeOpen}
+        clock={waiting.clock}
       />
     </div>
   ) : null;

@@ -361,7 +361,7 @@ try {
   await poll(() => bodyHas("A plant uses light"), 20000);
 
   // ---- the whole app at every width
-  check("the published course is on the page with a student answer", await bodyHas("From Objective 1, Activity 1"));
+  check("the published course is on the page with a student answer", await bodyHas("From Objective 1 \u00b7 Activity 1"));
   for (const w of WIDTHS) print(await at(w, "full live course"));
   // C-a (workspace): at 380 the stage navigator is the stepper again: a row of labels, no summaries, nothing sticky.
   await page.setViewport({ width: 380, height: 900, deviceScaleFactor: 1 });

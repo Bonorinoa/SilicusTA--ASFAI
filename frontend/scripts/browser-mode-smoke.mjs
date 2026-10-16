@@ -560,7 +560,7 @@ async function story(label, narrow) {
   await shot("15-waiting-student", 'section[data-variant="compact"][data-phase="running"]');
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
   await poll(() => bodyHas("A plant uses light, water and air to make sugar."), 15000);
-  check("the student gets an answer that cites the package", await bodyHas("From Objective 1, Activity 1"));
+  check("the student gets an answer that cites the published version", await bodyHas("From Objective 1 \u00b7 Activity 1"));
   await stageShot("13-student-answer");
   // The rail, open: at 380 it is a disclosure that starts closed; at 1440 it is already open.
   await page.evaluate(() => { const t = document.querySelector('aside button[aria-expanded="false"]'); if (t) t.click(); });

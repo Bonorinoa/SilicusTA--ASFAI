@@ -23,7 +23,7 @@ import { randomUUID } from "node:crypto";
 import { ConfirmGate, deterministicIdFactory } from "../confirm-gate/confirm-gate.mjs";
 import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { LessonIntake } from "./intake.mjs";
-import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, teacherStatement } from "./proposer.mjs";
+import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, SOURCE_SUGGESTED, teacherStatement } from "./proposer.mjs";
 import { digestOf } from "./digest.mjs";
 import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 import { reasonsOf } from "./reasons.mjs";
@@ -409,6 +409,63 @@ export class CourseSession {
       sources: proposed.map((o) => label(o.from)),
       assistantText: `Proposed ${proposed.length} objective${proposed.length === 1 ? "" : "s"} from your materials.`,
       materials: materials.map((m) => ({ name: m.name, digest: m.digest, chars: m.chars })),
+      at: a,
+    };
+    this.#apply(event);
+    this.#append(event);
+    return { ok: true, proposals: this.view().proposals };
+  }
+
+  /**
+   * Checkpoint 3, a second hand: the WORKER suggests up to three objectives that complement the teacher's own. Needs
+   * an outcome of the teacher's on record (their answer, or an objective they added), the outline confirmed, the
+   * objectives not yet confirmed, and no earlier suggestion still undecided. Reads nothing from a client. The
+   * worker's statements are already validated (three at most, none a repeat); the label is ours, never the model's.
+   *
+   * @param {{worker: object, at?: number}} input
+   */
+  async suggestObjectives({ worker, at } = {}) {
+    const answers = this.#intake.answers();
+    const added = this.#gate.decisions().filter((d) => d.verb === "add" && d.statement).map((d) => this.wording(d.targetId));
+    const outcomes = [...objectivesFromAnswers(answers).map((o) => o.statement), ...added];
+    if (outcomes.length === 0) {
+      return { ok: false, code: "NO_TEACHER_OUTCOMES", reason: "the teacher has not given an outcome of their own yet, so there is nothing to round out" };
+    }
+    if (this.#gate.checkpoints().outline.status !== "confirmed") {
+      return { ok: false, code: "CHECKPOINT_ORDER", reason: "the brief must be confirmed before objectives can be suggested" };
+    }
+    if (this.#gate.checkpoints().objectives.status === "confirmed") {
+      return { ok: false, code: "OBJECTIVES_CONFIRMED", reason: "the objectives are already confirmed" };
+    }
+    const rows = this.#rows();
+    // Suggestions round out a FIRST round (the teacher's derived outcomes, or the material path); they are never the
+    // first round, because the first round is what the derive route checks with ALREADY_PROPOSED.
+    if (rows.length === 0) {
+      return { ok: false, code: "PROPOSE_FIRST", reason: "propose objectives from your answers or materials first; suggestions round them out" };
+    }
+    if (rows.some((r) => r.source === SOURCE_SUGGESTED && r.status === "proposed")) {
+      return { ok: false, code: "SUGGESTIONS_PENDING", reason: "the earlier suggestions are still waiting for your decision" };
+    }
+    if (!worker) return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };
+    // Everything already on the table, in the teacher's latest wording, so nothing is offered twice (a dropped one too).
+    const existing = rows.flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean);
+    let statements;
+    try {
+      statements = await worker.suggestObjectives({
+        topic: String(answers?.topic ?? ""),
+        course: String(answers?.course ?? this.meta.title ?? ""),
+        outcomes,
+        existing,
+      });
+    } catch (e) {
+      return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
+    }
+    const a = at ?? Date.now();
+    const event = {
+      kind: "objectives.proposed",
+      items: statements.map((statement) => ({ kind: "local", statement })),
+      sources: statements.map(() => SOURCE_SUGGESTED),
+      assistantText: `Suggested ${statements.length} objective${statements.length === 1 ? "" : "s"} to round out the teacher's own.`,
       at: a,
     };
     this.#apply(event);

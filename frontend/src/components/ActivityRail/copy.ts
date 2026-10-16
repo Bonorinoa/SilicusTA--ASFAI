@@ -10,6 +10,7 @@
  *   intake.asked          questions: number
  *   objectives.derived    count: number
  *   objectives.drafted    count: number, materials: number
+ *   objectives.suggested  count: number
  *   objectives.decided    accepted, renamed, dropped, added: number
  *   plan.drafted          activities: number
  *   plan.checked          valid: boolean, issues: number
@@ -63,6 +64,10 @@ export function sentenceOf(it: Pick<ActivityItem, "action" | "facts"> & Partial<
       const m = num(facts, "materials");
       const what = n === null ? "Drafted objectives" : `Drafted ${plural(n, "objective")}`;
       return m === null ? what : `${what} from ${plural(m, "material")}`;
+    }
+    case "objectives.suggested": {
+      const n = num(facts, "count");
+      return n === null ? "Suggested objectives to round out yours" : `Suggested ${plural(n, "objective")} to round out yours`;
     }
     case "objectives.decided": {
       const parts = (["accepted", "renamed", "dropped", "added"] as const)

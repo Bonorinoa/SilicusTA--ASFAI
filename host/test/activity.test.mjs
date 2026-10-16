@@ -152,3 +152,10 @@ test("the whole HTTP story (material in, decisions, plan, publish): the secret n
     app.close();
   }
 });
+
+test("a worker's suggested objectives are their own rail row: worker / objectives.suggested, a count, never the statements", () => {
+  const rows = activityOf([
+    { seq: 1, event: { kind: "objectives.proposed", items: [{ kind: "local", statement: "a" }, { kind: "local", statement: "b" }], sources: ["suggested by Silicus", "suggested by Silicus"], assistantText: "Suggested 2 objectives.", at: 5 } },
+  ]);
+  assert.deepEqual(rows, [{ seq: 1, at: 5, actor: "worker", action: "objectives.suggested", artifact: "objectives", facts: { count: 2 } }]);
+});

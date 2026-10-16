@@ -30,6 +30,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
+import JSZip from "jszip";
 import { modelReply } from "../../host/test/scripted-course.mjs";
 import { verifyRecords } from "../../host/chain.mjs";
 import { readBackup } from "../../host/backup.mjs";
@@ -70,7 +71,7 @@ check("the browser host is its own chunk in the browser build", chunks.some((f) 
 const vercel = JSON.parse(readFileSync(join(REPO, "vercel.json"), "utf8"));
 const HEADERS = Object.fromEntries(vercel.headers.find((h) => h.source === "/(.*)").headers.map((h) => [h.key, h.value]));
 check("serving with vercel.json's strict CSP", /default-src 'self'; script-src 'self'/.test(HEADERS["Content-Security-Policy"] ?? ""));
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".json": "application/json", ".svg": "image/svg+xml" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2", ".json": "application/json", ".svg": "image/svg+xml", ".mjs": "text/javascript; charset=utf-8" };
 
 const PLAN_MS = Number(process.env.SILICUS_SMOKE_PLAN_MS ?? 2000);
 const STUDENT_MS = 1500;
@@ -231,6 +232,7 @@ const shot = async (name, selector = null) => {
 const stageShot = async (name, selector = null, viewportOnly = false) => {
   if (!SHOTS) return;
   const w = page.viewport().width;
+  await page.evaluate(() => window.scrollTo(0, 0)); // the sticky navigator and rail are drawn where the window is: capture from the top
   const path = join(SHOTS, `stage-${name}-${w}.png`);
   const el = selector ? await page.$(selector) : null;
   writeFileSync(path.replace(/\.png$/, ".txt"), await page.evaluate((sel) => (sel ? document.querySelector(sel) : document.body).innerText, selector));
@@ -239,6 +241,29 @@ const stageShot = async (name, selector = null, viewportOnly = false) => {
   if (viewportOnly) { await page.screenshot({ path }); return; }
   const h = await page.evaluate(() => document.documentElement.scrollHeight);
   await page.screenshot({ path, captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: Math.min(h, 6000) } });
+};
+/** C-a (workspace): at the two laptop sizes, the stage's primary action is inside the window the moment the stage opens. */
+// `settled`: the stage is a conversation whose cards (OnboardingChat, MaterialsPanel) are not this page's: measured where the page
+// came to rest (their own autofocus scrolls their input into view). Every other stage is measured from the top of the page.
+const primaryInViewport = async (stage, { settled = false } = {}) => {
+  const orig = page.viewport();
+  if (orig.width < 1100) return; // narrow keeps its single column; its own checks are the narrow ones
+    for (const [w, h] of [[1440, 900], [1280, 800]]) {
+    await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
+    if (!settled) await page.evaluate(() => window.scrollTo(0, 0));
+    await sleep(200);
+    const r = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('[data-primary="true"]')].filter((b) => b.offsetParent !== null);
+      if (els.length === 0) return null;
+      const b = els[0].getBoundingClientRect();
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom), left: Math.round(b.left), right: Math.round(b.right), vh: innerHeight, vw: innerWidth, label: els[0].textContent.trim().slice(0, 40), count: els.length };
+    });
+    if (SHOTS && w === 1440) await page.screenshot({ path: join(SHOTS, `ws-${stage.replace(/[^a-z]+/g, "-")}-1440x900.png`) });
+    check(`workspace ${w}x${h}: the ${stage} primary is inside the window when the stage opens`,
+      !!r && r.count === 1 && r.top >= 0 && r.bottom <= r.vh && r.left >= 0 && r.right <= r.vw, JSON.stringify(r));
+  }
+  await page.setViewport(orig);
+  await page.evaluate(() => window.scrollTo(0, 0));
 };
 const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
 
@@ -295,6 +320,7 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Confirm the material list"));
   if (narrow) await checkNarrow("onboarding: confirm the material list");
   await stageShot("03-confirm-material-list");
+  await primaryInViewport("confirm material list", { settled: true });
   await clickText("Confirm the material list");
   await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
   check("materials confirmed on the record", true);
@@ -303,6 +329,7 @@ async function story(label, narrow) {
   await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
   await shot("01b-intake");
   await stageShot("04-intake");
+  await primaryInViewport("intake", { settled: true });
   if (narrow) await checkNarrow("intake question 1: topic");
   check("ASFAI says plainly it needs the local app, with no Connect button",
     (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
@@ -320,6 +347,7 @@ async function story(label, narrow) {
   if (narrow) await checkNarrow("intake question 3: outcomes");
   await clickText("Propose these from my materials instead");
   await poll(() => bodyHas("Confirm the outline"));
+  await primaryInViewport("confirm outline");
   if (narrow) await checkNarrow("outline confirm");
   await clickText("Confirm the outline");
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
@@ -347,6 +375,7 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Lesson notes ·"));
   await shot("06-material-panel", 'section[aria-label="Course material"]');
   await stageShot("05-material");
+  await primaryInViewport("material", { settled: true });
   await clickText("Propose objectives from my materials");
   await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
   check("an AI action asks for the demo passcode", await bodyHas("Demo passcode"));
@@ -366,6 +395,7 @@ async function story(label, narrow) {
     /3 proposals\. None is confirmed until you decide\./.test(objReceipt) && /Drawn from 1 material/.test(objReceipt), objReceipt.replace(/\n+/g, " | "));
   await shot("11-receipt-proposals", 'section[data-phase="done"][data-variant="card"]');
   await stageShot("06-objectives-proposed");
+  await primaryInViewport("objectives (proposed)");
   check("the worker proposed objectives through /api/worker, with the passcode header",
     api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
   let s = await stored();
@@ -394,6 +424,7 @@ async function story(label, narrow) {
   // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
   await poll(() => bodyHas("build the plan"));
   await stageShot("07-objectives-decided");
+  await primaryInViewport("objectives (decided)");
   check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
   check("three confirmed objectives are on the page to be sent", confirmedStatements.length === 3 && confirmedStatements.every(Boolean), String(confirmedStatements.length));
@@ -443,10 +474,33 @@ async function story(label, narrow) {
   await poll(() => bodyHas("Confirm the lesson plan"));
   // C1.5 (new): the plan stage. The mock plan has 3 activities, each with one "Look at a leaf." line: the plan is on the page ONCE.
   await stageShot("09-plan-drafted");
+  await primaryInViewport("plan");
   check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   check("rail: a worker row after drafting, and no ASFAI lane in the online app",
     await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && ![...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
+  // C-a (workspace): edit the objectives from the plan and come back: two clicks, and the page is where it was (within 40 px).
+  if (!narrow) {
+    const orig = page.viewport();
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    await sleep(200);
+    const y0 = await page.evaluate(() => { const y = Math.max(0, Math.min(700, document.documentElement.scrollHeight - innerHeight - 50)); window.scrollTo(0, y); return window.scrollY; });
+    await sleep(150);
+    check("workspace: the plan page is tall enough to scroll, so the return check means something", y0 >= 300, `scrollY ${y0}`);
+    await clickText("Edit objectives"); // click 1
+    await poll(() => bodyHas("Back to the plan"));
+    check("workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary",
+      (await page.evaluate(() => !!document.querySelector('section[aria-label="Objective proposals"]'))) && (await primaryCount()) === 1);
+    await stageShot("09b-edit-objectives");
+    await clickText("Back to the plan"); // click 2
+    await poll(() => bodyHas("Confirm the lesson plan"));
+    await sleep(250);
+    const y1 = await page.evaluate(() => window.scrollY);
+    check("workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px", Math.abs(y1 - y0) <= 40, `scrollY ${y0} -> ${y1}`);
+    check("workspace: looking wrote nothing (still exactly the three objective decisions)", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
+    await page.setViewport(orig);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
   if (narrow) await checkNarrow("plan card, drafted");
   await clickText("Confirm the lesson plan");
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
@@ -455,6 +509,7 @@ async function story(label, narrow) {
   if (narrow) await checkNarrow("plan card");
   await poll(() => bodyHas("Review & publish"));
   await stageShot("10-publish");
+  await primaryInViewport("publish");
   check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   // ---- publish (review -> confirm step -> publish)
@@ -480,6 +535,7 @@ async function story(label, narrow) {
 
   if (narrow) await checkNarrow("publish card, sealed");
   await stageShot("12-published");
+  await primaryInViewport("published");
   await page.evaluate(() => window.scrollTo(0, 0));
   check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
@@ -620,6 +676,176 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
     console.log("[dump] " + (await page.evaluate(() => location.hash + " :: " + document.body.innerText.slice(0, 1500)).catch(() => "?")));
     console.log("[debug] " + (await page.evaluate(() => document.querySelector('section[aria-label="Where your courses are kept"]')?.innerText ?? "(no notice)").catch(() => "?")));
     check("the whole flow completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
+  }
+  await context.close();
+}
+
+/* ------------------------------ E-b: real file uploads ------------------------------
+ * Appended after the two passes (no existing check is touched). A FRESH context: a teacher adds a real PDF and a real
+ * DOCX at the naming question; the names are recorded, the text is read in the tab; "propose from my materials" uses
+ * it; a reload forgets it and says so; the PDF's marker string is in no IndexedDB or web-storage value; the page
+ * made no request outside its own origin (pdf.js's worker comes from the bundle); 0 CSP violations.
+ * ------------------------------------------------------------------------------- */
+{
+  passLabel = "uploads 1440";
+  const FIX = join(HERE, "src", "materials", "__fixtures__");
+  const PDF_MARK = "HELLO-PDF-MARKER-7731";
+  const DOCX_MARK = "DOCX-MARKER-4410";
+  const UP = mkdtempSync(join(tmpdir(), "silicus-uploads-"));
+
+  // The main entry chunk must not carry pdf.js: it is a lazy chunk, fetched only when a PDF is chosen.
+  {
+    const html = readFileSync(join(OUT, "index.html"), "utf8");
+    const entry = (html.match(/src="\/(assets\/[^"]+\.js)"/) ?? [])[1];
+    const entryText = entry ? readFileSync(join(OUT, entry), "utf8") : "";
+    const LIB = ["InvalidPDFException", "PasswordException", "PDFDocumentLoadingTask"];
+    const lazy = readdirSync(join(OUT, "assets")).filter((f) => /\.m?js$/.test(f) && f !== entry.split("/").pop())
+      .filter((f) => LIB.every((m) => readFileSync(join(OUT, "assets", f), "utf8").includes(m)));
+    check("uploads: the main entry chunk does not contain pdf.js (a lazy chunk does)", !!entry && LIB.every((m) => !entryText.includes(m)) && lazy.length >= 1,
+      `entry ${entry} (${entryText.length} bytes); lazy pdf.js chunk: ${lazy.join(", ") || "none"}`);
+    const lazyDocx = readdirSync(join(OUT, "assets")).filter((f) => /^mammoth\.browser\.min-.*\.js$/.test(f) || /^jszip\.min-.*\.js$/.test(f));
+    check("uploads: mammoth and jszip are lazy chunks too, not in the entry", lazyDocx.length === 2 && !entryText.includes("Can't find end of central directory"), lazyDocx.join(", "));
+  }
+
+  // A real DOCX, built here.
+  const docx = new JSZip();
+  docx.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+  docx.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  docx.file("word/document.xml", `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${[`Leaves hold the green pigment.`, `The code ${DOCX_MARK} appears only in this document.`].map((t) => `<w:p><w:r><w:t>${t}</w:t></w:r></w:p>`).join("")}</w:body></w:document>`);
+  const docxPath = join(UP, "Syllabus notes.docx");
+  writeFileSync(docxPath, await docx.generateAsync({ type: "nodebuffer" }));
+  const pdfPath = join(FIX, "hello.pdf");
+  const scanPath = join(FIX, "scan-only.pdf");
+  const docPath = join(UP, "old.doc");
+  writeFileSync(docPath, "not a real old word file");
+
+  const context = await browser.createBrowserContext();
+  page = await context.newPage();
+  const errs = [];
+  const foreign = [];
+  const workerLoads = [];
+  page.on("console", (m) => { if (m.type() === "error") { errs.push(m.text()); console.log(`[console.error] ${m.text()}`); } });
+  page.on("pageerror", (e) => { errs.push(e.message); console.log(`[pageerror] ${e.message}`); });
+  page.on("request", (r) => { if (!r.url().startsWith(APP) && !r.url().startsWith("data:") && !r.url().startsWith("blob:")) foreign.push(r.url()); });
+  page.on("response", (r) => { if (/pdf\.worker/.test(r.url())) workerLoads.push(`${r.status()} ${r.headers()["content-type"] ?? ""}`); });
+  await page.evaluateOnNewDocument(() => {
+    window.__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
+  await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
+  const bodiesBefore = api.workerBodies.length;
+  try {
+    await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
+    await page.waitForSelector('button[aria-label="Close the tour"]');
+    await page.click('button[aria-label="Close the tour"]');
+    const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
+    await reply("Photosynthesis from real files", "Record the course title");
+    await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
+    await reply("Ada Lovelace", "Record this name");
+    await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+
+    // ---- choose a real PDF and a real DOCX beside the typed names
+    await setValue("#onboarding-reply", "Textbook chapter 3");
+    check("uploads: the materials question offers 'Add files' with the PDF, DOCX and PPTX types",
+      await page.evaluate(() => { const i = document.querySelector("#onboarding-files"); return !!i && i.multiple && /\.pdf/.test(i.accept) && /\.docx/.test(i.accept) && /\.pptx/.test(i.accept); }));
+    await (await page.$("#onboarding-files")).uploadFile(pdfPath, docxPath);
+    await poll(async () => (await bodyHas("Syllabus notes.docx ·")) && (await bodyHas("hello.pdf ·")));
+    const listed = await page.evaluate(() => [...document.querySelectorAll('ul[aria-label="Files added"] li')].map((li) => li.textContent));
+    check("uploads: each file shows its name, kind and character count before anything is sent",
+      listed.some((t) => /^hello\.pdf · PDF · [\d,]+ characters$/.test(t)) && listed.some((t) => /^Syllabus notes\.docx · Word · [\d,]+ characters$/.test(t)), listed.join(" | "));
+    const pdfChars = Number((listed.find((t) => t.startsWith("hello.pdf")) ?? "").match(/([\d,]+) characters/)?.[1].replace(/,/g, "") ?? 0);
+    check("uploads: the PDF's character count is the length of its real text layer", pdfChars > 50 && pdfChars < 200, String(pdfChars));
+    const typed = await page.evaluate(() => document.querySelector("#onboarding-reply").value);
+    check("uploads: the file names sit on their own lines beside the typed name", typed === "Textbook chapter 3\nhello.pdf\nSyllabus notes.docx", JSON.stringify(typed));
+    check("uploads: nothing has left the page (no worker call, no /api/courses) while files are only chosen",
+      api.workerBodies.length === bodiesBefore && !api.calls.some((c) => c.path.startsWith("/api/courses")));
+    await shot("20-onboarding-files");
+    await stageShot("20-onboarding-files");
+
+    // ---- record: the NAMES go on the course, exactly as typed names do
+    await clickText("Record these names");
+    await poll(async () => (await stored()).metas.length === 1);
+    let s = await stored();
+    const created = s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event).find((e) => e.kind === "course.created");
+    const recordedNames = JSON.stringify(created ?? {});
+    check("uploads: the record holds the file names as typed names, and not their text",
+      recordedNames.includes("hello.pdf") && recordedNames.includes("Syllabus notes.docx") && recordedNames.includes("Textbook chapter 3") && !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK), recordedNames.slice(0, 200));
+    await poll(() => bodyHas("Confirm the material list"));
+    await clickText("Confirm the material list");
+    await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
+    const fill = (id, text) => page.evaluate((id, text) => {
+      const ta = document.querySelector(`#intake-${id}`);
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set.call(ta, text);
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+    }, id, text);
+    await fill("topic", "Photosynthesis"); await clickText("Record this answer");
+    await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
+    await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
+    await poll(() => bodyHas("Propose these from my materials instead"));
+    await clickText("Propose these from my materials instead");
+    await poll(() => bodyHas("Confirm the outline"));
+    await clickText("Confirm the outline");
+
+    // ---- the material panel offers the files chosen at the naming question: no second upload
+    await poll(() => bodyHas("Add your material here"));
+    await poll(() => bodyHas("hello.pdf · PDF"));
+    const offered = await page.evaluate(() => [...document.querySelectorAll('ul[aria-label="Material added"] li p')].map((p) => p.textContent));
+    check("uploads: 'propose from my materials' finds the files already chosen in this tab (names and counts shown, no second upload)",
+      offered.length === 2 && offered.some((t) => /^hello\.pdf · PDF · [\d,]+ characters$/.test(t)) && offered.some((t) => /^Syllabus notes\.docx · Word · [\d,]+ characters$/.test(t)), offered.join(" | "));
+    await shot("21-material-offered", 'section[aria-label="Course material"]');
+    await stageShot("21-material-offered");
+
+    // ---- reload: the text is gone, and the panel says what to do
+    await page.reload({ waitUntil: "networkidle0" });
+    await poll(() => bodyHas("Add your material here"));
+    check("uploads: after a reload the files are not offered (the text was never stored)", !(await bodyHas("hello.pdf · PDF")) && !(await bodyHas("Syllabus notes.docx · Word")));
+    check("uploads: and the panel says to add the file again, in the glossary's words",
+      await bodyHas("Add the file again to use its text. Silicus does not keep your files."));
+    s = await stored();
+    check("uploads: the PDF's marker text is in no IndexedDB value, localStorage or sessionStorage",
+      !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK) && !JSON.stringify(s).includes("Hello from the fixture PDF"));
+
+    // ---- failures are plain sentences, and add nothing
+    const panelInput = async () => page.$('section[aria-label="Course material"] input[type="file"]');
+    await (await panelInput()).uploadFile(scanPath);
+    await poll(() => bodyHas("This PDF has no text layer"));
+    const scanNote = await page.evaluate(() => document.querySelector('section[aria-label="Course material"] [role="status"]')?.textContent ?? "");
+    check("uploads: an image-only PDF says it has no text layer, names the file, and makes no OCR claim",
+      /^scan-only\.pdf: This PDF has no text layer/.test(scanNote) && !/\bOCR\b|recogni[sz]/i.test(scanNote), scanNote);
+    await (await panelInput()).uploadFile(docPath);
+    await poll(() => bodyHas("old.doc:"));
+    const docNote = await page.evaluate(() => document.querySelector('section[aria-label="Course material"] [role="status"]')?.textContent ?? "");
+    check("uploads: a legacy .doc says what to do instead", /^old\.doc: .*\.docx/.test(docNote), docNote);
+    check("uploads: neither failed file was added to the list", !(await page.evaluate(() => !!document.querySelector('ul[aria-label="Material added"]'))));
+
+    // ---- add the real files again, then propose: the model request carries their text
+    await (await panelInput()).uploadFile(pdfPath, docxPath);
+    await poll(async () => (await bodyHas("Syllabus notes.docx · Word")) && (await bodyHas("hello.pdf · PDF")));
+    check("uploads: the files added again in the panel are listed with their character counts", await page.evaluate(() => document.querySelectorAll('ul[aria-label="Material added"] li').length === 2));
+    await clickText("Propose objectives from my materials");
+    await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
+    await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+    await clickText("Continue");
+    await poll(async () => kinds(await stored()).includes("objectives.proposed"), 20000);
+    const sent = api.workerBodies.slice(bodiesBefore);
+    check("uploads: the proposal request carries the PDF's text and the DOCX's text, once each",
+      sent.filter((b) => b.includes(PDF_MARK)).length === 1 && sent.filter((b) => b.includes(DOCX_MARK)).length === 1, `${sent.length} worker request(s)`);
+    check("uploads: the receipt says the proposals were drawn from 2 materials", await poll(() => bodyHas("Drawn from 2 materials")).catch(() => false) === true);
+    s = await stored();
+    check("uploads: after proposing, the PDF's marker is STILL in no IndexedDB value, localStorage or sessionStorage",
+      !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK));
+    await stageShot("22-objectives-from-files");
+
+    // ---- the page stayed inside its own origin and its CSP
+    check("uploads: pdf.js's worker came from the bundle, same origin, as JavaScript", workerLoads.length >= 1 && workerLoads.every((w) => /^200 text\/javascript/.test(w)), workerLoads.join(" | "));
+    check("uploads: no request left the page's own origin (no CDN)", foreign.length === 0, foreign.join(", "));
+    const csp = await page.evaluate(() => window.__csp);
+    check("uploads: 0 CSP violations", csp.length === 0, csp.join("; "));
+    check("uploads: 0 console or page errors", errs.length === 0, errs.join(" | "));
+    check("uploads: the whole upload flow completed", true);
+  } catch (e) {
+    console.log("[dump] " + (await page.evaluate(() => location.hash + " :: " + document.body.innerText.slice(0, 1500)).catch(() => "?")));
+    check("uploads: the whole upload flow completed", false, e instanceof Error ? e.stack?.split("\n").slice(0, 3).join(" ") : String(e));
   }
   await context.close();
 }

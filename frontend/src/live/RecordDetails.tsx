@@ -8,8 +8,10 @@ import type { ReactNode } from "react";
 import { plural } from "../lib/plural";
 import styles from "./Stage.module.css";
 
-export function RecordDetails({ courseId, events, busy, onVerify, gateMessages, intakeGuard, children }: {
+export function RecordDetails({ courseId, planId, events, busy, onVerify, gateMessages, intakeGuard, children }: {
   courseId: string;
+  /** The lesson plan's own id, when there is one: the plan sheet prints it in its footer, and keeps it here on screen. */
+  planId?: string | null;
   events: number;
   busy: boolean;
   onVerify: () => void;
@@ -25,6 +27,8 @@ export function RecordDetails({ courseId, events, busy, onVerify, gateMessages, 
       <div className={styles.recordBody}>
         <dl className={styles.recordFacts}>
           <div><dt>Course</dt><dd className={styles.mono}>{courseId}</dd></div>
+          {planId ? <div><dt>Lesson plan</dt><dd className={styles.mono}>{planId}</dd></div> : null}
+          {planId ? <div><dt>Printing</dt><dd>The plan page is set to print cleanly; use your browser{"\u2019"}s print command. Its footer prints the ids above.</dd></div> : null}
           <div><dt>Event log</dt><dd>{plural(events, "event")}, each linked to the one before it</dd></div>
         </dl>
         <button type="button" className={styles.textButton} onClick={onVerify} disabled={busy}>Verify the event log</button>

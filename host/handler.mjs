@@ -35,7 +35,7 @@ export class HttpError extends Error {
 /** A worker state maps to an honest status: not configured is 501, an outage or bad output is 502. */
 function planStatus(code) {
   if (code === "WORKER_NOT_CONFIGURED") return 501;
-  if (code === "NO_CONFIRMED_OBJECTIVES" || code === "ALREADY_PROPOSED") return 409;
+  if (["NO_CONFIRMED_OBJECTIVES", "ALREADY_PROPOSED", "NO_TEACHER_OUTCOMES", "SUGGESTIONS_PENDING", "OBJECTIVES_CONFIRMED", "CHECKPOINT_ORDER", "PROPOSE_FIRST"].includes(code)) return 409;
   if (code === "NO_MATERIALS") return 422;
   return 502;
 }
@@ -235,6 +235,13 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         return { status: 200, json: { verified: ver.verified, ref, digest: record.digest, archivedAt: record.archivedAt, export: record.payload } };
       }
       if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed for ${tail}`);
+
+      // The worker SUGGESTS from the teacher's recorded words. It reads NO request body: not even to ignore it.
+      if (tail === "objectives/suggest") {
+        const r = await s.suggestObjectives({ worker: planWorker });
+        if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
+        return { status: 200, json: { proposals: r.proposals } };
+      }
 
       const b = await body();
       switch (tail) {

@@ -452,7 +452,7 @@ describe("LiveCourse — thin client of the host", () => {
 
   it("says plainly when the course does not cover a student's question", async () => {
     const v = publishedView(UNCHANGED);
-    mockHost(v, { studentReply: { answer: "That isn't in this course yet. Ask your teacher.", grounded: false, cites: [], note: "n" } });
+    mockHost(v, { studentReply: { answer: "That isn't part of this lesson. Ask your teacher.", grounded: false, cites: [], note: "n", refusal: "off_topic" } });
     const user = userEvent.setup();
     render(<LiveCourse />);
     await user.type(await screen.findByLabelText("Your question"), "Who won in 1966?");
@@ -483,19 +483,25 @@ describe("LiveCourse — thin client of the host", () => {
     });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    const list = await screen.findByRole("list", { name: "Your courses" });
+    // The library is a menu button named after the open course; its list is not on the page until it is asked for.
+    const trigger = await screen.findByRole("button", { name: /Lesson 3 · AI literacy/ });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await user.click(trigger);
+    const list = await screen.findByRole("menu", { name: "Your courses" });
     expect(within(list).getByText(/2 of 5 checkpoints confirmed/)).toBeInTheDocument();
     expect(within(list).getByText(/published, version 1/)).toBeInTheDocument();
     expect(within(list).getByText(/needs attention: its record does not verify/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Lesson 3 · AI literacy is open" })).toBeDisabled();
+    expect(within(list).getByRole("menuitem", { name: "Lesson 3 · AI literacy is open" })).toBeDisabled();
 
     const writes = () => calls.filter((c) => c.body !== undefined).length;
     const before = writes();
-    await user.click(within(list).getByRole("button", { name: "Open Earlier course" }));
+    await user.click(within(list).getByRole("menuitem", { name: "Open Earlier course" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Earlier course" })).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument(); // choosing closes it
     expect(writes()).toBe(before);
 
-    await user.click(screen.getByRole("button", { name: "Start a new course" }));
+    await user.click(screen.getByRole("button", { name: /Earlier course/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Start a new course" }));
     expect(await screen.findByLabelText("What should we call this course?")).toBeInTheDocument();
     expect(writes()).toBe(before);
   });

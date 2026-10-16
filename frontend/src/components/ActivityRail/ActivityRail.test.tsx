@@ -165,14 +165,14 @@ describe("ActivityRail — rows", () => {
   });
 
   it("shows up to eight steps whole, with no fold that hides just one or two", () => {
-    const eight = Array.from({ length: 8 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 20 - i));
+    const eight = Array.from({ length: 8 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, (20 - i) * 3));
     render(<ActivityRail items={eight} asfaiAvailable />);
     expect(rows()).toHaveLength(8);
     expect(screen.queryByRole("button", { name: /earlier step/ })).toBeNull();
   });
 
   it("folds a long history: the newest six, then a button for the earlier steps", () => {
-    const many = Array.from({ length: 11 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 20 - i));
+    const many = Array.from({ length: 11 }, (_, i) => item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, (30 - i) * 3));
     render(<ActivityRail items={many} asfaiAvailable />);
     expect(rows()).toHaveLength(6);
     fireEvent.click(screen.getByRole("button", { name: "Show 5 earlier steps" }));
@@ -327,5 +327,79 @@ describe("ActivityRail — narrow screens collapse, wide screens do not", () => 
     stubMedia({ wide: false });
     render(<ActivityRail items={[item("course.created", "teacher", "record")]} asfaiAvailable />);
     expect(screen.getByRole("button", { name: /Behind the scenes/ }).textContent).toMatch(/1 step\b/);
+  });
+});
+
+describe("ActivityRail — consecutive alike steps are one row", () => {
+  it("folds three decisions made within two minutes into one row with the counts added", () => {
+    const three = [
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 4),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 3),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 2),
+    ];
+    render(<ActivityRail items={three} asfaiAvailable />);
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].textContent).toMatch(/Your decisions: 3 accepted/);
+    expect(rows()[0].getAttribute("data-seq")).toBe(String(three[2].seq)); // the newest of the three stands for the row
+  });
+
+  it("adds the different verbs separately, and reads the head count of steps after grouping", () => {
+    const mixed = [
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 5),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, renamed: 1 }, 4),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 3),
+    ];
+    render(<ActivityRail items={mixed} asfaiAvailable />);
+    expect(rows()[0].textContent).toMatch(/Your decisions: 2 accepted, 1 renamed/);
+    expect(screen.getByText("1 step, newest first")).toBeInTheDocument();
+  });
+
+  it("keeps decisions apart when more than two minutes pass between them", () => {
+    render(<ActivityRail items={[
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 10),
+      item("objectives.decided", "teacher", "objectives", { decisions: 1, accepted: 1 }, 2),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(2);
+  });
+
+  it("never folds different actors, actions or checkpoints into each other", () => {
+    render(<ActivityRail items={[
+      item("checkpoint.confirmed", "teacher", "record", { checkpoint: "files" }, 6),
+      item("checkpoint.confirmed", "teacher", "record", { checkpoint: "outline" }, 5),
+      item("plan.drafted", "worker", "plan", { activities: 3 }, 4),
+      item("plan.confirmed", "teacher", "plan", {}, 3),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(4);
+  });
+
+  it("does not add counts that are not a tally (two plans drafted are two plans, not six activities)", () => {
+    render(<ActivityRail items={[
+      item("plan.drafted", "worker", "plan", { activities: 3 }, 3),
+      item("plan.drafted", "worker", "plan", { activities: 4 }, 2),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(2);
+  });
+
+  it("says how many times when identical steps with nothing to add repeat", () => {
+    render(<ActivityRail items={[
+      item("intake.answered", "teacher", "outline", {}, 3),
+      item("intake.answered", "teacher", "outline", {}, 2),
+      item("intake.answered", "teacher", "outline", {}, 1),
+    ]} asfaiAvailable />);
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].textContent).toMatch(/Answered the questions · 3 times/);
+  });
+});
+
+describe("ActivityRail — it owns its scroll and sits still while the stage scrolls", () => {
+  it("is sticky inside its own full-height cell, with a max height of the window minus its margins", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "ActivityRail.module.css"), "utf8");
+    const wide = css.slice(css.indexOf("@media (min-width: 80rem)"));
+    expect(wide).toMatch(/\.root\s*\{[^}]*position:\s*sticky/);
+    expect(wide).toMatch(/\.root\s*\{[^}]*max-height:\s*calc\(100vh/);
+    expect(wide).toMatch(/\.root\s*\{[^}]*overflow-y:\s*auto/);
   });
 });

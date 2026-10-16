@@ -107,6 +107,25 @@ const clickText = (page, text) => page.evaluate((t) => {
 
 // C1.5 helpers: the stage page marks exactly one primary action; the plan's title is the plan's text.
 const primaryCount = () => page.evaluate(() => [...document.querySelectorAll('[data-primary="true"]')].filter((b) => b.offsetParent !== null).length);
+/** C-a (workspace): at the two laptop sizes the stage's primary is inside the window when the stage opens (measured from the top of the page). */
+const waitMs = (ms) => new Promise((r) => setTimeout(r, ms));
+const primaryInViewport = async (stage) => {
+  const orig = page.viewport();
+  for (const [w, h] of [[1440, 900], [1280, 800]]) {
+    await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await waitMs(200);
+    const r = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('[data-primary="true"]')].filter((b) => b.offsetParent !== null);
+      if (els.length === 0) return null;
+      const b = els[0].getBoundingClientRect();
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom), left: Math.round(b.left), right: Math.round(b.right), vh: innerHeight, vw: innerWidth, count: els.length };
+    });
+    check(`workspace ${w}x${h}: the ${stage} primary is inside the window when the stage opens`, !!r && r.count === 1 && r.top >= 0 && r.bottom <= r.vh && r.left >= 0 && r.right <= r.vw, JSON.stringify(r));
+  }
+  await page.setViewport(orig);
+  await page.evaluate(() => window.scrollTo(0, 0));
+};
 const countIn = (t) => page.evaluate((s) => document.body.innerText.split(s).length - 1, t);
 const PLAN_TITLE = "Seeing the claim: how AI answers are built";
 const bodyHas = (page, t) => page.evaluate((s) => document.body.innerText.toLowerCase().includes(s.toLowerCase()), t);
@@ -248,6 +267,7 @@ await poll(async () => (await getView(courseId)).proposals.length === 2);
 check("the host proposed 2 objectives, one per recorded outcome line", true);
 await poll(async () => await bodyHas(page, "Accept objective") || await page.evaluate(() => !!document.querySelector('button[aria-label^="Accept objective"]')));
 check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+await primaryInViewport("objectives (decided)");
 
 // teacher decides: accept every awaiting proposal through the UI. State-driven,
 // because each accept triggers an async reload and re-render.
@@ -276,6 +296,25 @@ check("plan drafted on the host", true);
 await poll(async () => await bodyHas(page, "Seeing the claim: how AI answers are built"));
 check("PlanCard renders the host's plan", true);
 check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+await primaryInViewport("plan");
+// C-a (workspace): edit the objectives from the plan and come back: two clicks, scrollY within 40 px.
+{
+  const orig = page.viewport();
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await waitMs(200);
+  const y0 = await page.evaluate(() => { const y = Math.max(0, Math.min(700, document.documentElement.scrollHeight - innerHeight - 50)); window.scrollTo(0, y); return window.scrollY; });
+  await waitMs(150);
+  await clickText(page, "Edit objectives"); // click 1
+  await poll(async () => await bodyHas(page, "Back to the plan"));
+  check("workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary", (await primaryCount()) === 1);
+  await clickText(page, "Back to the plan"); // click 2
+  await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
+  await waitMs(250);
+  const y1 = await page.evaluate(() => window.scrollY);
+  check("workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px", Math.abs(y1 - y0) <= 40, `scrollY ${y0} -> ${y1}`);
+  await page.setViewport(orig);
+  await page.evaluate(() => window.scrollTo(0, 0));
+}
 check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
 check("rail: a worker row names the drafting model after drafting, and ASFAI has its own lane when connected",
   await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && [...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
@@ -300,6 +339,7 @@ const armed = await poll(async () => {
 check("host arms publish once the plan is confirmed", armed.publish.canPublish === true,
   armed.publish.blockers.join("; ") || "no blockers");
 check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+await primaryInViewport("publish");
 check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
 check("UI reflects the armed publish checkpoint",
   await poll(() => page.evaluate(() => document.body.innerText.toLowerCase().includes("ready to seal")), 8000));
@@ -332,6 +372,7 @@ check("all five checkpoints confirmed after publish",
 
 await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent ?? "").trim().startsWith("Try it as a student"))));
 check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
+await primaryInViewport("published");
 check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
 await clickText(page, "Try it as a student");
 check("'Try it as a student' puts the cursor in the student's question box",

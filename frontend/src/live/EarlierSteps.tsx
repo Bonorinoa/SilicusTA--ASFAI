@@ -41,7 +41,7 @@ function Line({ step }: { step: EarlierStep }) {
 export function EarlierSteps({ steps }: { steps: readonly EarlierStep[] }) {
   if (steps.length === 0) return null;
   return (
-    <ul className={styles.earlierList} aria-label="Earlier steps">
+    <ul className={styles.earlierList} aria-label="Earlier steps" data-keep={steps.some((s) => s.forceOpen) ? "true" : undefined}>
       {steps.map((s) => <Line key={s.id} step={s} />)}
     </ul>
   );

@@ -22,13 +22,14 @@ const RECORDS = [
   { seq: 6, event: { kind: "objectives.decided", decisions: [{ verb: "accept" }, { verb: "rename" }, { verb: "drop" }, { verb: "add" }], text: "Decide.", at: 6 } },
   { seq: 7, event: { kind: "plan.proposed", spec: { activities: [{}, {}, {}] }, assistantText: "Drafted.", at: 7 } },
   { seq: 8, event: { kind: "plan.validated", planId: "p", valid: false, issues: ["x", "y"], at: 8 } },
-  { seq: 9, event: { kind: "package.published", text: "Publish.", at: 9 } },
+  { seq: 9, event: { kind: "objectives.proposed", items: [{ kind: "local", statement: "d" }, { kind: "local", statement: "e" }, { kind: "local", statement: "f" }], sources: ["suggested by Silicus", "suggested by Silicus", "suggested by Silicus"], assistantText: "Suggested 3.", at: 9 } },
+  { seq: 10, event: { kind: "package.published", text: "Publish.", at: 10 } },
 ];
 
 /** Actions whose sentence is built from facts; every one must actually use them. */
 const FACT_BEARING = new Set<ActivityItem["action"]>([
   "checkpoint.confirmed", "intake.asked", "objectives.derived", "objectives.drafted",
-  "objectives.decided", "plan.drafted", "plan.checked", "package.sealed",
+  "objectives.suggested", "objectives.decided", "plan.drafted", "plan.checked", "package.sealed",
 ]);
 
 describe("host activity rows -> rail sentences (the seam)", () => {
@@ -49,6 +50,8 @@ describe("host activity rows -> rail sentences (the seam)", () => {
     const by = (a: string) => sentenceOf(rows.find((r) => r.action === a)!);
     expect(by("objectives.decided")).toMatch(/1 accepted, 1 renamed, 1 dropped, 1 added/);
     expect(by("objectives.drafted")).toMatch(/1 objective from 1 material/);
+    expect(by("objectives.suggested")).toBe("Suggested 3 objectives to round out yours");
+    expect(sentenceOf({ ...rows.find((r) => r.action === "objectives.suggested")!, facts: { count: 1 } })).toBe("Suggested 1 objective to round out yours");
     expect(by("plan.drafted")).toMatch(/3 activities/);
     expect(by("package.sealed")).toMatch(/version 1/);
   });

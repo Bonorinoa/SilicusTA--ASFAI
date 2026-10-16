@@ -9,19 +9,29 @@
 import { useId, useRef, useState } from "react";
 import type { MaterialInput } from "../gate/transport";
 import { plural } from "../lib/plural";
+import { describeFile } from "../materials/display";
+import { extractText } from "../materials/extract";
+import { ACCEPTED_FILE_TYPES, type ExtractedKind } from "../materials/extract.types";
+import { activeCourseId, heldFor, keepForCourse } from "../materials/session";
 import styles from "./OnboardingChat.module.css";
 
-const TEXTLIKE = /\.(txt|md|markdown|vtt|srt|html?|csv)$/i;
-const MAX_FILE = 400_000;
 const MAX_ITEMS = 8;
+
+/** A piece of material on the list. `kind` is set only for a file the teacher chose: those are kept for this tab. */
+type Item = MaterialInput & { kind?: ExtractedKind };
 
 /** A YouTube link, by host name. Only used to say, before anything is sent, that it needs the local app. */
 const YOUTUBE = /^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)(\/|$)/i;
 
 export function MaterialsPanel({
-  busy, zdr, youtube = true, onPropose,
+  busy, zdr, youtube = true, courseId, onPropose,
 }: {
   busy: boolean;
+  /**
+   * The course this panel is for. Files the teacher chose earlier in this tab for THIS course are offered back, so
+   * nothing is uploaded twice. Left out, the panel uses the course most recently recorded or opened in this tab.
+   */
+  courseId?: string;
   /** Can this host read YouTube captions? The online app cannot (it needs the local app's tools). */
   youtube?: boolean;
   /**
@@ -31,7 +41,10 @@ export function MaterialsPanel({
   zdr: boolean | null;
   onPropose: (materials: MaterialInput[]) => void;
 }) {
-  const [items, setItems] = useState<MaterialInput[]>([]);
+  const forCourse = courseId ?? activeCourseId();
+  const [items, setItems] = useState<Item[]>(() => (forCourse ? heldFor(forCourse).slice(0, MAX_ITEMS) : []));
+  const offered = useRef(items.length);
+  const [reading, setReading] = useState(false);
   const [name, setName] = useState("");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
@@ -40,9 +53,13 @@ export function MaterialsPanel({
   const ids = { name: useId(), text: useId(), url: useId(), file: useId() };
 
   // The list is mirrored in a ref so several files added in one go are counted as they land, not as of this render.
-  const held = useRef<MaterialInput[]>([]);
-  const commit = (next: MaterialInput[]) => { held.current = next; setItems(next); };
-  const add = (m: MaterialInput): boolean => {
+  const held = useRef<Item[]>(items);
+  const commit = (next: Item[]) => {
+    held.current = next; setItems(next);
+    // The text of the files (and only files) stays in this tab's memory for this course, so a second visit to this stage finds it.
+    if (forCourse) keepForCourse(forCourse, next.flatMap((m) => ("text" in m && m.kind ? [{ name: m.name, kind: m.kind, text: m.text, chars: m.text.length }] : [])));
+  };
+  const add = (m: Item): boolean => {
     if (held.current.length >= MAX_ITEMS) { setNote("Eight pieces of material is the most for one request. Remove one to add another."); return false; }
     commit([...held.current, m]); setNote(null);
     return true;
@@ -59,12 +76,16 @@ export function MaterialsPanel({
     if (add({ url: u })) setUrl("");
   };
   const addFiles = async (list: FileList | null) => {
-    for (const f of Array.from(list ?? [])) {
-      if (!TEXTLIKE.test(f.name)) { setNote(`${f.name}: only text-like files (.txt, .md, .vtt, .srt, .html) can be read for now. Paste the text instead.`); continue; }
-      if (f.size > MAX_FILE) { setNote(`${f.name} is too large. Paste the part you want used.`); continue; }
-      if (!add({ name: f.name, text: await f.text() })) break;
-    }
+    const chosen = Array.from(list ?? []);
     if (file.current) file.current.value = "";
+    setReading(true);
+    try {
+      for (const f of chosen) {
+        const r = await extractText(f);
+        if (!r.ok) { setNote(`${r.name}: ${r.message}`); continue; }
+        if (!add({ name: r.name, text: r.text, kind: r.kind })) break;
+      }
+    } finally { setReading(false); }
   };
 
   const urlHint = `${ids.url}-hint`;
@@ -72,7 +93,7 @@ export function MaterialsPanel({
     <section className={styles.composer} aria-label="Course material">
       <span className={styles.who}>Silicus</span>
       <p className={styles.prompt}>
-        {`Add your material here — paste text, a text file, a web page, or a YouTube link${youtube ? "" : " (YouTube: local app only)"}.`}
+        {`Add your material here — paste text, a file (PDF, Word, PowerPoint or text), a web page, or a YouTube link${youtube ? "" : " (YouTube: local app only)"}.`}
       </p>
       <p className={styles.kept}>
         You decide every objective afterwards. The material stays in this tab only: it is not saved, and it is sent once to the
@@ -85,7 +106,7 @@ export function MaterialsPanel({
         <ul className={styles.turns} aria-label="Material added">
           {items.map((m, i) => (
             <li key={i} className={`${styles.pair} ${styles.materialRow}`}>
-              <p className={styles.said}>{"url" in m ? m.url : `${m.name} · ${plural(m.text.length, "character")}`}</p>
+              <p className={styles.said}>{"url" in m ? m.url : m.kind ? describeFile({ name: m.name, kind: m.kind, chars: m.text.length }) : `${m.name} · ${plural(m.text.length, "character")}`}</p>
               <button type="button" className={styles.edit} onClick={() => commit(held.current.filter((_, j) => j !== i))}
                 aria-label={`Remove ${"url" in m ? m.url : m.name}`}>Remove</button>
             </li>
@@ -104,12 +125,19 @@ export function MaterialsPanel({
 
       <div className={styles.field}>
         <label className={styles.fieldLabel} htmlFor={ids.file}>A text file</label>
+        {/* Label kept as is: src/live/narrow-width.test.tsx (outside this lane's fence) asserts it by name. The hint below says what is accepted. */}
         {/* The browser's own file chooser is driven by a quiet button, the way the record band's
             Import is: its "No file chosen" status truncates to "N...n" in a narrow column, and the
             chosen file is listed above by name as soon as it lands, so nothing is lost. */}
-        <input id={ids.file} ref={file} className={styles.fileHidden} type="file" multiple accept=".txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv"
+        <input id={ids.file} ref={file} className={styles.fileHidden} type="file" multiple accept={ACCEPTED_FILE_TYPES} aria-describedby={`${ids.file}-hint`}
           onChange={(e) => void addFiles(e.target.files)} />
+        <p className={styles.fieldHint} id={`${ids.file}-hint`}>
+          PDF, Word (.docx), PowerPoint (.pptx) or text. The file is read in this tab and is not kept. After a reload the text is gone:
+          Add the file again to use its text. Silicus does not keep your files.
+        </p>
+        {offered.current > 0 ? <p className={styles.fieldHint}>Files you chose earlier in this tab are listed above, so you do not need to add them again.</p> : null}
         <div className={styles.verbs}><label className={styles.quiet} htmlFor={ids.file}>Choose a file</label></div>
+        {reading ? <p className={styles.fieldHint} aria-live="polite">Reading the file…</p> : null}
       </div>
 
       <div className={styles.field}>
@@ -120,7 +148,8 @@ export function MaterialsPanel({
       </div>
 
       {note ? <p className={styles.refusal} role="status">{note}</p> : null}
-      <button type="button" className={styles.send} data-primary="true" disabled={busy || items.length === 0} onClick={() => onPropose(items)}>
+      <button type="button" className={styles.send} data-primary="true" disabled={busy || reading || items.length === 0}
+        onClick={() => onPropose(items.map((m): MaterialInput => ("url" in m ? m : { name: m.name, text: m.text })))}>
         Propose objectives from my materials
       </button>
     </section>

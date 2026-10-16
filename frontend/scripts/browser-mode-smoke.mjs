@@ -624,6 +624,47 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
   await context.close();
 }
 
+// ------------------------------------------------------------------ the landing (#/), both widths, appended by C-c
+for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "landing 380"]]) {
+  passLabel = label;
+  const context = await browser.createBrowserContext();
+  page = await context.newPage();
+  const landingErrors = [];
+  page.on("console", (m) => { if (m.type() === "error") landingErrors.push(m.text()); });
+  page.on("pageerror", (e) => landingErrors.push(e.message));
+  await page.evaluateOnNewDocument(() => {
+    window.__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  await page.goto(`${APP}/#/`, { waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector("h1") !== null);
+  const L = await page.evaluate(() => ({
+    h1: [...document.querySelectorAll("h1")].map((h) => h.textContent),
+    banner: document.querySelectorAll("header").length, main: document.querySelectorAll("main").length, footer: document.querySelectorAll("footer").length,
+    steps: [...document.querySelectorAll("ol > li > h3")].map((h) => h.textContent),
+    never: [...document.querySelectorAll("h3")].map((h) => h.textContent).filter((t) => /^(Decide for you|Keep your files|Grade or save)/.test(t)).length,
+    tryIt: [...document.querySelectorAll("a")].find((a) => a.textContent === "Try it")?.getAttribute("href") ?? null,
+    local: [...document.querySelectorAll("a")].some((a) => a.textContent === "Run it on your computer (with ASFAI)"),
+    controls: document.querySelectorAll("button, input").length,
+    text: document.body.innerText,
+    sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  }));
+  check("landing: #/ shows one h1, one banner, one main and one footer", L.h1.length === 1 && /^Plan a lesson with an AI that proposes\. You decide\.$/.test(L.h1[0]) && L.banner === 1 && L.main === 1 && L.footer === 1, L.h1.join(" | "));
+  check("landing: the five steps in order, the three nevers, Try it to #/live, the local setup link, no controls and no sign-in",
+    L.steps.join(",") === "Course,Brief,Objectives,Lesson plan,Version" && L.never === 3 && L.tryIt === "#/live" && L.local && L.controls === 0 && !/sign[ -]?in|log[ -]?in/i.test(L.text), L.steps.join(","));
+  check("landing: says prototype and ages 5–14, says where the record is kept (this browser), claims no approval", /prototype/i.test(L.text) && /aged\s5–14/.test(L.text) && /kept in this browser/.test(L.text) && !/approved|endorse|Google|Arizona/.test(L.text));
+  check("landing: the page does not scroll sideways", L.sideways <= 0, `overflow ${L.sideways}px`);
+  if (width === 380) await checkNarrow("landing page");
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `landing-${width}.png`), captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.min(await page.evaluate(() => document.documentElement.scrollHeight), 6000) } });
+  await page.click('a[href="#/live"]');
+  await poll(() => page.evaluate(() => location.hash === "#/live" && /Build a course/.test(document.querySelector("h1")?.textContent ?? "")));
+  check("landing: Try it opens the app at #/live", true);
+  const cspLanding = await page.evaluate(() => window.__csp);
+  check("landing: 0 CSP violations and 0 console errors", cspLanding.length === 0 && landingErrors.length === 0, [...cspLanding, ...landingErrors].join("; "));
+  await context.close();
+}
+
 await browser.close();
 server.close();
 

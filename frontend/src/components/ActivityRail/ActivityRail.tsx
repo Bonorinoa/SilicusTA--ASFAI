@@ -99,6 +99,14 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
   const shown = items.filter((i) => asfaiAvailable || i.actor !== "asfai"); // oldest first
   const working = now && (asfaiAvailable || now.actor !== "asfai") ? now : null;
 
+  // Which model drafts, for the whole session: the host's `model` string as sent, or the honest "not reported".
+  // No worker object at all means the status request has not answered yet — no caption until it does.
+  const modelCaption = worker == null
+    ? null
+    : typeof worker.model === "string" && worker.model.trim() !== ""
+      ? `Model name: ${worker.model.trim()}`
+      : "Model name: not reported";
+
   // ---- relative times refresh quietly twice a minute; this never reaches the live region
   const [clock, setClock] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setClock(Date.now()), 30_000); return () => clearInterval(t); }, []);
@@ -118,7 +126,7 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
   const [open, setOpen] = useState(false);
   const [all, setAll] = useState(false);
 
-  if (shown.length === 0 && !working) return null;
+  if (shown.length === 0 && !working && !modelCaption) return null;
 
   const newestFirst = groupRows(shown).reverse();
   const rows = all || newestFirst.length <= FOLD_AT ? newestFirst : newestFirst.slice(0, RECENT);
@@ -151,6 +159,8 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
         )}
       </div>
 
+      {modelCaption ? <p className={styles.fine} data-model-caption="">{modelCaption}</p> : null}
+
       {working ? (
         <div className={styles.now} data-now="" data-actor={working.actor} data-motion={reduced ? "still" : "live"}>
           <Track lanes={lanes} actor={working.actor} />
@@ -173,7 +183,6 @@ export function ActivityRail({ items, now = null, worker = null, asfaiAvailable 
                 <p className={styles.fine}>
                   It sees only what this step sends, never your name or the rest of your record. The full list is under {"\u201c"}What the model sees{"\u201d"} on the waiting card.
                 </p>
-                {worker?.model ? <p className={styles.fine}>Model: {worker.model}</p> : null}
                 {worker?.zdr === true ? <p className={styles.fine}>Sent to a drafting provider that is set to zero-data-retention endpoints only.</p> : null}
                 {worker?.zdr === false ? <p className={styles.fine}>Sent under the provider{"\u2019"}s normal data-retention terms.</p> : null}
               </div>

@@ -40,7 +40,7 @@ when it ran ("Checked 2 minutes ago: no format problems").
 
 ## The student helper
 
-- Name in UI: **Student helper**. Section title on the published view: "Try the student helper".
+- Name in UI: **Student helper**. Section title on the published view: "Check a student question".
 - Scope line, always visible above the input (counts from the published version):
   "Answers only from version {N} of this lesson: {k} objectives and {m} activities. It has not read your
   materials, and nothing a student asks is saved."

@@ -23,7 +23,7 @@ describe("the page", () => {
     const main = screen.getByRole("main");
     const regions = within(main).getAllByRole("region");
     expect(regions.map((r) => r.getAttribute("aria-labelledby")).every(Boolean)).toBe(true);
-    expect(regions).toHaveLength(6);
+    expect(regions).toHaveLength(7);
   });
 
   it("shows the five steps in order, the three nevers, the age range, and says prototype plainly", () => {
@@ -70,7 +70,7 @@ describe("the page", () => {
     expect(window.location.hash).toBe("#/");
   });
 
-  it("the local setup is one collapsed disclosure at the bottom, and ASFAI is defined where it first appears", () => {
+  it("the local setup is one collapsed disclosure at the bottom, and ASFAI is defined as a protocol exactly once", () => {
     render(<Landing />);
     const summary = screen.getByText("For developers: run it locally");
     const details = summary.closest("details") as HTMLDetailsElement;
@@ -80,11 +80,12 @@ describe("the page", () => {
     // it is the last section on the page
     const regions = within(screen.getByRole("main")).getAllByRole("region");
     expect(regions[regions.length - 1].contains(details)).toBe(true);
-    // ASFAI: the first mention is its one-sentence definition; it is in no earlier text
+    // ASFAI is defined once, as a protocol — the How it works block mentions it first, so "first mention"
+    // is no longer the definition; assert the sentence still appears exactly once instead.
     const text = document.body.textContent ?? "";
-    const first = text.indexOf("ASFAI");
-    expect(text.slice(first, first + 90)).toMatch(/^ASFAI is a separate lesson-records product/);
-    expect(text.match(/ASFAI is a separate lesson-records product[^.]*\./g)).toHaveLength(1);
+    expect(text.match(/ASFAI is a protocol[^.]*\./g)).toHaveLength(1);
+    expect(text).not.toMatch(/ASFAI account/);
+    expect(text).toMatch(/send a plan to ASFAI/);
   });
 
   it("'you decide' is said at most three times: the headline, the steps title and the never-does heading", () => {

@@ -244,7 +244,7 @@ describe("one stage at a time, one primary action", () => {
     const { container } = render(<LiveCourse />);
     await screen.findByRole("heading", { name: PLAN_TITLE });
     expect(screen.queryByRole("region", { name: /Course package/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Try the student helper" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Check a student question" })).not.toBeInTheDocument();
     expect(primaries(container)).toHaveLength(1);
     expect(primaries(container)[0]).toHaveTextContent("Confirm the lesson plan");
   });
@@ -310,27 +310,27 @@ describe("the published moment", () => {
     expect(screen.queryByText(/Sealed 16 October 2026/)).not.toBeInTheDocument();
     expect(screen.queryByText(/is published and unchanged/)).not.toBeInTheDocument();
     const plan = screen.getByRole("heading", { name: PLAN_TITLE });
-    const helper = screen.getByRole("region", { name: "Try the student helper" });
+    const helper = screen.getByRole("region", { name: "Check a student question" });
     const bar = container.querySelector('[data-stage-bar="true"]') as HTMLElement;
     const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(before(status, plan)).toBe(true);
     expect(before(plan, helper)).toBe(true);
     expect(before(helper, bar)).toBe(true);
     const names = within(bar).getAllByRole("button").map((b) => b.textContent);
-    expect(names).toEqual(["Try the student helper", "Download the student handout", "Export the published version"]);
+    expect(names).toEqual(["Check a student question", "Download the student handout", "Export the published version"]);
     expect(screen.getByRole("button", { name: "Revise this course" })).toBeInTheDocument();
     expect(primaries(container)).toHaveLength(1);
-    expect(primaries(container)[0]).toHaveTextContent("Try the student helper");
+    expect(primaries(container)[0]).toHaveTextContent("Check a student question");
   });
 
-  it("the student helper is collapsed until opened, and 'Try the student helper' opens it and puts the cursor in the question box", async () => {
+  it("the student helper is collapsed until opened, and 'Check a student question' opens it and puts the cursor in the question box", async () => {
     mockHost(atPublished());
     const user = userEvent.setup();
     const { container } = render(<LiveCourse />);
     await screen.findByText(/^Version 1 is published\./);
-    const details = container.querySelector("section[aria-label='Try the student helper'] details") as HTMLDetailsElement;
+    const details = container.querySelector("section[aria-label='Check a student question'] details") as HTMLDetailsElement;
     expect(details.open).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Try the student helper" }));
+    await user.click(screen.getByRole("button", { name: "Check a student question" }));
     expect(details.open).toBe(true);
     expect(screen.getByLabelText("Your question")).toHaveFocus();
   });

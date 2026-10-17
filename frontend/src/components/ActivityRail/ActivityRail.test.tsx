@@ -250,13 +250,23 @@ describe("ActivityRail — the step in flight", () => {
     expect(container.textContent).not.toMatch(/retention/i);
   });
 
-  it("shows the model's name only when the host supplied one, and only while it works", () => {
+  it("shows Model name for the whole session: the host's name when supplied, 'not reported' when missing or failed, nothing while the status request is still pending", () => {
     const { container, rerender } = render(<ActivityRail items={HISTORY} now={NOW} worker={{ model: "host-model-x" }} asfaiAvailable />);
-    expect(container.textContent).toMatch(/host-model-x/);
+    expect(container.textContent).toMatch(/Model name: host-model-x/);
+    // the caption is not tied to a step working: it stays at rest
     rerender(<ActivityRail items={HISTORY} now={null} worker={{ model: "host-model-x" }} asfaiAvailable />);
-    expect(container.textContent).not.toMatch(/host-model-x/);
-    rerender(<ActivityRail items={HISTORY} now={NOW} worker={{ model: null }} asfaiAvailable />);
+    expect(container.textContent).toMatch(/Model name: host-model-x/);
+    // missing, empty or an answered-but-nameless status: the caption says so, never "null"
+    rerender(<ActivityRail items={HISTORY} now={null} worker={{ model: null }} asfaiAvailable />);
+    expect(container.textContent).toMatch(/Model name: not reported/);
     expect(container.textContent).not.toMatch(/null/);
+    rerender(<ActivityRail items={HISTORY} now={null} worker={{ model: "   " }} asfaiAvailable />);
+    expect(container.textContent).toMatch(/Model name: not reported/);
+    rerender(<ActivityRail items={HISTORY} now={null} worker={{ zdr: false }} asfaiAvailable />);
+    expect(container.textContent).toMatch(/Model name: not reported/);
+    // the status request has not answered yet: no caption at all
+    rerender(<ActivityRail items={HISTORY} now={null} worker={null} asfaiAvailable />);
+    expect(container.textContent).not.toMatch(/Model name/);
   });
 });
 

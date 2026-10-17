@@ -1,5 +1,5 @@
 /**
- * StudentChat — "Try the student helper". Asks the host about the PUBLISHED version and shows what each answer
+ * StudentChat — "Check a student question". Asks the host about the PUBLISHED version and shows what each answer
  * rests on. It is use, never evidence: the host records nothing, and neither does this component (the conversation
  * lives in memory and is gone on reload).
  *
@@ -37,7 +37,7 @@ export function basisLabel(a: StudentAnswer): string {
 }
 
 export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr = null, paused = false, inputId, open = false, onOpenChange, onWorking }: {
-  /** Lets the page put the cursor in the question box (\"Try the student helper\"). */
+  /** Lets the page put the cursor in the question box ("Check a student question"). */
   inputId?: string;
   /** The helper is collapsed until the teacher opens it; the page may open it (its primary button does). */
   open?: boolean;
@@ -90,12 +90,12 @@ export function StudentChat({ courseId, courseTitle, sealed, typicalSeconds, zdr
   };
 
   return (
-    <section className={styles.helper} aria-label="Try the student helper">
+    <section className={styles.helper} aria-label="Check a student question">
       <details open={isOpen} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; if (o !== isOpen) toggle(o); }}>
-        <summary className={styles.summary}>Try the student helper</summary>
+        <summary className={styles.summary}>Check a student question</summary>
         <div className={styles.body}>
           <p className={chatStyles.kept}>
-            Ask it about “{courseTitle}” as a student would. Asking here is not evidence of learning.
+            Type a question a student might ask about “{courseTitle}”. You see whether this version covers it, and whether the helper declines questions it should not answer. Asking here is not evidence of learning.
           </p>
           {sealed ? <p className={styles.scope}>{scopeLine(sealed)}</p> : null}
           <ol className={chatStyles.turns}>

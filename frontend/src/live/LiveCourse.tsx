@@ -120,7 +120,7 @@ export function LiveCourse() {
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [asfai, setAsfai] = useState<AsfaiStatus | null>(null);
-  const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean; typicalSeconds?: unknown } | null>(null);
+  const [worker, setWorker] = useState<{ configured: boolean; zdr?: boolean; model?: string | null; typicalSeconds?: unknown } | null>(null);
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   const [passcodeOpen, setPasscodeOpen] = useState(false);
   const waitIds = useRef(0);
@@ -161,7 +161,7 @@ export function LiveCourse() {
     return fresh;
   };
   useEffect(() => { void host.asfaiStatus().then(setAsfai).catch(() => {}); }, []);
-  useEffect(() => { void host.workerStatus().then(setWorker).catch(() => {}); }, []);
+  useEffect(() => { void host.workerStatus().then(setWorker).catch(() => setWorker({ configured: false })); }, []);
   const run = (fn: () => Promise<unknown>) => {
     setBusy(true);
     // A receipt is true only until the teacher's next act (accepting a proposal makes "none is confirmed" false).
@@ -849,7 +849,7 @@ export function LiveCourse() {
           />
         ) : null}
         <StageBar>
-          <button type="button" className={styles.primaryButton} data-primary="true" onClick={tryAsStudent}>Try the student helper</button>
+          <button type="button" className={styles.primaryButton} data-primary="true" onClick={tryAsStudent}>Check a student question</button>
           <button type="button" className={styles.ghostButton} onClick={downloadHandout} disabled={busy}>Download the student handout</button>
           <button type="button" className={styles.ghostButton} onClick={exportPackage} disabled={busy}>Export the published version</button>
         </StageBar>
@@ -987,7 +987,7 @@ export function LiveCourse() {
         key={view.course.courseId}
         items={view.activity ?? []}
         now={now}
-        worker={{ zdr: worker?.zdr ?? null }}
+        worker={worker}
         asfaiAvailable={asfaiAvailable}
       />
     </div>

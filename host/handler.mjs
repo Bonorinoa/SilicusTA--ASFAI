@@ -92,7 +92,7 @@ export function errorResponse(err) {
 
 /** @param {HandlerDeps} deps */
 export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, typicalSeconds = DEFAULT_TYPICAL_SECONDS, sources: knowledgeSources = [], archives = null, prepareMaterials, guard = null }) {
-  const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider, typicalSeconds }));
+  const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider, model: planWorker.model, typicalSeconds }));
 
   /**
    * Load per request. The event log is the source of record, so a fresh verified

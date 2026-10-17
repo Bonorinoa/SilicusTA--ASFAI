@@ -449,7 +449,7 @@ describe("LiveCourse — thin client of the host", () => {
     const { calls } = mockHost(v, { studentReply: { answer: "An algorithm is a list of steps.", grounded: true, cites: [{ id: "objective:1", label: "Objective 1" }], note: "Asking questions here is not evidence of learning." } });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.click(await screen.findByRole("button", { name: "Try the student helper" }));
+    await user.click(await screen.findByRole("button", { name: "Check a student question" }));
     await user.type(screen.getByLabelText("Your question"), "What is an algorithm?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
     expect(await screen.findByText("An algorithm is a list of steps.")).toBeInTheDocument();
@@ -466,7 +466,7 @@ describe("LiveCourse — thin client of the host", () => {
     mockHost(v, { studentReply: { answer: "That isn't part of this lesson. Ask your teacher.", grounded: false, cites: [], note: "n", refusal: "off_topic" } });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.click(await screen.findByRole("button", { name: "Try the student helper" }));
+    await user.click(await screen.findByRole("button", { name: "Check a student question" }));
     await user.type(screen.getByLabelText("Your question"), "Who won in 1966?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
     expect(await screen.findByText("That isn't part of this lesson. Ask your teacher.")).toBeInTheDocument();

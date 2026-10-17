@@ -58,9 +58,9 @@ describe("the first-run intake — plain words, no fake progress", () => {
     expect(await screen.findByLabelText(/what is this course built from/i)).toBeInTheDocument();
     // Choosing "No materials" is offered right here, as the opening copy promises.
     expect(screen.getByRole("button", { name: /no materials/i })).toBeInTheDocument();
-    // The opening step is about NAMES; the material itself is a later, separate act.
+    // The hint says where names go and where the file text stays (the file paragraph below says the same, so pin the hint's own wording).
     await user.type(screen.getByLabelText(/what is this course built from/i), "Lesson notes");
-    expect(screen.getByText(/you add the material itself later/i)).toBeInTheDocument();
+    expect(screen.getByText(/the text of a file stays in this tab/i)).toBeInTheDocument();
   });
 
   it("shows where you are and what is left, with no progress bar, no meter, no percent", () => {

@@ -39,8 +39,8 @@ const OPENING = [
   {
     id: "materials",
     // NAMES only: the material ITSELF is the later panel's job (MaterialsPanel owns "Add your material here").
-    prompt: "What is this course built from? Name the materials, one per line.",
-    hint: "Names only — you add the material itself later. Or choose No materials. Not sent to ASFAI.",
+    prompt: "What is this course built from? One material name per line.",
+    hint: "Names go on your course record now. The text of a file stays in this tab, and is used only when you ask for objectives from your materials. Or choose No materials. Not sent to ASFAI.",
     verb: "Record these names",
     block: "Name the materials, or choose No materials. Not saved yet.",
   },
@@ -317,7 +317,7 @@ export function OnboardingChat({
               <input id={FILES_ID} className={styles.fileHidden} type="file" multiple accept={ACCEPTED_FILE_TYPES} aria-describedby={`${FILES_ID}-hint`}
                 onChange={(e) => void addFiles(e.target.files)} />
               <p className={styles.fieldHint} id={`${FILES_ID}-hint`}>
-                {local("Or add the files themselves (PDF, Word, PowerPoint or text). Only their names are recorded now; the text stays in this tab, is not saved, and is used only if you ask for objectives from your materials. Not sent to ASFAI.")}
+                {local("Or add the files here (PDF, Word, PowerPoint or text). Only the names are recorded. The text stays in this tab and is not saved. Not sent to ASFAI.")}
               </p>
               {picked.length > 0 ? (
                 <ul className={styles.turns} aria-label="Files added">

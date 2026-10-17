@@ -6,7 +6,8 @@ import styles from "./Landing.module.css";
 /**
  * Landing — what Silicus is, in plain words, before the app. It is the bare URL ("", "#", "#/"); the app is at #/live.
  * Every sentence comes from docs/design/glossary.md or from what the app already tells teachers; nothing here
- * is a claim the product does not already make elsewhere (no sign-in, no logos, no endorsements, no numbers).
+ * is a claim the product does not already make elsewhere (no sign-in, no logos, no endorsements; the only numbers
+ * are the benchmark's question count, Marble's age range, and the scorecard's file name).
  */
 
 const STEPS: { name: string; line: string }[] = [
@@ -30,7 +31,7 @@ const NEVER: { title: string; body: string }[] = [
   },
   {
     title: "Never grades or saves student questions",
-    body: "A student can ask the helper about a published version. Silicus does not grade a question or save it. Each one goes to the drafting model, which answers from that version only, and the provider’s terms apply to what it receives. For how a student is doing, the helper points to you.",
+    body: "You can ask the helper a question a student might ask, about a published version. Silicus does not grade a question or save it. Each one goes to the drafting model, which answers from that version only, and the provider’s terms apply to what it receives. For how a student is doing, the helper points to you.",
   },
 ];
 
@@ -145,6 +146,13 @@ export function Landing() {
           </div>
         </section>
 
+        <section className={styles.section} aria-labelledby="landing-how">
+          <h2 id="landing-how" className={styles.h2}>How it works</h2>
+          <p className={styles.body}>
+            Silicus does not use RAG or a vector store. PDF, DOCX and PPTX files are read in your browser: only their names go on the course record, and the text stays in the tab until you ask for objectives from those materials. The drafting model writes a draft, you confirm it, and only then is a published version made. Where it is available, you can send the plan to ASFAI, an optional protocol that checks its format; ASFAI is not the model and not an account. Objectives can be aligned to Marble’s skill map, which covers about ages 4–15; a miss is normal, and you name a local objective instead. On a set of 44 student questions the helper passed: it answered every definition question, refused every off-topic, assessment and injection question, and made no invalid citations (eval/student-helper/scorecard-candidate2.md).
+          </p>
+        </section>
+
         <section className={styles.section} aria-labelledby="landing-dev">
           <details className={styles.dev}>
             <summary className={styles.devSummary}>
@@ -152,12 +160,12 @@ export function Landing() {
             </summary>
             <div className={styles.devBody}>
               <p className={styles.body}>
-                ASFAI is a separate lesson-records product that checks a plan against its shared lesson format; Silicus works without it.
+                ASFAI is a protocol that checks a plan against its shared lesson format; Silicus works without it.
               </p>
               <p className={styles.body}>
                 {BROWSER_MODE
-                  ? "The online version keeps your record in the browser, and it cannot use ASFAI or YouTube. The version on your computer keeps courses in a folder there, and can connect to an ASFAI account."
-                  : "You are using the version that runs on this computer. It keeps courses in a folder here, and can connect to an ASFAI account. These are the steps to start it."}
+                  ? "The online version keeps your record in the browser, and it cannot use ASFAI or YouTube. The version on your computer keeps courses in a folder there, and can send a plan to ASFAI."
+                  : "You are using the version that runs on this computer. It keeps courses in a folder here, and can send a plan to ASFAI. These are the steps to start it."}
               </p>
               <ol className={styles.local}>
                 <li>
@@ -174,7 +182,7 @@ export function Landing() {
                 <li>
                   <p className={styles.body}>
                     The AI steps stay off until the host is given a drafting model. <code>host/README.md</code> says how.
-                    Connect ASFAI from the course page when you want to.
+                    Send a plan to ASFAI from the course page when you want to.
                   </p>
                 </li>
               </ol>

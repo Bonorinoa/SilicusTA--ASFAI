@@ -114,6 +114,11 @@ export class PlanWorker {
     return Boolean(this.#url && this.#model);
   }
 
+  /** The model slug the server is configured to call. Config, never a credential. */
+  get model() {
+    return this.#model;
+  }
+
   /**
    * Draft a plan from the teacher's CONFIRMED objectives. The returned spec is
    * unvalidated by the gate at this point; the caller proposes it and the gate

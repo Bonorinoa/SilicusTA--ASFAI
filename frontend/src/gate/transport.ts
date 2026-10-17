@@ -243,7 +243,7 @@ export const host = {
   /** The OSS WORKER drafts the plan from the teacher's confirmed objectives; the UI sends no body. */
   proposePlan: (id: string) => call("POST", `/courses/${enc(id)}/plan`, {}),
   /** Is a drafting worker configured? Config only, never a credential. */
-  workerStatus: () => call<{ configured: boolean; zdr?: boolean; provider?: string; passcodeRequired?: boolean; typicalSeconds?: TypicalSeconds }>("GET", "/worker/status"),
+  workerStatus: () => call<{ configured: boolean; zdr?: boolean; provider?: string; model?: string | null; passcodeRequired?: boolean; typicalSeconds?: TypicalSeconds }>("GET", "/worker/status"),
   /** The teacher's material goes IN; the WORKER proposes objectives. The host keeps names and digests, never the text. */
   proposeFromMaterials: (id: string, b: { materials: MaterialInput[] }) =>
     call<{ proposals: ProposalView[]; materials: { name: string; chars: number; kind: string }[]; skipped: { name: string; reason: string }[] }>(

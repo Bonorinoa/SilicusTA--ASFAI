@@ -70,7 +70,8 @@ export class AsfaiGraphSource extends KnowledgeSource {
       if (!hit || typeof hit.id !== "string" || typeof hit.name !== "string") continue;
       if (seen.has(hit.id)) continue;
       seen.add(hit.id);
-      const ages = Number.isFinite(hit.ageRangeStart) && Number.isFinite(hit.ageRangeEnd)
+      // The graph's own name sometimes already ends in an age phrase ("... (age 8+)"): never print a second one.
+      const ages = Number.isFinite(hit.ageRangeStart) && Number.isFinite(hit.ageRangeEnd) && !/\(ages? [^)]*\)\s*$/i.test(hit.name)
         ? ` (ages ${hit.ageRangeStart}–${hit.ageRangeEnd})` : "";
       out.push(makeCitation({
         ref: `asfai:${hit.id}`,

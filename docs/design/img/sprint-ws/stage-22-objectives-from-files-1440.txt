@@ -1,0 +1,167 @@
+Silicus TA
+
+The AI proposes. You decide.
+
+COURSE
+Photosynthesis from real files
+How it works
+Photosynthesis from real files
+
+Ada Lovelace
+kept in this browser
+
+1
+Material
+✓
+3 materials
+›
+, done
+2
+Brief
+✓
+Photosynthesis
+›
+, done
+3
+Objectives
+3 proposals to decide
+4
+Plan
+Not started
+5
+Publish
+Not published
+
+Learning objectives
+
+Proposed for your course. Nothing is confirmed until you decide — accept, rename in your own words, drop, or add one of your own. Once confirmed, an objective's wording can still be edited.
+
+01
+
+AWAITING YOUR DECISION
+
+Students can explain how a plant makes its food.
+
+from material: hello.pdf
+
+Accept
+Rename
+Drop
+
+02
+
+AWAITING YOUR DECISION
+
+Students can name what a plant needs to make sugar.
+
+from material: hello.pdf, Syllabus notes.docx
+
+Accept
+Rename
+Drop
+
+03
+
+AWAITING YOUR DECISION
+
+Students can draw a leaf.
+
+from material: hello.pdf
+
+Accept
+Rename
+Drop
+Add objective
+
+Nothing decided yet — 0 of 3.
+
+Every proposal needs a decision first.
+Confirm 3 objectives — 3 decisions left
+
+Finished after 0 s. 3 proposals. None is confirmed until you decide. Drawn from 2 materials (164 characters read).
+
+DRAFT READY · NOTHING IS DECIDED YET
+
+Proposed learning objectives from your 2 materials
+
+Took 0 s
+
+3 proposals. None is confirmed until you decide.
+
+Drawn from 2 materials (164 characters read).
+
+What the model sees
+Record details
+
+THIS BROWSER KEEPS THE RECORD
+
+Your courses are stored in this browser only, not on a server. Export to keep a copy: clearing this browser’s data, or using another browser, starts empty.
+
+Export all courses
+Import
+Delete all data from this browser
+
+Drafting model: Drafted 3 objectives from 2 materials.
+
+Behind the scenes
+
+6 steps, newest first
+
+You
+your decisions
+Silicus
+keeps the record and the rules
+Drafting model
+proposes and drafts, never decides
+
+DRAFTING MODEL
+16:19:25
+
+Drafted 3 objectives from 2 materials
+
+Changed:
+Objectives
+
+YOU
+16:19:23
+
+Confirmed the brief
+
+Changed:
+Brief
+
+YOU
+16:19:23
+
+Answered the questions
+
+Changed:
+Brief
+
+YOU
+16:19:23
+
+Answered the questions · 2 times
+
+Changed:
+Brief
+
+YOU
+16:19:23
+
+Confirmed the material list
+
+Changed:
+Material
+
+YOU
+16:19:23
+
+Started this course
+
+Changed:
+Material
+
+A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+
+Design system

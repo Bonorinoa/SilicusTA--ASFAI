@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AiWaiting } from "./AiWaiting";
+import { AiWaiting, newWaitClock, stopWaitClock } from "./AiWaiting";
 import { DEFAULT_TYPICAL, describeStep, planReceipt, proposalsReceipt, typicalRange, type ReceiptView, type WaitingStep } from "./model";
 
 const OBJECTIVES = [
@@ -53,7 +53,7 @@ describe("AiWaiting — plain words with real numbers", () => {
 
   it("names the published version a student's answer comes from (compact)", () => {
     render(<AiWaiting step={ANSWER_STEP} phase="running" variant="compact" />);
-    expect(screen.getByText("Looking for the answer in this course (version 1)")).toBeInTheDocument();
+    expect(screen.getByText("Looking for the answer in version 1 of this lesson")).toBeInTheDocument();
   });
 
   it("shows no progress bar and no percentage, ever", () => {
@@ -164,6 +164,26 @@ describe("AiWaiting — what the model sees", () => {
     expect(within(panel).getByText("What it never sees")).toBeInTheDocument();
   });
 
+  it("plan: the teacher's course answer is listed, quoted, with the instruction that goes with it; absent, nothing changes", () => {
+    const withCourse = describeStep({ ...PLAN_STEP, course: "Grade 3 math, one 45-minute lesson" });
+    const group = withCourse.sends.find((g) => g.heading === "Course");
+    expect(group).toEqual({ heading: "Course", items: ["Grade 3 math, one 45-minute lesson"], quote: true });
+    expect(withCourse.sends.map((g) => g.heading)).toEqual(["Objectives", "Topic", "Course", "Material names", "Instructions"]);
+    expect(withCourse.sends.at(-1)?.items).toContain("Fit the plan to any length or audience you state in your course answer.");
+
+    for (const course of [undefined, "", "   "]) {
+      const t = describeStep({ ...PLAN_STEP, course });
+      expect(t.sends.map((g) => g.heading)).toEqual(["Objectives", "Topic", "Material names", "Instructions"]);
+      expect(t.sends.at(-1)?.items).toEqual(["Use only these objectives and cite each by its internal id.", "Student chat is never evidence of learning."]);
+    }
+  });
+
+  it("plan: the open disclosure shows the course", () => {
+    render(<AiWaiting step={{ ...PLAN_STEP, course: "Grade 3 math, one 45-minute lesson" }} phase="running" />);
+    fireEvent.click(screen.getByRole("button", { name: "What the model sees" }));
+    expect(screen.getByText(/Grade 3 math, one 45-minute lesson/)).toBeInTheDocument();
+  });
+
   it("objectives: lists each material with its character count, and a link as a link", () => {
     const t = describeStep(OBJ_STEP);
     expect(t.sends[0].items).toEqual([
@@ -209,6 +229,74 @@ describe("AiWaiting — motion", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none/);
     // the only place an animation is switched ON is the live-motion rule
     expect(css.match(/animation: [^n;][^;]*;/g)).toEqual(['animation: set 3.9s var(--ease-standard) infinite;']);
+  });
+});
+
+describe("AiWaiting — the clock belongs to the step, not to the card", () => {
+  // The stage page renders the waiting card in whichever stage is open, so a step that finishes moves the card
+  // to the next stage and React mounts a NEW card already "done". A card-local clock then said "Took 0 s" after
+  // an 18 s plan (seen in a real-model run). The caller passes the step's clock; the card only reads and banks it.
+  it("a card remounted after the step finished says the real time, not 0 s", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(18_000);
+    first.rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    first.unmount();
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("a card that unmounts mid-step and remounts done still counts the whole wait", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(10_000);
+    first.unmount();                 // the stage changed while the model was still working
+    advance(8_000);                  // ...and the model kept working with no card mounted
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("a finished clock stops: remounting minutes later adds nothing", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(18_000);
+    first.rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    first.unmount();
+    advance(5 * 60_000);             // the teacher reads the plan for five minutes, then opens another stage
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("a card remounted after the finish does not announce again (it was already said)", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(18_000);
+    first.rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    first.unmount();
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect((document.querySelector("[aria-live='polite']") as HTMLElement).textContent).toBe("");
+  });
+
+  it("the caller stops the clock at the real finish, even when no card is mounted then", () => {
+    const clock = newWaitClock();
+    const first = render(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(10_000);
+    first.unmount();
+    advance(8_000);
+    stopWaitClock(clock);            // LiveCourse.finishWait: the host answered at 18 s
+    advance(60_000);                 // the next stage opens a minute later
+    render(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("18 s").parentElement).toHaveTextContent("Took 18 s");
+  });
+
+  it("time at the passcode dialog is still held out of a shared clock", () => {
+    const clock = newWaitClock();
+    const { rerender } = render(<AiWaiting step={PLAN_STEP} phase="running" paused clock={clock} />);
+    advance(30_000);                 // the teacher types the passcode
+    rerender(<AiWaiting step={PLAN_STEP} phase="running" clock={clock} />);
+    advance(6_000);
+    rerender(<AiWaiting step={PLAN_STEP} phase="done" clock={clock} />);
+    expect(screen.getByText("6 s").parentElement).toHaveTextContent("Took 6 s");
   });
 });
 
@@ -353,4 +441,34 @@ describe("every text pair the waiting card sets is AA (>= 4.5:1)", () => {
     ["accent-strong", "paper-raised"], ["accent-strong", "paper"],                           // the disclosure button
   ];
   it.each(PAIRS)("%s on %s", (fg, bg) => { expect(ratio(fg, bg)).toBeGreaterThanOrEqual(4.5); });
+});
+
+describe("AiWaiting — the suggest step (sprint weekend-share)", () => {
+  const SUGGEST: WaitingStep = { kind: "suggest", outcomes: ["Name a unit fraction."], topic: "Unit fractions", course: "Grade 3 math", alreadyListed: 2 };
+
+  it("says what is sent: the teacher's outcomes, topic, course and the wording already on the page", () => {
+    const t = describeStep(SUGGEST);
+    expect(t.title).toBe("Suggesting up to 3 objectives that round out yours");
+    const sent = t.sends.map((g) => g.heading);
+    expect(sent).toEqual(["Your outcomes", "Named by you", "Already listed", "Instructions"]);
+    expect(t.sends.find((g) => g.heading === "Already listed")!.items[0]).toContain("2 objectives");
+    expect(t.never).toContain("The text of your materials");
+  });
+
+  it("reuses the objectives timing (the worker status may name 'suggest' or not)", () => {
+    expect(typicalRange("suggest")).toEqual(DEFAULT_TYPICAL.objectives);
+    expect(typicalRange("suggest", { objectives: [4, 9] })).toEqual([4, 9]);
+  });
+
+  it("never claims the AI decided anything while it runs", () => {
+    render(<AiWaiting step={SUGGEST} phase="running" />);
+    expect(screen.getByText(/nothing is decided yet/i)).toBeInTheDocument();
+  });
+
+  it("the student's answer step tells the truth about the new prompt (a cited idea may be explained)", () => {
+    const t = describeStep(ANSWER_STEP);
+    const text = JSON.stringify(t);
+    expect(text).toContain("explain it in plain words for the learners");
+    expect(text).not.toMatch(/package/i);
+  });
 });

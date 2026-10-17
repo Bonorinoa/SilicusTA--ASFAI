@@ -17,6 +17,12 @@ export const SOURCE_FROM_ANSWERS = "from your answer to ASFAI";
 
 /** The same, when the teacher answered the host's own questions and nothing left the machine. */
 export const SOURCE_FROM_LOCAL_ANSWERS = "from your answer";
+/**
+ * Contract 2026-10-16: the label on an objective the WORKER suggested to complement the teacher's own outcomes.
+ * Model-authored, so it must never collide with the labels reserved for the teacher's words ("from your answer",
+ * "from your answer to ASFAI", "your own objective") or with the material prefix ("from material: ...").
+ */
+export const SOURCE_SUGGESTED = "suggested by Silicus";
 
 /** The question id whose answer is the teacher's objective list. */
 export const OUTCOMES_KEY = "learning_outcomes";

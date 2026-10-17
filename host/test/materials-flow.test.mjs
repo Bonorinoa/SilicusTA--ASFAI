@@ -267,7 +267,7 @@ test("the whole story with NO typed outcomes and NO ASFAI: material -> proposals
 
 test("the worker status reports capability and typical waits, never a key or a URL", async () => {
   const { get } = await boot();
-  assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true, provider: "openai",
+  assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true, provider: "openai", model: "m",
     typicalSeconds: { objectives: [3, 15], plan: [5, 25], answer: [2, 8] } });
 });
 

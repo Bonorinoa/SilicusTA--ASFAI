@@ -33,10 +33,16 @@ export interface PlanCardProps {
    */
   rewordedSince?: readonly { id: string; before: string | null; after: string }[];
   /**
-   * Show the worker's alignment suggestions. They are NOT part of a sealed package, so a surface
+   * Show the worker's alignment suggestions. They are NOT part of a published version, so a surface
    * that previews "exactly what will be published" must pass false, or it would imply they are.
    */
   showAlignment?: boolean;
+  /**
+   * Where the machine's ids and the print note live. "inline" (default): in the sheet's footer, as before.
+   * "record": the course page keeps them in Record details; the sheet still PRINTS its footer (the urn is the
+   * printed page's own signature) but shows the date only on screen, and the print note is not drawn.
+   */
+  ids?: "inline" | "record";
 }
 
 const EVIDENCE_VALUE: Record<LessonPlanView["activities"][number]["evidenceIfAny"], string> = {
@@ -59,7 +65,7 @@ const SOURCE_LABEL: Record<string, string> = {
   "local-ontology": "your ontology file",
 };
 
-export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true }: PlanCardProps) {
+export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline" }: PlanCardProps) {
   const citedIds = plan.activities.flatMap((a) => a.objectiveIds);
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
@@ -158,21 +164,29 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                 <span className={styles.lineLabel}>Evidence</span>
                 <span className={styles.lineText}>
                   {EVIDENCE_VALUE[activity.evidenceIfAny]}
-                  {activity.objectiveIds
-                    .map((id) => citeNumber.get(id))
-                    .filter((n): n is number => Boolean(n))
-                    .map((n) => (
-                      <a
-                        key={n}
-                        className={styles.cite}
-                        href={`#obj-${n}`}
-                        aria-label={`Objective ${n} in the objectives key`}
-                      >
-                        {n}
-                      </a>
-                    ))}
                 </span>
               </p>
+              {activity.objectiveIds.some((id) => citeNumber.has(id)) ? (
+                <p className={styles.line}>
+                  <span className={styles.lineLabel}>Objectives</span>
+                  <span className={styles.lineText}>
+                    {activity.objectiveIds
+                      .filter((id) => citeNumber.has(id))
+                      .map((id) => {
+                        const n = citeNumber.get(id)!;
+                        const tip = `plan-${plan.id}-${activity.id}-obj-${n}`;
+                        return (
+                          <span key={id} className={styles.chip} tabIndex={0} aria-describedby={tip}>
+                            {`Obj ${n}`}
+                            <span id={tip} role="tooltip" className={styles.chipTip}>
+                              {cited.find((o) => o.id === id)?.statement}
+                            </span>
+                          </span>
+                        );
+                      })}
+                  </span>
+                </p>
+              ) : null}
 
               {activity.notEvidence ? (
                 <p className={styles.line}>
@@ -210,49 +224,57 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
       </section>
 
       {showAlignment && plan.citations && plan.citations.length > 0 ? (
-        <section className={styles.key} aria-label="Suggested alignment">
-          <h2 className={styles.keyHeading}>Suggested alignment</h2>
-          <p className={styles.alignmentNote}>
-            References the drafting assistant suggested. They are not requirements, not objectives, and
-            not part of the sealed package; you decide whether any of them fits.
-          </p>
-          <ul className={styles.keyList}>
-            {plan.citations.map((c) => (
-              <li key={c.ref} className={styles.keyItem}>
-                <span className={styles.keyNumber} aria-hidden="true">·</span>
-                <span className={styles.keyStatement}>
-                  {c.label}
-                  <span className={styles.garnish}>
-                    {` · from ${SOURCE_LABEL[c.source] ?? c.source}`}
-                    {c.verified ? ` · checked against ${SOURCE_LABEL[c.source] ?? c.source}` : " · not independently checked"}
-                    {` · activit${c.activityIndexes.length === 1 ? "y" : "ies"} ${c.activityIndexes.map((i) => i + 1).join(", ")}`}
+        <section className={styles.key} aria-label="Suggested alignment" data-print="hide">
+          {/* Collapsed by default: a long list of references the plan does not depend on. */}
+          <details className={styles.alignment}>
+            <summary className={styles.alignmentSummary}>
+              <span className={styles.keyHeading}>Suggested alignment</span>
+              <span className={styles.alignmentCount}>{plural(plan.citations.length, "reference")}</span>
+            </summary>
+            <p className={styles.alignmentNote}>
+              References the drafting assistant suggested. They are not requirements, not objectives, and
+              not part of the published version; you decide whether any of them fits.
+            </p>
+            <ul className={styles.keyList}>
+              {plan.citations.map((c) => (
+                <li key={c.ref} className={styles.keyItem}>
+                  <span className={styles.keyNumber} aria-hidden="true">·</span>
+                  <span className={styles.keyStatement}>
+                    {c.label}
+                    <span className={styles.garnish}>
+                      {` · from ${SOURCE_LABEL[c.source] ?? c.source}`}
+                      {c.verified ? ` · checked against ${SOURCE_LABEL[c.source] ?? c.source}` : " · not independently checked"}
+                      {` · activit${c.activityIndexes.length === 1 ? "y" : "ies"} ${c.activityIndexes.map((i) => i + 1).join(", ")}`}
+                    </span>
                   </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </details>
         </section>
       ) : null}
 
       <footer className={styles.footer}>
         <p className={styles.honesty}>Asking the assistant a question is not evidence.</p>
         <p className={styles.colophon}>
-          Silicus TA · plan <span className={styles.monoId}>{plan.id}</span>
-          {plan.courseId ? (
-            <>
-              {" · course "}
-              <span className={styles.monoId}>{plan.courseId}</span>
-            </>
-          ) : null}
+          <span className={ids === "record" ? styles.printOnly : undefined}>
+            Silicus TA · plan <span className={styles.monoId}>{plan.id}</span>
+            {plan.courseId ? (
+              <>
+                {" · course "}
+                <span className={styles.monoId}>{plan.courseId}</span>
+              </>
+            ) : null}
+          </span>
           {teacher?.confirmedAt
-            ? ` · confirmed ${teacher.confirmedAt.toLocaleDateString("en-GB", {
+            ? `${ids === "record" ? "" : " · "}confirmed ${teacher.confirmedAt.toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
               })}`
             : ""}
         </p>
-        {onPrint ? (
+        {onPrint && ids === "inline" ? (
           <p className={styles.printHint} data-print="hide">
             This page is set to print cleanly — use your browser’s print command.
           </p>

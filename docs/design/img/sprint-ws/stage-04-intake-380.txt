@@ -1,0 +1,75 @@
+Silicus TA
+
+The AI proposes. You decide.
+
+COURSE
+How plants eat
+How it works
+How plants eat
+
+Ada Lovelace · kept in this browser
+
+1
+Material
+✓
+, done
+2
+Brief
+3
+Objectives
+4
+Plan
+5
+Publish
+
+On this device.
+
+SILICUS
+What should we call this course?
+
+YOU
+
+How plants eat
+
+SILICUS
+What name should this course show for you?
+
+YOU
+
+Ada Lovelace
+
+SILICUS
+What is this course built from? Name the materials, one per line.
+
+YOU
+
+Lesson notes
+
+ASFAI’s skill-map alignment needs the local Silicus app. Here, Silicus asks its own questions below, and nothing is sent to ASFAI.
+
+SILICUS
+What topic should this lesson cover?
+
+The outline needs a subject.
+
+Recorded on this course when you press Record this answer.
+
+Record this answer
+Record details
+
+THIS BROWSER KEEPS THE RECORD
+
+Your courses are stored in this browser only, not on a server. Export to keep a copy: clearing this browser’s data, or using another browser, starts empty.
+
+Export all courses
+Import
+Delete all data from this browser
+
+You: Confirmed the material list.
+
+Behind the scenes
+2 steps
+
+A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+
+Design system

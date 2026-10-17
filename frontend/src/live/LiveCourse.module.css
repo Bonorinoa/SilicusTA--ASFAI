@@ -14,23 +14,29 @@
 .title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; margin: 0; color: var(--color-ink); overflow-wrap: anywhere; text-wrap: balance; }
 .lede { font-family: var(--font-ui); font-size: var(--text-base); line-height: var(--leading-base); color: var(--color-ink-soft); margin: 0; overflow-wrap: anywhere; }
 /* The meta line carries an unbreakable urn, so it must be allowed to break anywhere. */
-.sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-micro); color: var(--color-ink-muted); margin: var(--space-1) 0 0; overflow-wrap: anywhere; text-wrap: balance; }
+.subWhere { white-space: nowrap; } /* where the course is kept reads as one phrase, never split */
 /* The other display headings are the teacher's words too. */
 .heroTitle, .intakeTitle, .pinTitle, .offlineTitle { overflow-wrap: anywhere; }
 
-.stageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4) var(--space-5); flex-wrap: wrap; }
-/* Without min-width the title's urn-bearing meta line sets the row's minimum width and pushes past a
-   narrow viewport; the chips then take their own line, which is the calm reading order anyway. */
-.stageMeta { min-width: 0; flex: 1 1 16rem; }
-
-.chips { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
-.chip { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper-raised); min-width: 5.5rem; }
-.chipLabel { font-family: var(--font-ui); font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-label); color: var(--color-ink-muted); }
-.chipState { font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-ink-soft); }
-.chip[data-status="confirmed"] { border-color: var(--color-accent); }
-.chip[data-status="confirmed"] .chipState { color: var(--color-accent-strong); }
+.stageHeader { display: flex; flex-direction: column; gap: var(--space-4); }
+.stageMeta { min-width: 0; }
 
 .waiting { display: flex; flex-direction: column; }
+/* The plan stage, once drafted: the finished waiting card is a receipt, not a second page. Its eyebrow (which says "draft"
+   again) goes; the title and the time share one line, the check and the model's list share the next. Nothing is removed from
+   the card's text but the eyebrow; the live region still announces it all. */
+.waiting[data-compact] > section {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-4); box-shadow: none;
+}
+.waiting[data-compact] [class*="_eyebrow_"] { display: none; }
+.waiting[data-compact] [class*="_title_"] { grid-column: 1; grid-row: 1; font-size: var(--text-base); line-height: var(--leading-base); font-weight: var(--weight-semibold); }
+.waiting[data-compact] [class*="_toggle_"] { grid-column: 2; grid-row: 1; align-self: center; margin-left: 0; }
+.waiting[data-compact] [class*="_receipt_"] { grid-column: 1; grid-row: 2; padding: 0; background: transparent; align-items: baseline; }
+.waiting[data-compact] [class*="_receipt_"] p { font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); }
+.waiting[data-compact] [class*="_clock_"] { grid-column: 2; grid-row: 2; font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-ink-muted); white-space: nowrap; }
+.waiting[data-compact] [class*="_sees_"] { grid-column: 1 / -1; grid-row: 3; }
 .actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 
 .primaryButton, .ghostButton, .textButton {
@@ -111,7 +117,6 @@
   .live { padding: var(--space-5) var(--space-4) var(--space-6); gap: var(--space-4); }
   .intro, .intake, .pins, .offline, .aside { padding-left: var(--space-4); padding-right: var(--space-4); }
   .heroTitle { font-size: var(--text-xl); line-height: var(--leading-xl); }
-  .chip { min-width: 4.5rem; }
   .actions { gap: var(--space-2); }
 
   /* The steps line stops being an arrow chain that wraps mid-phrase and becomes a numbered ledger:
@@ -130,3 +135,68 @@
   .pinStatus { margin-left: auto; }
   .pinDigest, .pinDetail { flex: 1 1 100%; }
 }
+
+/* ---- the workspace: a stage navigator, the stage, and (wide) the rail ----
+   Narrow and mid widths read top to bottom: the course (menu, title, stepper), then the stage, then the rail as a
+   disclosure. At 1100 px the course and its steps stand in a sticky left column; at 1280 px the rail joins on the right. */
+.shell { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.nav { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.topbar > :first-child:not(button) { flex: 1 1 18rem; min-width: 0; }
+.howItWorks {
+  margin-left: auto; min-height: 44px; padding: 0 var(--space-2); background: transparent; border: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-sm); color: var(--color-ink-muted);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--color-accent-line);
+}
+.howItWorks:hover { color: var(--color-ink); }
+.howItWorks:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.main { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+/* The plan sheet centres itself in a column of its own measure; here the column is the measure, so it fills it and lines up with the bar under it. */
+.main > article { margin-left: 0; margin-right: 0; width: 100%; box-sizing: border-box; }
+.side { min-width: 0; }
+/* One column edge: the cards (44rem, 40rem, 46rem on their own), the waiting card, the record details and the browser
+   notice (42rem) all end where the plan sheet and the stage bar end. The notice also loses its own top margin: the column's gap is the rhythm. */
+.main > section, .main > article, .main > details { max-width: none; box-sizing: border-box; }
+.main > section[aria-label="Where your courses are kept"] { margin-top: 0; }
+
+@media (min-width: 68.75rem) {
+  .live[data-wide] { max-width: 84rem; }
+  .shell { display: grid; grid-template-columns: 13.5rem minmax(0, 46rem); gap: var(--space-8); justify-content: center; align-items: start; }
+  .shell > .nav { position: sticky; top: var(--space-5); }
+  /* The course switcher above already names the course, so its title here is the navigator's own size, not a headline. */
+  /* In the left column the byline is two lines on purpose: who, then where it is kept (the dot between them is for the stacked layout). */
+  .stageMeta .subDot { display: none; }
+  .stageMeta .subWhere { display: block; }
+  .stageMeta .title { font-size: var(--text-md); line-height: var(--leading-md); letter-spacing: 0; text-wrap: balance; }
+  /* The rail sits under the stage until there is room for a column (see the next block). */
+  .shell > .side { grid-column: 2; }
+  /* The decision card's and the publish card's own bars (their markup is not this page's) stay in view too, and read as a
+     layer: an opaque ground, a rule on top and a soft lift, like the stage bar. */
+  .main [data-armed][data-print="hide"] {
+    /* Docked on the window's foot (bottom: 0), not floating above it: a floating bar let a strip of the page show under it. */
+    position: sticky; bottom: 0; z-index: 3;
+    background-color: var(--color-paper-raised); border-top: 1px solid var(--color-rule-strong); box-shadow: var(--shadow-lift);
+  }
+  .main [data-armed="true"][data-print="hide"] { background-color: var(--color-accent-soft); }
+  /* A control in the stage that takes focus (or is jumped to) scrolls clear of the sticky bar, not under it: the bar is at most
+     ~130 px tall and docked on the window's foot. The bars' own buttons keep no margin, or focusing the primary would
+     scroll the page to lift it out of its own bar. */
+  .main :where(a[href], button, input, textarea, select, summary, [tabindex]):not([data-stage-bar] *, [data-armed][data-print="hide"] *, [data-primary="true"]) {
+    scroll-margin-bottom: calc(var(--space-8) * 5);
+  }
+  /* Intake and material: the cards that hold their primary are not this page's, so the button itself rides the foot of
+     the window while its card is on screen (a sticky box stays inside the box it lives in, so it never leaves its card). */
+  .live[data-stage="intake"] .main [data-primary="true"],
+  .live[data-stage="material"] .main [data-primary="true"] { position: sticky; bottom: var(--space-4); z-index: 3; box-shadow: var(--shadow-lift); }
+}
+@media (min-width: 80rem) {
+  .shell { grid-template-columns: 13.5rem minmax(0, 46rem) minmax(15rem, 18rem); }
+  /* A full-height cell, so the rail (sticky inside it, with its own scroll) has room to stay put. */
+  .shell > .side { grid-column: 3; align-self: stretch; }
+}
+
+/* Suggest up to 3 more: a quiet row above the decision list; the button is secondary, the words say who decides. */
+.suggest { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-rule); }
+.suggestRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.suggestText { margin: 0; flex: 1 1 18rem; font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--leading-sm); color: var(--color-ink-soft); max-width: 40rem; }

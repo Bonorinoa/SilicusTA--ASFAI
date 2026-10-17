@@ -4,6 +4,7 @@ import { PrintIcon } from "../components/icons";
 import { PlanCard } from "../components/PlanCard";
 import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
+import { Landing } from "../landing/Landing";
 import { LiveCourse } from "../live/LiveCourse";
 import { BROWSER_MODE } from "../gate/mode";
 import { colorTokens, spacingScale, typeScale } from "../design/tokens";
@@ -22,7 +23,7 @@ import styles from "./Workbench.module.css";
  * see README.md.)
  */
 
-type TabId = "live" | "decision" | "plan" | "publish" | "audit" | "tokens";
+type TabId = "landing" | "live" | "decision" | "plan" | "publish" | "audit" | "tokens";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "live", label: "Live course" },
@@ -33,10 +34,12 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "tokens", label: "Tokens" },
 ];
 
-/** The online app opens on the live course; the local app and its tests keep opening on the decision card. */
+/** An unknown hash (#/nope) still opens where it always did: the live course online, the decision card locally. */
 const HOME: TabId = BROWSER_MODE ? "live" : "decision";
 
 function tabFromHash(): TabId {
+  // The landing is the bare URL ("" or "#" or "#/"): it is the link people paste. The app is "#/live".
+  if (/^#?\/?$/.test(window.location.hash)) return "landing";
   const raw = window.location.hash.replace(/^#\/?/, "");
   return TABS.some((t) => t.id === raw) ? (raw as TabId) : HOME;
 }
@@ -64,14 +67,18 @@ export function Workbench() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  // The online app reads as the product: a masthead, no tabs. The component workbench stays one quiet link away.
-  const product = BROWSER_MODE && tab === "live";
+  // The course page reads as the product in BOTH apps (online and local): a masthead, no tabs. The component
+  // workbench stays one quiet footer link away, and its hash routes (#/decision, #/publish, ...) still work.
+  const product = tab === "live";
+
+  // The landing draws its own banner, main and footer.
+  if (tab === "landing") return <Landing />;
 
   return (
     <div className={styles.shell}>
       {product ? (
         <header className={styles.masthead} data-print="hide">
-          <a className={styles.wordmark} href="#/live" aria-label="Silicus TA, home">
+          <a className={styles.wordmark} href="#/" aria-label="Silicus TA, home">
             <Mark />
             <span className={styles.wordmarkName}>Silicus <span className={styles.wordmarkTa}>TA</span></span>
           </a>
@@ -115,7 +122,8 @@ export function Workbench() {
       {product ? (
         <footer className={styles.colophon} data-print="hide">
           <p className={styles.colophonText}>
-            A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+            A prototype. Teachers decide every step; the AI only proposes and drafts.{" "}
+            {BROWSER_MODE ? "Your record stays in this browser." : "Your record stays on this computer."}
           </p>
           <a className={styles.colophonLink} href="#/decision" onClick={() => setTab("decision")}>Design system</a>
         </footer>

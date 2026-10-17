@@ -1,7 +1,8 @@
 # Silicus TA 3.0
 
 A teacher/student product built on ASFAI Education records and its MCP contract, while staying
-compatible with graph ontologies more generally. AI assists, the teacher confirms: every
+compatible with graph ontologies more generally. ASFAI is a protocol, not the model and not the LMS.
+AI assists, the teacher confirms: every
 objective, plan and published version passes a recorded human checkpoint.
 
 ## Why it exists

@@ -79,3 +79,19 @@ test("it declares that it sends the teacher's words to ASFAI, so the course can 
   assert.equal(new AsfaiGraphSource({}).egress, "asfai");
   assert.equal(new AsfaiGraphSource({}).namespace, "asfai");
 });
+
+test("a name that already carries an age phrase gets exactly ONE age phrase in its label", async () => {
+  const hit = (name, extra = {}) => ({ id: "mt_9", name, description: "d", ageRangeStart: 8, ageRangeEnd: 9, ...extra });
+  const labelOf = async (h) => (await new AsfaiGraphSource({ client: { callTool: async () => [h] } }).retrieve({ topic: "fractions" }))[0].label;
+  const agePhrases = (s) => (s.match(/\(ages? [^)]*\)/gi) ?? []).length;
+
+  const already = await labelOf(hit("Fractions on a number line (age 8+)"));
+  assert.equal(already, "Fractions on a number line (age 8+)");
+  assert.equal(agePhrases(already), 1);
+  assert.equal(agePhrases(await labelOf(hit("Fractions (ages 8–9)"))), 1, "the plural form counts too");
+  // A name without one still gets the range, once; a hit with no ages gets none.
+  assert.equal(await labelOf(hit("Fractions on a number line")), "Fractions on a number line (ages 8–9)");
+  assert.equal(await labelOf(hit("Fractions", { ageRangeStart: undefined, ageRangeEnd: undefined })), "Fractions");
+  // A parenthesis that is not an age phrase does not suppress it.
+  assert.equal(await labelOf(hit("Fractions (unit fractions)")), "Fractions (unit fractions) (ages 8–9)");
+});

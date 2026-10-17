@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import type {
   ActivityView,
   LessonPlanView,
+  PlanInvalidationView,
   ObjectiveCiteView,
   PackageVersionView,
   PublishStatusView,
 } from "../../gate/types";
 import { PlanCard } from "../PlanCard";
 import { plural } from "../../lib/plural";
+import { reasonsFor } from "../../live/reasonText";
 import styles from "./PublishCard.module.css";
 
 /**
@@ -37,6 +39,11 @@ export interface PublishCardProps {
   courseId: string;
   /** The course package title (what gets sealed). */
   title: string;
+  /**
+   * The card's own heading. Defaults to the package title; a page that already shows the plan sheet under it
+   * passes a heading of its own so the title is not set twice in a row.
+   */
+  heading?: string;
   /** Live `publishStatus()` from the gate. */
   status: PublishStatusView;
   /** Confirmed objectives — the citation key of what ships. */
@@ -55,6 +62,9 @@ export interface PublishCardProps {
   onPublish: () => void;
   /** Parent downloads the sealed package as JSON with a sha-256 digest. */
   onExport?: () => void;
+  /** Passed through to the embedded plan sheet, so the preview says what the plan page itself would say. */
+  invalidation?: PlanInvalidationView | null;
+  rewordedSince?: readonly { id: string; before: string | null; after: string }[];
 }
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -67,6 +77,7 @@ export function PublishCard({
   courseLabel,
   courseId,
   title,
+  heading,
   status,
   objectives,
   activities,
@@ -77,6 +88,8 @@ export function PublishCard({
   teacherName,
   onPublish,
   onExport,
+  invalidation,
+  rewordedSince,
 }: PublishCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -118,12 +131,15 @@ export function PublishCard({
     flashTimer.current = setTimeout(() => setHintFlash(false), 1200);
   };
 
+  // The reasons in a teacher's words (the host classifies each gate blocker; the raw text lives in Record details).
+  const reasons = reasonsFor(status);
+
   const reviewClick = () => {
     if (!status.canPublish) {
       const text =
-        status.blockers.length === 1
-          ? `Cannot publish yet: ${status.blockers[0]}`
-          : `Cannot publish yet — ${status.blockers.length} things need your attention first.`;
+        reasons.length === 1
+          ? `Cannot publish yet: ${reasons[0]}`
+          : `Cannot publish yet — ${reasons.length} things need your attention first.`;
       flashHint(text);
       return;
     }
@@ -131,10 +147,10 @@ export function PublishCard({
   };
 
   const statusChip = isSealed
-    ? `Sealed · version ${published!.version}`
+    ? `Published · version ${published!.version}`
     : status.canPublish
-      ? "Ready to seal"
-      : "Not ready to seal";
+      ? "Ready to publish"
+      : "Not ready to publish";
   const chipState = isSealed ? "sealed" : status.canPublish ? "ready" : "blocked";
 
   const sealCopy = (
@@ -147,7 +163,7 @@ export function PublishCard({
   );
 
   return (
-    <section className={styles.card} aria-label="Course package — preview and publish">
+    <section className={styles.card} aria-label="Preview and publish">
       {/* The card's ONE live region: seal results and refusals. The parent
           notice is authoritative; the local flash covers blocked-hint clicks. */}
       <p className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">
@@ -157,15 +173,14 @@ export function PublishCard({
       <header className={styles.header}>
         {courseLabel ? <p className={styles.eyebrow}>{courseLabel}</p> : null}
         <div className={styles.titleRow}>
-          <h2 className={styles.heading}>{title}</h2>
+          <h2 className={styles.heading}>{heading ?? title}</h2>
           <p className={styles.statusChip} data-status={chipState}>
             {statusChip}
           </p>
         </div>
         <p className={styles.subhead}>
-          Everything below is exactly what the sealed package will contain — only objectives you
-          confirmed, and a lesson plan you confirmed. Sealing is the teacher’s act; nothing is
-          published until you do it.
+          Everything below is exactly what will be published — only objectives you confirmed,
+          and a lesson plan you confirmed. Publishing is your act; nothing is published until you do it.
         </p>
       </header>
 
@@ -176,15 +191,17 @@ export function PublishCard({
             objectives={objectives}
             teacher={teacherName ? { name: teacherName } : undefined}
             showAlignment={false}
+            invalidation={invalidation}
+            rewordedSince={rewordedSince}
           />
         </div>
       ) : (
         <p className={styles.empty}>No confirmed lesson plan yet — publish is blocked until a plan is confirmed.</p>
       )}
 
-      {!status.canPublish && status.blockers.length > 0 ? (
-        <ul className={styles.blockers} data-print="hide" aria-label="Why this package cannot be published">
-          {status.blockers.map((reason) => (
+      {!status.canPublish && reasons.length > 0 ? (
+        <ul className={styles.blockers} data-print="hide" aria-label="Why this version cannot be published">
+          {reasons.map((reason) => (
             <li key={reason}>{reason}</li>
           ))}
         </ul>
@@ -201,10 +218,10 @@ export function PublishCard({
         <div className={styles.confirmBar} data-armed={status.canPublish ? "true" : "false"} data-print="hide">
           <p className={styles.confirmStatus}>
             {isSealed
-              ? `Version ${published!.version} is sealed. Unpublished changes are ready for ${nextVersionLabel.toLowerCase()}.`
+              ? `Version ${published!.version} is published. Unpublished changes are ready for ${nextVersionLabel.toLowerCase()}.`
               : status.canPublish
                 ? `Ready — ${plural(objectives.length, "objective")}, ${plural(activities.length, "activity", "activities")}, ${plural(totalMinutes, "minute")}.`
-                : `Blocked — ${plural(status.blockers.length, "reason")} the teacher must resolve first.`}
+                : `Blocked — ${plural(reasons.length, "reason")} the teacher must resolve first.`}
           </p>
           <div className={styles.confirmActions}>
             <span
@@ -215,12 +232,13 @@ export function PublishCard({
               {status.canPublish
                 ? isSealed
                   ? "Any change ships as a new version."
-                  : "Sealing is irreversible — preview is below."
+                  : "Publishing can’t be undone — check the preview above."
                 : "Resolve the blockers above to arm this button."}
             </span>
             <button
               type="button"
               className={styles.confirmButton}
+              data-primary="true"
               data-armed={status.canPublish ? "true" : "false"}
               aria-disabled={!status.canPublish}
               aria-describedby="publish-hint"
@@ -251,7 +269,7 @@ export function PublishCard({
               ref={keepRef}
               onClick={() => {
                 setConfirming(false);
-                flashHint("Seal cancelled — nothing was published.");
+                flashHint("Cancelled — nothing was published.");
               }}
             >
               Keep editing
@@ -292,7 +310,7 @@ function SealedPanel({
   return (
     <div className={styles.sealPanel} data-print="hide">
       <h3 className={styles.sealHeading} tabIndex={-1} ref={panelRef}>
-        Sealed — version {version.version}
+        Published — version {version.version}
       </h3>
       <p className={styles.sealLead}>
         This version is immutable. Nothing in it can be edited; any later change ships as a new
@@ -307,7 +325,7 @@ function SealedPanel({
           </dd>
         </div>
         <div className={styles.line}>
-          <dt className={styles.lineLabel}>Sealed on</dt>
+          <dt className={styles.lineLabel}>Published on</dt>
           <dd className={styles.lineText}>
             {new Date(version.publishedAt).toLocaleDateString("en-GB", DATE_FORMAT)}
           </dd>
@@ -330,7 +348,7 @@ function SealedPanel({
       {/* Machine keys demoted out of the reading path (A2): the human words
           carry the meaning; ids live on their own quiet line. */}
       <p className={styles.colophon}>
-        course <span className={styles.monoId}>{courseId}</span> · sealed by{" "}
+        course <span className={styles.monoId}>{courseId}</span> · published by{" "}
         {version.provenance.decidedBy} · {version.provenance.channel} · turn{" "}
         <span className={styles.monoId}>{version.provenance.turnRef}</span>
       </p>
@@ -338,7 +356,7 @@ function SealedPanel({
       {onExport ? (
         <div className={styles.exportRow}>
           <button type="button" className={styles.exportButton} onClick={onExport}>
-            Export package (JSON)
+            Export the published version (JSON)
           </button>
           <p className={styles.exportHint} id="export-hint">
             Includes a sha-256 digest over the payload — anyone can verify the file is unaltered.

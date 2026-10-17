@@ -238,7 +238,7 @@ describe("DecisionCard, bound to a real ConfirmGate", () => {
     expect(confirm).toHaveAttribute("aria-disabled", "false");
     expect(confirm).toHaveAccessibleName(/build the plan/);
     expect(
-      screen.getByText(/All 3 proposals decided — every objective carries your decision\. Objectives checkpoint confirmed \(3 of 5\)\./),
+      screen.getByText(/All 3 objectives decided: 2 kept\./),
     ).toBeInTheDocument();
 
     await user.click(confirm);

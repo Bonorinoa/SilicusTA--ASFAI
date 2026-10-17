@@ -1,0 +1,145 @@
+Silicus TA
+
+The AI proposes. You decide.
+
+COURSE
+How plants eat
+How it works
+How plants eat
+
+Ada Lovelace · kept in this browser
+
+1
+Material
+✓
+, done
+2
+Brief
+✓
+, done
+3
+Objectives
+✓
+, done
+4
+Plan
+✓
+, done
+5
+Publish
+
+Review and publish
+
+READY TO PUBLISH
+
+Everything below is exactly what will be published — only objectives you confirmed, and a lesson plan you confirmed. Publishing is your act; nothing is published until you do it.
+
+SILICUS · LESSON PLAN
+
+CONFIRMED BY ADA LOVELACE
+
+How plants eat
+
+AGES 8–10 · 45 MINUTES · 3 ACTIVITIES · COURSE VERSION 1
+
+1
+
+Activity 1
+
+15 MIN
+
+LEARNERS
+Look at a leaf.
+
+TEACHER
+Ask what it needs.
+
+EVIDENCE
+teacher observation
+
+OBJECTIVES
+Obj 1
+
+2
+
+Activity 2
+
+15 MIN
+
+LEARNERS
+Look at a leaf.
+
+TEACHER
+Ask what it needs.
+
+EVIDENCE
+teacher observation
+
+OBJECTIVES
+Obj 2
+
+3
+
+Activity 3
+
+15 MIN
+
+LEARNERS
+Look at a leaf.
+
+TEACHER
+Ask what it needs.
+
+EVIDENCE
+teacher observation
+
+OBJECTIVES
+Obj 3
+
+OBJECTIVES REFERENCED
+1
+Students can explain how a plant makes its food.
+2
+Students can name what a plant needs to make sugar.
+3
+Students can draw a leaf.
+
+Asking the assistant a question is not evidence.
+
+Silicus TA · plan urn:uuid:4b972b98-cbd4-c208-6f79-3e66fabbde6d · course urn:uuid:0dc0dfe0-d6bd-4b1f-82d0-16c4ad9dcf70
+
+Ready — 3 objectives, 3 activities, 45 minutes.
+
+Publishing can’t be undone — check the preview above.
+Review & publish first version
+✓
+Material list confirmed · 1 material
+SHOW
+✓
+Brief confirmed
+SHOW
+✓
+Objectives decided · 3 objectives
+SHOW
+
+✓
+Lesson plan confirmed · 3 activities, 45 minutes
+
+Record details
+
+THIS BROWSER KEEPS THE RECORD
+
+Your courses are stored in this browser only, not on a server. Export to keep a copy: clearing this browser’s data, or using another browser, starts empty.
+
+Export all courses
+Import
+Delete all data from this browser
+
+You: Confirmed the lesson plan.
+
+Behind the scenes
+9 steps
+
+A prototype. Teachers decide every step; the AI only proposes and drafts. Your record stays in this browser.
+
+Design system

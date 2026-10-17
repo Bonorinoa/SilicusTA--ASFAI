@@ -26,7 +26,7 @@ const echoingWorker = ({ prompt }) => {
     const names = [...String(prompt).matchAll(/^=== MATERIAL: (.+) ===$/gm)].map((m) => m[1]);
     return { objectives: [{ statement: "Students can explain what an algorithm is.", from: [names[0]] }, { statement: "Students can follow a short list of steps.", from: names }] };
   }
-  if (/COURSE PACKAGE/.test(prompt)) return { answer: "An algorithm is a list of steps.", cites: ["objective:1"] };
+  if (/COURSE PACKAGE/.test(prompt)) return { inScope: true, answer: "An algorithm is a list of steps.", cites: ["objective:1"] };
   const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
   const refs = [...String(prompt).matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
   return {

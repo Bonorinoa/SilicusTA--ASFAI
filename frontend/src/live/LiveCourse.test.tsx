@@ -120,21 +120,23 @@ describe("LiveCourse — thin client of the host", () => {
     render(<LiveCourse />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Lesson 3 · AI literacy" })).toBeInTheDocument();
-    expect(screen.getByText(/host · teacher:tk-1/)).toBeInTheDocument();
+    // D3/stage page: the machine's words (course id, log length) are in Record details, not in the heading's meta line.
+    expect(screen.getByText((_, el) => el?.tagName === "P" && /teacher:tk-1 · kept on this computer/.test(el.textContent ?? ""))).toBeInTheDocument();
     // The proposal row comes straight from the host view.
     expect(screen.getByRole("heading", { name: STATEMENT })).toBeInTheDocument();
-    // A checkpoint chip reflects the host's status, not local state.
-    expect(screen.getByText(/log 3 events/)).toBeInTheDocument();
+    // The step index reflects the host's checkpoints, not local state; the log length is under Record details.
+    expect(screen.getByRole("list", { name: "Steps" })).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Record details" })).getByText(/3 events/)).toBeInTheDocument();
   });
 
-  it("counts a one-event log in words in the stage meta: 'log 1 event', never 'log 1 events'", async () => {
+  it("counts a one-event log in words in Record details: '1 event', never '1 events'", async () => {
     const v = stubView();
     v.integrity = { events: 1, head: "deadbeef" };
     mockHost(v);
     render(<LiveCourse />);
 
-    expect(await screen.findByText(/log 1 event(?!s)/)).toBeInTheDocument();
-    expect(screen.queryByText(/log 1 events/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/\b1 event(?!s)/)).toBeInTheDocument();
+    expect(screen.queryByText(/\b1 events/)).not.toBeInTheDocument();
   });
 
   it("counts a one-event log in words in the verify receipt: 'Event log verified — 1 event, chain intact.'", async () => {
@@ -188,7 +190,9 @@ describe("LiveCourse — thin client of the host", () => {
     // The outline is NOT offered while the intake is unanswered.
     expect(screen.queryByRole("button", { name: "Confirm the outline" })).not.toBeInTheDocument();
     // The gate's refusal reason is surfaced.
-    expect(screen.getByText(/clarifying questions and the teacher has not answered/i)).toBeInTheDocument();
+    // D4: a teacher's sentence by code; the guard's own wording is kept in Record details only.
+    expect(screen.getByText("Answer the questions above, then send them.")).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Record details" })).getByText(/clarifying questions and the teacher has not answered/i)).toBeInTheDocument();
 
     // One open question. The reply is posted under that id only — the browser does not
     // map free prose onto the other questions, and it does not build the ASFAI call.
@@ -273,11 +277,13 @@ describe("LiveCourse — thin client of the host", () => {
   it("drafts the plan without the browser sending any spec", async () => {
     const fresh = stubView();
     fresh.checkpoints.objectives.status = "confirmed";
+    fresh.proposals[0] = { ...fresh.proposals[0], status: "accepted" };   // a confirmed checkpoint means every proposal is decided
     const { calls } = mockHost(fresh);
     const user = userEvent.setup();
     render(<LiveCourse />);
 
-    await user.click(await screen.findByRole("button", { name: /draft the plan from your confirmed objectives/i }));
+    // D1: the confirm bar under the decided objectives is the button, and it says what it does.
+    await user.click(await screen.findByRole("button", { name: "Confirm 1 objective · build the plan" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/plan"))).toBe(true));
     const body = calls.find((c) => c.url.endsWith("/plan"))!.body as Record<string, unknown>;
     expect(body).toEqual({});
@@ -336,14 +342,23 @@ describe("LiveCourse — thin client of the host", () => {
     expect(JSON.stringify(body)).not.toMatch(/payload|learningOutcomes|mode/);
   });
 
-  it("opens the outline confirm once the teacher's own answers are in, with ASFAI untouched", async () => {
+  it("opens the brief confirm once the teacher's own answers are in, with ASFAI untouched", async () => {
     const done = localView();
     done.intake = { ...done.intake, outlineAuthorized: true, answers: { topic: "t", course: "c", learning_outcomes: ["o"] } };
     mockHost(done, { asfaiConnected: false });
     render(<LiveCourse />);
-    expect(await screen.findByRole("button", { name: "Confirm the outline" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Confirm the brief" })).toBeEnabled();
     expect(screen.queryByText(/Connect ASFAI to continue/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: /course intake/i })).not.toBeInTheDocument();
+  });
+
+  it("a course with no outcome on record shows a disabled 'Confirm the brief' and the plain reason, never a live confirm", async () => {
+    const empty = localView();
+    empty.intake = { ...empty.intake, outlineAuthorized: true, answers: { topic: "t", course: "c" } };
+    mockHost(empty, { asfaiConnected: false });
+    render(<LiveCourse />);
+    expect(await screen.findByRole("button", { name: "Confirm the brief" })).toBeDisabled();
+    expect(screen.getByText(/Nothing to confirm yet: no outcome is on record/)).toBeInTheDocument();
   });
 
   it("once ASFAI has asked, its questions are attributed to it and no recommendation is repeated", async () => {
@@ -429,30 +444,33 @@ describe("LiveCourse — thin client of the host", () => {
   });
 
   it("lets a teacher try the published course as a student: grounded answers show what they rest on, and nothing is saved", async () => {
-    const v = stubView();
-    v.versions = [{ version: 1 } as unknown as HostView["versions"][number]];
+    let v = stubView();
+    v = publishedView(UNCHANGED);
     const { calls } = mockHost(v, { studentReply: { answer: "An algorithm is a list of steps.", grounded: true, cites: [{ id: "objective:1", label: "Objective 1" }], note: "Asking questions here is not evidence of learning." } });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.type(await screen.findByLabelText("Your question"), "What is an algorithm?");
+    await user.click(await screen.findByRole("button", { name: "Check a student question" }));
+    await user.type(screen.getByLabelText("Your question"), "What is an algorithm?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
     expect(await screen.findByText("An algorithm is a list of steps.")).toBeInTheDocument();
-    expect(screen.getByText(/From Objective 1\./)).toBeInTheDocument();
+    expect(screen.getByText("From Objective 1")).toBeInTheDocument();
     const body = calls.find((c) => c.url.endsWith("/student/ask"))!.body as Record<string, unknown>;
     expect(body).toEqual({ question: "What is an algorithm?", history: [] });
-    expect(screen.getByText(/not evidence of learning, and nothing you ask is saved/i)).toBeInTheDocument();
+    expect(screen.getByText(/Asking here is not evidence of learning/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing a student asks is saved/)).toBeInTheDocument();
     expect(window.localStorage.length).toBe(0);
   });
 
   it("says plainly when the course does not cover a student's question", async () => {
-    const v = stubView();
-    v.versions = [{ version: 1 } as unknown as HostView["versions"][number]];
-    mockHost(v, { studentReply: { answer: "That isn't in this course yet. Ask your teacher.", grounded: false, cites: [], note: "n" } });
+    const v = publishedView(UNCHANGED);
+    mockHost(v, { studentReply: { answer: "That isn't part of this lesson. Ask your teacher.", grounded: false, cites: [], note: "n", refusal: "off_topic" } });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.type(await screen.findByLabelText("Your question"), "Who won in 1966?");
+    await user.click(await screen.findByRole("button", { name: "Check a student question" }));
+    await user.type(screen.getByLabelText("Your question"), "Who won in 1966?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
-    expect(await screen.findByText(/Not covered by this course\./)).toBeInTheDocument();
+    expect(await screen.findByText("That isn't part of this lesson. Ask your teacher.")).toBeInTheDocument();
+    expect(screen.queryByText(/isn't in this course yet/)).not.toBeInTheDocument();
   });
 
   it("never claims zero-retention when the worker is not set to it: it says the provider's normal terms apply", async () => {
@@ -478,25 +496,31 @@ describe("LiveCourse — thin client of the host", () => {
     });
     const user = userEvent.setup();
     render(<LiveCourse />);
-    const list = await screen.findByRole("list", { name: "Your courses" });
+    // The library is a menu button named after the open course; its list is not on the page until it is asked for.
+    const trigger = await screen.findByRole("button", { name: /Lesson 3 · AI literacy/ });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await user.click(trigger);
+    const list = await screen.findByRole("menu", { name: "Your courses" });
     expect(within(list).getByText(/2 of 5 checkpoints confirmed/)).toBeInTheDocument();
     expect(within(list).getByText(/published, version 1/)).toBeInTheDocument();
     expect(within(list).getByText(/needs attention: its record does not verify/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Lesson 3 · AI literacy is open" })).toBeDisabled();
+    expect(within(list).getByRole("menuitem", { name: "Lesson 3 · AI literacy is open" })).toBeDisabled();
 
     const writes = () => calls.filter((c) => c.body !== undefined).length;
     const before = writes();
-    await user.click(within(list).getByRole("button", { name: "Open Earlier course" }));
+    await user.click(within(list).getByRole("menuitem", { name: "Open Earlier course" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Earlier course" })).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument(); // choosing closes it
     expect(writes()).toBe(before);
 
-    await user.click(screen.getByRole("button", { name: "Start a new course" }));
+    await user.click(screen.getByRole("button", { name: /Earlier course/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Start a new course" }));
     expect(await screen.findByLabelText("What should we call this course?")).toBeInTheDocument();
     expect(writes()).toBe(before);
   });
 
   it("offers a student handout once published, built from the sealed version", async () => {
-    const v = stubView();
+    const v = publishedView(UNCHANGED);
     v.versions = [{
       courseId: COURSE_ID, version: 1, previousVersion: null, title: "AI literacy", owner: "Ada", status: "published",
       objectiveRefs: [{ id: "o", kind: "local", statement: STATEMENT }], lessonPlan: null, publishedAt: 1, note: null,
@@ -509,7 +533,7 @@ describe("LiveCourse — thin client of the host", () => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});   // jsdom cannot navigate
     const user = userEvent.setup();
     render(<LiveCourse />);
-    await user.click(await screen.findByRole("button", { name: "Download student handout" }));
+    await user.click(await screen.findByRole("button", { name: "Download the student handout" }));
     expect(created).toHaveBeenCalledOnce();
     const text = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(blob as unknown as Blob); });
     expect(text).toContain(STATEMENT);
@@ -529,6 +553,9 @@ describe("LiveCourse — thin client of the host", () => {
       objectiveRefs: [{ id: "urn:uuid:aaaa", kind: "local", statement: STATEMENT }], lessonPlan: null, publishedAt: 1, note: null,
       provenance: { turnRef: "t", decidedBy: "Ada", channel: "c", decidedAt: 1 },
     }];
+    v.plan = { id: "urn:uuid:plan", courseId: COURSE_ID, courseVersion: 1, title: "Steps", status: "confirmed", proposedBy: "ai", proposedAt: 1,
+      activities: [{ id: "act1", title: "Warm-up", minutes: 10, objectiveIds: ["urn:uuid:aaaa"], materialVersionIds: [], learnerDoes: "Do.", teacherDoes: "Ask.", evidenceIfAny: "none" }] };
+    v.publish = { canPublish: true, blockers: [] };
     v.revision = revision;
     return v;
   }
@@ -539,14 +566,14 @@ describe("LiveCourse — thin client of the host", () => {
     const { calls } = mockHost(publishedView(UNCHANGED));
     const user = userEvent.setup();
     render(<LiveCourse />);
-    expect(await screen.findByText("Version 1 is published and unchanged.")).toBeInTheDocument();
+    expect(await screen.findByText(/^Version 1 is published\./)).toBeInTheDocument();
     const before = WRITES(calls);
     await user.click(screen.getByRole("button", { name: "Revise this course" }));
     expect(await screen.findByText(/Nothing yet\. Version 1 is still the latest/)).toBeInTheDocument();
     expect(screen.queryByText(/you are drafting/)).not.toBeInTheDocument();
     expect(WRITES(calls)).toBe(before);
     // The sealed course still reads the same everywhere.
-    expect(screen.getByRole("button", { name: "Download student handout" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download the student handout" })).toBeInTheDocument();
   });
 
   it("Edit wording on a confirmed objective sends ONLY a reword intent; the reworded plan is flagged, not invalidated, and re-confirming is the teacher's own click", async () => {
@@ -597,7 +624,7 @@ describe("LiveCourse — thin client of the host", () => {
       activities: [{ id: "act1", title: "Warm-up", minutes: 10, objectiveIds: ["urn:uuid:aaaa"], materialVersionIds: [], learnerDoes: "Do.", teacherDoes: "Ask.", evidenceIfAny: "none" }] };
     mockHost(v);
     render(<LiveCourse />);
-    await screen.findByText("Version 1 is published and unchanged.");
+    await screen.findByText(/^Version 1 is published\./);
     expect(screen.queryByRole("region", { name: /reworded since/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm the plan as it reads" })).not.toBeInTheDocument();
   });
@@ -641,6 +668,7 @@ describe("LiveCourse — thin client of the host", () => {
 
   it("before the first seal, an invalidated plan offers a new plan (the revoked objective cannot come back)", async () => {
     const v = stubView();
+    v.checkpoints.objectives.status = "confirmed";
     v.plan = { id: "urn:uuid:plan", courseId: COURSE_ID, courseVersion: 1, title: "Steps", status: "invalidated", activities: [], proposedBy: "ai", proposedAt: 1 };
     mockHost(v);
     render(<LiveCourse />);
@@ -652,6 +680,7 @@ describe("LiveCourse — thin client of the host", () => {
     const { calls } = mockHost(publishedView(UNCHANGED), { workerConfigured: false });
     const user = userEvent.setup();
     render(<LiveCourse />);
+    await user.click(await screen.findByRole("button", { name: "Revise this course" }));   // decided objectives are read-only until then
     const row = (await screen.findByRole("heading", { name: STATEMENT })).closest("li") as HTMLElement;
     const before = WRITES(calls);
     await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
@@ -666,6 +695,7 @@ describe("LiveCourse — thin client of the host", () => {
     mockHost(view);
     const user = userEvent.setup();
     render(<LiveCourse />);
+    await user.click(await screen.findByRole("button", { name: "Revise this course" }));   // decided objectives are read-only until then
     const row = (await screen.findByRole("heading", { name: STATEMENT })).closest("li") as HTMLElement;
     await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
     expect(within(row).getByText(/a new one must be drafted and confirmed before you can publish/)).toBeInTheDocument();
@@ -677,6 +707,7 @@ describe("LiveCourse — thin client of the host", () => {
     mockHost(view);
     const user = userEvent.setup();
     render(<LiveCourse />);
+    await user.click(await screen.findByRole("button", { name: "Revise this course" }));   // decided objectives are read-only until then
     const row = (await screen.findByRole("heading", { name: STATEMENT })).closest("li") as HTMLElement;
     await user.click(within(row).getByRole("button", { name: /^Revoke your decision on objective 1/ }));
     expect(within(row).queryByText(/lesson plan cites it/)).not.toBeInTheDocument();

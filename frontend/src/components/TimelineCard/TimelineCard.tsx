@@ -7,7 +7,7 @@ import styles from "./TimelineCard.module.css";
  * that happened on this course, as one chronological spine.
  *
  * Each node comes from REAL gate records (checkpoint confirmations, teacher
- * decisions, sealed versions) — derived by the parent, rendered here. The card
+ * decisions, published versions) — derived by the parent, rendered here. The card
  * is read-only: no verbs, no live regions, nothing to dispatch. Machine keys
  * (turn refs, ids) are demoted to a quiet mono line so the human story reads
  * first (A2: machine data never masquerades as prose).
@@ -41,13 +41,13 @@ export function TimelineCard({ events, courseLabel }: TimelineCardProps) {
         {courseLabel ? <p className={styles.eyebrow}>{courseLabel}</p> : null}
         <h2 className={styles.heading}>Decision history</h2>
         <p className={styles.subhead}>
-          Everything recorded on this course — who decided, what changed, and when it was sealed.
+          Everything recorded on this course — who decided, what changed, and when it was published.
           The ledger is append-only; nothing here is ever rewritten.
         </p>
       </header>
 
       {events.length === 0 ? (
-        <p className={styles.empty}>Nothing recorded yet — decisions and seals will appear here.</p>
+        <p className={styles.empty}>Nothing recorded yet — decisions and published versions will appear here.</p>
       ) : (
         <ol className={styles.spine}>
           {events.map((event) => (
@@ -93,7 +93,7 @@ function EventNode({ event }: { event: TimelineEvent }) {
         {/* Machine keys demoted below the story — present for audit, never headline. */}
         <p className={styles.meta}>
           {event.kind === "publish"
-            ? `sealed as version ${event.version}`
+            ? `published as version ${event.version}`
             : event.version !== undefined
               ? `binds to version ${event.version}`
               : `checkpoint ${event.id.replace("checkpoint:", "")}`}

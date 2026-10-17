@@ -371,12 +371,12 @@ check("package sealed as version 1 on the host", sealed.versions[0].version === 
 check("all five checkpoints confirmed after publish",
   ["files", "outline", "objectives", "plan", "publish"].every((k) => sealed.checkpoints[k].status === "confirmed"));
 
-await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent ?? "").trim().startsWith("Try the student helper"))));
+await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent ?? "").trim().startsWith("Check a student question"))));
 check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
 await primaryInViewport("published");
 check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn(PLAN_TITLE)) === 1, `count=${await countIn(PLAN_TITLE)}`);
-await clickText(page, "Try the student helper");
-check("'Try the student helper' puts the cursor in the student's question box",
+await clickText(page, "Check a student question");
+check("'Check a student question' puts the cursor in the student's question box",
   await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
 
 // Sprint 2a: the export archives with an atomic write + read-back verified digest.

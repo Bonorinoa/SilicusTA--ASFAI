@@ -120,7 +120,7 @@ const measure = () => {
     ["section[aria-label='Course onboarding']", "onboarding card"],
     ["ol[aria-label='How it goes']", "hero steps line"],
     ["section[aria-label='Course material']", "materials panel"],
-    ["section[aria-label='Try the student helper']", "student chat"],
+    ["section[aria-label='Check a student question']", "student chat"],
     ["section[aria-label='Where your courses are kept']", "record band + data controls"],
     ["section[aria-label='Pinned copies on this device']", "pinned copies"],
     ["details", "course library"],
@@ -206,7 +206,7 @@ const SHOT_TARGETS = [
   ["ol[aria-label='How it goes']", "hero-steps"],
   ["section[aria-label='Course onboarding']", "onboarding-card"],
   ["section[aria-label='Course material']", "materials-panel"],
-  ["section[aria-label='Try the student helper']", "student-chat"],
+  ["section[aria-label='Check a student question']", "student-chat"],
   ["section[aria-label='Where your courses are kept']", "record-band"],
   ["section[aria-label='Pinned copies on this device']", "pinned-copies"],
 ];
@@ -357,10 +357,10 @@ try {
   await poll(recorded("package.published"));
   // The host records the publish before the page re-renders the published view: wait for the button, then click
   // (clicking on the record alone raced the render, about 1 run in 5).
-  await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((x) => (x.textContent ?? "").trim() === "Try the student helper")));
-  await clickText("Try the student helper"); // the helper is collapsed until opened
-  await page.waitForSelector('section[aria-label="Try the student helper"] input');
-  await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");
+  await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((x) => (x.textContent ?? "").trim() === "Check a student question")));
+  await clickText("Check a student question"); // the helper is collapsed until opened
+  await page.waitForSelector('section[aria-label="Check a student question"] input');
+  await page.type('section[aria-label="Check a student question"] input', "What do plants need to make food?");
   await clickText("Ask");
   await poll(() => bodyHas("A plant uses light"), 20000);
 

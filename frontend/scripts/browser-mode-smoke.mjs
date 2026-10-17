@@ -779,12 +779,12 @@ async function story(label, narrow) {
   await page.evaluate(() => window.scrollTo(0, 0));
   check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
   check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
-  await clickText("Try the student helper");
-  check("'Try the student helper' puts the cursor in the student's question box", await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
+  await clickText("Check a student question");
+  check("'Check a student question' puts the cursor in the student's question box", await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
   // ---- a student asks; nothing is written
   const beforeAsk = JSON.stringify(await stored());
-  await page.waitForSelector('section[aria-label="Try the student helper"] input');
-  await page.type('section[aria-label="Try the student helper"] input', "What do plants need to make food?");
+  await page.waitForSelector('section[aria-label="Check a student question"] input');
+  await page.type('section[aria-label="Check a student question"] input', "What do plants need to make food?");
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   await clickText("Ask");
   await page.waitForSelector('section[data-variant="compact"][data-phase="running"]', { timeout: 5000 });
@@ -1146,7 +1146,7 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
     !!L.img && !!L.copyBox && (width === 380 ? L.img.top >= L.copyBox.bottom && L.img.left >= 0 && L.img.right <= L.img.vw : L.img.left >= L.copyBox.right && L.img.right <= L.img.vw && Math.abs(L.img.top - L.copyBox.top) < 120), JSON.stringify([L.img, L.copyBox]));
   check("landing: the local setup is one collapsed 'For developers: run it locally' disclosure, last on the page, and its text is hidden until opened",
     !!L.details && !L.details.open && /For developers: run it locally/.test(L.details.title) && L.details.last && !/npm install/.test(L.text) && /npm install/.test(L.html), JSON.stringify(L.details));
-  check("landing: ASFAI is defined in one sentence where it first appears", L.html.indexOf("ASFAI") === L.html.indexOf("ASFAI is a separate lesson-records product"), String(L.html.indexOf("ASFAI")));
+  check("landing: ASFAI is defined in one sentence where it first appears", L.html.indexOf("ASFAI") === L.html.indexOf("ASFAI, an optional protocol that checks its format"), String(L.html.indexOf("ASFAI")));
   check("landing: the page does not scroll sideways", L.sideways <= 0, `overflow ${L.sideways}px`);
   if (width === 380) await checkNarrow("landing page");
   if (SHOTS) await page.screenshot({ path: join(SHOTS, `landing-${width}.png`), captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.min(await page.evaluate(() => document.documentElement.scrollHeight), 6000) } });

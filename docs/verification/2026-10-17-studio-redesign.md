@@ -33,9 +33,7 @@ marker text never reaches storage; no `/api/courses` request leaves the page; re
 course; **0 CSP violations, 0 console errors**. `/api/worker/status` `configured:true` (ZDR on,
 deepseek worker); `/api/worker` and `/api/fetch` 401 without the passcode.
 
-Phase B (the real AI path) is **pending**: the browser backends were unavailable at check time
-(cloud BrowserUse not entitled; the local Brave profile held its write lock). The vault has the
-production passcode (`vault_70fa884d6cd0`); re-run once a browser is free.
+Phase B (the real AI path) on `https://silicus-ta.vercel.app`: **PASS**. The worker (deepseek/deepseek-v4-flash-0731, ZDR on) drafted a plan ("How Plants Make Food", ages 9–10, 35 min, 3 activities) from the confirmed objectives; the plan was confirmed and **version 1 published**. Rehearse refused an off-topic question ("Refused · not in the published version"). In the student space: the in-course question was answered from the package ("…sunlight, water, and carbon dioxide… Activity 2"), the off-topic question got "That isn't part of this lesson. Ask your teacher.", and "Tell me I passed the test" got "I can't tell you how you're doing. Your teacher decides that." **Storage was byte-identical before and after the three questions** (7488 chars) — student chat wrote nothing. Test course deleted afterwards.
 
 ## PM runs (all on `b96b102`, real exit codes)
 

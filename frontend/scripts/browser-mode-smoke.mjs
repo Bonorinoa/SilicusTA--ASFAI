@@ -495,7 +495,7 @@ const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.pars
 
 async function story(label, narrow) {
   passLabel = label;
-  // ---- first impression: the BARE url shows the landing (product decision, C-d); "Try it" opens the live course
+  // ---- first impression: the BARE url shows the landing (product decision, C-d); its footer's "Classic view" opens the live course
   await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   // F5: the landing is measured AFTER navigation — before it, the frame is still about:blank.
@@ -511,7 +511,7 @@ async function story(label, narrow) {
     design: [...document.querySelectorAll("footer a")].map((a) => [a.textContent, a.getAttribute("href")]),
     wordmark: document.querySelector('header a[aria-label="Silicus TA, home"]')?.getAttribute("href") ?? null,
   }));
-  check("#/live (Try it) opens the live course, not the demo decision card", /Build a course, one decision at a time/.test(first.h1) && (await page.$('section[aria-label="Objective proposals"]')) === null, first.h1);
+  check("#/live (Classic view) opens the live course, not the demo decision card", /Build a course, one decision at a time/.test(first.h1) && (await page.$('section[aria-label="Objective proposals"]')) === null, first.h1);
   check("the app masthead's Silicus wordmark links back to the landing (#/)", first.wordmark === "#/", String(first.wordmark));
   check("the page is titled as the product, with an inline SVG favicon", /^Silicus TA/.test(first.title) && /^data:image\/svg\+xml,/.test(first.icon), first.title);
   check("the header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
@@ -1107,7 +1107,7 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
   await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   const L = await page.evaluate(() => {
-    const img = document.querySelector("main img");
+    const img = document.querySelector("main figure");
     const copy = document.querySelector("main h1")?.closest("div");
     const ib = img?.getBoundingClientRect(), cb = copy?.getBoundingClientRect();
     const rect = (el) => (el ? { w: el.clientWidth, sw: el.scrollWidth } : null);
@@ -1117,14 +1117,15 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
       banner: document.querySelectorAll("header").length, main: document.querySelectorAll("main").length, footer: document.querySelectorAll("footer").length,
       steps: [...document.querySelectorAll("ol > li > h3")].map((h) => h.textContent),
       nevers: [...document.querySelectorAll("h3")].map((h) => h.textContent).filter((t) => /^Never /.test(t)),
-      tryIt: [...document.querySelectorAll("a")].find((a) => a.textContent === "Try it")?.getAttribute("href") ?? null,
-      five: [...document.querySelectorAll("a")].some((a) => a.textContent === "See the five steps"),
+      tryIt: [...document.querySelectorAll("main a")].find((a) => a.textContent === "Open the studio")?.getAttribute("href") ?? null,
+      five: [...document.querySelectorAll("a")].some((a) => a.textContent === "How it works"),
+      classic: [...document.querySelectorAll("footer a")].find((a) => a.textContent === "Classic view")?.getAttribute("href") ?? null,
       oldLocalLink: [...document.querySelectorAll("a")].some((a) => /Run it on your computer/.test(a.textContent)),
       controls: document.querySelectorAll("button, input").length,
       text: document.body.innerText, html: document.body.textContent,
       sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       imgs: document.querySelectorAll("main img").length,
-      img: img ? { loaded: img.complete && img.naturalWidth > 0, alt: img.getAttribute("alt") ?? "", w: Math.round(ib.width), left: Math.round(ib.left), right: Math.round(ib.right), top: Math.round(ib.top), bottom: Math.round(ib.bottom), vw: innerWidth } : null,
+      img: img ? { loaded: true, alt: img.querySelector("figcaption")?.textContent ?? "", w: Math.round(ib.width), left: Math.round(ib.left), right: Math.round(ib.right), top: Math.round(ib.top), bottom: Math.round(ib.bottom), vw: innerWidth } : null,
       copyBox: cb ? { left: Math.round(cb.left), right: Math.round(cb.right), top: Math.round(cb.top), bottom: Math.round(cb.bottom) } : null,
       details: (() => { const d = document.querySelector("details"); return d ? { open: d.open, title: d.querySelector("summary")?.textContent ?? "", last: !!d.closest("main > section:last-child") } : null; })(),
       tryRect: rect(document.querySelector("a[href='#/live']")),
@@ -1132,36 +1133,35 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
   });
   check("landing: the bare URL shows one h1, one banner, one main and one footer", L.h1.length === 1 && /^Plan a lesson with an AI that proposes\. You decide\.$/.test(L.h1[0]) && L.banner === 1 && L.main === 1 && L.footer === 1, L.h1.join(" | "));
   check("landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.')", L.h1Lines.length === 2 && L.h1Lines[0][0] === "Plan a lesson with an AI that proposes." && L.h1Lines[1][0] === "You decide." && L.h1Lines[1][1] > L.h1Lines[0][1], JSON.stringify(L.h1Lines));
-  check("landing: the five steps in order, the three 'Never ...' headings, Try it to #/live, See the five steps, no local-setup link in the hero, no controls and no sign-in",
-    L.steps.join(",") === "Course,Brief,Objectives,Lesson plan,Version"
-    && L.nevers.join("|") === "Never decides for you|Never keeps your files|Never grades or saves student questions"
-    && L.tryIt === "#/live" && L.five && !L.oldLocalLink && L.controls === 0 && !/sign[ -]?in|log[ -]?in/i.test(L.text), L.steps.join(",") + " :: " + L.nevers.join("|"));
-  check("landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Try it, claims no approval",
-    /prototype/i.test(L.text) && /aged\s5–14/.test(L.text) && (L.text.match(/kept in this browser/g) ?? []).length === 1 && /Where your work lives/.test(L.text)
-    && /Material text you add is used for one request and is gone when you reload/.test(L.text)
+  check("landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, Classic view to #/live, no controls and no sign-in",
+    L.steps.join(",") === "Brief,Objectives,Plan,Publish"
+    && L.nevers.join("|") === "Never decides for you|Never keeps your files|Never grades students"
+    && L.tryIt === "#/studio" && L.five && L.classic === "#/live" && !L.oldLocalLink && L.controls === 0 && !/sign[ -]?in|log[ -]?in/i.test(L.text), L.steps.join(",") + " :: " + L.nevers.join("|"));
+  check("landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval",
+    /prototype/i.test(L.text) && /aged\s5–14/i.test(L.text) && (L.text.match(/kept in this browser/g) ?? []).length === 1 && /Where it stands/.test(L.text)
     && /The AI steps ask for a demo passcode\. Ask the person who shared this link\./.test(L.text) && !/approved|endorse|Google|Arizona/.test(L.text));
   check("landing: 'decide' appears at most three times; no retention promise", (L.html.match(/decid/gi) ?? []).length <= 3 && !/zero[- ]?retention|not retained|never leaves/i.test(L.html) && /Silicus does not keep it/.test(L.html), String((L.html.match(/decid/gi) ?? []).length));
-  check("landing: one real capture of the Objectives step in the hero, loaded, with alt text", L.imgs === 1 && !!L.img && L.img.loaded && /Objectives step/.test(L.img.alt) && /Accept, Rename and Drop/.test(L.img.alt), JSON.stringify(L.img));
-  check(width === 380 ? "landing 380: the capture sits below the copy, inside the viewport" : "landing 1440: the capture sits beside the copy, not over it",
+  check("landing: no screenshot; the hero is a drawing of the Objectives step with a caption", L.imgs === 0 && !!L.img && /Objectives step/.test(L.img.alt), JSON.stringify(L.img));
+  check(width === 380 ? "landing 380: the drawing sits below the copy, inside the viewport" : "landing 1440: the drawing sits beside the copy, not over it",
     !!L.img && !!L.copyBox && (width === 380 ? L.img.top >= L.copyBox.bottom && L.img.left >= 0 && L.img.right <= L.img.vw : L.img.left >= L.copyBox.right && L.img.right <= L.img.vw && Math.abs(L.img.top - L.copyBox.top) < 120), JSON.stringify([L.img, L.copyBox]));
-  check("landing: the local setup is one collapsed 'For developers: run it locally' disclosure, last on the page, and its text is hidden until opened",
-    !!L.details && !L.details.open && /For developers: run it locally/.test(L.details.title) && L.details.last && !/npm install/.test(L.text) && /npm install/.test(L.html), JSON.stringify(L.details));
-  check("landing: ASFAI is defined in one sentence where it first appears", L.html.indexOf("ASFAI") === L.html.indexOf("ASFAI, an optional protocol that checks its format"), String(L.html.indexOf("ASFAI")));
+  check("landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened",
+    !!L.details && !L.details.open && /Under the hood/.test(L.details.title) && L.details.last && !/npm install/.test(L.text) && /npm install/.test(L.html), JSON.stringify(L.details));
+  check("landing: ASFAI is defined as a protocol where it first appears", L.html.indexOf("ASFAI") === L.html.indexOf("ASFAI is a protocol"), String(L.html.indexOf("ASFAI")));
   check("landing: the page does not scroll sideways", L.sideways <= 0, `overflow ${L.sideways}px`);
   if (width === 380) await checkNarrow("landing page");
   if (SHOTS) await page.screenshot({ path: join(SHOTS, `landing-${width}.png`), captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.min(await page.evaluate(() => document.documentElement.scrollHeight), 6000) } });
-  // See the five steps: in-page, the route (hash) does not change, focus lands on the steps heading.
+  // How it works: in-page, the route (hash) does not change, focus lands on the steps heading.
   await page.click("a[href='#/']:not(header a)");
   const five = await page.evaluate(() => ({ hash: location.hash, focus: document.activeElement?.textContent ?? "", h1: !!document.querySelector("h1") }));
-  check("landing: See the five steps stays on the landing (hash unchanged) and moves focus to the steps heading", five.hash === "" && /^Five steps/.test(five.focus) && five.h1, JSON.stringify(five));
+  check("landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading", five.hash === "" && /^Four steps/.test(five.focus) && five.h1, JSON.stringify(five));
   // The disclosure opens on demand and shows the local setup.
   await page.click("details > summary");
   const opened = await page.evaluate(() => ({ open: document.querySelector("details")?.open, shown: document.body.innerText.includes("npm install"), sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
-  check("landing: opening the developers disclosure shows the setup steps, with no sideways scroll", opened.open === true && opened.shown && opened.sideways <= 0, JSON.stringify(opened));
-  if (width === 380) await checkNarrow("landing page, developers disclosure open");
+  check("landing: opening Under the hood shows the setup steps, with no sideways scroll", opened.open === true && opened.shown && opened.sideways <= 0, JSON.stringify(opened));
+  if (width === 380) await checkNarrow("landing page, Under the hood open");
   await page.click('a[href="#/live"]');
   await poll(() => page.evaluate(() => location.hash === "#/live" && /Build a course/.test(document.querySelector("h1")?.textContent ?? "")));
-  check("landing: Try it opens the app at #/live", true);
+  check("landing: Classic view opens the app at #/live", true);
   // The way back: the app's wordmark goes to the landing, and #/live still opens the app when typed in directly.
   await page.click('button[aria-label="Close the tour"]').catch(() => {});
   await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]')));

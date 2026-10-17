@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { DecisionCard } from "../components/DecisionCard";
 import { PrintIcon } from "../components/icons";
 import { PlanCard } from "../components/PlanCard";
@@ -6,6 +6,10 @@ import { PublishCard } from "../components/PublishCard";
 import { TimelineCard } from "../components/TimelineCard";
 import { Landing } from "../landing/Landing";
 import { LiveCourse } from "../live/LiveCourse";
+import { routeOf } from "../studio/route";
+
+// The redesigned studio loads only when its routes are opened, so the landing and #/live stay as light as before.
+const StudioApp = lazy(() => import("../studio/StudioApp").then((m) => ({ default: m.StudioApp })));
 import { BROWSER_MODE } from "../gate/mode";
 import { colorTokens, spacingScale, typeScale } from "../design/tokens";
 import { buildAuditedScenario, buildPlanScenario, seedProposals } from "../gate/demo";
@@ -61,8 +65,10 @@ export function Workbench() {
     typeof window === "undefined" ? HOME : tabFromHash(),
   );
 
+  const [studio, setStudio] = useState(() => typeof window !== "undefined" && routeOf(window.location.hash) !== null);
+
   useEffect(() => {
-    const onHash = () => setTab(tabFromHash());
+    const onHash = () => { setTab(tabFromHash()); setStudio(routeOf(window.location.hash) !== null); };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -71,6 +77,8 @@ export function Workbench() {
   // workbench stays one quiet footer link away, and its hash routes (#/decision, #/publish, ...) still work.
   const product = tab === "live";
 
+  // The redesigned destinations (#/studio, #/learn) draw their own shell.
+  if (studio) return <Suspense fallback={null}><StudioApp /></Suspense>;
   // The landing draws its own banner, main and footer.
   if (tab === "landing") return <Landing />;
 

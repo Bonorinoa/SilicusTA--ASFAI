@@ -1,0 +1,56 @@
+/* Studio — direction A, "Field notes". Scoped to .studio so the live page keeps its own look until the swap.
+   Builds on design/tokens.css (paper, ink, the one ink-blue accent) and adds what the new layout needs. */
+@import "@fontsource-variable/public-sans/wght.css";
+
+.studio {
+  --fn-sans: "Public Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fn-serif: var(--font-display);
+  --fn-desk: #efe9dc;
+  --fn-sheet: #fbf8f1;
+  --fn-tray: #e7e0d0;
+  --fn-tray-card: #fbf8f1;
+  --fn-ink: #221f1a;
+  --fn-ink-soft: #4a443b;
+  --fn-ink-muted: #6b6458;
+  --fn-line: #d9d0bd;
+  --fn-line-soft: #e2dacb;
+  --fn-line-dash: #a99e86;
+  --fn-accent: #2c4a66;
+  --fn-accent-strong: #1f3850;
+  --fn-accent-wash: #e3e9ef;
+  --fn-done: #4a6642;
+  --fn-done-wash: #e6ecdf;
+  --fn-danger: #87473c;
+  --fn-soon-fg: #6a4a12;
+  --fn-soon-bg: #f3ead6;
+  --fn-soon-line: #b89a5e;
+  --fn-shadow: 0 1px 2px rgba(34, 31, 26, 0.05), 0 8px 24px rgba(34, 31, 26, 0.06);
+  --fn-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  min-height: 100vh;
+  background: var(--fn-desk);
+  color: var(--fn-ink);
+  font-family: var(--fn-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.studio *:focus-visible {
+  outline: 2px solid var(--fn-accent);
+  outline-offset: 2px;
+}
+
+/* Base resets at zero specificity, so every component class wins over them. */
+:where(.studio) :where(h1, h2, h3) { font-family: var(--fn-serif); font-weight: 600; margin: 0; }
+:where(.studio) :where(p) { margin: 0; }
+:where(.studio) :where(button, input, textarea, select) { font: inherit; color: inherit; }
+
+@keyframes fn-shimmer { 0% { background-position: -480px 0; } 100% { background-position: 480px 0; } }
+@keyframes fn-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes fn-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+.studio [data-rise] { animation: fn-rise 260ms var(--fn-ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .studio *, .studio *::before, .studio *::after { animation: none !important; transition: none !important; }
+}

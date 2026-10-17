@@ -35,14 +35,17 @@ const snapshot = (page) =>
     for (const el of document.querySelectorAll("body *")) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
+      // Screen-reader-only text (the 1 px srOnly pattern) is hidden by design, not clipped: the same exemption as
+      // narrow-shell.mjs (a box of 8 px or less is not a label being cut off). It still counts for "past the edge".
+      const hiddenByDesign = el.clientWidth <= 8 || el.clientHeight <= 8;
       if (r.right > cw + 1 || r.left < -1) {
         past.push({ tag: el.tagName, cls: String(el.className || "").slice(0, 40), text: (el.textContent || "").trim().slice(0, 50), left: Math.round(r.left), right: Math.round(r.right) });
       }
-      if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX === "hidden") {
+      if (!hiddenByDesign && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX === "hidden") {
         clipped.push({ tag: el.tagName, cls: String(el.className || "").slice(0, 40), text: (el.textContent || "").trim().slice(0, 50), content: el.scrollWidth, box: el.clientWidth });
       }
       // vertical clipping of text blocks only
-      if (el.scrollHeight > el.clientHeight + 2 && getComputedStyle(el).overflowY === "hidden" && el.clientHeight < ch) {
+      if (!hiddenByDesign && el.scrollHeight > el.clientHeight + 2 && getComputedStyle(el).overflowY === "hidden" && el.clientHeight < ch) {
         clipped.push({ tag: el.tagName, cls: String(el.className || "").slice(0, 40), text: (el.textContent || "").trim().slice(0, 50), content: `h${el.scrollHeight}`, box: `h${el.clientHeight}` });
       }
     }

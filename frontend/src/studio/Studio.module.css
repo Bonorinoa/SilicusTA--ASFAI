@@ -170,7 +170,6 @@ a.crumb:hover { color: var(--fn-ink); }
 .actionButtons { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 
 .waitCard { background: #f4efe4; border: 1px solid var(--fn-line); border-radius: 9px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.waitLine { font-size: 0.8125rem; color: var(--fn-ink-muted); }
 
 .published {
   display: flex; flex-direction: column; gap: 14px; padding: 28px; border-radius: 12px;

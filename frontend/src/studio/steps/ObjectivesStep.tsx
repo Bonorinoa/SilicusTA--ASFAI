@@ -10,7 +10,7 @@ import type { ProposalView } from "../../gate/types";
 import { plural } from "../../lib/plural";
 import { suggestOffer } from "../../live/suggest";
 import type { StepProps } from "../CourseStudio";
-import { Badge, Button, Skeleton, WaitClock, ui } from "../ui";
+import { Badge, Button, Skeleton, ui } from "../ui";
 import { ActionBar } from "./ActionBar";
 import s from "../Studio.module.css";
 
@@ -30,7 +30,6 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   const dropped = rows.filter((r) => r.status === "dropped");
   const confirmed = view.checkpoints.objectives?.status === "confirmed";
   const drafting = c.waiting?.kind === "objectives" || c.waiting?.kind === "suggest";
-  const range = worker?.typicalSeconds?.objectives;
   const offer = suggestOffer(rows, confirmed, worker?.configured === true);
   const [showDropped, setShowDropped] = useState(false);
   const [newText, setNewText] = useState("");
@@ -89,9 +88,9 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
       </div>
       {waitingRows.map((r) => <ProposalCard key={r.id} row={r} busy={c.busy} onDecide={decide} />)}
       {drafting ? (
-        <div className={s.waitCard} aria-busy="true" aria-live="polite">
+        // The words are spoken once, by the one status line; the skeletons hold the place here.
+        <div className={s.waitCard} aria-busy="true">
           {[0, 1].map((i) => <div key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}><Skeleton width="92%" /><Skeleton width="64%" /></div>)}
-          <p className={s.waitLine}>{c.waiting?.kind === "suggest" ? "Finding objectives that round out yours" : `Reading ${plural(materials.length, "source")}`} · <WaitClock startedAt={c.waiting!.startedAt} range={range} /></p>
         </div>
       ) : null}
       {!drafting && waitingRows.length === 0 ? <p className={s.trayEmpty}>Nothing waiting. Everything proposed has a decision.</p> : null}
@@ -151,10 +150,10 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
             <ActionBar text={<><strong>Objectives confirmed.</strong> Rewording keeps the plan. Removing one the plan uses means drafting a new plan.</>}>
               <Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button>
             </ActionBar>
-          ) : !confirmed ? (
+          ) : !confirmed && !drafting ? (
             <ActionBar text={waitingRows.length
               ? <><strong>{plural(waitingRows.length, "proposal")} waiting.</strong> Your objectives are confirmed when every proposal has a decision.</>
-              : drafting ? "Proposals are on their way." : <><strong>Every proposal is decided.</strong></>} />
+              : <><strong>Every proposal is decided.</strong></>} />
           ) : null}
         </div>
       </div>

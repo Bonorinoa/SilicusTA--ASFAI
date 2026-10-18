@@ -152,7 +152,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
             </ActionBar>
           ) : !confirmed && !drafting ? (
             <ActionBar text={waitingRows.length
-              ? <><strong>{plural(waitingRows.length, "proposal")} waiting.</strong> Your objectives are confirmed when every proposal has a decision.</>
+              ? <><strong>{plural(waitingRows.length, "proposal")} waiting.</strong> The objectives aren’t confirmed yet.</>
               : <><strong>Every proposal is decided.</strong></>} />
           ) : null}
         </div>

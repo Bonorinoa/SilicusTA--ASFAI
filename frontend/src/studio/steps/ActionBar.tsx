@@ -6,7 +6,7 @@ export function ActionBar({ text, children }: { text: ReactNode; children?: Reac
   return (
     <div className={s.actionBar}>
       <div className={s.actionInner}>
-        <p className={s.actionText} role="status">{text}</p>
+        <p className={s.actionText}>{text}</p>
         {children ? <div className={s.actionButtons}>{children}</div> : null}
       </div>
     </div>

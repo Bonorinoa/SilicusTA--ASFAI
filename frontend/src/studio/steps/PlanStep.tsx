@@ -23,7 +23,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
     bar = null;
   } else if (!plan) {
     bar = (
-      <ActionBar text={noWorker ? `AI drafting isn’t set up ${BROWSER_MODE ? "on this site" : "on this host"}, so the plan can’t be drafted here.` : <><strong>Your objectives are confirmed.</strong> Silicus drafts activities that point to them; you confirm the plan.</>}>
+      <ActionBar text={noWorker ? `AI drafting isn’t set up ${BROWSER_MODE ? "on this site" : "on this host"}, so the plan can’t be drafted here.` : "Silicus drafts activities that point to them; you confirm the plan."}>
         <Button onClick={() => onLook("objectives")}>Review objectives</Button>
         <Button variant="primary" data-primary="true" disabled={c.busy || noWorker} onClick={() => void c.actions.draftPlan()}>Draft the lesson plan</Button>
       </ActionBar>

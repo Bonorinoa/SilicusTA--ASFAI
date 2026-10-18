@@ -14,7 +14,7 @@ import { ObjectivesStep } from "./steps/ObjectivesStep";
 import { PlanStep } from "./steps/PlanStep";
 import { PublishStep } from "./steps/PublishStep";
 import { Button, Dialog, Notice, Skeleton } from "./ui";
-import { STEP_LIST, currentStep, stepDone, stepTransition, useCourse, useWorker, type StepId } from "./useCourse";
+import { STEP_LIST, currentStep, stepDone, stepTransition, turnPhrase, useCourse, useWorker, type StepId } from "./useCourse";
 import s from "./Studio.module.css";
 
 /**
@@ -51,22 +51,35 @@ export function CourseStudio({ courseId }: { courseId: string }) {
 
   // When the work moves to a new step, stop looking at an old one.
   const step = view ? currentStep(view) : null;
+  const phrase = view ? turnPhrase(view) : null;
   useEffect(() => { setLooking(null); }, [step]);
 
   // B4: the jump (objectives confirmed, brief confirmed, plan confirmed) is announced once through the
   // one status line, and focus lands on the new step's heading for keyboard and screen-reader users.
+  // The sentence stays only for the ONE step change it describes: any act that sets busy, any waiting
+  // state, or a later change of the turn phrase (a move that is not the step change itself) clears it,
+  // so an atomic live region never re-speaks a stale sentence.
   const stepRef = useRef<StepId | null>(null);
+  const phraseRef = useRef<string | null>(null);
   useEffect(() => {
     if (!step) return;
-    const prev = stepRef.current;
+    const prevStep = stepRef.current;
+    const prevPhrase = phraseRef.current;
     stepRef.current = step;
-    if (prev === step || prev === null) return; // the first view is not a move
-    setTransition(stepTransition(prev, step));
-    const heading = document.querySelector<HTMLElement>("h1");
-    if (heading) { heading.tabIndex = -1; heading.focus(); }
-  }, [step]);
+    phraseRef.current = phrase;
+    if (prevStep === null) return; // the first view is not a move
+    if (prevStep !== step) {
+      setTransition(stepTransition(prevStep, step));
+      const heading = document.querySelector<HTMLElement>("h1");
+      if (heading) { heading.tabIndex = -1; heading.focus(); }
+      return;
+    }
+    // Same step: a later change of the turn phrase means the teacher did something next; the one-time
+    // transition sentence has said its piece.
+    if (prevPhrase !== null && phrase !== prevPhrase) setTransition(null);
+  }, [step, phrase]);
   // The transition sentence has said its piece; the next work begins from a plain turn line.
-  useEffect(() => { if (c.waiting) setTransition(null); }, [c.waiting]);
+  useEffect(() => { if (c.waiting || c.busy) setTransition(null); }, [c.waiting, c.busy]);
 
   if (c.missing) {
     return (

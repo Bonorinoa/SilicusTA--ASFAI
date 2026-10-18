@@ -47,9 +47,7 @@ describe("the studio's one status line and the announced auto-advance", () => {
     const { host, CourseStudio } = await studioEnv();
     const id = await freshCourse(host);
     render(<CourseStudio courseId={id} />);
-    expect(await screen.findByText("Your turn: confirm the source list")).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "Confirm the source list" }));
-    await screen.findByText("Your turn: answer the three questions");
+    expect(await screen.findByText("Your turn: answer the three questions, then confirm the brief")).toBeInTheDocument();
 
     // Answer the three questions and confirm the brief.
     await waitFor(() => expect(document.querySelector('section[aria-label="Questions"]')).not.toBeNull());
@@ -58,10 +56,9 @@ describe("the studio's one status line and the announced auto-advance", () => {
     setVal([...questions()][2], "Students can explain how a plant makes food.\nStudents can name what a plant needs.");
     setVal([...questions()][0], "How plants make food from sunlight");
     setVal([...questions()][1], "Grade 4 science, ages 9-10");
-    await waitFor(() => expect(screen.getByRole("button", { name: "Save answers" })).not.toBeDisabled(), { timeout: 3000 });
-    fireEvent.click(screen.getByRole("button", { name: "Save answers" }));
-    await screen.findByText(/Your answers are saved/, undefined, { timeout: 8000 });
-    fireEvent.click(await screen.findByRole("button", { name: "Confirm the brief" }));
+    // One click: the studio saves the answers, confirms the source list and confirms the brief.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Confirm the brief" })).not.toBeDisabled(), { timeout: 3000 });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm the brief" }));
 
     // Objectives: proposals arrive from the answers; the status line follows the view (with the one-time
     // "brief confirmed" transition prefix from the step change).

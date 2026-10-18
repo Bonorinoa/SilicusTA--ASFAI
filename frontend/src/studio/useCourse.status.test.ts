@@ -47,9 +47,10 @@ const proposal = (status: ProposalView["status"]): ProposalView => ({
 const draft = { id: "urn:uuid:pl", courseId: "urn:uuid:x", courseVersion: 0, title: "A plan", status: "draft" as const, activities: [], proposedBy: "ai" as const, proposedAt: 0 };
 
 describe("turnPhrase — the status line when the teacher must act", () => {
-  it("the brief: confirm the sources first, then answer the three questions", () => {
-    expect(turnPhrase(view())).toBe("Your turn: confirm the source list");
-    expect(turnPhrase(confirmed(view(), "files"))).toBe("Your turn: answer the three questions");
+  it("the brief is one decision: answer the three questions, then confirm (the source list rides along)", () => {
+    const phrase = "Your turn: answer the three questions, then confirm the brief";
+    expect(turnPhrase(view())).toBe(phrase);
+    expect(turnPhrase(confirmed(view(), "files"))).toBe(phrase);
   });
 
   it("the objectives: choose where the first proposals come from, or decide each proposal", () => {

@@ -192,8 +192,9 @@ export function stepDone(v: HostView, id: StepId): boolean {
  */
 export function turnPhrase(v: HostView): string {
   const st = (id: string) => v.checkpoints[id]?.status === "confirmed";
-  if (!st("files")) return "Your turn: confirm the source list";
-  if (!st("outline")) return "Your turn: answer the three questions";
+  // The brief is one decision: the questions are on screen from the start and one button confirms the
+  // source list, the answers and the brief together, so one phrase covers both checkpoints.
+  if (!st("files") || !st("outline")) return "Your turn: answer the three questions, then confirm the brief";
   if (!st("objectives")) {
     return v.proposals.some((p) => p.status === "proposed")
       ? "Your turn: accept, edit or drop each proposal"

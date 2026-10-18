@@ -309,3 +309,62 @@ describe("PlanCard in the workspace", () => {
     expect(screen.getByText(/set to print cleanly/)).toBeInTheDocument();
   });
 });
+
+describe("objective chips carry their statements (C1)", () => {
+  const scenario = buildPlanScenario();
+
+  it("separates a multi-objective activity's chips in text: never 'Obj 1Obj 3' run together", () => {
+    render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
+    // "Build a better answer" cites objectives 1 and 3 — two chips in ONE activity.
+    const build = screen.getByRole("heading", { name: "Build a better answer" }).closest("li") as HTMLElement;
+    const [chip1, chip3] = within(build).getAllByText(/^Obj \d$/);
+    expect(chip1.firstChild?.textContent).toBe("Obj 1");
+    expect(chip3.firstChild?.textContent).toBe("Obj 3");
+    // A visible separator sits between the chips, so innerText and AT text read them apart.
+    expect(chip1.nextElementSibling?.textContent).toBe(" · ");
+    expect(within(build).queryByText(/Obj 1Obj 3/)).not.toBeInTheDocument();
+  });
+
+  it("each chip's accessible name is the cited objective's statement", () => {
+    render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
+    const build = screen.getByRole("heading", { name: "Build a better answer" }).closest("li") as HTMLElement;
+    const [chip1, chip3] = within(build).getAllByText(/^Obj \d$/);
+    expect(chip1).toHaveAccessibleName(
+      "Students can explain what an algorithm is, in their own words, with an example from everyday life.",
+    );
+    expect(chip3).toHaveAccessibleName("Students can ask one honest question about how an AI tool works.");
+  });
+
+  it("shows each cited objective's statement in the activity itself, and never a machine id", () => {
+    render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
+    const build = screen.getByRole("heading", { name: "Build a better answer" }).closest("li") as HTMLElement;
+    const stmt = "Students can explain what an algorithm is, in their own words, with an example from everyday life.";
+    const matches = within(build).getAllByText(stmt);
+    // The statement is set as REAL type under the chips (tooltip + a visible line), not hover-only.
+    expect(matches.length).toBeGreaterThan(1);
+    expect(matches.some((el) => !el.closest('[class*="chipTip"]'))).toBe(true);
+    expect(
+      within(build).getAllByText("Students can ask one honest question about how an AI tool works.").length,
+    ).toBeGreaterThan(1);
+    expect(build.textContent).not.toMatch(/urn:uuid/u);
+  });
+
+  it("a cited objective without a statement shows only its number — never its id", () => {
+    const blank = scenario.objectives.map((o) =>
+      o.id === scenario.plan.activities[0].objectiveIds[0] ? { ...o, statement: "" } : o);
+    render(<PlanCard plan={scenario.plan} objectives={blank} />);
+    const warmup = screen.getByRole("heading", { name: "Warm-up: three answers, one question" }).closest("li") as HTMLElement;
+    const chip = within(warmup).getByText("Obj 1");
+    expect(chip.getAttribute("aria-label")).toBeNull();
+    expect(warmup.textContent).not.toMatch(/urn:/u);
+  });
+
+  it("sets the chip statement in muted small type that stays small and wraps in print (C1 print rules)", () => {
+    const css = readFileSync(path.join(here, "PlanCard.module.css"), "utf8");
+    expect(css).toMatch(/\.chipSep\s*\{/);
+    expect(css).toMatch(/\.chipStatement\s*\{[^}]*color:\s*var\(--color-ink-muted\)/s);
+    expect(css).toMatch(/\.chipStatement\s*\{[^}]*font-size:\s*var\(--text-sm\)/s);
+    // In print the statement is set in physical units, still small, so a long statement never overflows the sheet.
+    expect(css).toMatch(/@media print\s*\{[\s\S]*?\.chipStatement\s*\{[^}]*font-size:\s*9pt/);
+  });
+});

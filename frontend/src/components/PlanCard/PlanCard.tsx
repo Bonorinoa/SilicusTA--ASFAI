@@ -1,4 +1,5 @@
 import type { LessonPlanView, ObjectiveCiteView, PlanInvalidationView } from "../../gate/types";
+import { Fragment } from "react";
 import { plural } from "../../lib/plural";
 import styles from "./PlanCard.module.css";
 
@@ -138,7 +139,9 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
       </p>
 
       <ol className={styles.activities}>
-        {plan.activities.map((activity, index) => (
+        {plan.activities.map((activity, index) => {
+          const citedInActivity = activity.objectiveIds.filter((id) => citeNumber.has(id));
+          return (
           <li key={activity.id} className={styles.activity}>
             <p className={styles.activityNumber} aria-hidden="true">
               {index + 1}
@@ -166,24 +169,37 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                   {EVIDENCE_VALUE[activity.evidenceIfAny]}
                 </span>
               </p>
-              {activity.objectiveIds.some((id) => citeNumber.has(id)) ? (
+              {citedInActivity.length > 0 ? (
                 <p className={styles.line}>
                   <span className={styles.lineLabel}>Objectives</span>
                   <span className={styles.lineText}>
-                    {activity.objectiveIds
-                      .filter((id) => citeNumber.has(id))
-                      .map((id) => {
-                        const n = citeNumber.get(id)!;
-                        const tip = `plan-${plan.id}-${activity.id}-obj-${n}`;
-                        return (
-                          <span key={id} className={styles.chip} tabIndex={0} aria-describedby={tip}>
+                    {citedInActivity.map((id, i) => {
+                      const n = citeNumber.get(id)!;
+                      const statement = cited.find((o) => o.id === id)?.statement;
+                      const tip = `plan-${plan.id}-${activity.id}-obj-${n}`;
+                      return (
+                        <Fragment key={id}>
+                          {i > 0 ? <span className={styles.chipSep}> · </span> : null}
+                          <span
+                            className={styles.chip}
+                            tabIndex={0}
+                            aria-label={statement || undefined}
+                            aria-describedby={tip}
+                          >
                             {`Obj ${n}`}
                             <span id={tip} role="tooltip" className={styles.chipTip}>
-                              {cited.find((o) => o.id === id)?.statement}
+                              {statement}
                             </span>
                           </span>
-                        );
-                      })}
+                        </Fragment>
+                      );
+                    })}
+                    {citedInActivity.map((id) => {
+                      const statement = cited.find((o) => o.id === id)?.statement;
+                      return statement ? (
+                        <span key={id} className={styles.chipStatement}>{statement}</span>
+                      ) : null;
+                    })}
                   </span>
                 </p>
               ) : null}
@@ -196,7 +212,8 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
               ) : null}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ol>
 
       <section className={styles.key} aria-label="Objectives referenced">

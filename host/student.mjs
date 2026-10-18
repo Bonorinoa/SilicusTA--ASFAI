@@ -63,6 +63,23 @@ export function cleanQuestion(body) {
   return { question, history };
 }
 
+/** Heuristic: questions that ask for a grade, pass/fail, mastery or assessment. */
+const ASSESSMENT_PATTERNS = [
+  /\btell me (i|we) (passed|pass|failed)\b/i,
+  /\bdid (i|we) pass\b/i,
+  /\bam (i|we) passing\b/i,
+  /\bhow (am i|are we) doing\b/i,
+  /\bwhat (is|was) (my|our) grade\b/i,
+  /\bjudge (my|our) (mastery|work)\b/i,
+  /\bassess (my|our) (mastery|work)\b/i,
+  /\bmaster(ed|y|ing)\b/i,
+];
+
+function looksLikeAssessment(question) {
+  const q = String(question ?? "").toLowerCase();
+  return ASSESSMENT_PATTERNS.some((re) => re.test(q));
+}
+
 /**
  * @param {{pkg: ReturnType<typeof packageOf>, worker: {enabled: boolean, answerStudent: Function}, body: unknown}} input
  * @returns {Promise<{answer: string, grounded: boolean, cites: {id: string, label: string}[], note: string, basis?: "plan"|"explanation", refusal?: "off_topic"|"assessment"}>}
@@ -75,6 +92,10 @@ export async function askStudent({ pkg, worker, body }) {
     out = await worker.answerStudent({ question, history, title: pkg.title, items: pkg.items, ages: pkg.ages });
   } catch (e) {
     throw Object.assign(new StudentError(e?.code ?? "WORKER_FAILED", e instanceof Error ? e.message : String(e)), { upstream: true });
+  }
+  // Safety net: the model may miss an assessment request; catch it here before the grounded path.
+  if (looksLikeAssessment(question)) {
+    return { answer: ASSESSMENT, grounded: false, cites: [], note: NOT_EVIDENCE, refusal: "assessment" };
   }
   const byId = new Map(pkg.items.map((i) => [i.id, i]));
   const cites = out.cites.filter((id) => byId.has(id)).map((id) => ({ id, label: byId.get(id).label }));

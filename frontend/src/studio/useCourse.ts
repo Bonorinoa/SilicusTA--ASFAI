@@ -81,6 +81,23 @@ export function useCourse(courseId: string) {
         answers,
       }), "Not saved."),
     confirmBrief: () => run(() => host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." })),
+    /**
+     * One click, up to three intents, stopping at the first refusal: record the answers (when anything
+     * is unsaved or changed), confirm the source list (when it is not on the record yet), then confirm
+     * the outline. The host requires files before outline but accepts intake answers before 'files', so
+     * the order above is the honest one. Every step is still a normal intent; nothing is decided here.
+     */
+    confirmTheBrief: (answers: Record<string, string> | null, { sources = false }: { sources?: boolean } = {}) =>
+      run(async () => {
+        if (answers) {
+          await host.answerIntake(courseId, {
+            text: answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n"),
+            answers,
+          });
+        }
+        if (sources) await host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." });
+        await host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." });
+      }, "The brief wasn't confirmed."),
     proposeFromAnswers: () => run(() => host.proposeObjectives(courseId), "Nothing was proposed."),
     proposeFromSources: (materials: MaterialInput[]) =>
       runAi("objectives", async () => {

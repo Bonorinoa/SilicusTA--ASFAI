@@ -150,9 +150,7 @@ try {
   await waitText("Step 1 of 4", 8000).catch(() => {});
   t = await body();
   check("the Brief step renders (Step 1 of 4)", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
-  await clickBy("Confirm the source list");
-  await waitText("Three questions");
-  check("confirming the sources opens the three questions", /Three questions/.test(await body()));
+  check("the three questions open before the sources are confirmed", /Three questions/.test(t));
   const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
   check("three question fields render", nFields === 3, `found ${nFields}`);
   await setVal('section[aria-label="Questions"] textarea', "Explain how a plant makes its food\nName what a plant needs to make sugar");
@@ -162,10 +160,10 @@ try {
     set(ins[0], "How plants make food from sunlight"); set(ins[1], "Grade 4 science, ages 9-10");
   });
   await sleep(300);
-  await clickBy("Save answers");
-  check("the answers save and offer a confirm", await waitText("Your answers are saved", 6000));
+  check("the brief bar offers a quiet 'Save answers' secondary beside the confirm primary", /Save answers/.test(await body()));
+  // One click does the whole brief: confirm the source list (files), record the answers, confirm the outline.
   await clickBy("Confirm the brief");
-  check("confirming the brief moves to Objectives (Step 2 of 4)", await waitText("From your answers", 10000));
+  check("one click confirms the sources, saves the answers and confirms the brief (Objectives, Step 2 of 4)", await waitText("From your answers", 10000));
 
   // ---- objectives
   await clickBy("Use my answers");

@@ -60,9 +60,6 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed }:
       </ul>
       {held.length + links.length + waiting.length === 0 ? <p className={s.sourceMeta}>No sources yet. You can plan from your own answers instead.</p> : null}
       <button type="button" className={s.addSource} onClick={() => setAdding(true)} disabled={held.length + links.length >= MAX_ITEMS}>+ Add a source</button>
-      <div className={s.soonRow} style={{ justifyContent: "space-between" }}>
-        <span>Google Drive</span><Soon />
-      </div>
       {BROWSER_MODE ? <div className={s.soonRow} style={{ justifyContent: "space-between" }}><span>YouTube</span><Soon>Local app only</Soon></div> : null}
       <p className={s.sourceFoot}>Text is read in this tab, sent once when you ask for a draft, and forgotten on reload.</p>
       <AddSourceDialog

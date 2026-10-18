@@ -1,4 +1,4 @@
-/** Brief: confirm the source list, then answer three questions in one visible form, then confirm the brief. */
+/** Brief: the three questions are visible from the start; one primary confirms the source list (when there is one), saves the answers and confirms the brief. */
 import { useEffect, useId, useState } from "react";
 import { answerText } from "../../components/AiWaiting";
 import { materialNamesOf } from "../../components/AiWaiting";
@@ -43,27 +43,37 @@ export function BriefStep({ c, view, looking }: StepProps) {
   const saved = complete && !dirty;
   const editable = !briefOk && !looking;
 
-  const save = () => {
-    const out: Record<string, string> = {};
-    for (const q of questions) if (needs(q.id) && (answers[q.id] ?? "").trim()) out[q.id] = answers[q.id].trim();
-    if (fromSources) out.outcomes_from = "materials";
-    void c.actions.answerBrief(out);
+  const save = () => void c.actions.answerBrief(out());
+
+  /** The answers to record as one intent: everything complete, trimmed, plus the outcomes choice. */
+  const out = (): Record<string, string> => {
+    const a: Record<string, string> = {};
+    for (const q of questions) if (needs(q.id) && (answers[q.id] ?? "").trim()) a[q.id] = answers[q.id].trim();
+    if (fromSources) a.outcomes_from = "materials";
+    return a;
   };
 
   let bar: React.ReactNode = null;
-  if (!looking) {
-    if (!filesOk) {
-      bar = <ActionBar text={<><strong>Start with your sources.</strong> Is this list right? You can add the files themselves on the left.</>}>
-        <Button variant="primary" data-primary="true" disabled={c.busy} onClick={() => void c.actions.confirmSources()}>{names.length + tabOnly.length ? "Confirm the source list" : "Continue without sources"}</Button>
+  if (!looking && !briefOk) {
+    const listed = names.length + tabOnly.length > 0;
+    // The source-list sentence is only ever about a real list; with nothing added it says so.
+    const sourceNote = listed
+      ? <><strong>Start with your sources.</strong> Is this list right? You can add the files themselves on the left.</>
+      : <><strong>No sources yet.</strong> That's fine — your answers alone can brief Silicus. Add files on the left whenever you want.</>;
+    const confirm = () => void c.actions.confirmTheBrief(dirty ? out() : null, { sources: !filesOk });
+    if (!complete) {
+      bar = <ActionBar text="Answer each question to continue.">
+        <Button variant="primary" data-primary="true" disabled>Confirm the brief</Button>
       </ActionBar>;
-    } else if (!briefOk) {
-      bar = saved && complete
-        ? <ActionBar text={<><strong>Your answers are saved.</strong> Confirm the brief to move on to objectives.</>}>
-          <Button variant="primary" data-primary="true" disabled={c.busy} onClick={() => void c.actions.confirmBrief()}>Confirm the brief</Button>
-        </ActionBar>
-        : <ActionBar text={complete ? "Save your answers, then confirm." : "Answer each question to continue."}>
-          <Button variant="primary" data-primary="true" disabled={c.busy || !complete} onClick={save}>Save answers</Button>
-        </ActionBar>;
+    } else if (dirty) {
+      bar = <ActionBar text={filesOk ? <><strong>Your answers aren't saved yet.</strong> Confirming the brief records them first.</> : sourceNote}>
+        <Button variant="quiet" disabled={c.busy} onClick={save}>Save answers</Button>
+        <Button variant="primary" data-primary="true" disabled={c.busy} onClick={confirm}>Confirm the brief</Button>
+      </ActionBar>;
+    } else {
+      bar = <ActionBar text={filesOk ? <><strong>Your answers are saved.</strong> Confirm the brief to move on to objectives.</> : sourceNote}>
+        <Button variant="primary" data-primary="true" disabled={c.busy} onClick={confirm}>Confirm the brief</Button>
+      </ActionBar>;
     }
   }
 
@@ -94,38 +104,36 @@ export function BriefStep({ c, view, looking }: StepProps) {
           ) : <p className={s.docLede}>No sources yet. That’s fine: objectives can come from your answers.</p>}
         </section>
 
-        {filesOk ? (
-          <section className={s.card} aria-label="Questions" data-rise>
-            <div className={s.cardHead}>
-              <h2 className={s.cardTitle}>Three questions</h2>
-              {briefOk ? <span className={s.summaryDone}>✓ Confirmed</span> : saved ? <span className={s.provenance}>Saved</span> : null}
-            </div>
-            {questions.map((q) => {
-              const l = LABELS[q.id] ?? { label: q.prompt, hint: q.reason ?? "", placeholder: "" };
-              const outcomes = q.id === "learning_outcomes";
-              return (
-                <div key={q.id} className={ui.field}>
-                  <label className={ui.label} htmlFor={`${ids}-${q.id}`}>{l.label}</label>
-                  {outcomes ? (
-                    <>
-                      <textarea id={`${ids}-${q.id}`} className={ui.textarea} rows={3} placeholder={l.placeholder} disabled={!editable || fromSources}
-                        value={fromSources ? "" : answers[q.id] ?? ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
-                      <label className={s.checkRow} style={{ fontSize: "0.875rem", color: "var(--fn-ink-soft)" }}>
-                        <input type="checkbox" checked={fromSources} disabled={!editable} onChange={(e) => setFromSources(e.target.checked)} />
-                        Let Silicus propose these from my sources instead
-                      </label>
-                    </>
-                  ) : (
-                    <input id={`${ids}-${q.id}`} className={ui.input} placeholder={l.placeholder} disabled={!editable}
-                      value={answers[q.id] ?? ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
-                  )}
-                  <span className={ui.hint}>{l.hint}</span>
-                </div>
-              );
-            })}
-            {questions.length === 0 ? <p className={s.docLede}>Waiting for the questions…</p> : null}
-          </section>
-        ) : null}
+        <section className={s.card} aria-label="Questions" data-rise>
+          <div className={s.cardHead}>
+            <h2 className={s.cardTitle}>Three questions</h2>
+            {briefOk ? <span className={s.summaryDone}>✓ Confirmed</span> : saved ? <span className={s.provenance}>Saved</span> : null}
+          </div>
+          {questions.map((q) => {
+            const l = LABELS[q.id] ?? { label: q.prompt, hint: q.reason ?? "", placeholder: "" };
+            const outcomes = q.id === "learning_outcomes";
+            return (
+              <div key={q.id} className={ui.field}>
+                <label className={ui.label} htmlFor={`${ids}-${q.id}`}>{l.label}</label>
+                {outcomes ? (
+                  <>
+                    <textarea id={`${ids}-${q.id}`} className={ui.textarea} rows={3} placeholder={l.placeholder} disabled={!editable || fromSources}
+                      value={fromSources ? "" : answers[q.id] ?? ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+                    <label className={s.checkRow} style={{ fontSize: "0.875rem", color: "var(--fn-ink-soft)" }}>
+                      <input type="checkbox" checked={fromSources} disabled={!editable} onChange={(e) => setFromSources(e.target.checked)} />
+                      Let Silicus propose these from my sources instead
+                    </label>
+                  </>
+                ) : (
+                  <input id={`${ids}-${q.id}`} className={ui.input} placeholder={l.placeholder} disabled={!editable}
+                    value={answers[q.id] ?? ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+                )}
+                <span className={ui.hint}>{l.hint}</span>
+              </div>
+            );
+          })}
+          {questions.length === 0 ? <p className={s.docLede}>Waiting for the questions…</p> : null}
+        </section>
 
         {bar}
       </div>

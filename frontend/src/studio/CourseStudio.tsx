@@ -5,6 +5,7 @@ import { materialNamesOf } from "../components/AiWaiting";
 import { BROWSER_MODE } from "../gate/mode";
 import { host } from "../gate/transport";
 import { plural } from "../lib/plural";
+import type { ActivityItem } from "../gate/types";
 import { SourcesPanel } from "./SourcesPanel";
 import { TopBar, href } from "./StudioApp";
 import { BriefStep } from "./steps/BriefStep";
@@ -14,6 +15,27 @@ import { PublishStep } from "./steps/PublishStep";
 import { Button, Dialog, Notice, Skeleton } from "./ui";
 import { STEP_LIST, currentStep, stepDone, useCourse, useWorker, type StepId } from "./useCourse";
 import s from "./Studio.module.css";
+
+/**
+ * The decisions pill counts a teacher DECISION, never bookkeeping. Confirming a checkpoint, confirming
+ * the plan, deciding objectives or publishing are real choices on the record; saving answers
+ * (intake.answered) records the teacher's own words, and creating the course opens the record — neither
+ * is a decision. One decide act can carry several verbs, so its row counts facts.decisions.
+ */
+const DECISION_ACTIONS = new Set(["checkpoint.confirmed", "objectives.decided", "plan.confirmed", "package.sealed"]);
+
+export function decisionCount(activity: readonly ActivityItem[]): number {
+  let n = 0;
+  for (const a of activity ?? []) {
+    if (a.actor !== "teacher" || !DECISION_ACTIONS.has(a.action)) continue;
+    n += a.action === "objectives.decided" ? Number(a.facts?.decisions ?? 0) : 1;
+  }
+  return n;
+}
+
+export function decisionPillLabel(count: number): string {
+  return count > 0 ? `${plural(count, "decision")} recorded` : "No decisions yet";
+}
 
 export function CourseStudio({ courseId }: { courseId: string }) {
   const c = useCourse(courseId);
@@ -51,7 +73,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
 
   const shown: StepId = looking ?? step;
   const stepIndex = STEP_LIST.findIndex((x) => x.id === step);
-  const decisions = (view.activity ?? []).filter((a) => a.actor === "teacher").length;
+  const decisions = decisionCount(view.activity ?? []);
   const published = view.versions.at(-1) ?? null;
   const names = materialNamesOf(view.course.materials);
 
@@ -92,7 +114,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
         right={(
           <>
             <button type="button" className={s.pill} onClick={() => setHistoryOpen(true)}>
-              <span className={s.pillDot} aria-hidden="true" />{plural(decisions, "decision")} recorded
+              <span className={s.pillDot} aria-hidden="true" />{decisionPillLabel(decisions)}
             </button>
             {published ? <Button size="small" onClick={() => { window.location.hash = href.rehearse(courseId); }}>Rehearse</Button> : null}
           </>

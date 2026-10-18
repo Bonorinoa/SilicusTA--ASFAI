@@ -159,8 +159,6 @@ export function Rehearse({ courseId }: { courseId: string }) {
 
             <div className={s.soonRow}>
               <Soon>Save as a test set · soon</Soon>
-              <Soon>Run all 44 checks · soon</Soon>
-              <Soon>Reading-level persona · soon</Soon>
             </div>
           </aside>
         </main>

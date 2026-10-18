@@ -6,7 +6,7 @@ import { host, type CourseSummary } from "../gate/transport";
 import { plural } from "../lib/plural";
 import { NewCourseDialog } from "./NewCourseDialog";
 import { TopBar, href } from "./StudioApp";
-import { Skeleton, Soon } from "./ui";
+import { Skeleton } from "./ui";
 import s from "./Studio.module.css";
 
 /** The four teacher steps, read from the host's count of confirmed checkpoints (files and outline are the Brief). */
@@ -35,10 +35,6 @@ export function Home() {
             <p className={s.kicker}>For teachers of learners aged 5–14</p>
             <h1 className={s.display}>Your courses</h1>
             <p className={s.lede}>Silicus proposes objectives and drafts a lesson plan. You decide every one, and only you publish.</p>
-          </div>
-          <div className={s.soonRow}>
-            <Soon>Sync across devices · soon</Soon>
-            <Soon>Share with a colleague · soon</Soon>
           </div>
         </div>
 

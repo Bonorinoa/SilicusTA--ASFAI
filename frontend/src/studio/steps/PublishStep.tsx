@@ -7,7 +7,7 @@ import { reasonsFor } from "../../live/reasonText";
 import { ActionBar } from "./ActionBar";
 import type { StepProps } from "../CourseStudio";
 import { href } from "../StudioApp";
-import { Button, LinkButton, Soon } from "../ui";
+import { Button, LinkButton } from "../ui";
 import { download } from "../useCourse";
 import s from "../Studio.module.css";
 
@@ -32,7 +32,7 @@ export function PublishStep({ c, view, onLook }: StepProps) {
               <LinkButton variant="secondary" href={href.learn(id)}>Open the student space</LinkButton>
               <LinkButton variant="secondary" href={href.rehearse(id)}>Rehearse student questions</LinkButton>
             </div>
-            <div className={s.soonRow} style={{ color: "#c9d2db" }}><Soon>Class code · soon</Soon><span>Students can’t reach this browser yet; the student space is a preview on this device.</span></div>
+            <div className={s.soonRow} style={{ color: "#c9d2db" }}><span>Students can’t reach this browser yet; the student space is a preview on this device.</span></div>
           </section>
 
           <section className={s.card} aria-label="Take it with you">

@@ -239,6 +239,28 @@
 }
 .chip:hover .chipTip, .chip:focus .chipTip { display: block; }
 
+/* C1: a dot joins the chips in text as well as on screen, so 'Obj 1Obj 2'
+   never reads run together in innerText, in the a11y tree or in print. */
+.chipSep {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-sm);
+  color: var(--color-ink-muted);
+}
+
+/* The cited objective's own wording, set under the chips in muted small type:
+   a teacher reads what 'Obj 2' means without leaving the activity. */
+.chipStatement {
+  display: block;
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--color-ink-muted);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
 /* Suggested alignment folds away until asked for. */
 .alignment { margin: 0; }
 .alignmentSummary { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); cursor: pointer; list-style: none; min-height: 44px; }
@@ -253,6 +275,8 @@
   .printOnly { display: inline; }
   .chip { padding: 0; background: none; border: none; color: var(--color-ink); font-size: inherit; }
   .chipTip { display: none !important; }
+  .chipSep { font-size: inherit; }
+  .chipStatement { font-size: 9pt; line-height: 13pt; }
 }
 
 /* ---------------------------- objectives key ------------------------------ */

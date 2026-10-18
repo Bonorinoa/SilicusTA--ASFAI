@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { host, type HostView, type StudentAnswer } from "../gate/transport";
 import { href } from "./StudioApp";
-import { Skeleton, Soon } from "./ui";
+import { Skeleton } from "./ui";
 import s from "./Studio.module.css";
 
 const kid = (statement: string) => statement.replace(/^(students|learners)\s+(can|will)\s+/i, "").replace(/^./, (c) => c.toUpperCase()).replace(/\.$/, "");
@@ -46,7 +46,6 @@ export function Learn({ courseId }: { courseId: string }) {
     <div className={s.learn}>
       <div className={s.learnRibbon}>
         <span>Preview on this device. Students can’t open this link yet.</span>
-        <Soon>Class codes · soon</Soon>
         <a href={href.course(courseId)} style={{ color: "inherit" }}>Back to the studio</a>
       </div>
 
@@ -91,7 +90,17 @@ export function Learn({ courseId }: { courseId: string }) {
               {turns.map((t, i) => (
                 <div key={i} style={{ display: "contents" }}>
                   <div className={s.learnQ}>{t.q}</div>
-                  {t.a ? <div className={s.learnA}>{t.a.answer}</div> : t.error ? <div className={s.learnA}>{t.error}</div> : null}
+                  {t.a ? (
+                  <div className={s.learnA}>
+                    {t.a.answer}
+                    {t.a.grounded && t.a.cites.length > 0 ? (
+                      <span className={s.learnSource}>
+                        <span>From the lesson: {t.a.cites.map((c) => c.label).join(" · ")}</span>
+                        {t.a.basis === "explanation" ? <span>Silicus is explaining an idea your lesson names.</span> : null}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : t.error ? <div className={s.learnA}>{t.error}</div> : null}
                 </div>
               ))}
               {asking ? <div className={s.typing} aria-label="Silicus is thinking"><span /><span /><span /></div> : null}

@@ -227,6 +227,8 @@ a.crumb:hover { color: var(--fn-ink); }
 .learnNote { font-size: 0.75rem; color: #8a7b68; text-align: center; }
 .learnQ { align-self: flex-end; max-width: 80%; background: var(--learn-teal); color: #fff; border-radius: 18px 18px 6px 18px; padding: 10px 14px; }
 .learnA { align-self: flex-start; max-width: 88%; background: #fff; border-radius: 18px 18px 18px 6px; padding: 12px 14px; box-shadow: 0 2px 0 #ecdcc4; line-height: 1.5; }
+.learnSource { display: block; margin-top: 8px; font-size: 0.8125rem; line-height: 1.45; color: #8a7b68; }
+.learnSource span { display: block; }
 
 /* ---------- narrow ---------- */
 @media (max-width: 860px) {

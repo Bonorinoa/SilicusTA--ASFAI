@@ -134,7 +134,9 @@ describe("A1: the brief is one decision, not three", () => {
     renderBrief(view("confirmed", "pending", [], {}), makeC());
     expect(screen.getByRole("button", { name: "Confirm the brief" })).toBeDisabled();
     // E2: the disabled bar names the one question still blank (the status line already says "answer the questions").
-    expect(screen.getByRole("status")).toHaveTextContent("Answer Topic first, then this can be confirmed.");
+    // The action bar text is a plain paragraph now: the step status line is the one live region.
+    const bar = screen.getByText(/then this can be confirmed/);
+    expect(bar).toHaveTextContent("Answer Topic first, then this can be confirmed.");
   });
 });
 

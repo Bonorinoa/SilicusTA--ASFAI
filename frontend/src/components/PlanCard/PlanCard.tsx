@@ -183,13 +183,16 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                           <span
                             className={styles.chip}
                             tabIndex={0}
-                            aria-label={statement || undefined}
-                            aria-describedby={tip}
+                            role={statement ? "img" : undefined}
+                            aria-label={statement ? `Obj ${n} ${statement}` : undefined}
+                            aria-describedby={statement ? tip : undefined}
                           >
                             {`Obj ${n}`}
-                            <span id={tip} role="tooltip" className={styles.chipTip}>
-                              {statement}
-                            </span>
+                            {statement ? (
+                              <span id={tip} role="tooltip" className={styles.chipTip}>
+                                {statement}
+                              </span>
+                            ) : null}
                           </span>
                         </Fragment>
                       );

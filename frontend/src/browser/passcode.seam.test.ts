@@ -7,7 +7,7 @@
  * subscribe function, and nothing else. The value never travels with it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PASSCODE_KEY, onPasscodeAsking, passcodeKeeper, setPasscodePrompt } from "./passcode";
+import { PASSCODE_KEY, onPasscodeAsking, passcodeAsking, passcodeKeeper, setPasscodePrompt } from "./passcode";
 
 beforeEach(() => { sessionStorage.clear(); });
 afterEach(() => { setPasscodePrompt(null); vi.useRealTimers(); });
@@ -60,5 +60,38 @@ describe("the passcode asking seam", () => {
     expect(await keeper.ask("needed")).toBeNull();
     expect(events).toEqual([]);
     off();
+  });
+
+  it("with two overlapping prompts the first to finish does not clear the asking state (E4 counter)", async () => {
+    const events: boolean[] = [];
+    onPasscodeAsking((asking) => { events.push(asking); });
+    vi.useFakeTimers();
+    const resolvers: ((code: string | null) => void)[] = [];
+    let entered = 0;
+    setPasscodePrompt((_reason) => {
+      entered += 1;
+      return new Promise<string | null>((r) => { resolvers.push(r); });
+    });
+    const keeper = passcodeKeeper();
+    const first = keeper.ask("needed");
+    const second = keeper.ask("rejected");
+    expect(entered).toBe(2);
+    expect(passcodeAsking()).toBe(true);
+    expect(events).toEqual([true]); // one transition for both open prompts
+
+    // The FIRST prompt finishes while the second is still open: asking must STAY true.
+    resolvers[0]("letmein");
+    await vi.advanceTimersByTimeAsync(0);
+    await first;
+    expect(events).toEqual([true]); // no spurious false between overlapping prompts
+    expect(keeper.get()).toBe("letmein");
+    expect(passcodeAsking()).toBe(true); // the second prompt is still open
+
+    // Only when the LAST prompt resolves does the seam clear.
+    resolvers[1](null);
+    await vi.advanceTimersByTimeAsync(0);
+    await second;
+    expect(events).toEqual([true, false]);
+    expect(passcodeAsking()).toBe(false);
   });
 });

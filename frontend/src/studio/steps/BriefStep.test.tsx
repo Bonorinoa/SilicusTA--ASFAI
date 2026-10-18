@@ -10,6 +10,7 @@
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useMemo, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { HostView } from "../../gate/transport";
 import type { HeldFile } from "../../materials/session";
@@ -132,7 +133,66 @@ describe("A1: the brief is one decision, not three", () => {
   it("while an answer is missing the primary is a disabled 'Confirm the brief'", () => {
     renderBrief(view("confirmed", "pending", [], {}), makeC());
     expect(screen.getByRole("button", { name: "Confirm the brief" })).toBeDisabled();
-    expect(screen.getByText("Answer each question to continue.")).toBeInTheDocument();
+    // E2: the disabled bar names the one question still blank (the status line already says "answer the questions").
+    expect(screen.getByRole("status")).toHaveTextContent("Answer Topic first, then this can be confirmed.");
+  });
+});
+
+describe("E1: the brief chain holds the form while it is in flight", () => {
+  /**
+   * A driver that mimics useCourse's busy cycle around confirmTheBrief: the chain flips busy on, is held open
+   * (the host's answerIntake is slow — up to three calls), then lands the record and flips busy off.
+   */
+  function BusyBrief({ base, holdMs = 150 }: { base: HostView; holdMs?: number }) {
+    const [busy, setBusy] = useState(false);
+    const [view, setView] = useState(base);
+    const c = useMemo(() => {
+      const base_ = makeC({ busy });
+      return {
+        ...base_,
+        actions: {
+          ...base_.actions,
+          confirmTheBrief: async (answers: Record<string, string> | null) => {
+            setBusy(true);
+            await new Promise((r) => setTimeout(r, holdMs));
+            setView((prev) => ({ ...prev, intake: intake(answers ?? {}) }));
+            setBusy(false);
+          },
+        },
+      } as StepProps["c"];
+    }, [busy, view, holdMs]);
+    return <BriefStep c={c} view={view} looking={false} worker={null} onLook={vi.fn()} />;
+  }
+
+  it("disables the topic field while the chain is held open, so no typed text is lost", async () => {
+    render(<BusyBrief base={view("confirmed", "pending", [], {})} />);
+    await userEvent.type(screen.getByLabelText("Topic"), FILL.topic);
+    await userEvent.type(screen.getByLabelText("Who it’s for"), FILL.course);
+    await userEvent.type(screen.getByLabelText("What learners should be able to do"), FILL.outcomes);
+    await userEvent.click(screen.getByRole("button", { name: "Confirm the brief" }));
+
+    // In flight: the answerIntake call is still open and busy is true, so the topic field is disabled.
+    const topic = screen.getByLabelText("Topic") as HTMLInputElement;
+    expect(topic).toBeDisabled();
+    // A keystroke during the wait is refused, not swallowed: the field holds exactly what was typed.
+    await userEvent.type(topic, "x");
+    expect(topic.value).toBe(FILL.topic);
+
+    // Once the chain settles and the record lands, the typed answers are still there.
+    await screen.findByRole("button", { name: "Confirm the brief" });
+    expect((screen.getByLabelText("Topic") as HTMLInputElement).value).toBe(FILL.topic);
+    expect((screen.getByLabelText("Who it’s for") as HTMLInputElement).value).toBe(FILL.course);
+  });
+
+  it("freezes the other controls too while busy: the checkbox and the primary are disabled", async () => {
+    render(<BusyBrief base={view("pending", "pending", [], {})} holdMs={60} />);
+    await userEvent.type(screen.getByLabelText("Topic"), FILL.topic);
+    await userEvent.type(screen.getByLabelText("Who it’s for"), FILL.course);
+    await userEvent.type(screen.getByLabelText("What learners should be able to do"), FILL.outcomes);
+    await userEvent.click(screen.getByRole("button", { name: "Confirm the brief" }));
+    expect(screen.getByRole("button", { name: "Confirm the brief" })).toBeDisabled();
+    expect(screen.getByLabelText("Who it’s for")).toBeDisabled();
+    expect(screen.getByRole("checkbox")).toBeDisabled();
   });
 });
 

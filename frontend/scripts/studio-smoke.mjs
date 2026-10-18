@@ -140,7 +140,7 @@ try {
   await sleep(300);
   await page.type('dialog input[placeholder="How plants eat"]', "How plants eat");
   await page.type('dialog input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
-  await page.type('dialog textarea[placeholder*="Photosynthesis"]', "Lesson notes\nChapter 4 slides");
+  await page.type('dialog textarea[placeholder*="Photosynthesis"]', "Lesson notes\nChapter 4 slides\n" + "x".repeat(200));
   await clickBy("Create course");
   await page.waitForFunction(() => location.hash.startsWith("#/studio/"), { timeout: 8000 });
   check("creating a course opens it in the studio", /#\/studio\//.test(await page.evaluate(() => location.hash)));
@@ -151,6 +151,7 @@ try {
   t = await body();
   check("the Brief step renders (Step 1 of 4)", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
   check("the three questions open before the sources are confirmed", /Three questions/.test(t));
+  check("a 200-character unbroken source name wraps: the Brief step does not scroll sideways", await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1 && document.body.innerText.includes("x".repeat(200))));
   const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
   check("three question fields render", nFields === 3, `found ${nFields}`);
   await setVal('section[aria-label="Questions"] textarea', "Explain how a plant makes its food\nName what a plant needs to make sugar");

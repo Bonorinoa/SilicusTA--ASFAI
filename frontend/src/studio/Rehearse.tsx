@@ -6,7 +6,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { host, type HostView, type StudentAnswer } from "../gate/transport";
 import { TopBar, href } from "./StudioApp";
-import { Badge, Button, Skeleton, Soon, ui } from "./ui";
+import { Badge, Button, Skeleton, ui } from "./ui";
 import { useWorker } from "./useCourse";
 import s from "./Studio.module.css";
 
@@ -157,9 +157,6 @@ export function Rehearse({ courseId }: { courseId: string }) {
               <p className={s.provenance}>The helper reads your objectives and plan, not your source files.</p>
             </section>
 
-            <div className={s.soonRow}>
-              <Soon>Save as a test set · soon</Soon>
-            </div>
           </aside>
         </main>
       )}

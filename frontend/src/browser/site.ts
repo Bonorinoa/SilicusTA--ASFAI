@@ -32,6 +32,7 @@ export const MESSAGES = {
   notSetUp: "AI drafting is not switched on for this site, so nothing was sent. Everything else still works.",
   rejected: "The demo passcode was not accepted, so nothing was sent to the model.",
   cancelled: "AI drafting needs the demo passcode. Nothing was sent.",
+  dialogFailed: "The passcode box could not open, so nothing was sent. Reload the page and try again.",
   timeout: "The model did not answer in time, so the step stopped. Nothing you have recorded is lost; you can try again.",
   tooLarge: "That is more than the model can take at once. Remove a piece of material, or paste only the part you want used.",
   youtube: "YouTube captions can only be read by the local Silicus app. Paste the transcript as text instead.",
@@ -45,6 +46,9 @@ export const STATUS_TIMEOUT_MS = 10_000;
 
 /** The request left the page and did not come back in time. */
 class SiteTimeout extends Error {}
+
+/** The passcode dialog itself failed (not the network, not the teacher saying no). */
+class PasscodeDialogFailed extends Error {}
 
 class PasscodeUnavailable extends Error {
   constructor(readonly rejected: boolean) { super(rejected ? "rejected" : "cancelled"); }
@@ -101,7 +105,11 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
     for (let attempt = 0; attempt < 3; attempt += 1) {
       let code: string | null = null;
       if (required) {
-        code = passcode.get() ?? (await passcode.ask(attempt === 0 ? "needed" : "rejected"));
+        try {
+          code = passcode.get() ?? (await passcode.ask(attempt === 0 ? "needed" : "rejected"));
+        } catch {
+          throw new PasscodeDialogFailed();
+        }
         if (!code) throw new PasscodeUnavailable(attempt > 0);
       }
       const headers = new Headers(init.headers);
@@ -131,6 +139,7 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
       res = await withPasscode(url, init);
     } catch (e) {
       if (e instanceof PasscodeUnavailable) throw new WorkerError("PASSCODE_REQUIRED", e.rejected ? MESSAGES.rejected : MESSAGES.cancelled);
+      if (e instanceof PasscodeDialogFailed) throw new WorkerError("PASSCODE_REQUIRED", MESSAGES.dialogFailed);
       if (e instanceof SiteTimeout) throw new WorkerError("WORKER_UNREACHABLE", MESSAGES.timeout);
       throw new WorkerError("WORKER_UNREACHABLE", "The site could not be reached. Check the connection and try again.");
     }
@@ -152,6 +161,7 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
       res = await withPasscode(`${origin}/api/fetch`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url }) });
     } catch (e) {
       if (e instanceof PasscodeUnavailable) throw new MaterialError("PASSCODE_REQUIRED", e.rejected ? "The demo passcode was not accepted, so the link was not read." : "Reading a link needs the demo passcode. Paste the text instead.");
+      if (e instanceof PasscodeDialogFailed) throw new MaterialError("PASSCODE_REQUIRED", "The passcode box could not open, so the link was not read.");
       if (e instanceof SiteTimeout) throw new MaterialError("URL_UNREACHABLE", "reading that link took too long");
       throw new MaterialError("URL_UNREACHABLE", "that link could not be reached");
     }

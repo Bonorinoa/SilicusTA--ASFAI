@@ -325,14 +325,18 @@ describe("objective chips carry their statements (C1)", () => {
     expect(within(build).queryByText(/Obj 1Obj 3/)).not.toBeInTheDocument();
   });
 
-  it("each chip's accessible name is the cited objective's statement", () => {
+  it("each chip's accessible name is the visible label followed by the cited objective's statement (E3 name-from-content)", () => {
     render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
     const build = screen.getByRole("heading", { name: "Build a better answer" }).closest("li") as HTMLElement;
     const [chip1, chip3] = within(build).getAllByText(/^Obj \d$/);
-    expect(chip1).toHaveAccessibleName(
-      "Students can explain what an algorithm is, in their own words, with an example from everyday life.",
+    // The visible label 'Obj N' is IN the accessible name (WCAG label-in-name), with the statement after it.
+    expect(chip1.getAttribute("aria-label")).toBe(
+      "Obj 1 Students can explain what an algorithm is, in their own words, with an example from everyday life.",
     );
-    expect(chip3).toHaveAccessibleName("Students can ask one honest question about how an AI tool works.");
+    expect(chip1).toHaveAccessibleName(
+      `Obj 1 Students can explain what an algorithm is, in their own words, with an example from everyday life.`,
+    );
+    expect(chip3).toHaveAccessibleName("Obj 3 Students can ask one honest question about how an AI tool works.");
   });
 
   it("shows each cited objective's statement in the activity itself, and never a machine id", () => {

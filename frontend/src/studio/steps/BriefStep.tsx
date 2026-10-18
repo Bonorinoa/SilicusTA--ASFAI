@@ -1,5 +1,5 @@
 /** Brief: the three questions are visible from the start; one primary confirms the source list (when there is one), saves the answers and confirms the brief. */
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { answerText } from "../../components/AiWaiting";
 import { materialNamesOf } from "../../components/AiWaiting";
 import { Button, ui } from "../ui";
@@ -33,8 +33,36 @@ export function BriefStep({ c, view, worker, looking }: StepProps) {
   };
   const [answers, setAnswers] = useState<Record<string, string>>(initial);
   const [fromSources, setFromSources] = useState(recorded.outcomes_from === "materials");
+  /** The record's answer for each question, in the shape the fields hold (arrays newline-joined, trimmed). */
+  const fmt = (rec: Record<string, unknown>): Record<string, string> => {
+    const a: Record<string, string> = {};
+    for (const q of questions) a[q.id] = Array.isArray(rec[q.id]) ? (rec[q.id] as string[]).join("\n") : answerText(rec[q.id]);
+    return a;
+  };
+  const prevRec = useRef(recorded);
   const key = JSON.stringify(recorded) + questions.map((q) => q.id).join();
-  useEffect(() => { setAnswers(initial()); setFromSources(recorded.outcomes_from === "materials"); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [key]);
+  useEffect(() => {
+    const prev = prevRec.current;
+    const before = fmt(prev);
+    const beforeFrom = prev.outcomes_from === "materials";
+    const after = fmt(recorded);
+    const afterFrom = recorded.outcomes_from === "materials";
+    prevRec.current = recorded;
+    // Adopt the record only where it does not clobber the teacher: a field that still shows the previous
+    // record (or is empty) takes the new record's value; text the teacher typed that differs from what was
+    // sent is never overwritten, even while a save or confirm is in flight (E1).
+    setAnswers((cur) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+      for (const q of questions) {
+        const id = q.id;
+        if (cur[id] === before[id] || cur[id] === undefined) { next[id] = after[id]; changed = true; }
+      }
+      return changed ? { ...cur, ...next } : cur;
+    });
+    setFromSources((cur) => (cur === beforeFrom ? afterFrom : cur));
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [key]);
   const ids = useId();
 
   const needs = (id: string) => !(id === "learning_outcomes" && fromSources);
@@ -42,7 +70,9 @@ export function BriefStep({ c, view, worker, looking }: StepProps) {
   const dirty = questions.some((q) => (answers[q.id] ?? "") !== (initial()[q.id] ?? "")) || fromSources !== (recorded.outcomes_from === "materials");
   // Nothing typed since the last save, and every question has an answer on the record.
   const saved = complete && !dirty;
-  const editable = !briefOk && !looking;
+  // The questions and the checkbox stay editable only while nothing is being decided or confirmed: a brief in
+  // flight must not swallow a keystroke, so the form freezes until the chain settles (E1).
+  const editable = !briefOk && !c.busy && !looking;
 
   const save = () => void c.actions.answerBrief(out());
 
@@ -63,7 +93,12 @@ export function BriefStep({ c, view, worker, looking }: StepProps) {
       : <><strong>No sources yet.</strong> That's fine — your answers alone can brief Silicus. Add files on the left whenever you want.</>;
     const confirm = () => void c.actions.confirmTheBrief(dirty ? out() : null, { sources: !filesOk });
     if (!complete) {
-      bar = <ActionBar text="Answer each question to continue.">
+      // E2: the status line already says "answer the three questions"; this bar only adds the one piece it
+      // does not, which question still needs an answer (plain words, from the form). With no questions yet
+      // the disabled primary stands alone — no repetition of the status.
+      const missing = questions.find((q) => needs(q.id) && (answers[q.id] ?? "").trim() === "");
+      const label = missing ? LABELS[missing.id]?.label : null;
+      bar = <ActionBar text={label ? <>Answer <strong>{label}</strong> first, then this can be confirmed.</> : null}>
         <Button variant="primary" data-primary="true" disabled>Confirm the brief</Button>
       </ActionBar>;
     } else if (dirty) {
@@ -96,11 +131,11 @@ export function BriefStep({ c, view, worker, looking }: StepProps) {
           </div>
           {names.length + tabOnly.length ? (
             <ul className={s.sourceList}>
-              {names.map((n) => <li key={n} className={s.checkRow} style={{ padding: "6px 0" }}><span className={s.check} aria-hidden="true">{filesOk ? "✓" : "·"}</span>{n}</li>)}
+              {names.map((n) => <li key={n} className={s.checkRow} style={{ padding: "6px 0" }}><span className={s.check} aria-hidden="true">{filesOk ? "✓" : "·"}</span><span className={s.sourceText}>{n}</span></li>)}
               {tabOnly.map((h) => (
                 <li key={`t-${h.name}`} className={s.checkRow} style={{ padding: "6px 0" }}>
                   <span className={s.check} aria-hidden="true" style={{ background: "transparent", border: "1px dashed var(--fn-line-dash)" }}>·</span>
-                  <span>{h.name}<br /><span className={s.provenance}>Text in this tab. Its name goes on the record when Silicus reads it.</span></span>
+                  <span className={s.sourceText}>{h.name}<br /><span className={s.provenance}>Text in this tab. Its name goes on the record when Silicus reads it.</span></span>
                 </li>
               ))}
             </ul>

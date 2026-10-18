@@ -92,7 +92,9 @@ a.crumb:hover { color: var(--fn-ink); }
 .sourceList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .sourceItem { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--fn-line-soft); }
 .sourceIcon { flex: 0 0 28px; height: 28px; border-radius: 6px; background: #e7e0d0; display: grid; place-items: center; font-size: 0.625rem; font-weight: 700; color: var(--fn-ink-soft); letter-spacing: 0.04em; }
-.sourceName { font-size: 0.875rem; word-break: break-word; }
+.sourceName { font-size: 0.875rem; word-break: break-word; overflow-wrap: anywhere; }
+/* A source name is the teacher's own string: a long unbroken one wraps instead of widening the page. */
+.sourceText { min-width: 0; overflow-wrap: anywhere; }
 .sourceMeta { font-size: 0.75rem; color: var(--fn-ink-muted); }
 .sourceRemove { margin-left: auto; background: none; border: 0; color: var(--fn-ink-muted); cursor: pointer; padding: 2px 4px; }
 .addSource {

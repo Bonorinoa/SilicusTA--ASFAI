@@ -9,12 +9,20 @@ import { describeIntent } from "../gate/harness";
 import { listPins, pinVersion } from "../gate/pin";
 import { host, type HostView, type MaterialInput } from "../gate/transport";
 import type { DecisionIntent, TypicalSeconds } from "../gate/types";
+import { onPasscodeAsking } from "../browser/passcode";
+import { plural } from "../lib/plural";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
 import { suggestRefusalText } from "../live/suggest";
 
 export type WaitKind = "objectives" | "suggest" | "plan";
-export interface Waiting { kind: WaitKind; startedAt: number }
-export interface WorkerInfo { configured: boolean; zdr?: boolean; model?: string | null; typicalSeconds?: TypicalSeconds }
+/**
+ * The waiting state ONE step can be in. "passcode" is its own honest phase: the keeper's prompt is open and
+ * the teacher, not the model, is the one being waited for — the status line says so and no clock runs.
+ * "working" starts the clock at the moment the request actually left, which is after any passcode prompt
+ * resolved, never before.
+ */
+export interface Waiting { kind: WaitKind; phase: "passcode" | "working"; startedAt: number; what: string }
+export interface WorkerInfo { configured: boolean; zdr?: boolean; model?: string | null; typicalSeconds?: TypicalSeconds; passcodeRequired?: boolean }
 
 const sentence = (m: string) => { const t = m.trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? "" : ".") : ""; };
 const messageOf = (e: unknown) => sentence(e instanceof Error ? e.message : String(e));
@@ -63,11 +71,27 @@ export function useCourse(courseId: string) {
       .finally(async () => { await reload(); if (live.current) setBusy(false); });
   };
 
-  /** An AI step: the same, plus the waiting state the skeletons read. */
+  /** The status line's doing-phrase for one AI step, counted from data already in hand — never invented. */
+  const waitingWhat = (kind: WaitKind): string => {
+    if (kind === "plan") return `drafting from ${plural(view?.objectives.length ?? 0, "confirmed objective")}`;
+    if (kind === "suggest") return "finding objectives that round out yours";
+    return sources.length > 0 ? `reading ${plural(sources.length, "source")}` : "reading your sources";
+  };
+
+  // B1: in the online build the passcode prompt is awaited inside the worker fetch. While a prompt is open
+  // the step is in the "passcode" phase (no clock); when it resolves the clock starts — the moment the
+  // request actually leaves. Only the boolean leaves passcode.ts; the value never does.
+  useEffect(() => onPasscodeAsking((open) => {
+    if (!live.current) return;
+    if (open) setWaiting((w) => w && w.phase === "working" ? { ...w, phase: "passcode" } : w);
+    else setWaiting((w) => w && w.phase === "passcode" ? { ...w, phase: "working", startedAt: Date.now() } : w);
+  }), []);
+
+  /** An AI step: the same, plus the waiting state the one status line reads. */
   const runAi = (kind: WaitKind, fn: () => Promise<unknown>, onError: (e: unknown) => string) => {
     setBusy(true);
     setNotice(null);
-    setWaiting({ kind, startedAt: Date.now() });
+    setWaiting({ kind, phase: "working", startedAt: Date.now(), what: waitingWhat(kind) });
     return fn()
       .catch((e) => setNotice(onError(e)))
       .finally(async () => { await reload(); if (live.current) { setWaiting(null); setBusy(false); } });
@@ -143,4 +167,36 @@ export function stepDone(v: HostView, id: StepId): boolean {
   if (id === "objectives") return st("objectives");
   if (id === "plan") return v.plan?.status === "confirmed";
   return v.versions.length > 0 && v.revision?.drafting !== true;
+}
+
+/**
+ * The one status line when the teacher must act (B2). A short "Your turn: …" naming what the host view
+ * says is expected now, derived ONLY from the view: no tab state, no form state, nothing promised.
+ */
+export function turnPhrase(v: HostView): string {
+  const st = (id: string) => v.checkpoints[id]?.status === "confirmed";
+  if (!st("files")) return "Your turn: confirm the source list";
+  if (!st("outline")) return "Your turn: answer the three questions";
+  if (!st("objectives")) {
+    return v.proposals.some((p) => p.status === "proposed")
+      ? "Your turn: accept, edit or drop each proposal"
+      : "Your turn: choose where the first proposals come from";
+  }
+  if (!v.plan || v.plan.status !== "confirmed") {
+    if (!v.plan) return "Your turn: draft the lesson plan";
+    if (v.plan.status === "invalidated") return "Your turn: draft a new plan";
+    return "Your turn: read the plan, then confirm it";
+  }
+  return "Your turn: review and publish";
+}
+
+/**
+ * One spoken sentence for a step transition (B4), announced once through the status line when the work
+ * moves on — objectives confirmed, the brief confirmed, the plan confirmed. Anything else is silent.
+ */
+export function stepTransition(from: StepId, to: StepId): string {
+  if (from === "brief" && to === "objectives") return "The brief is confirmed. On to the objectives.";
+  if (from === "objectives" && to === "plan") return "Objectives confirmed. On to the plan.";
+  if (from === "plan" && to === "publish") return "The plan is confirmed. On to publish.";
+  return "";
 }

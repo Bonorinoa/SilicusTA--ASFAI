@@ -3,7 +3,7 @@ import { PlanCard } from "../../components/PlanCard";
 import { BROWSER_MODE } from "../../gate/mode";
 import { plural } from "../../lib/plural";
 import type { StepProps } from "../CourseStudio";
-import { Button, Skeleton, WaitClock } from "../ui";
+import { Button, Skeleton } from "../ui";
 import { ActionBar } from "./ActionBar";
 import s from "../Studio.module.css";
 
@@ -19,7 +19,8 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
   if (looking) {
     bar = <ActionBar text={plan?.status === "confirmed" ? <><strong>Plan confirmed.</strong> Nothing here changes.</> : "A look at the plan."}><Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button></ActionBar>;
   } else if (drafting) {
-    bar = <ActionBar text={<>Drafting from {plural(view.objectives.length, "confirmed objective")} · <WaitClock startedAt={c.waiting!.startedAt} range={worker?.typicalSeconds?.plan} /></>} />;
+    // Drafting is spoken once, by the one status line; the skeleton card holds the place here.
+    bar = null;
   } else if (!plan) {
     bar = (
       <ActionBar text={noWorker ? `AI drafting isn’t set up ${BROWSER_MODE ? "on this site" : "on this host"}, so the plan can’t be drafted here.` : <><strong>Your objectives are confirmed.</strong> Silicus drafts activities that point to them; you confirm the plan.</>}>

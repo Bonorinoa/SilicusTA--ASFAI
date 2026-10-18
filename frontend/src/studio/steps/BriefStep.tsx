@@ -4,6 +4,7 @@ import { answerText } from "../../components/AiWaiting";
 import { materialNamesOf } from "../../components/AiWaiting";
 import { Button, ui } from "../ui";
 import type { StepProps } from "../CourseStudio";
+import { PasscodeNote } from "../PasscodeNote";
 import { ActionBar } from "./ActionBar";
 import s from "../Studio.module.css";
 
@@ -13,7 +14,7 @@ const LABELS: Record<string, { label: string; hint: string; placeholder: string 
   learning_outcomes: { label: "What learners should be able to do", hint: "One per line. Each can become an objective.", placeholder: "Explain how a plant makes its food" },
 };
 
-export function BriefStep({ c, view, looking }: StepProps) {
+export function BriefStep({ c, view, worker, looking }: StepProps) {
   const filesOk = view.checkpoints.files?.status === "confirmed";
   const briefOk = view.checkpoints.outline?.status === "confirmed";
   const questions = view.intake.questions ?? [];
@@ -75,6 +76,8 @@ export function BriefStep({ c, view, looking }: StepProps) {
           <h1 className={s.docTitle}>The brief</h1>
           <p className={s.docLede}>Your own words about the lesson. Silicus drafts from these, and only from what you confirm.</p>
         </header>
+
+        <PasscodeNote worker={worker} />
 
         <section className={s.card} aria-label="Sources">
           <div className={s.cardHead}>

@@ -1,0 +1,24 @@
+/* The one status line per step (B2), and the B3 passcode note on the Brief step. */
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+  padding: 12px 48px 0;
+  font-size: 0.875rem;
+  color: var(--fn-ink-soft);
+}
+
+.passcodeNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--fn-ink-soft);
+  background: rgba(251, 248, 241, 0.6);
+  border: 1px solid var(--fn-line-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+}

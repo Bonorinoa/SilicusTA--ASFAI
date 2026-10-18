@@ -1,18 +1,19 @@
 /** The course studio: sources on the left, the lesson in the middle, proposals on the right, one action bar. */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityRail } from "../components/ActivityRail";
 import { materialNamesOf } from "../components/AiWaiting";
 import { BROWSER_MODE } from "../gate/mode";
 import { host } from "../gate/transport";
 import { plural } from "../lib/plural";
 import { SourcesPanel } from "./SourcesPanel";
+import { StepStatus } from "./StepStatus";
 import { TopBar, href } from "./StudioApp";
 import { BriefStep } from "./steps/BriefStep";
 import { ObjectivesStep } from "./steps/ObjectivesStep";
 import { PlanStep } from "./steps/PlanStep";
 import { PublishStep } from "./steps/PublishStep";
 import { Button, Dialog, Notice, Skeleton } from "./ui";
-import { STEP_LIST, currentStep, stepDone, useCourse, useWorker, type StepId } from "./useCourse";
+import { STEP_LIST, currentStep, stepDone, stepTransition, useCourse, useWorker, type StepId } from "./useCourse";
 import s from "./Studio.module.css";
 
 export function CourseStudio({ courseId }: { courseId: string }) {
@@ -22,11 +23,28 @@ export function CourseStudio({ courseId }: { courseId: string }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [links, setLinks] = useState<string[]>([]);
   const [verified, setVerified] = useState<string | null>(null);
+  // B4: one spoken sentence about the last step transition, shown until the next work begins.
+  const [transition, setTransition] = useState<string | null>(null);
   const { view } = c;
 
   // When the work moves to a new step, stop looking at an old one.
   const step = view ? currentStep(view) : null;
   useEffect(() => { setLooking(null); }, [step]);
+
+  // B4: the jump (objectives confirmed, brief confirmed, plan confirmed) is announced once through the
+  // one status line, and focus lands on the new step's heading for keyboard and screen-reader users.
+  const stepRef = useRef<StepId | null>(null);
+  useEffect(() => {
+    if (!step) return;
+    const prev = stepRef.current;
+    stepRef.current = step;
+    if (prev === step || prev === null) return; // the first view is not a move
+    setTransition(stepTransition(prev, step));
+    const heading = document.querySelector<HTMLElement>("h1");
+    if (heading) { heading.tabIndex = -1; heading.focus(); }
+  }, [step]);
+  // The transition sentence has said its piece; the next work begins from a plain turn line.
+  useEffect(() => { if (c.waiting) setTransition(null); }, [c.waiting]);
 
   if (c.missing) {
     return (
@@ -108,6 +126,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
           confirmed={view.checkpoints.files?.status === "confirmed"}
         />
         <div className={s.work}>
+          <StepStatus view={view} waiting={c.waiting} worker={worker} transition={transition} />
           {c.notice ? <div style={{ flexBasis: "100%", padding: "16px 48px 0" }}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
           {shown === "brief" ? <BriefStep {...common} /> : null}
           {shown === "objectives" ? <ObjectivesStep {...common} links={links} /> : null}

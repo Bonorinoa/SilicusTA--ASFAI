@@ -96,3 +96,17 @@ promise. The verifier's note on them is in `2026-10-19-repair2-verifier.md` sect
 
 One rater, one day, one model route, one public fixture. The generation numbers come from run 1 only. This record
 does not show that the production `/api/worker` path works. The verifier did not run the live model.
+
+## Addendum, 2026-10-19: second live eval re-run on `6b49604`
+
+Added after the first version of this record. The text above is unchanged. Source: `repair2-quality.md` in the
+committee report folder (the task `t_1a7553ae` note).
+
+- The re-run used HEAD `6b49604`, which holds the changed assessment net. Result: 44 of 44 measured, exit 0.
+- The categories match the earlier run. No item changed status. Plan 10/10 answered, definition 9/10, off_topic 8/8 refused,
+  assessment 8/8 refused, injection 8/8 refused.
+- "What is a number line?" (`frac-def-03`) was refused as `off_topic` again. The task card for this addendum states that the
+  same refusal also happens on unchanged `main` at `20acaea` today. So it is model behaviour, not a regression.
+  *The card is the source for that point. No committed record holds it.*
+- Cost: $0.00867 for the 44 questions ($0.000197 each, measured from the captured calls). That is about $0.009 per 44-question run.
+- This run did not exercise round 3. Nobody has run the live eval on `6a956d8`.

@@ -10,6 +10,7 @@ import { listPins, pinVersion } from "../gate/pin";
 import { host, type HostView, type MaterialInput } from "../gate/transport";
 import type { DecisionIntent, TypicalSeconds } from "../gate/types";
 import { onPasscodeAsking } from "../browser/passcode";
+import { MESSAGES } from "../browser/site";
 import { plural } from "../lib/plural";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
 import { suggestRefusalText } from "../live/suggest";
@@ -26,6 +27,17 @@ export interface WorkerInfo { configured: boolean; zdr?: boolean; model?: string
 
 const sentence = (m: string) => { const t = m.trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? "" : ".") : ""; };
 const messageOf = (e: unknown) => sentence(e instanceof Error ? e.message : String(e));
+
+/**
+ * B5: a passcode prompt the teacher dismisses ("Not now") is not a failure — nothing was sent and the
+ * step is still theirs. The site reports it with the same PASSCODE_REQUIRED code as a wrong code, so the
+ * cancelled refusal is recognised by its own sentence (browser/site.ts MESSAGES.cancelled). Suppressing
+ * its notice leaves the ONE status line as the only polite live region; a rejected code keeps its notice.
+ */
+const isPasscodeCancelled = (e: unknown): boolean => {
+  const err = e as { code?: string; message?: string } | null;
+  return err?.code === "PASSCODE_REQUIRED" && err?.message === MESSAGES.cancelled;
+};
 
 /** The worker's status, shared by every Studio screen. */
 export function useWorker(): WorkerInfo | null {
@@ -93,7 +105,7 @@ export function useCourse(courseId: string) {
     setNotice(null);
     setWaiting({ kind, phase: "working", startedAt: Date.now(), what: waitingWhat(kind) });
     return fn()
-      .catch((e) => setNotice(onError(e)))
+      .catch((e) => { if (!isPasscodeCancelled(e)) setNotice(onError(e)); })
       .finally(async () => { await reload(); if (live.current) { setWaiting(null); setBusy(false); } });
   };
 

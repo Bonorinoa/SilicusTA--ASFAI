@@ -20,10 +20,25 @@ export function PasscodeDialog({ onAsking }: { onAsking?: (asking: boolean) => v
   const ids = { title: useId(), input: useId(), note: useId() };
 
   useEffect(() => setPasscodePrompt((reason) => new Promise<string | null>((resolve) => { setCode(""); setAsk({ reason, resolve }); })), []);
-  // Focus goes into the dialog, stays in it, and returns to where it was when the dialog closes.
+  // Focus goes into the dialog, stays in it, and returns to the control that asked for it. That control
+  // can be gone by the time the dialog closes (an AI step swaps its action bar for a skeleton, and a
+  // disabled control cannot take focus), so if it is unusable the step's primary action — the same
+  // control, once the step has settled — takes focus. Restoring on the next frame lets the step settle.
   useEffect(() => {
-    if (ask) { opener.current = document.activeElement; input.current?.focus(); }
-    else if (opener.current) { (opener.current as HTMLElement).focus?.(); opener.current = null; }
+    if (ask) { opener.current = document.activeElement; input.current?.focus(); return; }
+    const target = opener.current as HTMLElement | null;
+    opener.current = null;
+    if (!target) return;
+    const restore = () => {
+      const usable = target !== document.body && target !== document.documentElement && target.isConnected && !(target as HTMLButtonElement).disabled;
+      const next = usable ? target : document.querySelector<HTMLElement>('[data-primary="true"]');
+      next?.focus?.();
+    };
+    if (typeof requestAnimationFrame === "function") {
+      const raf = requestAnimationFrame(restore);
+      return () => cancelAnimationFrame(raf);
+    }
+    restore();
   }, [ask]);
   // The waiting card holds its clock while the teacher, not the model, is the one being waited for.
   useEffect(() => { onAsking?.(ask !== null); }, [ask, onAsking]);

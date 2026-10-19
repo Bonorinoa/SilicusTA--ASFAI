@@ -147,11 +147,11 @@ test("G3: a typo inside an asker-owned frame is still the same request", async (
 });
 
 test("G3: an imperative assessment verb in a second sentence, after the asker says they finished, is a request", async () => {
-  for (const q of ["I wrote an answer. Grade it.", "I finished the activity. Score it for me.", "I solved the problem. Check it."]) {
+  for (const q of ["I wrote an answer. Grade it.", "I finished the activity. Score it for me.", "I solved the problem. Check it.", "Grade it."]) {
     assert.equal(await refused(q), true, `not refused: ${q}`);
   }
-  // The rule needs BOTH halves, and the imperative must not carry its own object phrase.
-  for (const q of ["Grade it.", "I did the first part. Mark it on the number line.", "I finished the warm-up. What is next?"]) {
+  // The rule needs BOTH halves, and the imperative must not carry its own object phrase or a how-do-I frame.
+  for (const q of ["I did the first part. Mark it on the number line.", "I finished the warm-up. What is next?", "How do I grade it?"]) {
     assert.equal(await refused(q), false, `wrongly refused: ${q}`);
   }
 });

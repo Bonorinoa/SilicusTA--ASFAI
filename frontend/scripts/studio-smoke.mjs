@@ -122,6 +122,34 @@ const enterPasscode = async () => {
   await sleep(100);
   return clickBy("Continue");
 };
+// A REAL mouse click: a programmatic el.click() does not move focus, and B5 is about where focus goes.
+const clickPrimary = async (label, ms = 6000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    const h = await page.evaluateHandle((lab) => [...document.querySelectorAll("button[data-primary=\"true\"]")]
+      .find((e) => !e.disabled && (e.textContent ?? "").trim().includes(lab)) ?? null, label);
+    const el = h.asElement();
+    if (el) { await el.scrollIntoView(); await el.click(); await sleep(350); return true; }
+    await sleep(150);
+  }
+  return false;
+};
+const dialogOpen = () => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"] input[type="password"]'));
+// The studio's one status line (StepStatus) and the step's live regions, minus anything inside the dialog.
+const liveRegions = () => page.evaluate(() => [...document.querySelectorAll('[role="status"],[role="alert"],[aria-live="polite"],[aria-live="assertive"]')]
+  .filter((n) => !n.closest('[role="dialog"]')).map((n) => (n.textContent ?? "").trim()).filter(Boolean));
+const active = () => page.evaluate(() => {
+  const a = document.activeElement;
+  return { tag: a?.tagName, text: (a?.textContent ?? "").trim().slice(0, 40), primary: a?.getAttribute?.("data-primary") ?? null, isBody: a === document.body };
+});
+const statusLine = () => page.evaluate(() => {
+  const st = document.querySelector('[role="status"]');
+  const line = st?.closest("p");
+  const tray = document.querySelector('aside[aria-label="Proposals"]');
+  const r = (e) => { const b = e.getBoundingClientRect(); return { left: Math.round(b.left), width: Math.round(b.width) }; };
+  return { text: (st?.textContent ?? "").trim(), line: line ? r(line) : null, parent: line ? r(line.parentElement) : null,
+    tray: tray ? r(tray) : null, sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 };
+});
 
 try {
   // ---- the landing leads into the studio
@@ -172,6 +200,19 @@ try {
   await sleep(500);
   const cards = await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length);
   check("the proposals tray fills from the teacher's answers", cards >= 1, `${cards} proposal(s)`);
+  // ---- B1: the status line owns its row, and the proposals tray sits in the right column
+  await sleep(400);
+  let g = await statusLine();
+  check("B1 the status line spans its row (not a sliver beside the tray)", !!g.line && !!g.parent && g.line.width >= g.parent.width - 4 && !g.sideways,
+    `line=${g.line?.width} parent=${g.parent?.width} sideways=${g.sideways}`);
+  check("B1 1440: the proposals tray sits in the right column, not squeezed under the status line", !!g.tray && g.tray.left > 300,
+    `tray.left=${g.tray?.left} line.left=${g.line?.left}`);
+  await page.setViewport({ width: 380, height: 800 });
+  await sleep(400);
+  g = await statusLine();
+  check("B1 380: the status line does not force a sideways scroll", !g.sideways, `sideways=${g.sideways}`);
+  await page.setViewport({ width: 1440, height: 900 });
+  await sleep(400);
   // Add the teacher's own objective BEFORE deciding every proposal: once the last one is
   // decided the host auto-confirms objectives and the studio moves on (backend-asks #13).
   await setVal('input[placeholder="Students can…"]', "Students can explain why leaves are green.");
@@ -188,8 +229,24 @@ try {
   }
   await sleep(400);
 
+  // ---- B5: cancelling the passcode gives focus back to the step's primary action, every time
+  // (a real mouse click opens it, so the invoking control — not <body> — is what the dialog stores)
+  let b5 = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const route = i % 2 === 0 ? "Not now" : "Escape";
+    const opened = (await clickPrimary("Draft the lesson plan")) && (await dialogOpen());
+    if (route === "Escape") await page.keyboard.press("Escape"); else await clickBy("Not now");
+    await sleep(700);
+    const a = await active();
+    const back = a.primary === "true" || /Draft the lesson plan/.test(a.text);
+    if (opened && back) b5 += 1;
+    else console.log(`  B5-b miss ${i} (${route}): opened=${opened} focus=${JSON.stringify(a)}`);
+    if (i === 0) check("B5-a one live region after a cancelled passcode", (await liveRegions()).length === 1, JSON.stringify(await liveRegions()));
+  }
+  check("B5-b focus returns to the primary action after 20 cancels, both routes", b5 === 20, `${b5}/20`);
+
   // ---- plan (needs the passcode)
-  await clickBy("Draft the lesson plan");
+  await clickPrimary("Draft the lesson plan");
   await enterPasscode();
   check("drafting the plan completes and shows a draft", await waitText("Confirm the lesson plan", 15000));
   await clickBy("Confirm the lesson plan");
@@ -200,6 +257,10 @@ try {
   check("publishing asks for a second, explicit confirm", await waitText("Publish version 1?", 5000));
   await clickBy("Publish version 1");
   check("the published moment renders with the student and Rehearse links", await waitText("Version 1 is published", 10000) && /Open the student space/.test(await body()) && /Rehearse student questions/.test(await body()));
+  await sleep(500);
+  const published = await body();
+  const line = await statusLine();
+  check("B2 the published screen stops asking to review and publish", line.text.includes("Version 1 is published") && !/Your turn: review and publish/.test(published), `status="${line.text}"`);
 
   // ---- rehearse
   const id = (await page.evaluate(() => location.hash)).split("/")[2];

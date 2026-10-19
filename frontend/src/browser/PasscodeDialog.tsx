@@ -46,15 +46,19 @@ export function PasscodeDialog({ onAsking }: { onAsking?: (asking: boolean) => v
     const restore = () => {
       if (stopped) return;
       if (movedByTeacher()) return stop();
-      const next = usable(target) ? target : document.querySelector<HTMLElement>('[data-primary="true"]');
-      if (!next) return;                                  // not there yet: keep waiting until the bound
+      const primary = document.querySelector<HTMLElement>('[data-primary="true"]');
+      const next = usable(target) ? target : usable(primary) ? primary : null;
+      if (!next) return;                                  // not there yet (or not usable yet): keep waiting until the bound
       try { next.focus(); } catch { /* a focus that throws is not worth an error */ }
       stop();
     };
     const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame(restore) : 0;
     if (typeof MutationObserver === "function") {
       observer = new MutationObserver(restore);
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-primary"] });
+      // "disabled" is watched too: the control that asked is often disabled while its ask is in flight
+      // (Rehearse's Ask is, until the host has taken the question), and the moment it becomes usable
+      // again is exactly the moment to give it focus back — rather than waiting out the 2 s bound.
+      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-primary", "disabled"] });
     }
     if (typeof setTimeout === "function") timer = setTimeout(() => { restore(); stop(); }, 2000);
     return () => { if (typeof cancelAnimationFrame === "function" && raf) cancelAnimationFrame(raf); stop(); };

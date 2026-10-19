@@ -123,8 +123,8 @@ app. Print the Plan tab of the workbench to judge it.
 
 One component for proposing objectives, drafting the plan and a student's answer (compact variant): plain
 words with real counts, a live clock, the usual range (`typicalSeconds` from the worker status, else
-`objectives 2–10`, `plan 8–30`, `answer 2–15` — the measured ranges of the 2026-10-19 quality report,
-rounded, not the guesses they replaced), "What the model sees", a true receipt computed from the
+`objectives 2–10`, `plan 8–30`, `answer 2–15` — ranges chosen from a sample of 44 answers and 3 plan and
+6 objective runs; widened by hand, not the guesses they replaced), "What the model sees", a true receipt computed from the
 resulting view, and no progress bar. See `../docs/design/waiting-experience.md`.
 
 ## Binding to the confirm-gate core (architecture)

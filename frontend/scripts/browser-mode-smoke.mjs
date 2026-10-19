@@ -671,9 +671,9 @@ async function story(label, narrow) {
   const live = () => page.evaluate(() => [...document.querySelectorAll('section[data-variant="card"] [aria-live="polite"]')].map((n) => n.textContent));
   check("the waiting experience says in plain words what is happening, with the real count",
     /Drafting a lesson plan from your 3 confirmed objectives/.test(await running()));
-  check("it states the typical range the documented defaults give: usually 5–25 seconds", /usually 5\u201325 seconds/.test(await running()));
+  check("it states the typical range the documented defaults give: usually 8–30 seconds", /usually 8\u201330 seconds/.test(await running()));
   const liveAtStart = await live();
-  check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 5 to 25 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
+  check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 8 to 30 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
   check("there is no progress bar and no percentage", !(await page.evaluate(() => !!document.querySelector('section[data-phase="running"] progress, section[data-phase="running"] [role="progressbar"]') || /%/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? ""))));
   await shot("10-waiting-plan", 'section[data-phase="running"][data-variant="card"]');
   await stageShot("08-plan-drafting");
@@ -794,8 +794,8 @@ async function story(label, narrow) {
     const word = el.querySelector("span[style]");
     return { text: el.innerText, motion: el.getAttribute("data-motion"), anim: getComputedStyle(word).animationName, live: el.querySelectorAll('[aria-live="polite"]').length };
   });
-  check("a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–8 seconds",
-    /Looking for the answer in version 1 of this lesson/.test(compact.text) && /usually 2\u20138 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
+  check("a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–15 seconds",
+    /Looking for the answer in version 1 of this lesson/.test(compact.text) && /usually 2\u201315 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
   check("under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation)", compact.motion === "still" && compact.anim === "none", `${compact.motion} / ${compact.anim}`);
   await shot("15-waiting-student", 'section[data-variant="compact"][data-phase="running"]');
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);

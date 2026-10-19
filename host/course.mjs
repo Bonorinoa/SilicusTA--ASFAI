@@ -28,6 +28,7 @@ import { digestOf } from "./digest.mjs";
 import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 import { reasonsOf } from "./reasons.mjs";
 import { activityOf } from "./activity.mjs";
+import { materialNames } from "./materials-core.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -47,7 +48,9 @@ export class CourseSession {
   static create(store, { owner, title, description = "", materials = [] } = {}) {
     const courseId = `urn:uuid:${randomUUID()}`;
     const seed = `urn:uuid:${randomUUID()}`;
-    store.initCourse({ courseId, owner, title, description, materials, seed, at: Date.now() });
+    // The record keeps NAMES only: whatever the client sent is reduced to `{name}` here, before meta.json,
+    // the course.created event, the view, the export and any backup ever see it (lock: material transient).
+    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, at: Date.now() });
     return CourseSession.load(store, courseId);
   }
 

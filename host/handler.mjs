@@ -188,6 +188,8 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         }
         if (method === "POST") {
           const b = await body();
+          // A JSON null, an array or a scalar is a clean refusal, not a 500 from reading `.owner` off it (E3).
+          if (!b || typeof b !== "object" || Array.isArray(b)) throw new HttpError(400, "BAD_INPUT", "a course needs an owner and a title");
           if (!b.owner || !b.title) throw new HttpError(400, "BAD_INPUT", "owner and title are required");
           const s = CourseSession.create(store, {
             owner: String(b.owner), title: String(b.title),

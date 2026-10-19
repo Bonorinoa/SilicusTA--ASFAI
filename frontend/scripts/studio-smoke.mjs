@@ -135,6 +135,25 @@ const clickPrimary = async (label, ms = 6000) => {
   return false;
 };
 const dialogOpen = () => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"] input[type="password"]'));
+// A REAL mouse click on a button by its exact label (the Rehearse Ask button is not the step's primary).
+const clickReal = async (label, ms = 6000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    const h = await page.evaluateHandle((lab) => [...document.querySelectorAll("button")]
+      .find((e) => !e.disabled && (e.textContent ?? "").trim() === lab) ?? null, label);
+    const el = h.asElement();
+    if (el) { await el.scrollIntoView(); await el.click(); await sleep(250); return true; }
+    await sleep(100);
+  }
+  return false;
+};
+const setComposer = (value) => page.evaluate((v) => {
+  const el = document.querySelector('textarea[placeholder="Type as a student would…"]');
+  if (!el) return null;
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set.call(el, v);
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  return el.value;
+}, value);
 // The studio's one status line (StepStatus) and the step's live regions, minus anything inside the dialog.
 const liveRegions = () => page.evaluate(() => [...document.querySelectorAll('[role="status"],[role="alert"],[aria-live="polite"],[aria-live="assertive"]')]
   .filter((n) => !n.closest('[role="dialog"]')).map((n) => (n.textContent ?? "").trim()).filter(Boolean));
@@ -268,6 +287,28 @@ try {
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   await waitText("Type as a student would", 6000);
   check("Rehearse renders the simulator and the guardrail probes", /Ask what your students will ask/.test(await body()) && /Guardrail probes/.test(await body()));
+  // ---- G4: a cancelled passcode in Rehearse keeps the question the teacher typed, and focus returns to
+  // the Ask button (the opener, since a real click focuses it). 20 repeats, both cancel routes. The tab
+  // forgets the passcode first, so Ask really does ask for it again.
+  await page.evaluate(() => sessionStorage.removeItem("silicus.demoPasscode"));
+  const G4_Q = "What is a fraction?";
+  let g4 = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const route = i % 2 === 0 ? "Not now" : "Escape";
+    await setComposer(G4_Q);
+    await sleep(120);
+    const opened = (await clickReal("Ask")) && (await dialogOpen());
+    if (route === "Escape") await page.keyboard.press("Escape"); else await clickReal("Not now");
+    await sleep(600);
+    const value = await page.evaluate(() => document.querySelector('textarea[placeholder="Type as a student would…"]')?.value ?? null);
+    const a = await active();
+    const back = a.tag === "TEXTAREA" || /^Ask$/.test(a.text ?? "");
+    if (opened && value === G4_Q && back) g4 += 1;
+    else console.log(`  G4 miss ${i} (${route}): opened=${opened} value=${JSON.stringify(value)} focus=${JSON.stringify(a)}`);
+  }
+  check("G4 20 cancelled passcodes in Rehearse keep the question and return focus, both routes", g4 === 20, `${g4}/20`);
+  await setComposer("");
+  await sleep(150);
   await page.type('textarea[placeholder="Type as a student would…"]', "What's the best video game right now?");
   await clickBy("Ask");
   await enterPasscode();

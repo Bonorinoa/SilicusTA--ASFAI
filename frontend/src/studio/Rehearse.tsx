@@ -47,8 +47,12 @@ export function Rehearse({ courseId }: { courseId: string }) {
   const thread = useRef<Turn[]>([]);
   const update = (fn: (t: Turn[]) => Turn[]) => { thread.current = fn(thread.current); setTurns(thread.current); };
 
-  const ask = async (q: string, probe?: Probe) => {
-    if (!q.trim() || thread.current.some((t) => !t.a && !t.error)) return;
+  /**
+   * Send one question to the host. Returns whether the host TOOK it: a cancelled passcode (or any other
+   * failure) means nothing was sent, so the caller must not treat the question as spent.
+   */
+  const ask = async (q: string, probe?: Probe): Promise<boolean> => {
+    if (!q.trim() || thread.current.some((t) => !t.a && !t.error)) return false;
     const earlier = thread.current;
     const index = earlier.length;
     update((t) => [...t, { q, a: null }]);
@@ -59,11 +63,23 @@ export function Rehearse({ courseId }: { courseId: string }) {
       update((t) => t.map((x, i) => (i === index ? { ...x, a } : x)));
       setSelected(index);
       if (probe) setResults((r) => ({ ...r, [probe.id]: { ok: probe.expect === "answer" ? a.grounded : !a.grounded, turn: index } }));
+      return true;
     } catch (e) {
       update((t) => t.map((x, i) => (i === index ? { ...x, error: e instanceof Error ? e.message : String(e) } : x)));
+      return false;
     } finally {
       setAsking(false);
     }
+  };
+
+  /**
+   * Ask the box's question. The box keeps its text until the host has taken it (B5/G4): a cancelled
+   * passcode sends nothing, so the teacher must not have to type the question again — and the Ask button
+   * stays usable, which is also what lets the dialog hand focus back to it.
+   */
+  const send = async () => {
+    const q = question;
+    if (await ask(q)) setQuestion((current) => (current === q ? "" : current));
   };
 
   const runRemaining = async () => { for (const p of probes) if (!results[p.id]) await ask(p.question, p); };
@@ -104,13 +120,15 @@ export function Rehearse({ courseId }: { courseId: string }) {
               {asking ? <div className={s.typing} aria-label="Silicus is answering"><span /><span /><span /></div> : null}
               <div ref={end} />
             </div>
-            <form className={s.composer} onSubmit={(e) => { e.preventDefault(); void ask(question); setQuestion(""); }}>
+            <form className={s.composer} onSubmit={(e) => { e.preventDefault(); void send(); }}>
               <div className={ui.field}>
                 <label className={ui.label} htmlFor={qId}>Student question</label>
                 <textarea id={qId} className={ui.textarea} rows={2} maxLength={800} value={question} placeholder="Type as a student would…" onChange={(e) => setQuestion(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void ask(question); setQuestion(""); } }} />
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
               </div>
-              <Button variant="primary" type="submit" disabled={asking || !question.trim()}>Ask</Button>
+              {/* data-primary: this is the page's own primary action, and it is disabled while the ask is in
+                  flight — which is why the passcode dialog needs it marked to hand focus back (G4). */}
+              <Button variant="primary" type="submit" data-primary="true" disabled={asking || !question.trim()}>Ask</Button>
             </form>
             {worker?.typicalSeconds?.answer ? <p className={s.provenance}>Answers usually take {worker.typicalSeconds.answer[0]}–{worker.typicalSeconds.answer[1]} s.</p> : null}
           </section>

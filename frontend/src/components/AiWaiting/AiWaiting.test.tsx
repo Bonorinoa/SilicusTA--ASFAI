@@ -93,20 +93,20 @@ describe("AiWaiting — a real clock and the typical range", () => {
   });
 
   it("falls back to exactly the documented defaults when typicalSeconds is absent", () => {
-    expect(DEFAULT_TYPICAL).toEqual({ objectives: [3, 15], plan: [5, 25], answer: [2, 8] });
+    expect(DEFAULT_TYPICAL).toEqual({ objectives: [2, 10], plan: [8, 30], answer: [2, 15] });
     const { unmount } = render(<AiWaiting step={PLAN_STEP} phase="running" />);
-    expect(screen.getByText(/usually 5\u201325 seconds/)).toBeInTheDocument();
+    expect(screen.getByText(/usually 8\u201330 seconds/)).toBeInTheDocument();
     unmount();
     const o = render(<AiWaiting step={OBJ_STEP} phase="running" typicalSeconds={{}} />);
-    expect(screen.getByText(/usually 3\u201315 seconds/)).toBeInTheDocument();
+    expect(screen.getByText(/usually 2\u201310 seconds/)).toBeInTheDocument();
     o.unmount();
     render(<AiWaiting step={ANSWER_STEP} phase="running" variant="compact" typicalSeconds={null} />);
-    expect(screen.getByText(/usually 2\u20138 seconds/)).toBeInTheDocument();
+    expect(screen.getByText(/usually 2\u201315 seconds/)).toBeInTheDocument();
   });
 
   it("ignores a malformed range instead of showing nonsense", () => {
     for (const bad of [{ plan: [30, 10] }, { plan: [5] }, { plan: ["5", "25"] }, { plan: [-1, 4] }, { plan: [Number.NaN, 9] }, "x", 7]) {
-      expect(typicalRange("plan", bad)).toEqual([5, 25]);
+      expect(typicalRange("plan", bad)).toEqual([8, 30]);
     }
     expect(typicalRange("plan", { plan: [7.4, 31.6] })).toEqual([7, 32]);
   });
@@ -115,7 +115,7 @@ describe("AiWaiting — a real clock and the typical range", () => {
 describe("AiWaiting — taking longer than usual", () => {
   it("appears only after the high end of the range, and says what is true", () => {
     render(<AiWaiting step={PLAN_STEP} phase="running" />);
-    advance(25_000);
+    advance(30_000);
     expect(screen.queryByText(/Taking longer than usual/)).not.toBeInTheDocument();
     advance(1_000);
     expect(screen.getByText(/Taking longer than usual\. If the model does not answer, this step stops by itself, and nothing you have recorded is lost\./)).toBeInTheDocument();
@@ -310,7 +310,7 @@ describe("AiWaiting — announcements and the receipt", () => {
     const seen = () => { const t = live().textContent ?? ""; if (writes.at(-1) !== t) writes.push(t); };
     seen();
     for (let i = 0; i < 20; i += 1) { advance(1_000); seen(); }
-    expect(writes).toEqual(["Drafting a lesson plan from your 6 confirmed objectives. Usually 5 to 25 seconds."]);
+    expect(writes).toEqual(["Drafting a lesson plan from your 6 confirmed objectives. Usually 8 to 30 seconds."]);
     rerender(<AiWaiting step={PLAN_STEP} phase="done" receipt={["Checked: 5 activities, each cites only objectives you confirmed (9 citations)."]} />);
     seen();
     expect(writes).toHaveLength(2);

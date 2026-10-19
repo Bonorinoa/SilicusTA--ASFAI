@@ -71,7 +71,7 @@ describe("StepStatus — the one status line", () => {
 
   it("without a worker status the range falls back to the documented defaults", () => {
     render(<StepStatus view={VIEW} waiting={working()} worker={{ configured: true }} transition={null} />);
-    expect(screen.getByText(/usually 5–25 s/)).toBeInTheDocument();
+    expect(screen.getByText(/usually 8–30 s/)).toBeInTheDocument();
   });
 
   it("a step transition is announced once, ahead of the new step's turn", () => {

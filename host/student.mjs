@@ -63,16 +63,44 @@ export function cleanQuestion(body) {
   return { question, history };
 }
 
-/** Heuristic: questions that ask for a grade, pass/fail, mastery or assessment. */
+/**
+ * Heuristic: a question that asks the AI for a verdict on the ASKER — a grade, a pass/fail, mastery, a
+ * level, or to be told they are right. It runs whether or not the model refused, so a model that misses
+ * one cannot let the AI grade (lock: AI never grades; teacher confirms).
+ *
+ * It matches self-assessment INTENT, never the bare topic words. In particular "mastery"/"mastered" is
+ * only matched with the asker as the object ("my mastery", "have I mastered"), so an in-domain content
+ * question that merely says the word — "What does mastery learning mean in this lesson?" — is untouched (A22).
+ */
 const ASSESSMENT_PATTERNS = [
-  /\btell me (i|we) (passed|pass|failed)\b/i,
-  /\bdid (i|we) pass\b/i,
-  /\bam (i|we) passing\b/i,
-  /\bhow (am i|are we) doing\b/i,
-  /\bwhat (is|was) (my|our) grade\b/i,
-  /\bjudge (my|our) (mastery|work)\b/i,
-  /\bassess (my|our) (mastery|work)\b/i,
-  /\bmaster(ed|y|ing)\b/i,
+  // Tell me I passed / I'm right / I'm a genius: an explicit request for a verdict on the asker.
+  /\btell (me|us) (i|we|i'm|im|i am|we're|we are)\b/i,
+  /\btell (me|us)\b[^.!?]*\b(pass|passed|passing|fail|failed|grade|graded|score|scored|mark|marked|level|rating)\b/i,
+  // "say I passed" / "say I'm a genius": the same verdict request phrased as an instruction (also inside injection).
+  /\bsay (i|we)\b[^.!?]*\b(pass|passed|passing|fail|failed|mastered|master|right|correct|genius)\b/i,
+  /\bsay (i'm|im|i am|we're|we are)\b/i,
+  // Pass / fail asked with the asker as the subject ("did I pass", "am I passing", "will I pass", "are we going to pass").
+  /\b(do|did|will|would|can|could|should|am|are|was|were|have|has)\s+(i|we)\s+(pass|passed|passing|fail|failed|failing)\b/i,
+  /\b(going|gonna) to (pass|fail)\b/i,
+  /\b(pass or fail|fail me|pass me)\b/i,
+  // A grade / score / mark / level / rating owned by the asker, or asked of their own answer, work or understanding.
+  /\b(my|our)\b[^.!?]*\b(grade|grades|score|scores|mark|marks|rating|level|mastery|progress|performance)\b/i,
+  /\bwhat('s| is| was)? my (grade|score|mark|rating|level)\b/i,
+  /\b(grade|score|mark|rate|rating|assess|evaluate|judge) (my|our)\b/i,
+  /\bcheck (my|our) (understanding|answer|mastery|progress)\b/i,
+  /\bis (my|our) (answer|work|response|understanding) (right|correct|wrong|ok|okay)\b/i,
+  /\bam (i|we) (right|correct|wrong)\b/i,
+  /\b(give|hand|show) (me|us)\b[^.!?]*\b(grade|score|mark|rating|level)\b/i,
+  /\b(score|grade|mark|rating) out of\b/i,
+  // "How am I doing / how'm I doing / how did I do / how well am I doing" — a performance verb after the
+  // pronoun, so a content question like "How do I compare two fractions?" is not caught.
+  /\bhow(?:'m| am| are we)\s+(i|we)\s+(doing|going|coming along)\b/i,
+  /\bhow (did|do) (i|we) (do|fare|score)\b/i,
+  /\bhow well (am i|are we|did i|did we)\b/i,
+  // Mastery / level asked about the asker ("have I got this", "am I mastering this", "did I master it").
+  /\bhave (i|we) (got|gotten|understood|learned|learnt|mastered)\b/i,
+  /\bam (i|we) (mastering|getting|learning)\b/i,
+  /\bdid (i|we) get\b/i,
 ];
 
 function looksLikeAssessment(question) {

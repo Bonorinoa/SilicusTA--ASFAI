@@ -112,7 +112,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
             <h1 className={s.docTitle}>Learning objectives</h1>
             <p className={s.docLede}>
               {mine.length === 0
-                ? "Accept, edit or drop each proposal on the right. Accepted ones land here."
+                ? "Accept, edit or drop each proposal under Proposals. Accepted ones land here."
                 : `${plural(mine.length, "objective")} accepted${waitingRows.length ? `, ${plural(waitingRows.length, "proposal")} waiting` : ""}.`}
             </p>
           </header>

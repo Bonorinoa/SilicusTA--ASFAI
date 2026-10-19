@@ -119,7 +119,7 @@ export function Landing() {
           </div>
           <figure className={styles.figure}>
             <StudioSketch />
-            <figcaption className={styles.caption}>The Objectives step: proposals wait on the right until you decide.</figcaption>
+            <figcaption className={styles.caption}>The Objectives step: proposals wait under Proposals until you decide.</figcaption>
           </figure>
         </section>
 

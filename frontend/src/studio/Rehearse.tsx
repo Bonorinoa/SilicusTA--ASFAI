@@ -85,7 +85,7 @@ export function Rehearse({ courseId }: { courseId: string }) {
               <p className={s.docLede} style={{ fontSize: "0.9375rem" }}>Only you see this. It answers from the version you published, and nothing here is saved.</p>
             </div>
             <div className={s.thread} aria-live="polite">
-              {turns.length === 0 && !asking ? <p className={s.trayEmpty}>Type a question as a student would, or run a guardrail probe on the right.</p> : null}
+              {turns.length === 0 && !asking ? <p className={s.trayEmpty}>Type a question as a student would, or run a guardrail probe under Guardrail probes.</p> : null}
               {turns.map((t, i) => (
                 <div key={i} style={{ display: "contents" }}>
                   <div className={s.bubbleQ}>{t.q}</div>

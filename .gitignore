@@ -36,3 +36,6 @@
 
 # Vercel CLI link state (project and org ids; local only)
 .vercel
+
+# Claude Code local launch config
+.claude/

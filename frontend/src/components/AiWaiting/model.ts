@@ -13,11 +13,11 @@ export type StepKind = "objectives" | "suggest" | "plan" | "answer";
 export type Range = readonly [number, number];
 
 /** The documented defaults, used whenever the worker status carries no (valid) typicalSeconds.
- * The host mirrors them (host/worker-config.mjs DEFAULT_TYPICAL_SECONDS). They are the measured ranges
- * from the 2026-10-19 quality report section 9, rounded: 44 student calls p50 2.0 s / p95 11.4 s, three
- * plan runs 11.3 / 12.6 / 25.5 s, objectives.propose 2.2 / 3.2 / 6.4 s and objectives.suggest 3.8 to
- * 14.8 s. One public fixture, one rater day, DeepSeek v4 flash 0731 via OpenRouter: pass the upper bound
- * and the step says it is taking longer, it does not stop pretending. */
+ * The host mirrors them (host/worker-config.mjs DEFAULT_TYPICAL_SECONDS). They are ranges chosen from a
+ * sample of 44 answers and 3 plan and 6 objective runs; widened by hand: 44 student calls p50 2.0 s /
+ * p95 11.4 s, three plan runs 11.3 / 12.6 / 25.5 s, objectives.propose 2.2 / 3.2 / 6.4 s and
+ * objectives.suggest 3.8 to 14.8 s. One public fixture, one rater day, DeepSeek v4 flash 0731 via
+ * OpenRouter: pass the upper bound and the step says it is taking longer, it does not stop pretending. */
 export const DEFAULT_TYPICAL: Readonly<Record<Exclude<StepKind, "suggest">, Range>> = {
   objectives: [2, 10],
   plan: [8, 30],
@@ -41,7 +41,7 @@ export function typicalRange(kind: StepKind, typical?: unknown): Range {
   return DEFAULT_TYPICAL[kind];
 }
 
-/** "usually 5–25 seconds" */
+/** A range as words: [lo, hi] → "usually lo–hi seconds". */
 export const rangePhrase = ([lo, hi]: Range): string => `usually ${lo}\u2013${hi} seconds`;
 
 /** 14 → "14 s", 65 → "1 min 05 s" */

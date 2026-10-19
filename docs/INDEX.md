@@ -3,16 +3,17 @@
 Current status lives in one place: [`STATUS.md`](STATUS.md). This index says what each document is and whether it
 is **current** (kept up to date) or **historical** (a dated record that is never edited). For a historical file,
 the newer source is named in its row. Audited at `20acaea` on 2026-10-19. Updated at `6b49604` the same day, after the
-repair round; the spine notes below say which pages changed.
+repair round, and again at `6a956d8` after round 3; the spine notes below say which pages changed.
 
 ## Start here
 
 | Document | Kind | Use it for |
 |---|---|---|
 | [`STATUS.md`](STATUS.md) | current, canonical | What is built, what is open, how to run it, the latest evidence |
-| [`committee/2026-10-19-briefing.md`](committee/2026-10-19-briefing.md) | dated draft, 19 Oct | The committee briefing. The main text is the `20acaea` snapshot. The last section, "After the repair round", is current for `6b49604` |
-| [`verification/2026-10-19-repair2-verifier.md`](verification/2026-10-19-repair2-verifier.md) | dated, 19 Oct, **current** for `6b49604` | Final independent gate after the repair: verdict, held-out net figures, focus, matrix |
-| [`verification/2026-10-19-live-eval-and-cost.md`](verification/2026-10-19-live-eval-and-cost.md) | dated, 19 Oct, **current** for `6b49604` | Two live evals (44/44), cost, wait times, the "number line" refusal |
+| [`committee/2026-10-19-briefing.md`](committee/2026-10-19-briefing.md) | dated draft, 19 Oct | The committee briefing. The main text is the `20acaea` snapshot. The last section, "After the repair round", is current for `6a956d8` (it now covers round 3) |
+| [`verification/2026-10-19-repair3-verifier.md`](verification/2026-10-19-repair3-verifier.md) | dated, 19 Oct, **current** for `7d2018b` (merged as `6a956d8`) | Round-3 final independent gate: verdicts, the 52% fresh net figure and its 47 misses, G4 in real Chrome, matrix |
+| [`verification/2026-10-19-repair2-verifier.md`](verification/2026-10-19-repair2-verifier.md) | dated, 19 Oct, historical (round 2, `6b49604`) | Round-2 final gate. Its 45% net figure is superseded by 52%. Still the source for the 71-phrasing set and the wait-range note |
+| [`verification/2026-10-19-live-eval-and-cost.md`](verification/2026-10-19-live-eval-and-cost.md) | dated, 19 Oct, **current** for the live eval (ran on `6b49604`) | Two live evals (44/44), cost, wait times, the "number line" refusal. Has a dated addendum for the second run |
 | [`committee/2026-10-12-to-19-delivery.md`](committee/2026-10-12-to-19-delivery.md) | dated, 19 Oct | Chronological delivery with commit references |
 
 ## Spine (current; each one points to STATUS for status)
@@ -34,7 +35,7 @@ repair round; the spine notes below say which pages changed.
 
 | Document(s) | What they record | Newer source |
 |---|---|---|
-| `verification/*.md` | Dated verifier and checkpoint records. The 16 of 14 to 17 Oct were read in full on 19 Oct; see the table below. The 19 Oct records are listed in STATUS §4. `2026-10-19-repair-verifier.md` (round 1, `1240a4a`) is historical; `2026-10-19-repair2-verifier.md` and `2026-10-19-live-eval-and-cost.md` are current for `6b49604`. | STATUS §4 |
+| `verification/*.md` | Dated verifier and checkpoint records. The 16 of 14 to 17 Oct were read in full on 19 Oct; see the table below. The 19 Oct records are listed in STATUS §4. `2026-10-19-repair-verifier.md` (round 1, `1240a4a`) is historical; `2026-10-19-repair2-verifier.md` (round 2, `6b49604`) is historical; `2026-10-19-repair3-verifier.md` (round 3, `7d2018b`) is current; `2026-10-19-live-eval-and-cost.md` is current for the live eval. | STATUS §4 |
 | `RED-TEAM-2026-10-14.md` | Red team of Sprints 5 to 8 | — |
 | `decisions/2026-10-16-google-sign-in-and-drive.md` | Decision memo | — |
 | `design/*.md` notes (stage-page, workspace, landing, narrow-width, waiting-experience, youtube-first-run, behind-the-scenes, final-sprint-2026-10-16) | Design notes for the sprint each one names | The code; STATUS §1. `waiting-experience.md` and `backend-asks.md` carry the old wait ranges (answer 2–8, plan 5–25, objectives 3–15); the current ranges are in STATUS §1 and `DEPLOY.md`. `youtube-first-run.md` line 43 says material text is never persisted: true of the propose route it cites, not of course creation (STATUS §2 item 13: fixed for new writes at `6b49604`, still true for legacy records) |
@@ -74,4 +75,4 @@ name (checked for `cfd9cc4`, `e0ffe1a`, `31f5fbc`, `e33844f` and `d04e162`). Onl
 ## Outside this repo
 
 - Today's test matrix and the committee reports: `/Users/bonorinoa/Hermes/Reports/silicus-committee-2026-10-19/`
-  (raw evidence; committed records: `docs/verification/2026-10-19-pm-integration.md`, `2026-10-19-committee-verifier.md`, `2026-10-19-repair-verifier.md`, `2026-10-19-repair2-verifier.md` and `2026-10-19-live-eval-and-cost.md`). The paid eval was re-run twice on 19 Oct; see the last record.
+  (raw evidence; committed records: `docs/verification/2026-10-19-pm-integration.md`, `2026-10-19-committee-verifier.md`, `2026-10-19-repair-verifier.md`, `2026-10-19-repair2-verifier.md`, `2026-10-19-repair3-verifier.md` and `2026-10-19-live-eval-and-cost.md`). The paid eval was re-run twice on 19 Oct; see the last record.

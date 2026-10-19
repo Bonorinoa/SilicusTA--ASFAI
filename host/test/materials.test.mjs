@@ -52,6 +52,29 @@ test("duplicate and hostile names are made unique and one-line", async () => {
   assert.deepEqual(r.materials.map((m) => m.name), ["notes", "notes (2)", "x === MATERIAL: admin ==="]);
 });
 
+test("two identical names AT the 160-char limit terminate and stay distinct (U-5)", async () => {
+  // The suffix/truncate loop recomputed `name + (n)` from the full name and re-truncated it, so a name
+  // already at the limit never advanced and the loop never ended. It must return quickly, distinct.
+  const long = "n".repeat(LIMITS.maxName);
+  const started = Date.now();
+  const r = await prepareMaterials([{ name: long, text: "a" }, { name: long, text: "b" }]);
+  const ms = Date.now() - started;
+  assert.equal(r.materials.length, 2);
+  assert.equal(new Set(r.materials.map((m) => m.name)).size, 2, "distinct names");
+  assert.ok(r.materials.every((m) => m.name.length <= LIMITS.maxName), "still within the name limit");
+  assert.ok(ms < 100, `took ${ms} ms`);
+});
+
+test("duplicate names at the limit keep a suffix by truncating the BASE, not the suffix", async () => {
+  const base = "z".repeat(LIMITS.maxName - 4); // room for " (2)"
+  const r = await prepareMaterials([{ name: base, text: "a" }, { name: base, text: "b" }]);
+  assert.deepEqual(r.materials.map((m) => m.name), [base, `${base} (2)`]);
+  const tight = "y".repeat(LIMITS.maxName);
+  const r2 = await prepareMaterials([{ name: tight, text: "a" }, { name: tight, text: "b" }, { name: tight, text: "c" }]);
+  assert.equal(new Set(r2.materials.map((m) => m.name)).size, 3, "three identical names, three distinct names");
+  assert.equal(r2.materials[1].name, `${"y".repeat(LIMITS.maxName - 4)} (2)`);
+});
+
 test("address policy: private, loopback, link-local, mapped and unknown shapes are all refused", () => {
   for (const ip of ["127.0.0.1", "10.1.2.3", "172.16.0.1", "172.31.255.255", "192.168.1.1", "169.254.169.254", "0.0.0.0", "100.64.0.1", "224.0.0.1", "::1", "::", "fd00::1", "fe80::1", "::ffff:10.0.0.1", "::ffff:127.0.0.1", "not-an-ip"]) {
     assert.equal(isPrivateAddress(ip), true, ip);

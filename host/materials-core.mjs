@@ -93,7 +93,57 @@ export function youtubeVideoId(raw) {
   return id && /^[\w-]{11}$/.test(id) ? id : null;
 }
 
-export const cleanName = (n) => String(n ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/g, " ").trim().slice(0, LIMITS.maxName);
+/** One-line, control-char-free, trimmed, bounded. `max` defaults to the display-name limit; callers that
+ *  mirror another surface (the shipped UI's 200-char create names) pass their own bound. */
+export const cleanName = (n, max = LIMITS.maxName) => String(n ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+
+/**
+ * A bounded, deterministic unique display name for a course's material list.
+ *
+ * The suffix is appended to a base TRUNCATED to leave room for it, so a name already at the length limit
+ * still advances: recomputing `` `${name} (${n})`.slice(0, LIMITS.maxName) `` never changes a name that is
+ * already at the limit, so the loop used to spin forever (U-5). The candidate count is bounded by the
+ * number of names already taken, so this always terminates.
+ *
+ * @param {unknown} name @param {Set<string>} used @returns {string}
+ */
+export function uniqueName(name, used) {
+  const base = cleanName(name);
+  if (!used.has(base)) return base;
+  for (let n = 2; n <= used.size + 2; n += 1) {
+    const suffix = ` (${n})`;
+    const candidate = `${base.slice(0, Math.max(0, LIMITS.maxName - suffix.length))}${suffix}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  return base; // unreachable while items are bounded; returning keeps the caller honest rather than hanging
+}
+
+/* ------------------------------ what a record may keep ------------------------------ */
+
+/** How many material names a course record keeps, and how long each may be (the shipped UI's own bounds). */
+export const MAX_MATERIAL_NAMES = 24;
+export const MAX_MATERIAL_NAME_CHARS = 200;
+
+/**
+ * What a course record may keep about its materials AT CREATION: source NAMES only, exactly the shape the
+ * shipped UI sends (`{ name: string }`), bounded the way the UI bounds them. Material TEXT is never a name,
+ * so every other field (`text`, `extra`, a smuggled nested value) is dropped here instead of persisted
+ * (lock: material transient; U-2). A non-object, or an object with no string name, contributes nothing.
+ *
+ * @param {unknown} materials @returns {{name: string}[]}
+ */
+export function materialNames(materials) {
+  if (!Array.isArray(materials)) return [];
+  const out = [];
+  for (const m of materials) {
+    if (!m || typeof m !== "object" || typeof m.name !== "string") continue;
+    const name = cleanName(m.name, MAX_MATERIAL_NAME_CHARS);
+    if (!name) continue;
+    out.push({ name });
+    if (out.length >= MAX_MATERIAL_NAMES) break;
+  }
+  return out;
+}
 
 /* ------------------------------- preparing a request ------------------------------- */
 
@@ -130,8 +180,7 @@ export async function prepareMaterialsWith(items, resolveUrl) {
       }
       name = cleanName(name) || "material";
       if (!text) throw new MaterialError("EMPTY", "there was no readable text");
-      let unique = name;
-      for (let n = 2; used.has(unique); n += 1) unique = `${name} (${n})`.slice(0, LIMITS.maxName);
+      const unique = uniqueName(name, used);
       const room = LIMITS.maxTotalChars - total;
       if (room <= 0) throw new MaterialError("TOO_LARGE", "that is more material than can be read at once");
       const clipped = text.slice(0, Math.min(room, LIMITS.maxChars));

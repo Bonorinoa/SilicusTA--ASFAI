@@ -1,6 +1,7 @@
 /* The one status line per step (B2), and the B3 passcode note on the Brief step. */
 .line {
   display: flex;
+  flex-basis: 100%;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0 4px;

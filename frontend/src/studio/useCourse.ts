@@ -205,6 +205,9 @@ export function turnPhrase(v: HostView): string {
     if (v.plan.status === "invalidated") return "Your turn: draft a new plan";
     return "Your turn: read the plan, then confirm it";
   }
+  // Published with nothing pending: the step is done, so say so instead of asking to publish again.
+  const latest = v.versions.at(-1);
+  if (latest && v.revision?.drafting !== true) return `Version ${latest.version} is published. Preview it or revise.`;
   return "Your turn: review and publish";
 }
 

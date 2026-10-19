@@ -6,6 +6,8 @@
  * usual range, or "Waiting for your passcode" — never a promise, never a percentage, and the ticking
  * clock is never inside the live region (it would announce every second).
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { StepStatus } from "./StepStatus";
@@ -81,5 +83,35 @@ describe("StepStatus — the one status line", () => {
     render(<StepStatus view={VIEW} waiting={working({ what: "reading 1 source" })} worker={WORKER} transition={null} />);
     expect(statusText()).toBe("Silicus is reading 1 source");
     expect(screen.queryByText(/1 sources/)).not.toBeInTheDocument();
+  });
+});
+
+/* ------------------------------- R5 · B1 and B2 ------------------------------- */
+
+/** A course whose plan is confirmed AND whose latest version is published: the step is done. */
+const PUBLISHED: HostView = {
+  ...VIEW,
+  plan: { ...VIEW.plan, status: "confirmed" } as HostView["plan"],
+  versions: [{ version: 1 } as HostView["versions"][number]],
+};
+
+describe("B1: the status line owns a whole row of the wrapping flex column", () => {
+  it("declares flex-basis:100% on .line so the proposals tray is not pushed left", () => {
+    const css = readFileSync(join(__dirname, "StepStatus.module.css"), "utf8");
+    const line = css.match(/\.line\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(line).toMatch(/flex-basis:\s*100%/);
+  });
+});
+
+describe("B2: the status line is not stale after publishing", () => {
+  it("says the version is published instead of 'Your turn: review and publish'", () => {
+    render(<StepStatus view={PUBLISHED} waiting={null} worker={WORKER} transition={null} />);
+    expect(statusText()).toBe("Version 1 is published. Preview it or revise.");
+    expect(statusText()).not.toMatch(/review and publish/);
+  });
+
+  it("still says 'review and publish' while the plan is confirmed but nothing is published yet", () => {
+    render(<StepStatus view={{ ...VIEW, plan: { ...VIEW.plan, status: "confirmed" } as HostView["plan"] }} waiting={null} worker={WORKER} transition={null} />);
+    expect(statusText()).toBe("Your turn: review and publish");
   });
 });

@@ -1,5 +1,13 @@
 # Student helper eval
 
+> **Status (audit of 2026-10-19 at `20acaea`).** The recorded results are historical and tied to their sha:
+> `scorecard-baseline.md`, `scorecard-candidate.md` (`bb1653d`, D2 PASS), `scorecard-candidate2.md` (`fa68bf9`)
+> and `compare.md`. The eval was **not** re-run after `20acaea`, which added a server-side assessment pattern
+> check to `host/student.mjs`. That check also refuses any question containing "mastery", "mastered" or
+> "mastering", so `definition` and `plan` results may change. The commands below name scratch worktrees from
+> 16 October. Point `--root` at the tree under test. The run calls a real model, so it is a paid run, not a
+> deterministic check. Current status: [`../../docs/STATUS.md`](../../docs/STATUS.md).
+
 Scores the published-lesson helper on the two fixture courses. The baseline is this worktree's current behaviour. A later run can point `--root` at another worktree and keep this question set.
 
 ## Command

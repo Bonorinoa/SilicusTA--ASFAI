@@ -1,9 +1,19 @@
 # Deploying the online prototype on Vercel
 
+> Current as of the 19 October audit at `20acaea`: routes, limits (120 s function, 115 s upstream, 20 s fetch) and
+> guards match `vercel.json` and `api/`. Which sha is live in production is not recorded in the repo after the
+> 17 October records (`b96b102`). For status, see [`STATUS.md`](STATUS.md). For how the browser host differs
+> from the local Node host, see STATUS §3.
+
 The online Silicus runs in the teacher's browser: the course record lives in the browser
 (IndexedDB), not on a server. Vercel serves the built app and runs three small, stateless
-functions. Nothing about a teacher, a student or a course is stored on Vercel, and the functions
-never log a request body.
+functions. There is no course-record persistence on Vercel, and the functions do not log a request body
+(`api/`). Source text and student questions still transit Vercel and the model provider, and the provider's and
+platform's own terms (retention, logging) still apply. This is not a blanket privacy guarantee.
+
+> **Current, 19 October (operator readback, attributed):** authenticated production `/api/worker` returns 502
+> `UPSTREAM_ERROR` with upstream 402. The route works as designed (status code only, no upstream text); the
+> provider account needs funding. See the live-service row in [`STATUS.md`](STATUS.md).
 
 | Route | What it does |
 |---|---|

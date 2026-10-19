@@ -65,3 +65,12 @@ when it ran ("Checked 2 minutes ago: no format problems").
 Suggested objectives: the teacher must have at least one outcome of their own first; Silicus suggests at most
 three; each one is accepted, renamed or dropped like any other proposal (the buttons say Accept, Rename, Drop). Button: "Suggest up to 3 more".
 Explainer under it: "Silicus reads your outcomes and suggests ones that would round out the lesson. You decide."
+
+## Known drift (open, for the owner)
+
+Recorded on 2026-10-19 from `verification/2026-10-17-studio-redesign.md` F2. It is not resolved here, because
+this file is the contract. On a proposal, the studio (`#/studio`) shows **Accept / Edit / Drop**
+(`frontend/src/studio/steps/ObjectivesStep.tsx:193-195`). Its "Edit" sends the gate's `rename` verb, and the
+row then reads "Renamed by you". The contract above, and `#/live`, say **Accept / Rename / Drop**. Changing a
+confirmed objective is the separate `reword` verb ("Reworded by you"), and it has no line here yet. The owner
+decides which word wins. The contract changes first, then the surfaces.

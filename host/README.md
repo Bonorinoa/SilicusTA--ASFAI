@@ -1,5 +1,8 @@
 # Silicus host (Sprint 1)
 
+> Started in Sprint 1. It now serves both builds (see "One API, two hosts"). For status, see
+> [`../docs/STATUS.md`](../docs/STATUS.md). The test counts on this page are from the sprint that wrote them.
+
 The product core behind the GUI: the transport that owns each course's ledger
 and confirm-gate, plus the append-only event log that makes state durable and
 replayable. Zero dependencies (node:http, node:fs, node:crypto). Node >= 18,
@@ -43,18 +46,25 @@ The GUI is a sidecar: it reaches this host through a same-origin `/api` proxy
 
 ## Test it
 
+From `host/` (from the repository root, wrap each line as `(cd host && …)`):
+
 ```sh
-npm test                        # 10 tests: the session flow, restart-by-replay,
+npm test                        # the session flow, restart-by-replay,
                                 # tamper detection, the anti-fabrication property
-node scripts/e2e-restart.mjs    # 11 acceptance checks at the PROCESS boundary:
+node scripts/e2e-restart.mjs    # acceptance checks at the PROCESS boundary:
                                 # drive the flow, SIGTERM, restart, state identical
 ```
 
 Plus the core seam's own proof, from the repo root:
 
 ```sh
-cd ../confirm-gate && node --test    # 26 tests, incl. test/persistence.test.mjs
+(cd confirm-gate && node --test)    # incl. test/persistence.test.mjs
 ```
+
+The Sprint 1 counts (10 host tests, 11 e2e checks, 26 confirm-gate tests) are historical. Later counts are
+recorded per sha under `../docs/verification/`. The recommended command is plain `node --test` (it exits on
+its own). Some historical verifier records used `--test-timeout=30000 --test-force-exit`; do not use
+`--test-force-exit` by default, because it hides a hang.
 
 ## Layout
 
@@ -284,8 +294,9 @@ Statements typed for `add`, `rename` and `reword` are untrusted: `proposer.teach
 
 Known gaps: revoking a cited objective with no worker leaves the course unable to seal the next version until one is
 configured (a reword does not: that is what `reword` is for); over the 1 MiB body cap the connection is cut before
-the `413` is sent; `add` and `rename` still write a client's extra decision keys into the log verbatim (inert, the gate
-ignores them; only `reword` is reduced to its three fields).
+the `413` is sent. (Closed since this was written: `add` and `rename` used to write a client's extra decision keys
+into the log verbatim. `bd01d4f` cuts every verb down to the fields the host uses, and
+`test/decisions-whitelist.test.mjs` pins it.)
 
 ## Archive (Sprint 2a)
 
@@ -327,6 +338,8 @@ not in the sealed package, never required.
 
 Off unless a model is configured. One worker serves every model call (plan drafting, objectives from
 material, grounded student answers); its output is always validated as untrusted input.
+(*Note, 19 October:* "grounded" here means the answer cites ids in the published package. Whether a cited item
+supports the answer is not checked; see `../docs/STATUS.md` §2 item 14.)
 
 | Variable | Meaning |
 |---|---|

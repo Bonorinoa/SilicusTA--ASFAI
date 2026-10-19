@@ -4,6 +4,13 @@ Started 2026-10-16 with the full-flow redesign (Augusto + Claude). The redesign 
 may show a feature before the host supports it, behind a dashed "Soon" badge that opens nothing pretend.
 Each item says what the screen needs, why, and what the frontend does meanwhile. Add to it as screens land.
 
+> **Status note (audit of 2026-10-19 at `20acaea`; current status lives in [`../STATUS.md`](../STATUS.md)).**
+> Every ask below is still open in the host. Checked in source: #13 (`confirm-gate/confirm-gate.mjs:19` still
+> confirms objectives automatically) and #1 (students cannot reach a version). The "Meanwhile" column has
+> moved. Rehearse is built at `#/studio/<id>/rehearse` (`frontend/src/studio/Rehearse.tsx`), and most "Soon"
+> badges were removed on 17 October (`5eae600`, `a48b081`, `ee9f81d`). The ones still in source are "Class
+> codes · soon" on the landing and "Local app only" for YouTube in the Sources panel.
+
 Priority: **P1** blocks a destination from working for real · **P2** makes an existing screen honest or
 calmer · **P3** nice to have.
 

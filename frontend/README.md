@@ -1,5 +1,11 @@
 # Silicus TA 3.0 — design-system foundation
 
+> For status, see [`../docs/STATUS.md`](../docs/STATUS.md). This page started as the Phase 0 foundation. The app now has
+> these routes (`frontend/src/workbench/Workbench.tsx`, `frontend/src/studio/route.ts`): the landing at `#/`, the course
+> page at `#/live`, and the studio at `#/studio`, `#/studio/<id>`, `#/studio/<id>/rehearse` and `#/learn/<id>` (the
+> student space, a preview on this device). The studio is exercised by `node scripts/studio-smoke.mjs`, run from
+> `frontend/` (browser build, mock worker, no network).
+
 Tokens-first styling and two flagship components for the teacher-facing product,
 exercised in a live component workbench and bound to the real **confirm-gate**
 state machine (`../confirm-gate/`) — the UI renders gate state and dispatches
@@ -204,11 +210,16 @@ node scripts/browser-mode-smoke.mjs   # builds browser mode, serves it with verc
 
 ## Workbench & commands
 
+The commands on this page run from `frontend/`. From the repository root, wrap them as
+`(cd frontend && …)`; the full root-safe list is in `../docs/STATUS.md` §3.
+
 ```sh
 npm install
 npm run dev       # workbench at http://localhost:5173
 npm run build     # tsc -p tsconfig.json && vite build
-npm test          # vitest run — 32 tests (6 files)
+npm test          # vitest run (32 tests in 6 files when this was written; current counts: ../docs/verification/)
+node scripts/studio-smoke.mjs        # #/studio end to end in Chrome (browser build, mock worker)
+node scripts/browser-mode-smoke.mjs  # the online build with vercel.json's headers and mock functions
 ```
 
 The workbench is a **Vite gallery route** (hash tabs: *Decision card* / *Plan

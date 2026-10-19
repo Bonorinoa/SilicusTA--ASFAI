@@ -1,5 +1,31 @@
 # Silicus TA 3.0 — roadmap
 
+> **Superseded for status (audit of 2026-10-19 at `20acaea`).** This page is the 14 October plan, and its body is
+> kept as written. Current status: [`STATUS.md`](STATUS.md). Lines below that are out of date, checked in source:
+> - "Waiting on OpenRouter credits" / "Fund the OpenRouter account". On 17 October the production AI path ran
+>   with `deepseek/deepseek-v4-flash-0731`, ZDR on (`verification/2026-10-17-studio-redesign.md`, Phase B).
+>   **But on 19 October funding is blocking again:** the operator reports production `/api/worker` returning 502
+>   `UPSTREAM_ERROR` (upstream 402) and a fresh 44-question eval failing on upstream outages (`STATUS.md` header).
+> - §1 "Issue #14 + PR #15 … Still open, awaiting review." Superseded by the parent's fresh GitHub readback on
+>   19 October (not re-read by this audit): issue #14 OPEN; PR #15 **CLOSED, not merged** (`mergedAt: null`,
+>   updated 2026-10-15); CORS issue #16 OPEN; upstream HEAD `dac19d3`. No upstream fix has shipped.
+> - **"Material text is never stored" / "Material never persists" (§2 Sprint 7, §6) is wrong as a statement of
+>   current behaviour.** It is the intended invariant. The course-creation route stores whatever material fields
+>   a client sends, in `meta.json`, the chained `course.created` event and exports (`STATUS.md` §2 item 13). The
+>   material tests (`host/test/materials-flow.test.mjs`) send material only to the propose route; their
+>   course-creation calls send none, so they do not catch this.
+> - "Zero ungrounded answers" / "grounded answer" (§3, §6). Answers cite the published package; the citations are
+>   checked to exist, not to support the answer, and the helper never sees the source (`STATUS.md` §2 item 14).
+> - §4 Hosting. Option B (a static site plus a small proxy, the record in IndexedDB) was built on 14 October
+>   (`acdf31e`) and is deployed. How students reach a version is still open (`design/backend-asks.md` #1).
+> - §5 "PDF extraction" (later). It was built on 16 October in the browser for PDF, DOCX and PPTX (`7dedb7a`).
+> - §2 "UI polish is uneven", item 6. Narrow widths, the waiting experience and the studio landed 14 to 17 October.
+> - §2 "Quality is unmeasured", item 8. There is now a student-helper eval (`eval/student-helper/`, D2 PASS at
+>   `bb1653d`). Objective and plan quality are still unmeasured.
+> - Test counts here (core 26, host 147/187, …) are historical.
+> - Still true: the reword-and-back dirty flag, no worker-free re-plan, students cannot reach a version, one
+>   lesson per course.
+
 Written 2026-10-14; updated after Sprints 7 and 8. Plain English on purpose: this is the page the whole
 team (Augusto, Michael, Stephen) should be able to read and agree or disagree with.
 

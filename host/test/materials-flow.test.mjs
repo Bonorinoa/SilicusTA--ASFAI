@@ -268,12 +268,12 @@ test("the whole story with NO typed outcomes and NO ASFAI: material -> proposals
 test("the worker status reports capability and typical waits, never a key or a URL", async () => {
   const { get } = await boot();
   assert.deepEqual((await get("/api/worker/status")).json, { configured: true, zdr: true, provider: "openai", model: "m",
-    typicalSeconds: { objectives: [3, 15], plan: [5, 25], answer: [2, 8] } });
+    typicalSeconds: { objectives: [3, 35], plan: [5, 35], answer: [3, 35] } });
 });
 
 test("the Node status endpoint applies per-task SILICUS_TYPICAL_SECONDS overrides and ignores invalid JSON", async () => {
   const custom = await boot({ workerEnv: { SILICUS_TYPICAL_SECONDS: '{"answer":[4,12]}' } });
-  assert.deepEqual((await custom.get("/api/worker/status")).json.typicalSeconds, { objectives: [3, 15], plan: [5, 25], answer: [4, 12] });
+  assert.deepEqual((await custom.get("/api/worker/status")).json.typicalSeconds, { objectives: [3, 35], plan: [5, 35], answer: [4, 12] });
   const invalid = await boot({ workerEnv: { SILICUS_TYPICAL_SECONDS: "not json" } });
-  assert.deepEqual((await invalid.get("/api/worker/status")).json.typicalSeconds, { objectives: [3, 15], plan: [5, 25], answer: [2, 8] });
+  assert.deepEqual((await invalid.get("/api/worker/status")).json.typicalSeconds, { objectives: [3, 35], plan: [5, 35], answer: [3, 35] });
 });

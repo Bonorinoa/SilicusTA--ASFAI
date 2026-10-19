@@ -14,7 +14,7 @@ test("status shape: configured, zdr, provider openrouter, passcodeRequired, mode
   const r = await read(await GET(get()));
   assert.equal(r.status, 200);
   assert.deepEqual(r.json, { configured: true, zdr: true, provider: "openrouter", passcodeRequired: true, model: MODEL,
-    typicalSeconds: { objectives: [3, 15], plan: [5, 25], answer: [2, 8] } });
+    typicalSeconds: { objectives: [3, 35], plan: [5, 35], answer: [3, 35] } });
   assert.ok(!r.text.includes(PASS), "the passcode must never be in the status");
   assert.equal(r.headers.get("cache-control"), "no-store");
 });
@@ -45,7 +45,7 @@ test("zdr is reported exactly as configured: false only with SILICUS_WORKER_ZDR=
 });
 
 test("typicalSeconds defaults per task, accepts per-task JSON overrides, and ignores invalid JSON", async () => {
-  const expected = { objectives: [3, 15], plan: [5, 25], answer: [2, 8] };
+  const expected = { objectives: [3, 35], plan: [5, 35], answer: [3, 35] };
   const custom = await read(await createStatusHandler({ env: baseEnv({ SILICUS_TYPICAL_SECONDS: '{"plan":[7,30]}' }) }).GET(get()));
   assert.deepEqual(custom.json.typicalSeconds, { ...expected, plan: [7, 30] });
   for (const value of ["not json", "[]", '{"plan":"fast"}']) {
@@ -59,7 +59,7 @@ test("status needs no passcode and never reveals the key, even with nothing conf
   const r = await read(await GET(get()));
   assert.equal(r.status, 200);
   assert.deepEqual(r.json, { configured: false, zdr: true, provider: "openrouter", passcodeRequired: true, model: null,
-    typicalSeconds: { objectives: [3, 15], plan: [5, 25], answer: [2, 8] } });
+    typicalSeconds: { objectives: [3, 35], plan: [5, 35], answer: [3, 35] } });
   const r2 = await read(await createStatusHandler({ env: { OPENROUTER_API_KEY: KEY } }).GET(get()));
   assert.equal(r2.json.configured, false);
 });

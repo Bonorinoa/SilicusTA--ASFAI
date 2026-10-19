@@ -15,9 +15,9 @@ export function reasoningBody(value) {
 }
 
 export const DEFAULT_TYPICAL_SECONDS = Object.freeze({
-  objectives: Object.freeze([3, 15]),
-  plan: Object.freeze([5, 25]),
-  answer: Object.freeze([2, 8]),
+  objectives: Object.freeze([3, 35]),
+  plan: Object.freeze([5, 35]),
+  answer: Object.freeze([3, 35]),
 });
 
 const tasks = Object.keys(DEFAULT_TYPICAL_SECONDS);

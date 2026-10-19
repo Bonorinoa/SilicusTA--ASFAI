@@ -349,7 +349,7 @@ supports the answer is not checked; see `../docs/STATUS.md` §2 item 14.)
 | `SILICUS_WORKER_API_KEY` | credential; `anthropic` also reads `ANTHROPIC_API_KEY` |
 | `SILICUS_WORKER_ZDR` | zero-data-retention routing, OpenRouter only. On for the `openrouter` preset (`0` turns it off); opt-in (`1`) otherwise. On the Anthropic wire `1` refuses to start: the host will not claim a guarantee it cannot make |
 | `SILICUS_WORKER_REASONING` | OpenAI-wire reasoning: `low`, `medium`, `high`, `off`, or `model-default`. The `openrouter` preset defaults to `low`; other setups omit it unless explicitly set. It is never sent on the Anthropic wire. |
-| `SILICUS_TYPICAL_SECONDS` | Optional JSON wait ranges reported by `/api/worker/status`, overridable per task. Defaults to `{"objectives":[3,15],"plan":[5,25],"answer":[2,8]}`; invalid JSON or task entries are ignored. |
+| `SILICUS_TYPICAL_SECONDS` | Optional JSON wait ranges reported by `/api/worker/status`, overridable per task. Defaults to `{"objectives":[3,35],"plan":[5,35],"answer":[3,35]}` (the upper bound is the measured p95 of the slowest observed real request, see the 2026-10-19 quality report); invalid JSON or task entries are ignored. |
 | `SILICUS_YTDLP` | path to `yt-dlp`, for YouTube captions |
 
 Retention differs by provider. OpenRouter with `SILICUS_WORKER_ZDR=1` routes only to zero-retention

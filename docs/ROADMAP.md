@@ -1,17 +1,17 @@
 # Silicus TA 3.0 — roadmap
 
-> **Superseded for status (audit of 2026-10-19 at `20acaea`).** This page is the 14 October plan, and its body is
+> **Superseded for status (audit of 2026-10-19 at `20acaea`; updated for `6b49604`).** This page is the 14 October plan, and its body is
 > kept as written. Current status: [`STATUS.md`](STATUS.md). Lines below that are out of date, checked in source:
 > - "Waiting on OpenRouter credits" / "Fund the OpenRouter account". On 17 October the production AI path ran
 >   with `deepseek/deepseek-v4-flash-0731`, ZDR on (`verification/2026-10-17-studio-redesign.md`, Phase B).
->   **But on 19 October funding is blocking again:** the operator reports production `/api/worker` returning 502
->   `UPSTREAM_ERROR` (upstream 402) and a fresh 44-question eval failing on upstream outages (`STATUS.md` header).
+>   **On 19 October funding blocked again** (production `/api/worker` 502, upstream 402; a fresh eval failed on outages).
+>   Later that day two live evals scored 44/44 on the funded route (`verification/2026-10-19-live-eval-and-cost.md`). The verifier did not check production (`STATUS.md` §2 item 17).
 > - §1 "Issue #14 + PR #15 … Still open, awaiting review." Superseded by the parent's fresh GitHub readback on
 >   19 October (not re-read by this audit): issue #14 OPEN; PR #15 **CLOSED, not merged** (`mergedAt: null`,
 >   updated 2026-10-15); CORS issue #16 OPEN; upstream HEAD `dac19d3`. No upstream fix has shipped.
 > - **"Material text is never stored" / "Material never persists" (§2 Sprint 7, §6) is wrong as a statement of
->   current behaviour.** It is the intended invariant. The course-creation route stores whatever material fields
->   a client sends, in `meta.json`, the chained `course.created` event and exports (`STATUS.md` §2 item 13). The
+>   current behaviour.** It is the intended invariant. At `20acaea` the course-creation route stored whatever material fields
+>   a client sent. At `6b49604` it keeps names only for new writes. Legacy and imported records can still hold raw text (`STATUS.md` §2 item 13). The
 >   material tests (`host/test/materials-flow.test.mjs`) send material only to the propose route; their
 >   course-creation calls send none, so they do not catch this.
 > - "Zero ungrounded answers" / "grounded answer" (§3, §6). Answers cite the published package; the citations are

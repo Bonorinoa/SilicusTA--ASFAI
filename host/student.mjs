@@ -68,43 +68,97 @@ export function cleanQuestion(body) {
  * level, or to be told they are right. It runs whether or not the model refused, so a model that misses
  * one cannot let the AI grade (lock: AI never grades; teacher confirms).
  *
- * It matches self-assessment INTENT, never the bare topic words. In particular "mastery"/"mastered" is
- * only matched with the asker as the object ("my mastery", "have I mastered"), so an in-domain content
- * question that merely says the word — "What does mastery learning mean in this lesson?" — is untouched (A22).
+ * Three rules keep it honest, because a net that catches everything also refuses real questions:
+ *   (a) The question is NORMALISED first (normalizeQuestion): lowercased, typographic apostrophes folded
+ *       to ', and every run of whitespace — including the zero-width and odd space characters a paste
+ *       carries — collapsed to one plain space. "Grade  my   answer" is "grade my answer" here.
+ *   (b) Each pattern is ANCHORED: it needs a self-referential assessment verb, or a verdict noun the
+ *       asker OWNS, inside a tight window (a few words — never an unbounded gap across the sentence).
+ *       So "How did we get from one half to two quarters?", "Tell me about the Mark Twain example" and
+ *       "What does our performance task ask us to do?" are lesson questions, not assessments.
+ *   (c) "mastery"/"mastered"/"level" is only matched with the asker as the object ("my mastery",
+ *       "have I mastered", "what's my level"), so a content question that merely says the word is
+ *       untouched (A22).
+ *
+ * It stays a SAFETY NET: the model prompt does the main work; this only recognises the shape of a
+ * request for a verdict the AI may not give.
  */
 const ASSESSMENT_PATTERNS = [
-  // Tell me I passed / I'm right / I'm a genius: an explicit request for a verdict on the asker.
-  /\btell (me|us) (i|we|i'm|im|i am|we're|we are)\b/i,
-  /\btell (me|us)\b[^.!?]*\b(pass|passed|passing|fail|failed|grade|graded|score|scored|mark|marked|level|rating)\b/i,
-  // "say I passed" / "say I'm a genius": the same verdict request phrased as an instruction (also inside injection).
-  /\bsay (i|we)\b[^.!?]*\b(pass|passed|passing|fail|failed|mastered|master|right|correct|genius)\b/i,
-  /\bsay (i'm|im|i am|we're|we are)\b/i,
-  // Pass / fail asked with the asker as the subject ("did I pass", "am I passing", "will I pass", "are we going to pass").
-  /\b(do|did|will|would|can|could|should|am|are|was|were|have|has)\s+(i|we)\s+(pass|passed|passing|fail|failed|failing)\b/i,
-  /\b(going|gonna) to (pass|fail)\b/i,
-  /\b(pass or fail|fail me|pass me)\b/i,
-  // A grade / score / mark / level / rating owned by the asker, or asked of their own answer, work or understanding.
-  /\b(my|our)\b[^.!?]*\b(grade|grades|score|scores|mark|marks|rating|level|mastery|progress|performance)\b/i,
-  /\bwhat('s| is| was)? my (grade|score|mark|rating|level)\b/i,
-  /\b(grade|score|mark|rate|rating|assess|evaluate|judge) (my|our)\b/i,
-  /\bcheck (my|our) (understanding|answer|mastery|progress)\b/i,
-  /\bis (my|our) (answer|work|response|understanding) (right|correct|wrong|ok|okay)\b/i,
-  /\bam (i|we) (right|correct|wrong)\b/i,
-  /\b(give|hand|show) (me|us)\b[^.!?]*\b(grade|score|mark|rating|level)\b/i,
-  /\b(score|grade|mark|rating) out of\b/i,
-  // "How am I doing / how'm I doing / how did I do / how well am I doing" — a performance verb after the
-  // pronoun, so a content question like "How do I compare two fractions?" is not caught.
-  /\bhow(?:'m| am| are we)\s+(i|we)\s+(doing|going|coming along)\b/i,
-  /\bhow (did|do) (i|we) (do|fare|score)\b/i,
-  /\bhow well (am i|are we|did i|did we)\b/i,
-  // Mastery / level asked about the asker ("have I got this", "am I mastering this", "did I master it").
-  /\bhave (i|we) (got|gotten|understood|learned|learnt|mastered)\b/i,
-  /\bam (i|we) (mastering|getting|learning)\b/i,
-  /\bdid (i|we) get\b/i,
+  // Tell me I passed / tell me I'm a genius / say I'm right: an explicit request for a verdict on the asker.
+  /\btell (me|us) (i|we)\b/,
+  /\btell (me|us) (i'm|im|i am|we're|we are)\b/,
+  /\bsay (i|we)\b[^.!?]*\b(pass|passed|passing|fail|failed|mastered|master|right|correct|genius)\b/,
+  /\bsay (i'm|im|i am|we're|we are)\b/,
+  // Tell me whether I'm good at this / tell me my grade / what mark I got.
+  /\btell (me|us) (if|whether) (i|we|i'm|im)\b/,
+  /\btell (me|us) (my|our)\b[^.!?]*\b(grade|score|mark|rating|level|progress|performance|mastery)\b/,
+  /\b(what|which) (mark|grade|score|rating)\b[^.!?]*\b(i|we) (got|get|have|had|receive|received|earn|earned|deserve)\b/,
+  // Pass / fail asked with the asker as the subject ("did I pass", "am I passing", "will I pass").
+  /\b(do|did|will|would|can|could|should|am|are|was|were|have|has)\s+(i|we)\s+(pass|passed|passing|fail|failed|failing)\b/,
+  /\b(going|gonna) to (pass|fail)\b/,
+  /\b(pass or fail|fail me|pass me|pass\s*\/\s*fail)\b/,
+  // An assessment verb aimed at the asker or something of theirs: "grade me", "rate my answer",
+  // "evaluate whether I mastered this", "check my understanding".
+  /\b(grade|graded|score|scored|mark|marked|rate|rated|assess|assessed|evaluate|evaluated|judge|judged|rank|ranked) (me|us|my|our)\b/,
+  /\b(grade|score|rate|assess|evaluate|judge|rank) how (i|we)\b/,
+  /\bcheck (my|our) (understanding|answer|answers|work|mastery|progress|grade|score|mark|level|performance)\b/,
+  /\b(whether|if) (i|we) (master|mastered|pass|passed|fail|failed|understand|understood|learn|learned|learnt|improve|improved|deserve)\b/,
+  // A verdict noun the asker OWNS, inside a frame that asks for it ("what's my score?", "how's my
+  // progress?"). The lookahead keeps the content phrase "our performance task" out of the net.
+  /\bwhat(?:'s|s| is| was)?\s+(my|our)\s+(grade|grades|score|scores|mark|marks|rating|level|mastery|progress|performance)\b(?!\s+(?:task|bar|chart|curve|goal|plan|practic\w*|rubric|standard|objective|book|log|note|example|project|sheet|activity|lesson))/,
+  /\bhow(?:'s|s| is| was)?\s+(my|our)\s+(grade|score|mark|rating|level|mastery|progress|performance)\b(?!\s+(?:task|bar|chart|curve|goal|plan|practic\w*|rubric|standard|objective|book|log|note|example|project|sheet|activity|lesson))/,
+  /\bhow (good|bad|well) is (my|our) (answer|work|response|explanation|understanding)\b/,
+  /\bis (my|our) (answer|work|response|understanding) (right|correct|wrong|ok|okay)\b/,
+  /\bis (my|our) (answer|work|effort|response) (good|bad|ok|okay|fine)?\s*enough\b/,
+  // "How am I doing / how did I do / how well do I know / am I doing well" — a performance frame after
+  // the pronoun, so a content question like "How do I compare two fractions?" is not caught.
+  /\bhow(?:'m| am| are we)\s+(i|we)\s+(doing|going|coming along|performing|progressing)\b/,
+  /\bhow (did|do) (i|we) (do|fare|score)\b/,
+  /\bhow well (am i|are we|did i|did we)\b/,
+  /\bhow well do (i|we) know\b/,
+  /\bam (i|we) (doing|going) (well|good|ok|okay|fine|alright|great|bad|poor)\b/,
+  /\bam (i|we) (right|correct|wrong)\b/,
+  /\bam (i|we) (good|bad|great|ok|okay|fine|better|worse|improving|smart|ready|prepared)\b/,
+  /\bam (i|we) on (the right )?track\b/,
+  /\b(am|are) (i|we) (smart|good|well|ready|prepared|strong|clever|talented) enough\b/,
+  /\b(do|did|have|has|will|would) (i|we) (learn|learned|learnt|master|mastered|study|studied|practi[cs]e|practi[cs]ed|revise|revised|improve|improved) enough\b/,
+  /\b(do|did) (i|we) know (this|it|that|these|them) (well|good|enough)\b/,
+  /\b(did|do) (i|we) (do|perform|go) (better|worse|well|good|badly|ok|okay)\b/,
+  /\bwhere (do|does) (i|we) stand\b/,
+  // Mastery / understanding asked about the asker.
+  /\bhave (i|we) (got|gotten|understood|learned|learnt|mastered|improved)\b/,
+  /\bam (i|we) (mastering|getting|learning)\b/,
+  /\bdid (i|we) (master|mastered|pass|passed|learn|learned|learnt|understand|understood|get it|get this|get that)\b/,
+  /\bdid (i|we) (really |actually )?get (it|this|that|these|those|any of (it|this|that)|an? [a-f]\b|a good (grade|score|mark))\b/,
+  /\bdo you think (i|we|i'm|im)\b/,
+  // Ask for a verdict or for credit: "do I deserve an A", "would you give me an A", "congratulate me",
+  // "rank my understanding", "what percentage of this do I know", "can I get credit for effort".
+  /\b(i|we|my|our)\b[^.!?]{0,40}\bdeserve\b[^.!?]*\b(an? [a-f]\b|full marks|top marks|credit|a (grade|score|mark|pass|better|higher))\b/,
+  /\b(congratulate|compliment|praise) (me|us)\b/,
+  /\b(give|hand|award) (me|us) an? [a-f]\b/,
+  /\b(give|hand|award) (me|us)\b[^.!?]*\b(grade|score|mark|marks|rating|level|credit|feedback|pass)\b/,
+  /\b(score|grade|mark|rating) out of\b/,
+  /\b(grade|score|mark|rating|level|credit|feedback) (for|on|about) (my|our)\b/,
+  /\bwhat percentage\b[^.!?]*\b(i|we)\b/,
+  /\b(i|we)\b[^.!?]*\b(get|got)\b\s+(credit|extra credit)\b/,
+  /\b(i|we)\b[^.!?]*\b(earn|earned|receive|received|deserve)\b\s+(credit|extra credit|full marks|top marks|a grade|an? [a-f]\b|a pass)\b/,
+  /\brank (me|us|my|our)\b/,
 ];
 
+/** Fold the shapes a paste carries — zero-width joiners/marks, non-breaking and typographic spaces, curly
+ * apostrophes — and every run of whitespace into one plain space, then lowercase. */
+function normalizeQuestion(question) {
+  return String(question ?? "")
+    .replace(/[\u200b-\u200f\u2028\u2029\ufeff]/g, " ")
+    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ")
+    .replace(/[\u2018\u2019\u02bc\u2032]/g, "'")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function looksLikeAssessment(question) {
-  const q = String(question ?? "").toLowerCase();
+  const q = normalizeQuestion(question);
   return ASSESSMENT_PATTERNS.some((re) => re.test(q));
 }
 

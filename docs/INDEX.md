@@ -2,28 +2,31 @@
 
 Current status lives in one place: [`STATUS.md`](STATUS.md). This index says what each document is and whether it
 is **current** (kept up to date) or **historical** (a dated record that is never edited). For a historical file,
-the newer source is named in its row. Audited at `20acaea` on 2026-10-19.
+the newer source is named in its row. Audited at `20acaea` on 2026-10-19. Updated at `6b49604` the same day, after the
+repair round; the spine notes below say which pages changed.
 
 ## Start here
 
 | Document | Kind | Use it for |
 |---|---|---|
 | [`STATUS.md`](STATUS.md) | current, canonical | What is built, what is open, how to run it, the latest evidence |
-| [`committee/2026-10-19-briefing.md`](committee/2026-10-19-briefing.md) | dated draft, 19 Oct | The committee briefing |
+| [`committee/2026-10-19-briefing.md`](committee/2026-10-19-briefing.md) | dated draft, 19 Oct | The committee briefing. The main text is the `20acaea` snapshot. The last section, "After the repair round", is current for `6b49604` |
+| [`verification/2026-10-19-repair2-verifier.md`](verification/2026-10-19-repair2-verifier.md) | dated, 19 Oct, **current** for `6b49604` | Final independent gate after the repair: verdict, held-out net figures, focus, matrix |
+| [`verification/2026-10-19-live-eval-and-cost.md`](verification/2026-10-19-live-eval-and-cost.md) | dated, 19 Oct, **current** for `6b49604` | Two live evals (44/44), cost, wait times, the "number line" refusal |
 | [`committee/2026-10-12-to-19-delivery.md`](committee/2026-10-12-to-19-delivery.md) | dated, 19 Oct | Chronological delivery with commit references |
 
 ## Spine (current; each one points to STATUS for status)
 
 | Document | What it is | Audit note (19 Oct) |
 |---|---|---|
-| [`../README.md`](../README.md) | Repo entry, layout, run, boundaries | Its "Status (2026-10-14)" section is now labelled historical. It wrongly said the trust core was untouched since Sprint 2: `b95afc8` changed it. |
+| [`../README.md`](../README.md) | Repo entry, layout, run, boundaries | Its correction box now says material names-only holds for new writes. Its "Status (2026-10-14)" section is now labelled historical. It wrongly said the trust core was untouched since Sprint 2: `b95afc8` changed it. |
 | [`../host/README.md`](../host/README.md) | Node host: API, trust boundary, integrity, worker config | The test counts are labelled historical. The stale line saying "`add`/`rename` still write extra keys" was corrected (closed by `bd01d4f`). |
 | [`../frontend/README.md`](../frontend/README.md) | Design system, two builds, workbench | The "32 tests" count is labelled historical. Added the studio routes and the studio smoke. |
-| [`ROADMAP.md`](ROADMAP.md) | Plan as of 14 Oct | A superseded-items banner was added. The body is unchanged. The banner flags the body's wrong "material never persists" claim, PR #15's real state, and that funding is blocking again on 19 Oct. |
-| [`DEPLOY.md`](DEPLOY.md) | Vercel functions, environment variable names, guards, limits | Matches `vercel.json` and `api/` (120 s, 115 s, 20 s). A pointer was added. "Nothing is stored on Vercel" was narrowed to "no course-record persistence"; transit and provider terms still apply. |
+| [`ROADMAP.md`](ROADMAP.md) | Plan as of 14 Oct | A superseded-items banner was added and updated at `6b49604`. The body is unchanged. The banner flags the body's wrong "material never persists" claim, PR #15's real state, and that funding is blocking again on 19 Oct. |
+| [`DEPLOY.md`](DEPLOY.md) | Vercel functions, environment variable names, guards, limits | Matches `vercel.json` and `api/` (120 s, 115 s, 20 s). A pointer was added. At `6b49604` the `SILICUS_TYPICAL_SECONDS` defaults were corrected to answer [2,15], objectives [2,10], plan [8,30]. "Nothing is stored on Vercel" was narrowed to "no course-record persistence"; transit and provider terms still apply. |
 | [`design/glossary.md`](design/glossary.md) | Copy contract | A drift note was added: on a proposal the studio shows "Edit" (it sends `rename`), and the contract says "Rename". Escalated, not changed. |
 | [`design/backend-asks.md`](design/backend-asks.md) | Frontend-to-host asks | A status note was added (#13 still open in source; Rehearse is built). |
-| [`../eval/student-helper/README.md`](../eval/student-helper/README.md) | Eval harness (calls a real model) | Last results are historical (`fa68bf9`). Not re-run after `20acaea`. |
+| [`../eval/student-helper/README.md`](../eval/student-helper/README.md) | Eval harness (calls a real model) | Last committed results are historical (`fa68bf9`). Two live runs on 19 Oct are summarised in `verification/2026-10-19-live-eval-and-cost.md`. |
 | [`deck/README.md`](deck/README.md) | Slide deck notes | The deck is a historical artifact at `bd01d4f` (14 Oct). Superseded claims are listed. The HTML is unchanged. |
 | [`lesson-planning-object.md`](lesson-planning-object.md), [`../confirm-gate/SPEC.md`](../confirm-gate/SPEC.md) | Object contract, trust-core contract | Contracts. Not changed. |
 
@@ -31,10 +34,10 @@ the newer source is named in its row. Audited at `20acaea` on 2026-10-19.
 
 | Document(s) | What they record | Newer source |
 |---|---|---|
-| `verification/*.md` (16 files) | Dated verifier and checkpoint records. All 16 were read in full on 19 Oct; see the table below. | STATUS §4 |
+| `verification/*.md` | Dated verifier and checkpoint records. The 16 of 14 to 17 Oct were read in full on 19 Oct; see the table below. The 19 Oct records are listed in STATUS §4. `2026-10-19-repair-verifier.md` (round 1, `1240a4a`) is historical; `2026-10-19-repair2-verifier.md` and `2026-10-19-live-eval-and-cost.md` are current for `6b49604`. | STATUS §4 |
 | `RED-TEAM-2026-10-14.md` | Red team of Sprints 5 to 8 | — |
 | `decisions/2026-10-16-google-sign-in-and-drive.md` | Decision memo | — |
-| `design/*.md` notes (stage-page, workspace, landing, narrow-width, waiting-experience, youtube-first-run, behind-the-scenes, final-sprint-2026-10-16) | Design notes for the sprint each one names | The code; STATUS §1. `youtube-first-run.md` line 43 says material text is never persisted: true of the propose route it cites, not of course creation (STATUS §2 item 13) |
+| `design/*.md` notes (stage-page, workspace, landing, narrow-width, waiting-experience, youtube-first-run, behind-the-scenes, final-sprint-2026-10-16) | Design notes for the sprint each one names | The code; STATUS §1. `waiting-experience.md` and `backend-asks.md` carry the old wait ranges (answer 2–8, plan 5–25, objectives 3–15); the current ranges are in STATUS §1 and `DEPLOY.md`. `youtube-first-run.md` line 43 says material text is never persisted: true of the propose route it cites, not of course creation (STATUS §2 item 13: fixed for new writes at `6b49604`, still true for legacy records) |
 | `../.hermes/plans/*.md` (6 files) | Dated sprint plans | STATUS |
 | `deck/silicus-ta-3.0-how-it-works.html` | Generated deck at `bd01d4f` | `deck/README.md` note; STATUS |
 | `../eval/student-helper/scorecard-*.md`, `compare.md` | Eval results for the sha each one names | STATUS §2 item 8 |
@@ -71,4 +74,4 @@ name (checked for `cfd9cc4`, `e0ffe1a`, `31f5fbc`, `e33844f` and `d04e162`). Onl
 ## Outside this repo
 
 - Today's test matrix and the committee reports: `/Users/bonorinoa/Hermes/Reports/silicus-committee-2026-10-19/`
-  (raw evidence; committed records: `docs/verification/2026-10-19-pm-integration.md` and `2026-10-19-committee-verifier.md`; a re-run of the paid eval is PENDING).
+  (raw evidence; committed records: `docs/verification/2026-10-19-pm-integration.md`, `2026-10-19-committee-verifier.md`, `2026-10-19-repair-verifier.md`, `2026-10-19-repair2-verifier.md` and `2026-10-19-live-eval-and-cost.md`). The paid eval was re-run twice on 19 Oct; see the last record.

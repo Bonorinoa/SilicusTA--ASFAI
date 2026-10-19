@@ -22,7 +22,8 @@ line "the trust core is untouched since Sprint 2" stopped being true on 14 Octob
 verb to `confirm-gate/`.
 
 > **Correction (19 October).** "Material never persists" is the intended invariant, not current behaviour: the
-> course-creation route stores whatever material fields a client sends (`docs/STATUS.md` §2 item 13). Student
+> course-creation route stored whatever material fields a client sent. At `6b49604` it keeps names only for new
+> writes. Legacy and imported records can still hold raw text (`docs/STATUS.md` §2 item 13). Student
 > answers cite the published package; their meaning is not checked against the source (§2 item 14).
 
 *Historical, 2026-10-14:* Working end to end, ahead of a **December 2026 MVP**: one teacher can run the whole story —

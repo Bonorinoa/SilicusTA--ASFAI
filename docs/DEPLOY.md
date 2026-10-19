@@ -1,6 +1,6 @@
 # Deploying the online prototype on Vercel
 
-> Current as of the 19 October audit at `20acaea`: routes, limits (120 s function, 115 s upstream, 20 s fetch) and
+> Current as of the 19 October audit at `20acaea`, with the wait-range defaults updated at `6b49604`: routes, limits (120 s function, 115 s upstream, 20 s fetch) and
 > guards match `vercel.json` and `api/`. Which sha is live in production is not recorded in the repo after the
 > 17 October records (`b96b102`). For status, see [`STATUS.md`](STATUS.md). For how the browser host differs
 > from the local Node host, see STATUS §3.
@@ -42,7 +42,7 @@ The CLI prompts for the value; never put a value in the repo, a commit message o
 | `SILICUS_DAILY_CAP` | no | Model calls per function instance per UTC day. Default 300. |
 | `SILICUS_WORKER_MAX_TOKENS` | no | Sets the reply cap (default 4000, never higher). The client cannot influence it. |
 | `SILICUS_WORKER_REASONING` | no | Server-selected reasoning effort: `low` (default), `medium`, `high`, `off` (`{enabled:false}`), or `model-default` (omit the setting). The browser cannot override it. |
-| `SILICUS_TYPICAL_SECONDS` | no | JSON task wait ranges shown by the UI, for example `{"plan":[7,30]}`. Defaults: `{"objectives":[3,15],"plan":[5,25],"answer":[2,8]}`; invalid JSON or invalid task entries are ignored. |
+| `SILICUS_TYPICAL_SECONDS` | no | JSON task wait ranges shown by the UI, for example `{"plan":[7,30]}`. Defaults: `{"objectives":[2,10],"plan":[8,30],"answer":[2,15]}`. The defaults are hand-widened from a small sample (44 student calls, 3 plan runs, 3 objective runs, one fixture). They are not a promise. Past the upper bound the UI says "Taking longer than usual"; nothing stops the request. Invalid JSON or invalid task entries are ignored. |
 
 If the key, the model or the passcode is missing, `/api/worker` answers 503 and does nothing.
 If the passcode is missing, `/api/fetch` answers 503 too. Neither is ever an open proxy.

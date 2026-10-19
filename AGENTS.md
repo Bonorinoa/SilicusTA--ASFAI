@@ -12,8 +12,10 @@ Read these before you change or claim anything. This file points. It does not ho
 
 - ASFAI Education is a separate protocol product. Silicus can use it and never requires it.
 - The browser host and the Node host have different authority. Do not treat them as equal.
-- Material text is transient. This is an invariant that is violated today (STATUS section 2, item 13). Do not
-  describe it as current behaviour.
+- Material text is transient. It holds for new writes. It is still violated for legacy and imported records (STATUS
+  section 2, item 13). Do not describe it as fully current behaviour.
+- AI never grades. This rests on the prompt, the refusal flag and a partial regex net (STATUS
+  section 2, item 8). Do not call the net a guarantee.
 - Student chat is not learning evidence.
 - Objective identity is the local URN.
 - The teacher confirms. The AI proposes.

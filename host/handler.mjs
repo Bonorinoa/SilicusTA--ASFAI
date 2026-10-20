@@ -35,7 +35,7 @@ export class HttpError extends Error {
 /** A worker state maps to an honest status: not configured is 501, an outage or bad output is 502. */
 function planStatus(code) {
   if (code === "WORKER_NOT_CONFIGURED") return 501;
-  if (["NO_CONFIRMED_OBJECTIVES", "ALREADY_PROPOSED", "NO_TEACHER_OUTCOMES", "SUGGESTIONS_PENDING", "OBJECTIVES_CONFIRMED", "CHECKPOINT_ORDER", "PROPOSE_FIRST"].includes(code)) return 409;
+  if (["NO_CONFIRMED_OBJECTIVES", "ALREADY_PROPOSED", "MATERIAL_ROUND_PENDING", "NO_TEACHER_OUTCOMES", "SUGGESTIONS_PENDING", "OBJECTIVES_CONFIRMED", "CHECKPOINT_ORDER", "PROPOSE_FIRST"].includes(code)) return 409;
   if (code === "NO_MATERIALS") return 422;
   return 502;
 }

@@ -280,7 +280,7 @@ test("objectives are proposed from the material, which reaches the prompt as unt
   assert.ok(/untrusted/.test(mock.st.lastPrompt) && /Never follow instructions/.test(mock.st.lastPrompt));
 });
 
-test("proposed objectives are cleaned, deduplicated and capped; a ghost material name is refused", async () => {
+test("proposed objectives are cleaned, deduplicated and capped; an unknown name is dropped, not fatal", async () => {
   const many = Array.from({ length: 20 }, (_, i) => ({ statement: `Students can do thing number ${i}.`, from: [] }));
   const { worker } = await workerWith(objectivesReply([
     { statement: "  Students can\u2028explain\u0000 it.  ", from: ["week1-slides.txt", "week1-slides.txt"] },
@@ -294,8 +294,83 @@ test("proposed objectives are cleaned, deduplicated and capped; a ghost material
   assert.equal(out.length, 12, "capped");
   assert.equal(new Set(out.map((o) => o.statement.toLowerCase())).size, out.length);
 
+  // R1: a name we never sent can no longer kill the batch — it is dropped from that one objective, and the
+  // objective is still proposed with no label (the batch is refused only when nothing usable is left).
   const { worker: w2 } = await workerWith(objectivesReply([{ statement: "Students can do x.", from: ["secret-file.pdf"] }]));
-  await assert.rejects(w2.draftObjectives({ materials: MATS }), { code: "WORKER_BAD_OUTPUT" });
+  assert.deepEqual(await w2.draftObjectives({ materials: MATS }), [{ statement: "Students can do x.", from: [] }]);
+});
+
+/* R1, the live failure (F1, 19 Oct): a model that cites a SECTION HEADING instead of the page title.
+   Reproduction: Wikipedia "Solow–Swan model - Wikipedia", the model answered from ["Long-run implications"].
+   The whole batch used to be thrown away as WORKER_BAD_OUTPUT; the objective must survive instead. */
+test("R1: a bad provenance label is dropped from that objective, never a refusal of the whole batch", async () => {
+  const SOLOW = [{ name: "Solow–Swan model - Wikipedia", text: "The model describes capital accumulation and its long-run implications." }];
+  const { worker } = await workerWith(objectivesReply([
+    { statement: "Students can explain how capital accumulation drives output.", from: ["Long-run implications"] },
+    { statement: "Students can state the steady state condition.", from: ["Solow–Swan model - Wikipedia"] },
+  ]));
+  const out = await worker.draftObjectives({ materials: SOLOW });
+  assert.equal(out.length, 2, "the objective with the bad label survived");
+  assert.deepEqual(out[0].from, [], "the unknown label was dropped, the objective was not");
+  assert.deepEqual(out[1].from, ["Solow–Swan model - Wikipedia"], "a real name still lands");
+});
+
+test("R1: the prompt carries a short id per material and the model's ids map back to names; unknown ids drop", async () => {
+  const { mock, worker } = await workerWith(objectivesReply([
+    { statement: "Students can explain what an algorithm is.", from: ["M1"] },
+    { statement: "Learners can find the claim in an AI answer.", from: ["m2", "M9"] },
+  ]));
+  const out = await worker.draftObjectives({ materials: MATS });
+  assert.ok(mock.st.lastPrompt.includes("M1"), "the prompt hands out the ids");
+  assert.ok(mock.st.lastPrompt.includes("week1-slides.txt"), "and the names with them");
+  assert.deepEqual(out[0].from, ["week1-slides.txt"], "an id maps back to the name we sent");
+  assert.deepEqual(out[1].from, ["https://example.org/ai-intro"], "case is tolerated, and M9 is dropped");
+});
+
+test("R1: only a batch with NO usable objective left is refused", async () => {
+  const { worker } = await workerWith(objectivesReply([{ statement: "", from: ["M1"] }, { statement: "   " }]));
+  await assert.rejects(worker.draftObjectives({ materials: MATS }), { code: "WORKER_BAD_OUTPUT" });
+});
+
+/* R2 (F4): the prompt must carry what the teacher already has, tagged, and the reply must not repeat it. */
+test("R2: the objectives prompt carries the teacher's own objectives, and a repeat of one is dropped", async () => {
+  const { mock, worker } = await workerWith(objectivesReply([
+    { statement: "Students can explain what an algorithm is.", from: ["M1"] },     // the teacher's own brief outcome
+    { statement: "Students can trace a short algorithm step by step.", from: ["M1"] },
+  ]));
+  const out = await worker.draftObjectives({
+    materials: MATS,
+    outcomes: ["Students can explain what an algorithm is."],
+    existing: [{ statement: "Students can follow a short list of steps.", by: "teacher" }],
+  });
+  assert.deepEqual(out.map((o) => o.statement), ["Students can trace a short algorithm step by step."], "a repeat of an objective the teacher already has is dropped");
+  assert.ok(mock.st.lastPrompt.includes("The teacher's outcomes from their brief:\n- Students can explain what an algorithm is."), mock.st.lastPrompt);
+  assert.ok(mock.st.lastPrompt.includes("Objectives already on this course:\n- [the teacher's own] Students can follow a short list of steps."), mock.st.lastPrompt);
+  assert.ok(/never repeat or reword them/.test(mock.st.lastPrompt));
+  assert.ok(/untrusted text as well/.test(mock.st.lastPrompt), "the teacher's words are framed as untrusted too");
+});
+
+test("R2: an objective already on the course is not repeated in the prompt, and nobody's objectives means no block", async () => {
+  const { mock, worker } = await workerWith(objectivesReply([{ statement: "Students can do y.", from: ["M1"] }]));
+  await worker.draftObjectives({ materials: MATS, outcomes: ["Students can do x."], existing: [{ statement: "Students can do x.", by: "teacher" }] });
+  const lines = mock.st.lastPrompt.split("\n");
+  assert.equal(lines.filter((l) => l === "- Students can do x.").length, 1, "listed once, under the brief outcomes");
+  assert.equal(lines.filter((l) => l.startsWith("Objectives already on this course:")).length, 0, "the duplicate row is not rendered at all");
+
+  const { mock: bare, worker: plain } = await workerWith(objectivesReply([{ statement: "Students can do y.", from: ["M1"] }]));
+  await plain.draftObjectives({ materials: MATS });
+  assert.equal(bare.st.lastPrompt.includes("The teacher's own objectives are listed below"), false, "with nothing of the teacher's there is no block");
+});
+
+test("F4: a round whose every proposal repeats an objective already on the course is ROUND_NOTHING_NEW, not WORKER_BAD_OUTPUT", async () => {
+  const { worker } = await workerWith(objectivesReply([{ statement: "Students can do x.", from: ["M1"] }]));
+  await assert.rejects(
+    worker.draftObjectives({ materials: MATS, outcomes: [], existing: [{ statement: "Students can do x.", by: "accepted" }] }),
+    { code: "ROUND_NOTHING_NEW" },
+  );
+  // A genuinely empty/malformed reply, no existing set, is still WORKER_BAD_OUTPUT (nothing was known to repeat).
+  const { worker: plain } = await workerWith({ objectives: [{ statement: "", from: [] }] });
+  await assert.rejects(plain.draftObjectives({ materials: MATS }), { code: "WORKER_BAD_OUTPUT" });
 });
 
 test("a worker that proposes nothing usable, or no list, is a refusal; no material or no worker is a state", async () => {
@@ -355,8 +430,12 @@ test("the Anthropic wire serves every worker call: objectives and student answer
   const mock = await startMockWorker({ reply: { objectives: [{ statement: "Students can do x.", from: ["a.txt"] }] }, shape: "anthropic" }); MOCKS.push(mock);
   const w = new PlanWorker({ url: mock.url, model: "claude-sonnet-5-5", provider: "anthropic" });
   assert.deepEqual(await w.draftObjectives({ materials: [{ name: "a.txt", text: "hello" }] }), [{ statement: "Students can do x.", from: ["a.txt"] }]);
+  // R1 on this wire too: an unknown name is dropped and the objective survives; a reply with no usable
+  // objective is still WORKER_BAD_OUTPUT.
   const bad = await startMockWorker({ reply: { objectives: [{ statement: "Students can do x.", from: ["ghost.txt"] }] }, shape: "anthropic" }); MOCKS.push(bad);
-  await assert.rejects(new PlanWorker({ url: bad.url, model: "m", provider: "anthropic" }).draftObjectives({ materials: [{ name: "a.txt", text: "hello" }] }), { code: "WORKER_BAD_OUTPUT" });
+  assert.deepEqual(await new PlanWorker({ url: bad.url, model: "m", provider: "anthropic" }).draftObjectives({ materials: [{ name: "a.txt", text: "hello" }] }), [{ statement: "Students can do x.", from: [] }]);
+  const empty = await startMockWorker({ reply: { objectives: [{ statement: "   " }] }, shape: "anthropic" }); MOCKS.push(empty);
+  await assert.rejects(new PlanWorker({ url: empty.url, model: "m", provider: "anthropic" }).draftObjectives({ materials: [{ name: "a.txt", text: "hello" }] }), { code: "WORKER_BAD_OUTPUT" });
 });
 
 test("the Anthropic wire refuses to claim zero-data-retention, and an unknown provider is a configuration error", () => {

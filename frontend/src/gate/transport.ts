@@ -16,7 +16,7 @@ import { BROWSER_MODE } from "./mode";
 import type { CourseAnchor } from "./pin";
 import type {
   LessonPlanView, ObjectiveCiteView, PackageVersionView, PlanInvalidationView,
-  ActivityItem, ProposalView, PublishStatusView, TimelineEvent, TypicalSeconds,
+  ActivityItem, ProposalView, PublishStatusView, TimelineEvent, TypicalSeconds, ObjectivesMode,
 } from "./types";
 
 export interface HostCheckpoint {
@@ -120,6 +120,12 @@ export interface RevisionView {
 export interface HostView {
   course: HostCourseMeta;
   checkpoints: Record<string, HostCheckpoint>;
+  /**
+   * How checkpoint 3 confirms for THIS course (R4). `"auto"` is the historical behaviour; `"explicit"` means
+   * the UI offers the teacher a "confirm these objectives" action (`host.confirmObjectives`). Absent on an
+   * older host: treat it as `"auto"`.
+   */
+  objectivesMode?: ObjectivesMode;
   intake: IntakeStatus;
   validations?: PlanValidation[];
   proposals: ProposalView[];
@@ -205,7 +211,7 @@ const enc = encodeURIComponent;
 export const host = {
   health: () => call<{ ok: boolean; courses: number }>("GET", "/health"),
   listCourses: () => call<{ courses: CourseSummary[] }>("GET", "/courses"),
-  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[] }) =>
+  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit" }) =>
     call<{ ok: true; courseId: string; view: HostView }>("POST", "/courses", b),
   getCourse: (id: string) => call<HostView>("GET", `/courses/${enc(id)}`),
   exportCourse: (id: string) => call<Record<string, unknown>>("GET", `/courses/${enc(id)}/export`),
@@ -240,6 +246,12 @@ export const host = {
     call<{ proposals: ProposalView[] }>("POST", `/courses/${enc(id)}/objectives/suggest`, {}),
   decide: (id: string, b: { decisions: unknown[]; text: string }) =>
     call<{ decisions: unknown[] }>("POST", `/courses/${enc(id)}/decisions`, b),
+  /**
+   * The teacher closes checkpoint 3 on an `objectivesMode: "explicit"` course (R4). Body is `{ text }` only:
+   * the session mints the teacher turn and the gate refuses OBJECTIVES_PENDING / NO_OBJECTIVES / OBJECTIVES_AUTO.
+   */
+  confirmObjectives: (id: string, b: { text: string }) =>
+    call<HostCheckpoint>("POST", `/courses/${enc(id)}/objectives/confirm`, b),
   /** The OSS WORKER drafts the plan from the teacher's confirmed objectives; the UI sends no body. */
   proposePlan: (id: string) => call("POST", `/courses/${enc(id)}/plan`, {}),
   /** Is a drafting worker configured? Config only, never a credential. */

@@ -196,8 +196,30 @@ test("refusals are honest and leave the course alone: no worker (501), nothing t
   assert.equal((await get(c)).json.proposals.length, 0);
 });
 
+/* R1, the live F1 failure (19 Oct): the page's title is the material name, and the model answered from
+   ["Long-run implications"] (a section heading). That used to throw the whole batch away. */
+test("R1: a bad provenance label no longer discards the batch, and an id still names the real source", async () => {
+  const SOLOW = { name: "Solow–Swan model - Wikipedia", text: "Capital accumulation and its long-run implications." };
+
+  const wrong = await boot({ reply: { objectives: [{ statement: "Students can explain the long-run implications of capital accumulation.", from: ["Long-run implications"] }] } });
+  const c = await courseReady(wrong.post);
+  await wrong.post(`${c}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  const r = await wrong.post(`${c}/materials/propose`, { materials: [SOLOW] });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.equal(r.json.proposals.length, 1, "the objective survived the label the model got wrong");
+  assert.equal(r.json.proposals[0].source, "from material: (several)", "no name we did not send can ever follow 'from material:'");
+  assert.equal(r.json.proposals[0].status, "proposed", "and the teacher still decides it");
+
+  const byId = await boot({ reply: { objectives: [{ statement: "Students can state the steady state condition.", from: ["M1"] }] } });
+  const c2 = await courseReady(byId.post);
+  await byId.post(`${c2}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  const r2 = await byId.post(`${c2}/materials/propose`, { materials: [SOLOW] });
+  assert.equal(r2.status, 200, JSON.stringify(r2.json));
+  assert.equal(r2.json.proposals[0].source, "from material: Solow–Swan model - Wikipedia", "the id maps back to the name the page carries");
+});
+
 test("a worker that misbehaves is a 502 refusal, never half-written proposals", async () => {
-  const bad = await boot({ reply: { objectives: [{ statement: "Students can do x.", from: ["never-sent.pdf"] }] } });
+  const bad = await boot({ reply: { objectives: [{ statement: "" }, { statement: "  " }] } });
   const c = await courseReady(bad.post);
   await bad.post(`${c}/checkpoints`, { id: "outline", text: "Confirm the outline." });
   const r = await bad.post(`${c}/materials/propose`, { materials: [SLIDES] });

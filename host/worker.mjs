@@ -382,11 +382,14 @@ function buildObjectivesPrompt({ materials, topic, course }) {
     "Each objective is ONE sentence naming something a learner can observably do, e.g. \"Students can explain what an algorithm is.\".",
     "Write at most 25 words per objective, and 3 to 8 objectives. Do not invent topics the material does not cover.",
     'Answer with JSON only, no prose: {"objectives": [{"statement": string, "from": [string]}]}',
-    '"from" lists the exact material names (as given in the headers) each objective draws on.',
+    '"from" lists the material ids (M1, M2, ... as given in the MATERIAL headers below) each objective draws on.',
+    "Use only those ids. They are for your answer only: never write an id inside an objective's statement.",
     "",
     `Topic: ${clean(topic, 200) || "(not given)"}`,
     `Course: ${clean(course, 200) || "(not given)"}`,
-    ...materials.flatMap((m) => ["", `=== MATERIAL: ${clean(m.name, 160)} ===`, String(m.text ?? ""), "=== END MATERIAL ==="]),
+    // The id is HOST-GENERATED and stays on its own line BEFORE the untrusted text, so the model has one short,
+    // unambiguous handle per material to answer with (it can no longer be tempted to cite a section heading).
+    ...materials.flatMap((m, i) => ["", `=== MATERIAL: ${clean(m.name, 160)} ===`, `Material id: M${i + 1}`, String(m.text ?? ""), "=== END MATERIAL ==="]),
   ].join("\n");
 }
 
@@ -394,7 +397,18 @@ function buildObjectivesPrompt({ materials, topic, course }) {
 function validateObjectives(raw, materials) {
   const list = Array.isArray(raw?.objectives) ? raw.objectives : null;
   if (!list) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no objectives list");
+  // R1 (F1, 19 Oct): the model answers with the short ids we handed out; we map them back to the names WE sent,
+  // so a label after "from material:" can still only be one of our names. A name echoed back verbatim is
+  // tolerated too (an older prompt, or a model that repeats the header), and is equally ours.
   const names = new Set(materials.map((m) => clean(m.name, 160)));
+  const byId = new Map(materials.map((m, i) => [`M${i + 1}`, clean(m.name, 160)]));
+  const resolve = (value) => {
+    const key = clean(value, 160);
+    if (!key) return null;
+    const viaId = byId.get(key.toUpperCase());
+    if (viaId !== undefined) return viaId;
+    return names.has(key) ? key : null;
+  };
   const seen = new Set();
   const out = [];
   for (const o of list) {
@@ -402,11 +416,13 @@ function validateObjectives(raw, materials) {
     if (!statement) continue;
     const key = statement.toLowerCase();
     if (seen.has(key)) continue;
-    const from = (Array.isArray(o?.from) ? o.from : []).map((n) => clean(n, 160)).filter(Boolean);
-    const ghost = from.find((n) => !names.has(n));
-    if (ghost !== undefined) throw new WorkerError("WORKER_BAD_OUTPUT", `an objective names a material we did not send: ${ghost}`);
+    // An unknown id or name is DROPPED from this objective, never a refusal of the whole batch: a model that
+    // cites a section heading ("Long-run implications") or a made-up handle still proposed something worth
+    // keeping, and the material list it really drew on is unknowable. The objective survives with the names
+    // that are real, or none, and the caller renders "from material: (several)".
+    const from = [...new Set((Array.isArray(o?.from) ? o.from : []).map(resolve).filter(Boolean))];
     seen.add(key);
-    out.push({ statement, from: [...new Set(from)] });
+    out.push({ statement, from });
     if (out.length >= MAX_OBJECTIVES) break;
   }
   if (out.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker proposed no usable objectives");

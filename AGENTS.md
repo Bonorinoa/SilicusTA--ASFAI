@@ -31,4 +31,8 @@ Read these before you change or claim anything. This file points. It does not ho
   report. Mark unfinalized runs PENDING.
 - A green test run is not live reliability. The paid student-helper eval and the production model path are
   separate checks (STATUS header).
+- **Commit with the owner's git identity.** Vercel builds `main` on push and refuses (state BLOCKED) when the
+  pushed commit's author is not a member of the team. A helper identity such as `engineer <engineer@local>` or
+  `silicus-ta <silicus-ta@local>` blocks the production build. The repository's own git config is correct; do not
+  override it with `git -c user.name=...`.
 - Paper numbers and scope decisions belong to Augusto.

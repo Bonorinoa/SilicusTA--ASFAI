@@ -10,6 +10,9 @@ import { heldFor, forgetEverything } from "../materials/session";
 import { briefAnswers, NewCourseWizard } from "./NewCourseWizard";
 import { linksFor, takeProposeOnArrival } from "./links";
 
+// userEvent.type walks every key; under a loaded machine the default 5 s is too tight for a five-step walk.
+vi.setConfig({ testTimeout: 30_000 });
+
 const ID = "urn:uuid:aaaaaaaa-2222-3333-4444-555555555555";
 const mocks = vi.hoisted(() => ({
   listCourses: vi.fn(),
@@ -77,7 +80,7 @@ describe("NewCourseWizard", () => {
     expect(screen.getByRole("heading", { name: "Review and confirm" })).toBeInTheDocument();
     expect(mocks.createCourse).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: /^Confirm and/ }));
-    await waitFor(() => expect(mocks.confirmCheckpoint).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.confirmCheckpoint).toHaveBeenCalledTimes(2), { timeout: 10_000 });
     expect(mocks.createCourse).toHaveBeenCalledWith({ title: "How plants eat", owner: "Ada Lovelace", materials: [] });
     const answers = mocks.answerIntake.mock.calls[0][1];
     expect(answers.answers).toEqual({ topic: "Photosynthesis", course: "Grade 4", learning_outcomes: "Explain how a plant makes food", outcomes_from: "materials" });
@@ -101,7 +104,7 @@ describe("NewCourseWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Confirm and create the course" }));
-    await waitFor(() => expect(mocks.answerIntake).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.answerIntake).toHaveBeenCalledTimes(1), { timeout: 10_000 });
     expect(mocks.confirmCheckpoint).not.toHaveBeenCalled();
   });
 

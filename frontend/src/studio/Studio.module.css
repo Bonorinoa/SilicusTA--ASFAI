@@ -52,6 +52,10 @@ a.crumb:hover { color: var(--fn-ink); }
 }
 .pill:hover { border-color: var(--fn-ink-muted); color: var(--fn-ink); }
 .pillDot { width: 7px; height: 7px; border-radius: 999px; background: var(--fn-done); }
+.aiDot { width: 7px; height: 7px; border-radius: 999px; background: var(--fn-line-dash); }
+.aiDot[data-tone="ok"] { background: var(--fn-done); }
+.aiDot[data-tone="warn"] { background: #b8872a; }
+.aiDot[data-tone="off"] { background: var(--fn-danger); }
 
 /* ---------- home ---------- */
 .page { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; display: flex; flex-direction: column; gap: 40px; }

@@ -6,6 +6,8 @@ import { BROWSER_MODE } from "../gate/mode";
 import { host } from "../gate/transport";
 import { plural } from "../lib/plural";
 import type { ActivityItem } from "../gate/types";
+import { AiCheck } from "./AiCheck";
+import { useAiStatus } from "./aiStatus";
 import { keepLinksForCourse, linksFor, takeProposeOnArrival } from "./links";
 import { SourcesPanel } from "./SourcesPanel";
 import { StepStatus } from "./StepStatus";
@@ -14,7 +16,7 @@ import { BriefStep } from "./steps/BriefStep";
 import { ObjectivesStep } from "./steps/ObjectivesStep";
 import { PlanStep } from "./steps/PlanStep";
 import { PublishStep } from "./steps/PublishStep";
-import { Button, Dialog, Notice, Skeleton } from "./ui";
+import { Button, Dialog, Notice, Skeleton, ui } from "./ui";
 import { STEP_LIST, currentStep, stepDone, stepTransition, turnPhrase, useCourse, useWorker, type StepId } from "./useCourse";
 import s from "./Studio.module.css";
 
@@ -44,6 +46,9 @@ export function CourseStudio({ courseId }: { courseId: string }) {
   const worker = useWorker();
   const [looking, setLooking] = useState<StepId | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // F5: the same diagnosis as the wizard's AI check, one click from every step.
+  const ai = useAiStatus();
+  const [aiOpen, setAiOpen] = useState(false);
   // Web pages live in the tab like file text (links.ts), so the wizard can hand its pages over.
   const [links, setLinksState] = useState<string[]>(() => linksFor(courseId));
   const setLinks = (next: string[]) => { keepLinksForCourse(courseId, next); setLinksState(next); };
@@ -156,6 +161,9 @@ export function CourseStudio({ courseId }: { courseId: string }) {
         center={stepper}
         right={(
           <>
+            <button type="button" className={s.pill} onClick={() => setAiOpen(true)} aria-haspopup="dialog">
+              <span className={s.aiDot} data-tone={ai.diagnosis.tone} aria-hidden="true" />{ai.diagnosis.label}
+            </button>
             <button type="button" className={s.pill} onClick={() => setHistoryOpen(true)}>
               <span className={s.pillDot} aria-hidden="true" />{decisionPillLabel(decisions)}
             </button>
@@ -181,6 +189,16 @@ export function CourseStudio({ courseId }: { courseId: string }) {
           {shown === "publish" ? <PublishStep {...common} /> : null}
         </div>
       </div>
+
+      <Dialog open={aiOpen} onClose={() => setAiOpen(false)} label="AI status">
+        <div className={ui.dialogBody}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <h2 style={{ fontSize: "1.5rem" }}>AI status</h2>
+            <Button variant="quiet" size="small" onClick={() => setAiOpen(false)}>Close</Button>
+          </div>
+          <AiCheck ai={ai} lastProblem={c.notice ?? undefined} />
+        </div>
+      </Dialog>
 
       <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} label="History" drawer>
         <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, height: "100%", boxSizing: "border-box", overflow: "auto" }}>

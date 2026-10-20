@@ -6,6 +6,7 @@ import { BROWSER_MODE } from "../gate/mode";
 import { host } from "../gate/transport";
 import { plural } from "../lib/plural";
 import type { ActivityItem } from "../gate/types";
+import { keepLinksForCourse, linksFor, takeProposeOnArrival } from "./links";
 import { SourcesPanel } from "./SourcesPanel";
 import { StepStatus } from "./StepStatus";
 import { TopBar, href } from "./StudioApp";
@@ -43,7 +44,9 @@ export function CourseStudio({ courseId }: { courseId: string }) {
   const worker = useWorker();
   const [looking, setLooking] = useState<StepId | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [links, setLinks] = useState<string[]>([]);
+  // Web pages live in the tab like file text (links.ts), so the wizard can hand its pages over.
+  const [links, setLinksState] = useState<string[]>(() => linksFor(courseId));
+  const setLinks = (next: string[]) => { keepLinksForCourse(courseId, next); setLinksState(next); };
   const [verified, setVerified] = useState<string | null>(null);
   // B4: one spoken sentence about the last step transition, shown until the next work begins.
   const [transition, setTransition] = useState<string | null>(null);
@@ -78,6 +81,15 @@ export function CourseStudio({ courseId }: { courseId: string }) {
     // transition sentence has said its piece.
     if (prevPhrase !== null && phrase !== prevPhrase) setTransition(null);
   }, [step, phrase]);
+  // R7: the wizard's confirm asked for proposals from the sources. Start them once, on arrival at an
+  // Objectives step with nothing proposed yet: the same intent the "Propose from sources" button sends.
+  useEffect(() => {
+    if (!view || step !== "objectives" || view.proposals.length > 0 || c.busy) return;
+    if (!takeProposeOnArrival(courseId)) return;
+    const materials = [...c.sources.map((h) => ({ name: h.name, text: h.text })), ...links.map((url) => ({ url }))];
+    if (materials.length > 0) void c.actions.proposeFromSources(materials);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [view, step]);
   // The transition sentence has said its piece; the next work begins from a plain turn line.
   useEffect(() => { if (c.waiting || c.busy) setTransition(null); }, [c.waiting, c.busy]);
 

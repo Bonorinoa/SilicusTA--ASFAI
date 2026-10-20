@@ -39,6 +39,13 @@ const isPasscodeCancelled = (e: unknown): boolean => {
   return err?.code === "PASSCODE_REQUIRED" && err?.message === MESSAGES.cancelled;
 };
 
+/**
+ * The teacher-turn words that ride with recorded brief answers. One definition, so the brief step and the
+ * onboarding wizard send the SAME intent for the same answers.
+ */
+export const intakeText = (answers: Record<string, string>): string =>
+  answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n");
+
 /** The worker's status, shared by every Studio screen. */
 export function useWorker(): WorkerInfo | null {
   const [worker, setWorker] = useState<WorkerInfo | null>(null);
@@ -113,7 +120,7 @@ export function useCourse(courseId: string) {
     confirmSources: () => run(() => host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." })),
     answerBrief: (answers: Record<string, string>) =>
       run(() => host.answerIntake(courseId, {
-        text: answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n"),
+        text: intakeText(answers),
         answers,
       }), "Not saved."),
     confirmBrief: () => run(() => host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." })),
@@ -127,7 +134,7 @@ export function useCourse(courseId: string) {
       run(async () => {
         if (answers) {
           await host.answerIntake(courseId, {
-            text: answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n"),
+            text: intakeText(answers),
             answers,
           });
         }

@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BROWSER_MODE } from "../gate/mode";
 import { PasscodeDialog } from "../browser/PasscodeDialog";
 import { Home } from "./Home";
+import { NewCourseWizard } from "./NewCourseWizard";
 import { CourseStudio } from "./CourseStudio";
 import { Rehearse } from "./Rehearse";
 import { Learn } from "./Learn";
@@ -33,6 +34,7 @@ export function StudioApp() {
     <div className="studio">
       {BROWSER_MODE ? <PasscodeDialog /> : null}
       {route.page === "home" ? <Home /> : null}
+      {route.page === "new" ? <NewCourseWizard /> : null}
       {route.page === "course" ? <CourseStudio key={route.id} courseId={route.id} /> : null}
       {route.page === "rehearse" ? <Rehearse key={route.id} courseId={route.id} /> : null}
       {route.page === "learn" ? <Learn key={route.id} courseId={route.id} /> : null}

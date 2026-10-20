@@ -47,6 +47,14 @@ describe("explainRefusal", () => {
     expect(`${x.what} ${x.saved} ${x.next}`).not.toMatch(MACHINE);
   });
 
+  it("WORKER_TRUNCATED never tells a plan step to cut sources (the plan is drafted from objectives)", () => {
+    const plan = explainRefusal(new HostError("the reply was cut off", "WORKER_TRUNCATED"), "plan");
+    expect(plan.next).not.toMatch(/sources/i);
+    expect(plan.next).toContain("confirmed");
+    const propose = explainRefusal(new HostError("the reply was cut off", "WORKER_TRUNCATED"), "propose");
+    expect(propose.next).toMatch(/source/i);
+  });
+
   it("ALREADY_PROPOSED's next step differs when nothing is actually waiting (F5)", () => {
     const waiting = explainRefusal(new HostError("earlier proposals are still waiting for your decision", "ALREADY_PROPOSED"), "propose", { alreadyProposedWaiting: true });
     expect(waiting.next).toContain("proposals waiting");

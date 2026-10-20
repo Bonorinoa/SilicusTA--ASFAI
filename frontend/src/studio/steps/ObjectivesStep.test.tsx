@@ -86,6 +86,12 @@ describe("R4 UI: an explicit course ends on the teacher's own confirm", () => {
     expect(screen.getByText("1 proposal waiting.")).toBeInTheDocument();
   });
 
+  it("keeps a source's own capitalisation in the accepted label (a page title is a name, not machine text)", () => {
+    renderStep(view([row("accepted", "from material: Water cycle - Wikipedia")]));
+    expect(screen.getByText(/Accepted · From material: Water cycle - Wikipedia/)).toBeInTheDocument();
+    expect(screen.queryByText(/water cycle - wikipedia/)).toBeNull();
+  });
+
   it("is disabled with nothing decided", () => {
     renderStep(view([]));
     expect(screen.getByRole("button", { name: "Confirm objectives" })).toBeDisabled();

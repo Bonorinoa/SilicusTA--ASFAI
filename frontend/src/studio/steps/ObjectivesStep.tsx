@@ -19,9 +19,11 @@ import s from "../Studio.module.css";
 
 const provenance = (r: ProposalView): string => {
   const src = r.source ? r.source.charAt(0).toUpperCase() + r.source.slice(1) : r.by === "teacher" ? "Your own" : "Proposed";
-  if (r.reworded) return `Reworded by you · ${src.toLowerCase()}`;
-  if (r.status === "renamed") return `Renamed by you · ${src.toLowerCase()}`;
-  if (r.status === "accepted") return `Accepted · ${src.toLowerCase()}`;
+  // The source label keeps its own capitalisation: a web page's title or a file name ("Water cycle - Wikipedia")
+  // is a name, and lowercasing it makes the record look like machine text.
+  if (r.reworded) return `Reworded by you · ${src}`;
+  if (r.status === "renamed") return `Renamed by you · ${src}`;
+  if (r.status === "accepted") return `Accepted · ${src}`;
   return src;
 };
 

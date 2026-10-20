@@ -60,7 +60,13 @@ export const REFUSALS: Readonly<Record<string, RefusalText>> = {
   WORKER_TRUNCATED: {
     what: "The model ran out of room before it finished.",
     saved: NOTHING_ADDED,
-    next: "Try again with fewer sources, or paste only the part you want used.",
+    next: "Try again. A shorter source, or pasting only the part you want used, helps.",
+    nextFor: {
+      // The plan is drafted from the CONFIRMED OBJECTIVES, never from the sources: advice to cut sources is wrong there.
+      plan: "Try again. A long plan is sometimes cut off, and nothing you confirmed is affected.",
+      suggest: "Try again. Nothing on your course changed.",
+      ask: "Try again; the answer was cut off before it ended.",
+    },
   },
   WORKER_FAILED: {
     what: "Something went wrong while the model was drafting.",

@@ -423,7 +423,17 @@ export class CourseSession {
    * @param {{worker: object, materials: {name: string, text: string, chars: number, digest: string}[], at?: number}} input
    */
   async proposeObjectivesFromMaterials({ worker, materials = [], at } = {}) {
-    if (this.#proposalIds.length > 0) {
+    if (this.#objectivesMode === "explicit") {
+      // R3 (sprint 2026-10-19), explicit courses only: proposing from sources is a round the teacher can repeat
+      // until THEY confirm the objectives. Their own objectives never block it; a round still waiting does.
+      if (this.view().checkpoints.objectives?.status === "confirmed") {
+        return { ok: false, code: "OBJECTIVES_CONFIRMED", reason: "you have confirmed the objectives; proposing more would reopen them" };
+      }
+      if (this.#rows().some((r) => r.status === "proposed")) {
+        return { ok: false, code: "ALREADY_PROPOSED", reason: "earlier proposals are still waiting for your decision" };
+      }
+    } else if (this.#proposalIds.length > 0) {
+      // Auto courses keep the historical rule exactly: one proposal round per course.
       return { ok: false, code: "ALREADY_PROPOSED", reason: "objectives have already been proposed for this course" };
     }
     if (!worker) return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };

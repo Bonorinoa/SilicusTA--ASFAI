@@ -34,8 +34,8 @@ afterEach(() => { setPasscodePrompt(null); vi.restoreAllMocks(); });
 const drive = (r: Rig) => runScriptedCourse((m: string, p: string, b?: unknown) => r.call(m as "GET" | "POST", p, b));
 
 /** A course at the outline gate, answered with the host's own questions; nothing here needs AI. */
-async function readyCourse(r: Rig, { fromMaterials = true } = {}) {
-  const created = await r.call("POST", "/api/courses", { owner: "Ada Lovelace", title: "How plants eat", materials: [{ name: MATERIAL.name }] });
+async function readyCourse(r: Rig, { fromMaterials = true, objectivesConfirm }: { fromMaterials?: boolean; objectivesConfirm?: "explicit" } = {}) {
+  const created = await r.call("POST", "/api/courses", { owner: "Ada Lovelace", title: "How plants eat", materials: [{ name: MATERIAL.name }], ...(objectivesConfirm ? { objectivesConfirm } : {}) });
   const c = `/api/courses/${encodeURIComponent(created.json.courseId)}`;
   await r.call("POST", `${c}/checkpoints`, { id: "files", text: "Confirm the material list." });
   await r.call("POST", `${c}/intake/answer`, { text: "topic", answers: { topic: "photosynthesis" } });
@@ -360,6 +360,37 @@ describe("what needs the local app says so", () => {
     expect(res.status).toBe(422);
     expect(res.json).toMatchObject({ code: "YOUTUBE_LOCAL_ONLY", message: MESSAGES.youtube });
     expect(r.site.calls.filter((x) => !x.url.endsWith("/status"))).toEqual([]);
+  });
+});
+
+describe("the explicit objectives confirm (R4): the browser host serves the same route as the Node host", () => {
+  it("an explicit course stays open after the last decision and closes only on POST /objectives/confirm; the route refuses on an auto course", async () => {
+    const r = await rig();
+    const { c, courseId } = await readyCourse(r, { fromMaterials: false, objectivesConfirm: "explicit" });
+    expect((await r.call("GET", c)).json.objectivesMode).toBe("explicit");
+
+    const proposals = (await r.call("POST", `${c}/objectives`, {})).json.proposals;
+    expect(proposals).toHaveLength(2);
+    await r.call("POST", `${c}/decisions`, { text: "Accept both.", decisions: proposals.map((p: any) => ({ verb: "accept", proposalId: p.id })) });
+    expect((await r.call("GET", c)).json.checkpoints.objectives.status).toBe("open");
+
+    const confirmed = await r.call("POST", `${c}/objectives/confirm`, { text: "These are my objectives." });
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.json.status).toBe("confirmed");
+    const view = (await r.call("GET", c)).json;
+    expect(view.checkpoints.objectives.status).toBe("confirmed");
+    expect(view.objectivesMode).toBe("explicit");
+    expect((await r.call("GET", `/api/courses/${encodeURIComponent(courseId)}/verify`)).json.ok).toBe(true);
+
+    // An auto course never offers the action: the same route refuses it, and nothing is written.
+    const auto = await readyCourse(r, { fromMaterials: false });
+    expect((await r.call("GET", auto.c)).json.objectivesMode).toBe("auto");
+    const autoProposals = (await r.call("POST", `${auto.c}/objectives`, {})).json.proposals;
+    await r.call("POST", `${auto.c}/decisions`, { text: "Accept both.", decisions: autoProposals.map((p: any) => ({ verb: "accept", proposalId: p.id })) });
+    expect((await r.call("GET", auto.c)).json.checkpoints.objectives.status).toBe("confirmed");
+    const refused = await r.call("POST", `${auto.c}/objectives/confirm`, { text: "Confirm." });
+    expect(refused.status).toBe(409);
+    expect(refused.json.code).toBe("OBJECTIVES_AUTO");
   });
 });
 

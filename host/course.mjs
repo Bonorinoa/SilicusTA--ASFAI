@@ -45,12 +45,16 @@ export class CourseIntegrityError extends Error {
 
 export class CourseSession {
   /** Register a NEW course (a fresh per-course id seed) and return its session. */
-  static create(store, { owner, title, description = "", materials = [] } = {}) {
+  static create(store, { owner, title, description = "", materials = [], objectivesConfirm } = {}) {
     const courseId = `urn:uuid:${randomUUID()}`;
     const seed = `urn:uuid:${randomUUID()}`;
     // The record keeps NAMES only: whatever the client sent is reduced to `{name}` here, before meta.json,
     // the course.created event, the view, the export and any backup ever see it (lock: material transient).
-    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, at: Date.now() });
+    // `objectivesConfirm` is checkpoint 3's mode (R4). The HOST default is "auto": ONLY the exact value
+    // "explicit" is stored; a missing field, "auto", "banana" or anything else stores NOTHING, so an auto
+    // course's record is byte-identical to one written before the mode existed and replays as "auto".
+    const objectivesMode = objectivesConfirm === "explicit" ? "explicit" : undefined;
+    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, at: Date.now() });
     return CourseSession.load(store, courseId);
   }
 
@@ -73,6 +77,16 @@ export class CourseSession {
     this.#log = log;
     this.meta = meta;
     this.#now = meta.createdAt;
+    // The objectives-confirmation mode (R4) is a property of the COURSE RECORD, not a global switch: it is
+    // written into the course.created event (and the meta document) at creation, so a replay rebuilds the same
+    // gate. A record with no such field — anything created before the mode existed — reads as "auto": flipping
+    // a global default would silently change what every old course's log means.
+    const created = log.read().find((record) => record.event?.kind === "course.created")?.event ?? null;
+    // Read ONLY from the hash-chained course.created event. meta.json is an unchained convenience copy: falling
+    // back to it would let a one-line file edit flip an auto course explicit and un-confirm its objectives on
+    // replay while chain verification still passes.
+    const storedMode = created?.objectivesConfirm;
+    this.#objectivesMode = storedMode === "explicit" ? "explicit" : "auto";
     this.#ledger = new TurnLedger({ clock: () => this.#now });
     // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.
     this.#intake = new LessonIntake({ ledger: this.#ledger, courseId: meta.courseId });
@@ -86,6 +100,7 @@ export class CourseSession {
       materials: meta.materials ?? [],
       clock: () => this.#now,
       idFactory: deterministicIdFactory(meta.seed),
+      objectivesConfirm: this.#objectivesMode,
     });
     for (const record of log.read()) this.#apply(record.event);
   }
@@ -96,6 +111,8 @@ export class CourseSession {
   #ledger;
   #gate;
   #intake;
+  /** @type {"auto"|"explicit"} Checkpoint-3 confirmation mode, read from the course record at construction. */
+  #objectivesMode;
   #validations = [];
   #planAt = null;
   /** @type {string[]} proposal ids in the order the AI proposed them */
@@ -169,7 +186,14 @@ export class CourseSession {
         return;
       case "checkpoint.confirmed": {
         const turnRef = this.#inbound(event.text, event.at);
-        this.#gate.confirmCheckpoint(event.id, this.#prov(turnRef, event.at), event.note ?? null);
+        const provenance = this.#prov(turnRef, event.at);
+        if (event.id === "objectives") {
+          // Checkpoint 3 in explicit mode: the teacher's own close of the objectives (R4). Auto-mode courses
+          // never log this (the gate confirms itself); the gate refuses OBJECTIVES_AUTO if one ever did.
+          this.#gate.confirmObjectivesCheckpoint({ provenance });
+          return;
+        }
+        this.#gate.confirmCheckpoint(event.id, provenance, event.note ?? null);
         return;
       }
       case "intake.observed": {
@@ -255,6 +279,25 @@ export class CourseSession {
     this.#apply(event);
     this.#append(event);
     return this.view().checkpoints[id];
+  }
+
+  /**
+   * Checkpoint 3 in explicit mode (R4): the teacher confirms their objectives. Same log shape as the other
+   * checkpoints (`checkpoint.confirmed`, id `objectives`), so replay and the activity rail read it natively.
+   * Refuses `OBJECTIVES_AUTO` on an auto-mode course before minting any turn; the gate refuses
+   * `OBJECTIVES_PENDING` / `NO_OBJECTIVES` (and any fabricated provenance). The caller supplies NO provenance.
+   */
+  confirmObjectives({ text, at } = {}) {
+    if (this.#objectivesMode !== "explicit") {
+      const e = new Error("this course confirms its objectives automatically");
+      e.code = "OBJECTIVES_AUTO";
+      throw e;
+    }
+    const a = at ?? Date.now();
+    const event = { kind: "checkpoint.confirmed", id: "objectives", text: requireMsg(text, "text"), at: a };
+    this.#apply(event);
+    this.#append(event);
+    return this.view().checkpoints.objectives;
   }
 
   /**
@@ -388,12 +431,21 @@ export class CourseSession {
       return { ok: false, code: "NO_MATERIALS", reason: "there is no material to propose objectives from" };
     }
     const answers = this.#intake.answers();
+    // R2 (F4): the worker proposes CONDITIONED on what the teacher already has. Their brief outcomes, and every
+    // objective already on the course that is not dropped, each tagged with who it came from (the teacher's own,
+    // accepted, or a proposal still waiting). These are untrusted text in the prompt, exactly like the material.
+    const outcomes = objectivesFromAnswers(answers).map((o) => o.statement);
+    const existing = this.#rows()
+      .filter((r) => r.status !== "dropped")
+      .map((r) => ({ statement: r.statement, by: r.by === "teacher" ? "teacher" : r.status === "proposed" ? "proposed" : "accepted" }));
     let proposed;
     try {
       proposed = await worker.draftObjectives({
         materials: materials.map((m) => ({ name: m.name, text: m.text })),
         topic: String(answers?.topic ?? ""),
         course: String(answers?.course ?? this.meta.title ?? ""),
+        outcomes,
+        existing,
       });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
@@ -799,6 +851,7 @@ export class CourseSession {
         description: this.meta.description, materials: this.meta.materials ?? [], createdAt: this.meta.createdAt,
       },
       checkpoints: this.#gate.checkpoints(),
+      objectivesMode: this.#objectivesMode,
       intake: this.#intake.status(),
       validations: [...this.#validations],
       proposals: this.#rows(),

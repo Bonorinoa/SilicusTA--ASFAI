@@ -58,6 +58,14 @@ export type DecisionIntent =
 /** Gate checkpoint status (checkpoint 3 for the DecisionCard). */
 export type CheckpointStatus = "pending" | "open" | "confirmed";
 
+/**
+ * How checkpoint 3 (the objectives) confirms, as a property of the COURSE RECORD (R4). `"auto"` is the
+ * historical behaviour (the checkpoint confirms itself once every proposal carries a teacher decision);
+ * `"explicit"` means the teacher closes it with `host.confirmObjectives`. Read from the view, never chosen
+ * by the client: the mode is fixed when the course is created.
+ */
+export type ObjectivesMode = "auto" | "explicit";
+
 /** Optional expected wait ranges reported by the host, in seconds. */
 export interface TypicalSeconds {
   objectives: readonly [number, number];

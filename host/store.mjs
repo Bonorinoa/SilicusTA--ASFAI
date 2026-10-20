@@ -67,17 +67,20 @@ export class CourseStore {
   }
 
   /** Create the course record (meta.json) and open its log. Throws if it exists. */
-  initCourse({ courseId, owner, title, description = "", materials = [], seed, at }) {
+  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm }) {
     const dir = this.#dir(courseId);
     if (existsSync(join(dir, "meta.json"))) throw new Error(`course already exists: ${courseId}`);
     mkdirSync(dir, { recursive: true });
+    // Only the exact checkpoint-3 mode "explicit" is recorded (R4). Anything else writes NO field, so an auto
+    // course's meta.json and course.created event are byte-identical to a record written before the mode existed.
+    const mode = objectivesConfirm === "explicit" ? { objectivesConfirm } : {};
     const meta = Object.freeze({
       courseId, owner, title, description, materials,
-      seed, createdAt: at ?? Date.now(),
+      seed, ...mode, createdAt: at ?? Date.now(),
     });
     writeFileSync(join(dir, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
     const log = this.log(courseId);
-    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, at: meta.createdAt });
+    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, ...mode, at: meta.createdAt });
     return meta;
   }
 

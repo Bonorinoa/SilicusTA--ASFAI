@@ -27,7 +27,7 @@ function Harness({ courseId }: { courseId: string }) {
       <button onClick={() => void c.actions.confirmTheBrief(ANSWERS, { sources: true })}>chain</button>
       <button onClick={() => void c.actions.confirmTheBrief(null, { sources: true })}>chain-clean</button>
       <button onClick={() => void c.actions.confirmTheBrief(ANSWERS, { sources: false })}>chain-no-sources</button>
-      <span data-testid="notice">{c.notice ?? ""}</span>
+      <span data-testid="notice">{c.problem ? `${c.problem.what} ${c.problem.details}` : c.notice ?? ""}</span>
     </div>
   );
 }

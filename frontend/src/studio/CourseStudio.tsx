@@ -9,6 +9,8 @@ import type { ActivityItem } from "../gate/types";
 import { AiCheck } from "./AiCheck";
 import { useAiStatus } from "./aiStatus";
 import { keepLinksForCourse, linksFor, takeProposeOnArrival } from "./links";
+import { explainRefusal } from "../lib/refusals";
+import { Refusal } from "./Refusal";
 import { SourcesPanel } from "./SourcesPanel";
 import { StepStatus } from "./StepStatus";
 import { TopBar, href } from "./StudioApp";
@@ -127,7 +129,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
 
   const verify = async () => {
     try { const r = await host.verify(courseId); setVerified(r.ok ? `The record checks out: ${plural(r.events, "event")}, chain intact.` : "The record does not check out."); }
-    catch (e) { setVerified(e instanceof Error ? e.message : String(e)); }
+    catch (e) { const x = explainRefusal(e, "check"); setVerified(`${x.what} ${x.next}`); }
   };
 
   const stepper = (
@@ -182,7 +184,8 @@ export function CourseStudio({ courseId }: { courseId: string }) {
         />
         <div className={s.work}>
           <StepStatus view={view} waiting={c.waiting} worker={worker} transition={transition} />
-          {c.notice ? <div className={s.noticeRow}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
+          {c.problem ? <div className={s.noticeRow}><Refusal problem={c.problem} onClose={() => c.setNotice(null)} /></div>
+            : c.notice ? <div className={s.noticeRow}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
           {shown === "brief" ? <BriefStep {...common} /> : null}
           {shown === "objectives" ? <ObjectivesStep {...common} links={links} /> : null}
           {shown === "plan" ? <PlanStep {...common} /> : null}
@@ -196,7 +199,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
             <h2 style={{ fontSize: "1.5rem" }}>AI status</h2>
             <Button variant="quiet" size="small" onClick={() => setAiOpen(false)}>Close</Button>
           </div>
-          <AiCheck ai={ai} lastProblem={c.notice ?? undefined} />
+          <AiCheck ai={ai} lastProblem={c.problem ? `${c.problem.what} ${c.problem.next}` : c.notice ?? undefined} />
         </div>
       </Dialog>
 

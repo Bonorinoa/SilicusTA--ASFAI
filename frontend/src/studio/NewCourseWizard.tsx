@@ -12,6 +12,7 @@
  * and there are sources, asks the studio to start "propose from sources" there.
  */
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { explainRefusal } from "../lib/refusals";
 import { host } from "../gate/transport";
 import { plural } from "../lib/plural";
 import { describeFile } from "../materials/display";
@@ -120,11 +121,12 @@ export function NewCourseWizard() {
       if (a.fromSources && count > 0) askToProposeOnArrival(courseId);
       window.location.hash = href.course(courseId);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
       const id = courseId;
+      const x = explainRefusal(e, id ? "brief" : "create");
+      const details = x.details ? <details><summary>Details</summary>{x.details}</details> : null;
       setProblem(id
-        ? <>The course was created, but the brief wasn’t confirmed: {msg} <a href={href.course(id)}>Open the course to finish the brief</a>.</>
-        : <>Nothing was created: {msg}</>);
+        ? <>The course was created, but the brief wasn’t confirmed. The course is kept. <a href={href.course(id)}>Open the course to finish the brief</a>.{details}</>
+        : <>{x.what} {x.saved} {x.next}{details}</>);
       setBusy(false);
     }
   };

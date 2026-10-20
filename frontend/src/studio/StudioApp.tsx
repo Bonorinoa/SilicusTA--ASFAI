@@ -52,6 +52,7 @@ export function Wordmark() {
 export function TopBar({ crumbs = [], center, right }: { crumbs?: { label: string; href?: string }[]; center?: ReactNode; right?: ReactNode }) {
   return (
     <header className={s.topbar}>
+      <div className={s.topInner}>
       <nav className={s.brand} aria-label="Breadcrumb">
         <Wordmark />
         {crumbs.map((c) => (
@@ -63,6 +64,7 @@ export function TopBar({ crumbs = [], center, right }: { crumbs?: { label: strin
       </nav>
       {center}
       <div className={s.topRight}>{right}</div>
+      </div>
     </header>
   );
 }

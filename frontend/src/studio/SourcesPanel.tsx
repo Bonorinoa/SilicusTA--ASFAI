@@ -4,6 +4,7 @@
  */
 import { useId, useRef, useState } from "react";
 import { BROWSER_MODE } from "../gate/mode";
+import { plural } from "../lib/plural";
 import { describeFile } from "../materials/display";
 import { extractText } from "../materials/extract";
 import { ACCEPTED_FILE_TYPES } from "../materials/extract.types";
@@ -23,12 +24,21 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed }:
   confirmed: boolean;
 }) {
   const [adding, setAdding] = useState(false);
+  // On a phone the panel folds into one bar above the step (R8); on wider screens it is always open.
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
   const loaded = new Set(held.map((h) => h.name));
   // Names on the record that this tab has no text for yet.
   const waiting = names.filter((n) => !loaded.has(n));
+  const count = held.length + links.length + waiting.length;
 
   return (
-    <aside className={s.sources} aria-label="Sources">
+    <aside className={s.sources} aria-label="Sources" data-open={open ? "true" : undefined}>
+      <button type="button" className={s.sourcesToggle} aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)}>
+        <span><strong>Sources</strong> · {count === 0 ? "none yet" : plural(count, "source")}</span>
+        <span aria-hidden="true">{open ? "Hide" : "Show"}</span>
+      </button>
+      <div className={s.sourcesBody} id={bodyId}>
       <div className={s.sectionLabel}>
         <span>Sources</span>
         {confirmed ? <span style={{ color: "var(--fn-done)", letterSpacing: 0, textTransform: "none" }}>✓ listed</span> : null}
@@ -62,6 +72,7 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed }:
       <button type="button" className={s.addSource} onClick={() => setAdding(true)} disabled={held.length + links.length >= MAX_ITEMS}>+ Add a source</button>
       {BROWSER_MODE ? <div className={s.soonRow} style={{ justifyContent: "space-between" }}><span>YouTube</span><Soon>Local app only</Soon></div> : null}
       <p className={s.sourceFoot}>Text is read in this tab, sent once when you ask for a draft, and forgotten on reload.</p>
+      </div>
       <AddSourceDialog
         open={adding}
         onClose={() => setAdding(false)}

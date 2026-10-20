@@ -162,7 +162,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
         />
         <div className={s.work}>
           <StepStatus view={view} waiting={c.waiting} worker={worker} transition={transition} />
-          {c.notice ? <div style={{ flexBasis: "100%", padding: "16px 48px 0" }}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
+          {c.notice ? <div className={s.noticeRow}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
           {shown === "brief" ? <BriefStep {...common} /> : null}
           {shown === "objectives" ? <ObjectivesStep {...common} links={links} /> : null}
           {shown === "plan" ? <PlanStep {...common} /> : null}

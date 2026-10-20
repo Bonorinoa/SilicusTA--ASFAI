@@ -3,16 +3,21 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  background: rgba(251, 248, 241, 0.92);
+  backdrop-filter: saturate(1.2) blur(8px);
+  border-bottom: 1px solid var(--fn-line);
+}
+/* The bar's colour runs edge to edge; its contents keep the shell's measure so they line up with the page. */
+.topInner {
+  max-width: var(--fn-shell);
+  margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 24px;
-  padding: 10px 24px;
+  padding: 10px 32px;
   min-height: 60px;
   box-sizing: border-box;
-  background: rgba(251, 248, 241, 0.92);
-  backdrop-filter: saturate(1.2) blur(8px);
-  border-bottom: 1px solid var(--fn-line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .wordmark { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--fn-ink); }
@@ -49,7 +54,7 @@ a.crumb:hover { color: var(--fn-ink); }
 .pillDot { width: 7px; height: 7px; border-radius: 999px; background: var(--fn-done); }
 
 /* ---------- home ---------- */
-.page { max-width: 1120px; margin: 0 auto; padding: 48px 24px 80px; display: flex; flex-direction: column; gap: 40px; }
+.page { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; display: flex; flex-direction: column; gap: 40px; }
 .pageHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .kicker { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fn-ink-muted); }
 .display { font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1.1; }
@@ -83,11 +88,30 @@ a.crumb:hover { color: var(--fn-ink); }
 .soonRow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.8125rem; color: var(--fn-ink-muted); }
 
 /* ---------- course studio ---------- */
-.studioBody { display: flex; flex-wrap: wrap; align-items: stretch; min-height: calc(100vh - 61px); }
-.sources {
-  flex: 0 0 248px; box-sizing: border-box; padding: 24px 20px;
-  border-right: 1px solid var(--fn-line); display: flex; flex-direction: column; gap: 14px;
+/*
+ * The studio is a calm, bounded page (R8): one shell measure (--fn-shell) on every wide screen, a quiet
+ * sources rail, the document at reading width, and the proposals tray as a sunken sheet beside it that
+ * stays in view while the document scrolls. Grid, not wrapping flex: a wrapped flex row stretched the
+ * status line's row to fill the screen, which was the blank band above the step heading.
+ */
+.studioBody {
+  max-width: var(--fn-shell);
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  column-gap: 40px;
+  align-items: start;
+  min-height: calc(100vh - 61px);
 }
+.sources {
+  position: sticky; top: 61px; box-sizing: border-box; padding: 28px 0 24px;
+  max-height: calc(100vh - 61px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.sourcesToggle { display: none; }
+.sourcesBody { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .sectionLabel { font-size: 0.6875rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fn-ink-muted); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .sourceList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .sourceItem { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--fn-line-soft); }
@@ -104,9 +128,22 @@ a.crumb:hover { color: var(--fn-ink); }
 .addSource:hover { background: var(--fn-sheet); color: var(--fn-ink); }
 .sourceFoot { margin-top: auto; font-size: 0.75rem; color: var(--fn-ink-muted); }
 
-.work { flex: 999 1 560px; min-width: 0; display: flex; flex-wrap: wrap; align-items: stretch; }
-.doc { flex: 999 1 520px; min-width: 0; box-sizing: border-box; padding: 32px 48px 0; display: flex; flex-direction: column; gap: 24px; }
-.docInner { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 24px; flex: 1; }
+.work {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  column-gap: 40px;
+}
+/* With proposals waiting, the tray takes a column of its own beside the document. */
+.work:has(> .tray) { grid-template-columns: minmax(0, 1fr) 320px; }
+.work > :not(.doc):not(.tray) { grid-column: 1 / -1; }
+.noticeRow { padding-top: 14px; max-width: var(--fn-measure); }
+.doc {
+  min-width: 0; max-width: var(--fn-measure); box-sizing: border-box; padding: 24px 0 0;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.docInner { width: 100%; display: flex; flex-direction: column; gap: 24px; flex: 1; }
 .docHead { display: flex; flex-direction: column; gap: 8px; }
 .docTitle { font-size: 2.125rem; line-height: 1.15; }
 .docLede { color: var(--fn-ink-soft); font-size: 1rem; }
@@ -117,8 +154,9 @@ a.crumb:hover { color: var(--fn-ink); }
 .summaryDone { color: var(--fn-done); font-weight: 600; }
 
 .tray {
-  flex: 1 1 320px; max-width: 400px; box-sizing: border-box; padding: 28px 22px;
-  background: var(--fn-tray); display: flex; flex-direction: column; gap: 14px;
+  position: sticky; top: 77px; align-self: start; margin-top: 24px;
+  max-height: calc(100vh - 93px); overflow-y: auto; box-sizing: border-box; padding: 22px 18px;
+  border-radius: 12px; background: var(--fn-tray); display: flex; flex-direction: column; gap: 14px;
 }
 .trayHead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .trayTitle { font-size: 1.25rem; }
@@ -231,13 +269,29 @@ a.crumb:hover { color: var(--fn-ink); }
 .learnSource { display: block; margin-top: 8px; font-size: 0.8125rem; line-height: 1.45; color: #8a7b68; }
 .learnSource span { display: block; }
 
-/* ---------- narrow ---------- */
+/* ---------- middle widths: the tray goes under the document ---------- */
+@media (max-width: 1180px) {
+  .work:has(> .tray) { grid-template-columns: minmax(0, 1fr); }
+  .tray { position: static; max-height: none; overflow: visible; max-width: var(--fn-measure); margin: 8px 0 32px; }
+}
+
+/* ---------- narrow: one column, sources fold into a bar at the top ---------- */
 @media (max-width: 860px) {
-  /* The work comes first on a phone; sources follow it. */
-  .sources { flex-basis: 100%; order: 2; border-right: 0; border-top: 1px solid var(--fn-line); }
+  .topbar { position: static; }
+  .topInner { padding: 10px 16px; gap: 10px 12px; }
   .stepper { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
   .step { flex: 0 0 auto; padding: 0 12px; }
-  .doc { padding: 24px 16px 0; }
-  .tray { max-width: none; }
-  .topbar { padding: 10px 16px; }
+  .studioBody { grid-template-columns: minmax(0, 1fr); padding: 0 16px; min-height: 0; }
+  .sources { position: static; max-height: none; overflow: visible; padding: 12px 0 0; gap: 0; }
+  .sourcesToggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+    min-height: 48px; padding: 0 14px; box-sizing: border-box; border-radius: 10px;
+    border: 1px solid var(--fn-line); background: var(--fn-sheet); cursor: pointer; text-align: left;
+    font-size: 0.875rem; color: var(--fn-ink-soft);
+  }
+  .sourcesToggle strong { color: var(--fn-ink); font-weight: 600; }
+  .sourcesBody { padding: 14px 4px 4px; }
+  .sources:not([data-open="true"]) .sourcesBody { display: none; }
+  .doc { padding-top: 16px; min-height: 0; }
+  .tray { padding: 18px 14px; }
 }

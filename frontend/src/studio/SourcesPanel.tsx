@@ -16,7 +16,7 @@ import s from "./Studio.module.css";
 const KIND_LABEL: Record<string, string> = { pdf: "PDF", docx: "DOC", pptx: "PPT", text: "TXT", link: "URL" };
 const MAX_ITEMS = 8;
 
-export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, proposals = [], skipped = [] }: {
+export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, proposals = [], skipped = [], recordedAs = {} }: {
   names: string[];
   held: HeldFile[];
   links: string[];
@@ -27,6 +27,8 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, p
   proposals?: readonly { source: string | null }[];
   /** What the host skipped in this tab's last round from sources. */
   skipped?: readonly Skipped[];
+  /** The name the host recorded for a source in the last round (a link's page title), keyed by the tab's key. */
+  recordedAs?: Readonly<Record<string, string>>;
 }) {
   const [adding, setAdding] = useState(false);
   // On a phone the panel folds into one bar above the step (R8); on wider screens it is always open.
@@ -38,7 +40,7 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, p
   const use = (name: string): string | null => {
     const skip = skippedLine(name, skipped);
     if (skip) return skip;
-    const n = usedFor(name, proposals);
+    const n = usedFor(recordedAs[name] ?? name, proposals);
     return n > 0 ? usedLine(n) : null;
   };
   const useRow = (name: string) => {

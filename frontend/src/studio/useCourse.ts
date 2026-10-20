@@ -15,7 +15,7 @@ import { MESSAGES } from "../browser/site";
 import { plural } from "../lib/plural";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
 import { explainRefusal, type Act, type Explained } from "../lib/refusals";
-import type { Skipped } from "./sourceUse";
+import { recordedNames, type Skipped } from "./sourceUse";
 
 export type WaitKind = "objectives" | "suggest" | "plan";
 /**
@@ -69,6 +69,8 @@ export function useCourse(courseId: string) {
   const [sources, setSourcesState] = useState<HeldFile[]>(() => heldFor(courseId));
   // R6: the sources the host skipped in the last round from sources, so each row can say why. Tab-only, like the text.
   const [skipped, setSkipped] = useState<Skipped[]>([]);
+  // ...and the name the host recorded for each source it read (a web page's own title for a link).
+  const [recordedAs, setRecordedAs] = useState<Record<string, string>>({});
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
 
@@ -83,7 +85,7 @@ export function useCourse(courseId: string) {
     }
   }, [courseId]);
 
-  useEffect(() => { setView(null); setSkipped([]); setSourcesState(heldFor(courseId)); void reload(); }, [courseId, reload]);
+  useEffect(() => { setView(null); setSkipped([]); setRecordedAs({}); setSourcesState(heldFor(courseId)); void reload(); }, [courseId, reload]);
 
   const setSources = (next: HeldFile[]) => { keepForCourse(courseId, next); setSourcesState(heldFor(courseId)); };
 
@@ -152,6 +154,7 @@ export function useCourse(courseId: string) {
       runAi("objectives", async () => {
         const r = await host.proposeFromMaterials(courseId, { materials });
         setSkipped(r.skipped);
+        setRecordedAs(recordedNames(materials as { name?: string; url?: string }[], r.skipped, r.materials ?? []));
         if (r.skipped.length) setNotice(`${plural(r.skipped.length, "source was", "sources were")} skipped. Each one says why under Sources.`);
       }, "propose"),
     suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), "suggest"),
@@ -175,7 +178,7 @@ export function useCourse(courseId: string) {
     pins: () => listPins(courseId),
   };
 
-  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, skipped, reload, actions };
+  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, skipped, recordedAs, reload, actions };
 }
 
 export function download(blob: Blob, filename: string): void {

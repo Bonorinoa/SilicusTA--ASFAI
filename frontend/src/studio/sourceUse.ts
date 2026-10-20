@@ -64,3 +64,20 @@ export function legacyNames(names: readonly string[], held: readonly { name: str
   const have = new Set(held.map((h) => sourceKey(h.name)));
   return names.filter((n) => !have.has(sourceKey(n)));
 }
+
+/**
+ * The name the host recorded for each source of a round, keyed by the tab's own key (a file's name, a link's
+ * address). The host returns the read materials in input order minus the skipped ones (host/materials-core.mjs),
+ * so a web page's own title maps back to its link. If the counts disagree, nothing is mapped rather than guessed.
+ */
+export function recordedNames(
+  inputs: readonly { name?: string; url?: string }[],
+  skipped: readonly Skipped[],
+  read: readonly { name: string }[],
+): Record<string, string> {
+  const keyOf = (m: { name?: string; url?: string }) => m.name ?? m.url ?? "";
+  const gone = new Set(skipped.map((x) => x.name));
+  const kept = inputs.filter((m) => !gone.has(keyOf(m)) && !gone.has(keyOf(m).slice(0, 120)));
+  if (kept.length !== read.length) return {};
+  return Object.fromEntries(kept.map((m, i) => [keyOf(m), read[i].name]));
+}

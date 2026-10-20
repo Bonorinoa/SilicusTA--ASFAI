@@ -1,6 +1,6 @@
 /** sourceUse.test.ts — R6: what the Sources panel says about each source, counted, never decided. */
 import { describe, expect, it } from "vitest";
-import { legacyNames, namesInLabel, skippedLine, skipReason, sourceKey, usedFor, usedLine } from "./sourceUse";
+import { legacyNames, namesInLabel, recordedNames, skippedLine, skipReason, sourceKey, usedFor, usedLine } from "./sourceUse";
 
 const p = (source: string | null) => ({ source });
 
@@ -47,5 +47,17 @@ describe("legacy names", () => {
   });
   it("does not strip what is not an extension", () => {
     expect(legacyNames(["Week 1. Plants"], [{ name: "Week 1" }])).toEqual(["Week 1. Plants"]);
+  });
+});
+
+describe("a link's page title maps back to its row", () => {
+  it("maps inputs minus the skipped ones onto the host's read list, in order", () => {
+    const inputs = [{ name: "Lesson notes", text: "…" }, { url: "https://a.test/x" }, { url: "https://b.test/y" }];
+    const map = recordedNames(inputs, [{ name: "https://a.test/x", code: "URL_REFUSED" }], [{ name: "Lesson notes" }, { name: "How leaves work" }]);
+    expect(map).toEqual({ "Lesson notes": "Lesson notes", "https://b.test/y": "How leaves work" });
+    expect(usedFor(map["https://b.test/y"], [{ source: "from material: How leaves work" }])).toBe(1);
+  });
+  it("maps nothing when the counts disagree", () => {
+    expect(recordedNames([{ url: "https://a.test/x" }], [], [])).toEqual({});
   });
 });

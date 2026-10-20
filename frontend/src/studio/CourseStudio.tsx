@@ -182,6 +182,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
           onLinks={setLinks}
           proposals={view.proposals}
           skipped={c.skipped}
+          recordedAs={c.recordedAs}
           confirmed={view.checkpoints.files?.status === "confirmed"}
         />
         <div className={s.work}>

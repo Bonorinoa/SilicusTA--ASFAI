@@ -9,27 +9,42 @@ import { describeFile } from "../materials/display";
 import type { HeldFile } from "../materials/session";
 import { SourceDrop } from "./SourceDrop";
 import { shortAddress } from "./sourceIntake";
+import { legacyNames, skippedLine, usedFor, usedLine, type Skipped } from "./sourceUse";
 import { Button, Dialog, Soon, ui } from "./ui";
 import s from "./Studio.module.css";
 
 const KIND_LABEL: Record<string, string> = { pdf: "PDF", docx: "DOC", pptx: "PPT", text: "TXT", link: "URL" };
 const MAX_ITEMS = 8;
 
-export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed }: {
+export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, proposals = [], skipped = [] }: {
   names: string[];
   held: HeldFile[];
   links: string[];
   onHeld: (next: HeldFile[]) => void;
   onLinks: (next: string[]) => void;
   confirmed: boolean;
+  /** The host's proposals; "Used for N proposals" is counted off their own "from material:" labels (R6). */
+  proposals?: readonly { source: string | null }[];
+  /** What the host skipped in this tab's last round from sources. */
+  skipped?: readonly Skipped[];
 }) {
   const [adding, setAdding] = useState(false);
   // On a phone the panel folds into one bar above the step (R8); on wider screens it is always open.
   const [open, setOpen] = useState(false);
   const bodyId = useId();
-  const loaded = new Set(held.map((h) => h.name));
-  // Names on the record that this tab has no text for yet.
-  const waiting = names.filter((n) => !loaded.has(n));
+  // Names on the record that this tab has no text for yet; an attached file covers one ignoring case and extension.
+  const waiting = legacyNames(names, held);
+  /** What happened to a source in the host's rounds: skipped in the last one, or used for N proposals. */
+  const use = (name: string): string | null => {
+    const skip = skippedLine(name, skipped);
+    if (skip) return skip;
+    const n = usedFor(name, proposals);
+    return n > 0 ? usedLine(n) : null;
+  };
+  const useRow = (name: string) => {
+    const line = use(name);
+    return line ? <><br /><span className={s.sourceMeta} data-source-use={line.startsWith("Skipped") ? "skipped" : "used"}>{line}</span></> : null;
+  };
   const count = held.length + links.length + waiting.length;
 
   return (
@@ -49,7 +64,8 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed }:
             <span className={s.sourceIcon} aria-hidden="true">{KIND_LABEL[h.kind] ?? "TXT"}</span>
             <span style={{ minWidth: 0 }}>
               <span className={s.sourceName}>{h.name}</span><br />
-              <span className={s.sourceMeta}>{describeFile(h).replace(`${h.name} · `, "")}</span>
+              <span className={s.sourceMeta}>Read in this tab · {describeFile(h).replace(`${h.name} · `, "")}</span>
+              {useRow(h.name)}
             </span>
             <button type="button" className={s.sourceRemove} aria-label={`Remove ${h.name} from this tab`} onClick={() => onHeld(held.filter((x) => x !== h))}>×</button>
           </li>
@@ -57,14 +73,19 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed }:
         {links.map((u) => (
           <li key={`l-${u}`} className={s.sourceItem}>
             <span className={s.sourceIcon} aria-hidden="true">URL</span>
-            <span style={{ minWidth: 0 }}><span className={s.sourceName}>{shortAddress(u)}</span><br /><span className={s.sourceMeta}>Fetched when Silicus reads it</span></span>
+            <span style={{ minWidth: 0 }}><span className={s.sourceName}>{shortAddress(u)}</span><br /><span className={s.sourceMeta}>Fetched when Silicus reads it</span>{useRow(u)}</span>
             <button type="button" className={s.sourceRemove} aria-label={`Remove ${u}`} onClick={() => onLinks(links.filter((x) => x !== u))}>×</button>
           </li>
         ))}
         {waiting.map((n) => (
           <li key={`n-${n}`} className={s.sourceItem}>
             <span className={s.sourceIcon} aria-hidden="true" style={{ background: "transparent", border: "1px dashed var(--fn-line-dash)" }}>…</span>
-            <span style={{ minWidth: 0 }}><span className={s.sourceName}>{n}</span><br /><span className={s.sourceMeta}>Named only. Add the file to use its text.</span></span>
+            <span style={{ minWidth: 0 }}>
+              <span className={s.sourceName}>{n}</span><br />
+              <span className={s.sourceMeta}>Named only, so Silicus has no text for it. </span>
+              <button type="button" className={s.sourceAttach} onClick={() => setAdding(true)} aria-label={`Attach the file for ${n}`}>Attach the file</button>
+              {useRow(n)}
+            </span>
           </li>
         ))}
       </ul>

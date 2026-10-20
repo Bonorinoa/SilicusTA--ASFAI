@@ -180,6 +180,8 @@ export function CourseStudio({ courseId }: { courseId: string }) {
           links={links}
           onHeld={c.setSources}
           onLinks={setLinks}
+          proposals={view.proposals}
+          skipped={c.skipped}
           confirmed={view.checkpoints.files?.status === "confirmed"}
         />
         <div className={s.work}>

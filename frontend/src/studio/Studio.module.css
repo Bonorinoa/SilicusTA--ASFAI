@@ -125,6 +125,10 @@ a.crumb:hover { color: var(--fn-ink); }
 /* A source name is the teacher's own string: a long unbroken one wraps instead of widening the page. */
 .sourceText { min-width: 0; overflow-wrap: anywhere; }
 .sourceMeta { font-size: 0.75rem; color: var(--fn-ink-muted); }
+.sourceAttach {
+  background: none; border: 0; padding: 0; font: inherit; font-size: 0.75rem; color: var(--fn-ink);
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
 .sourceRemove { margin-left: auto; background: none; border: 0; color: var(--fn-ink-muted); cursor: pointer; padding: 2px 4px; }
 .addSource {
   min-height: 44px; border-radius: 7px; border: 1px dashed #b8ad97; background: transparent;

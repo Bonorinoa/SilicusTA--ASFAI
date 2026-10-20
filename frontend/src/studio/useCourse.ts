@@ -15,6 +15,7 @@ import { MESSAGES } from "../browser/site";
 import { plural } from "../lib/plural";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
 import { explainRefusal, type Act, type Explained } from "../lib/refusals";
+import type { Skipped } from "./sourceUse";
 
 export type WaitKind = "objectives" | "suggest" | "plan";
 /**
@@ -66,6 +67,8 @@ export function useCourse(courseId: string) {
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   // Material text lives in this tab only (materials/session.ts): never in the record, never in storage.
   const [sources, setSourcesState] = useState<HeldFile[]>(() => heldFor(courseId));
+  // R6: the sources the host skipped in the last round from sources, so each row can say why. Tab-only, like the text.
+  const [skipped, setSkipped] = useState<Skipped[]>([]);
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
 
@@ -80,7 +83,7 @@ export function useCourse(courseId: string) {
     }
   }, [courseId]);
 
-  useEffect(() => { setView(null); setSourcesState(heldFor(courseId)); void reload(); }, [courseId, reload]);
+  useEffect(() => { setView(null); setSkipped([]); setSourcesState(heldFor(courseId)); void reload(); }, [courseId, reload]);
 
   const setSources = (next: HeldFile[]) => { keepForCourse(courseId, next); setSourcesState(heldFor(courseId)); };
 
@@ -148,6 +151,7 @@ export function useCourse(courseId: string) {
     proposeFromSources: (materials: MaterialInput[]) =>
       runAi("objectives", async () => {
         const r = await host.proposeFromMaterials(courseId, { materials });
+        setSkipped(r.skipped);
         if (r.skipped.length) setNotice(`${plural(r.skipped.length, "source was", "sources were")} skipped. Each one says why under Sources.`);
       }, "propose"),
     suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), "suggest"),
@@ -171,7 +175,7 @@ export function useCourse(courseId: string) {
     pins: () => listPins(courseId),
   };
 
-  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, reload, actions };
+  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, skipped, reload, actions };
 }
 
 export function download(blob: Blob, filename: string): void {

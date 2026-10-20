@@ -97,7 +97,7 @@ export function NewCourseWizard() {
     setBusy(true); setProblem(null);
     let courseId: string | null = null;
     try {
-      const r = await host.createCourse({ title: a.title.trim(), owner: a.owner.trim(), materials: [] });
+      const r = await host.createCourse({ title: a.title.trim(), owner: a.owner.trim(), materials: [], objectivesConfirm: "explicit" });
       courseId = r.courseId;
       // Text stays in this tab, held for the course exactly as the Sources panel holds it.
       keepForCourse(courseId, files);

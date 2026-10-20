@@ -244,7 +244,16 @@ try {
   await clickBy("Objectives");
   await waitText("From your answers", 6000);
 
-  // ---- objectives
+  // ---- objectives (lane D): the wizard made an EXPLICIT course (R4). Writing your own comes first, before any proposal (R3 UI).
+  check("D the course is explicit: one held 'Confirm objectives' primary, the add form before any proposal",
+    await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].filter((b) => b.textContent.trim() === "Confirm objectives" && b.disabled).length === 1
+      && !!document.querySelector('form[aria-label="Write your own objective"] input[placeholder="Students can…"]')));
+  await setVal('input[placeholder="Students can…"]', "Students can say where a plant gets its water.");
+  await sleep(300);
+  await clickBy("Add");
+  await sleep(900);
+  check("D adding your own objective before any proposal lands it in the document, and nothing confirms by itself",
+    /where a plant gets its water/.test(await body()) && /Your own objective/i.test(await body()) && /Step 2 of 4/i.test(await body()));
   await clickBy("Use my answers");
   await waitText("Proposals", 8000);
   await sleep(500);
@@ -263,8 +272,7 @@ try {
   check("B1 380: the status line does not force a sideways scroll", !g.sideways, `sideways=${g.sideways}`);
   await page.setViewport({ width: 1440, height: 900 });
   await sleep(400);
-  // Add the teacher's own objective BEFORE deciding every proposal: once the last one is
-  // decided the host auto-confirms objectives and the studio moves on (backend-asks #13).
+  // Add another of the teacher's own while proposals wait (an explicit course never confirms by itself).
   await setVal('input[placeholder="Students can…"]', "Students can explain why leaves are green.");
   await sleep(400);
   await clickBy("Add");
@@ -278,6 +286,11 @@ try {
     await clickBy("Drop it"); await sleep(300);
   }
   await sleep(400);
+  // ---- D · R4: every proposal decided, and the objectives still wait for the teacher's own confirm
+  check("D with every proposal decided the step stays open until the teacher confirms",
+    /Step 2 of 4/i.test(await body()) && await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled)));
+  await clickPrimary("Confirm objectives");
+  check("D confirming the objectives explicitly moves to the plan", await waitText("Objectives confirmed. On to the plan.", 6000) || await waitText("Step 3 of 4", 2000));
 
   // ---- B5: cancelling the passcode gives focus back to the step's primary action, every time
   // (a real mouse click opens it, so the invoking control — not <body> — is what the dialog stores)

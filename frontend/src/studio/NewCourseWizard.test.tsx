@@ -81,7 +81,7 @@ describe("NewCourseWizard", () => {
     expect(mocks.createCourse).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: /^Confirm and/ }));
     await waitFor(() => expect(mocks.confirmCheckpoint).toHaveBeenCalledTimes(2), { timeout: 10_000 });
-    expect(mocks.createCourse).toHaveBeenCalledWith({ title: "How plants eat", owner: "Ada Lovelace", materials: [] });
+    expect(mocks.createCourse).toHaveBeenCalledWith({ title: "How plants eat", owner: "Ada Lovelace", materials: [], objectivesConfirm: "explicit" });
     const answers = mocks.answerIntake.mock.calls[0][1];
     expect(answers.answers).toEqual({ topic: "Photosynthesis", course: "Grade 4", learning_outcomes: "Explain how a plant makes food", outcomes_from: "materials" });
     expect(answers.text).toBe("Propose the outcomes from my materials.");

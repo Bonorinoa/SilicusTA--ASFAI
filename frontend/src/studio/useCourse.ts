@@ -148,6 +148,8 @@ export function useCourse(courseId: string) {
         if (r.skipped.length) setNotice(`Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}`);
       }, (e) => `Nothing was proposed. ${messageOf(e)}`),
     suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), suggestRefusalText),
+    /** R4: the teacher's own close of the objectives on an explicit course. The host refuses it while one waits. */
+    confirmObjectives: () => run(() => host.confirmObjectives(courseId, { text: "Confirm the objectives." }), "The objectives weren't confirmed."),
     decide: (intent: DecisionIntent) =>
       run(() => host.decide(courseId, { decisions: [intent], text: describeIntent(intent) }), "Not recorded."),
     draftPlan: () => runAi("plan", () => host.proposePlan(courseId), (e) => `No plan was drafted. ${messageOf(e)}`),
@@ -215,9 +217,10 @@ export function turnPhrase(v: HostView): string {
   // source list, the answers and the brief together, so one phrase covers both checkpoints.
   if (!st("files") || !st("outline")) return "Your turn: answer the three questions, then confirm the brief";
   if (!st("objectives")) {
-    return v.proposals.some((p) => p.status === "proposed")
-      ? "Your turn: accept, edit or drop each proposal"
-      : "Your turn: choose where the first proposals come from";
+    if (v.proposals.some((p) => p.status === "proposed")) return "Your turn: accept, edit or drop each proposal";
+    // R4: an explicit course waits for the teacher's own confirm once something is decided.
+    if (v.objectivesMode === "explicit" && v.proposals.some((p) => p.status !== "dropped")) return "Your turn: add more, or confirm the objectives";
+    return "Your turn: choose where the first proposals come from";
   }
   if (!v.plan || v.plan.status !== "confirmed") {
     if (!v.plan) return "Your turn: draft the lesson plan";

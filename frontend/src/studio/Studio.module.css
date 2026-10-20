@@ -145,7 +145,7 @@ a.crumb:hover { color: var(--fn-ink); }
 .work > :not(.doc):not(.tray) { grid-column: 1 / -1; }
 .noticeRow { padding-top: 14px; max-width: var(--fn-measure); }
 .doc {
-  min-width: 0; max-width: var(--fn-measure); box-sizing: border-box; padding: 24px 0 0;
+  min-width: 0; max-width: var(--fn-measure); box-sizing: border-box; padding: 24px 0 0; align-self: start;
   display: flex; flex-direction: column; gap: 24px;
 }
 .docInner { width: 100%; display: flex; flex-direction: column; gap: 24px; flex: 1; }

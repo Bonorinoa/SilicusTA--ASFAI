@@ -156,7 +156,6 @@ export function NewCourseWizard() {
 
   const mobileStep = step && step !== "welcome" ? (
     <div className={w.mobileStep}>
-      <span>Step {index + 1} of {STEPS.length} · {STEPS[index].label}</span>
       <div className={w.mobileBar} aria-hidden="true">{STEPS.map((x, i) => <span key={x.id} className={w.mobileSeg} data-done={i <= index ? "true" : undefined} />)}</div>
     </div>
   ) : null;
@@ -190,9 +189,9 @@ export function NewCourseWizard() {
           <li className={w.promise}><span className={w.promiseNum}>2</span><span className={w.promiseTitle}>Your sources</span><span className={w.promiseText}>Files, pasted notes or a web page. Read in this tab; only their names go on the record.</span></li>
           <li className={w.promise}><span className={w.promiseNum}>3</span><span className={w.promiseTitle}>Your objectives</span><span className={w.promiseText}>Write a few, let Silicus propose them from your sources, or both.</span></li>
           <li className={w.promise}><span className={w.promiseNum}>4</span><span className={w.promiseTitle}>A quick AI check</span><span className={w.promiseText}>Whether drafting is ready, and what to do if it isn’t.</span></li>
+          <li className={w.promise}><span className={w.promiseNum}>5</span><span className={w.promiseTitle}>You confirm</span><span className={w.promiseText}>One page shows everything. Nothing is recorded until you confirm it.</span></li>
         </ol>
-        <div className={w.foot}>
-          <p className={w.footNote}>Nothing is recorded until you confirm at the end.</p>
+        <div className={`${w.foot} ${w.footBare}`}>
           <div className={w.footButtons}>
             <Button variant="primary" data-primary="true" onClick={() => go("course")}>Begin</Button>
           </div>
@@ -302,11 +301,11 @@ export function NewCourseWizard() {
   } else if (step === "review") {
     const written = a.outcomes.split("\n").map((l) => l.trim()).filter(Boolean);
     const proposing = a.fromSources && count > 0;
-    const row = (label: string, value: ReactNode, edit: StepId) => (
+    const row = (label: string, value: ReactNode, edit: StepId, action = "Change") => (
       <div className={w.summaryRow}>
         <dt>{label}</dt>
         <dd>{value}</dd>
-        <button type="button" className={w.summaryEdit} onClick={() => go(edit)} aria-label={`Change ${label.toLowerCase()}`}>Change</button>
+        <button type="button" className={w.summaryEdit} onClick={() => go(edit)} aria-label={`${action}: ${label}`}>{action}</button>
       </div>
     );
     body = (
@@ -326,10 +325,10 @@ export function NewCourseWizard() {
           {row("Objectives", (
             <>
               {written.length ? <ul className={w.summaryList}>{written.map((o) => <li key={o}>{o}</li>)}</ul> : null}
-              {proposing ? <p>Silicus proposes objectives from {plural(count, "source")}{written.length ? ", to sit alongside yours" : ""}.</p> : null}
+              {proposing ? <p style={{ marginTop: written.length ? 6 : 0 }}>Silicus proposes objectives from {plural(count, "source")}{written.length ? ", to sit alongside yours" : ""}.</p> : null}
             </>
           ), "objectives")}
-          {row("AI", ai.diagnosis.sentence, "ai")}
+          {row("AI", ai.diagnosis.sentence, "ai", "Check")}
         </dl>
         <p className={w.sends}>
           <strong>Confirming records this course as your decisions:</strong> your answers, the source list and the brief.

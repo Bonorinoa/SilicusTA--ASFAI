@@ -332,6 +332,36 @@ test("R1: only a batch with NO usable objective left is refused", async () => {
   await assert.rejects(worker.draftObjectives({ materials: MATS }), { code: "WORKER_BAD_OUTPUT" });
 });
 
+/* R2 (F4): the prompt must carry what the teacher already has, tagged, and the reply must not repeat it. */
+test("R2: the objectives prompt carries the teacher's own objectives, and a repeat of one is dropped", async () => {
+  const { mock, worker } = await workerWith(objectivesReply([
+    { statement: "Students can explain what an algorithm is.", from: ["M1"] },     // the teacher's own brief outcome
+    { statement: "Students can trace a short algorithm step by step.", from: ["M1"] },
+  ]));
+  const out = await worker.draftObjectives({
+    materials: MATS,
+    outcomes: ["Students can explain what an algorithm is."],
+    existing: [{ statement: "Students can follow a short list of steps.", by: "teacher" }],
+  });
+  assert.deepEqual(out.map((o) => o.statement), ["Students can trace a short algorithm step by step."], "a repeat of an objective the teacher already has is dropped");
+  assert.ok(mock.st.lastPrompt.includes("The teacher's outcomes from their brief:\n- Students can explain what an algorithm is."), mock.st.lastPrompt);
+  assert.ok(mock.st.lastPrompt.includes("Objectives already on this course:\n- [the teacher's own] Students can follow a short list of steps."), mock.st.lastPrompt);
+  assert.ok(/never repeat or reword them/.test(mock.st.lastPrompt));
+  assert.ok(/untrusted text as well/.test(mock.st.lastPrompt), "the teacher's words are framed as untrusted too");
+});
+
+test("R2: an objective already on the course is not repeated in the prompt, and nobody's objectives means no block", async () => {
+  const { mock, worker } = await workerWith(objectivesReply([{ statement: "Students can do y.", from: ["M1"] }]));
+  await worker.draftObjectives({ materials: MATS, outcomes: ["Students can do x."], existing: [{ statement: "Students can do x.", by: "teacher" }] });
+  const lines = mock.st.lastPrompt.split("\n");
+  assert.equal(lines.filter((l) => l === "- Students can do x.").length, 1, "listed once, under the brief outcomes");
+  assert.equal(lines.filter((l) => l.startsWith("Objectives already on this course:")).length, 0, "the duplicate row is not rendered at all");
+
+  const { mock: bare, worker: plain } = await workerWith(objectivesReply([{ statement: "Students can do y.", from: ["M1"] }]));
+  await plain.draftObjectives({ materials: MATS });
+  assert.equal(bare.st.lastPrompt.includes("The teacher's own objectives are listed below"), false, "with nothing of the teacher's there is no block");
+});
+
 test("a worker that proposes nothing usable, or no list, is a refusal; no material or no worker is a state", async () => {
   for (const reply of [{ objectives: [] }, { objectives: [{ statement: "" }] }, { nope: 1 }, "not json at all"]) {
     const { worker } = await workerWith(reply);

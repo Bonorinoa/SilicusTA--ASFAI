@@ -218,6 +218,22 @@ test("R1: a bad provenance label no longer discards the batch, and an id still n
   assert.equal(r2.json.proposals[0].source, "from material: Solow–Swan model - Wikipedia", "the id maps back to the name the page carries");
 });
 
+/* R2 (F4): the round is conditioned on the objectives the teacher already put on the course. */
+test("R2: proposing from sources carries the objectives already on the course into the prompt", async () => {
+  const calls = [];
+  const { post, get } = await boot({ reply: model(calls) });
+  const c = await courseReady(post);
+  await post(`${c}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  await post(`${c}/decisions`, { text: "Add my own.", decisions: [{ verb: "add", statement: "Students can say why order matters." }] });
+
+  const r = await post(`${c}/materials/propose`, { materials: [SLIDES] });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.ok(calls[0].includes("never repeat or reword them"), "the instruction is in the prompt");
+  assert.ok(calls[0].includes("Objectives already on this course:\n- [the teacher's own] Students can say why order matters."), calls[0]);
+  assert.ok(/untrusted text as well/.test(calls[0]), "the teacher's own objective is framed as untrusted text");
+  assert.deepEqual(r.json.proposals.map((p) => p.statement), ["Students can explain what an algorithm is.", "Students can follow a short list of steps.", "Students can say why order matters."], "the model's two, plus the teacher's own row");
+});
+
 test("a worker that misbehaves is a 502 refusal, never half-written proposals", async () => {
   const bad = await boot({ reply: { objectives: [{ statement: "" }, { statement: "  " }] } });
   const c = await courseReady(bad.post);

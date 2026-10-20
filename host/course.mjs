@@ -388,12 +388,21 @@ export class CourseSession {
       return { ok: false, code: "NO_MATERIALS", reason: "there is no material to propose objectives from" };
     }
     const answers = this.#intake.answers();
+    // R2 (F4): the worker proposes CONDITIONED on what the teacher already has. Their brief outcomes, and every
+    // objective already on the course that is not dropped, each tagged with who it came from (the teacher's own,
+    // accepted, or a proposal still waiting). These are untrusted text in the prompt, exactly like the material.
+    const outcomes = objectivesFromAnswers(answers).map((o) => o.statement);
+    const existing = this.#rows()
+      .filter((r) => r.status !== "dropped")
+      .map((r) => ({ statement: r.statement, by: r.by === "teacher" ? "teacher" : r.status === "proposed" ? "proposed" : "accepted" }));
     let proposed;
     try {
       proposed = await worker.draftObjectives({
         materials: materials.map((m) => ({ name: m.name, text: m.text })),
         topic: String(answers?.topic ?? ""),
         course: String(answers?.course ?? this.meta.title ?? ""),
+        outcomes,
+        existing,
       });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };

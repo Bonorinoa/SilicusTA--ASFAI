@@ -63,7 +63,13 @@ export function useCourse(courseId: string) {
   const [notice, setNoticeText] = useState<string | null>(null);
   const [problem, setProblem] = useState<Explained | null>(null);
   const setNotice = (text: string | null) => { setNoticeText(text); setProblem(null); };
-  const refuse = (e: unknown, act: Act) => { setNoticeText(null); setProblem(explainRefusal(e, act)); };
+  const refuse = (e: unknown, act: Act) => {
+    setNoticeText(null);
+    // F5 (verifier): ALREADY_PROPOSED's next step depends on whether something is actually waiting. The host
+    // decides; this is only which plain sentence to show.
+    const waitingNow = (view?.proposals ?? []).some((r) => r.status === "proposed");
+    setProblem(explainRefusal(e, act, { alreadyProposedWaiting: waitingNow }));
+  };
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   // Material text lives in this tab only (materials/session.ts): never in the record, never in storage.
   const [sources, setSourcesState] = useState<HeldFile[]>(() => heldFor(courseId));

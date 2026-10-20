@@ -620,7 +620,8 @@ export class ConfirmGate {
     if (this.#objectivesConfirm === "explicit") {
       // Explicit mode: a teacher decision never confirms checkpoint 3. The teacher closes it with
       // confirmObjectivesCheckpoint; until then the checkpoint stays open, exactly as it does mid-round in
-      // auto mode. (A decision made after an explicit confirm leaves it open again: re-confirm.)
+      // auto mode. A decision made after that confirm leaves the checkpoint confirmed — it closed the set,
+      // and a later drop or reword is still a decision on an item of that set (a new PROPOSAL reopens it).
       this.#touchCheckpoint("objectives");
     } else if (this.#undecidedProposalIds().length === 0) {
       const cp = this.#checkpoints.get("objectives");

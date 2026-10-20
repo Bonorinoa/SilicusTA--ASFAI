@@ -435,6 +435,7 @@ function validateObjectives(raw, materials, existing = []) {
   // Everything the teacher already has, by the same normaliser the suggestion path uses: a proposal that repeats
   // or merely rewords an existing objective is dropped, wherever it came from.
   const seen = new Set(existing.map(norm).filter(Boolean));
+  const hadKnown = seen.size > 0;
   const out = [];
   for (const o of list) {
     const statement = clean(o?.statement, MAX_STATEMENT);
@@ -450,7 +451,21 @@ function validateObjectives(raw, materials, existing = []) {
     out.push({ statement, from });
     if (out.length >= MAX_OBJECTIVES) break;
   }
-  if (out.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker proposed no usable objectives");
+  if (out.length === 0) {
+    // Nothing usable: distinguish "the model produced junk" from "the model had nothing NEW to say" (F4). The
+    // second round in an explicit course can legitimately come back all repeats — the prompt asks for fewer when
+    // nothing is missing — and that is a NAMED refusal, not a bad-output fault the teacher should retry.
+    // Only statements that repeated the set ALREADY on the course count as "nothing new": a list that is
+    // self-duplicating (no existing set) stays WORKER_BAD_OUTPUT.
+    const nothingNew = hadKnown && list.length > 0 && list.every((o) => {
+      const s = clean(o?.statement, MAX_STATEMENT);
+      return s && existing.map(norm).filter(Boolean).includes(norm(s));
+    });
+    if (nothingNew) {
+      throw new WorkerError("ROUND_NOTHING_NEW", "the worker proposed no objectives that are not already on this course");
+    }
+    throw new WorkerError("WORKER_BAD_OUTPUT", "the worker proposed no usable objectives");
+  }
   return out;
 }
 

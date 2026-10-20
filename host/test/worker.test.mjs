@@ -362,6 +362,17 @@ test("R2: an objective already on the course is not repeated in the prompt, and 
   assert.equal(bare.st.lastPrompt.includes("The teacher's own objectives are listed below"), false, "with nothing of the teacher's there is no block");
 });
 
+test("F4: a round whose every proposal repeats an objective already on the course is ROUND_NOTHING_NEW, not WORKER_BAD_OUTPUT", async () => {
+  const { worker } = await workerWith(objectivesReply([{ statement: "Students can do x.", from: ["M1"] }]));
+  await assert.rejects(
+    worker.draftObjectives({ materials: MATS, outcomes: [], existing: [{ statement: "Students can do x.", by: "accepted" }] }),
+    { code: "ROUND_NOTHING_NEW" },
+  );
+  // A genuinely empty/malformed reply, no existing set, is still WORKER_BAD_OUTPUT (nothing was known to repeat).
+  const { worker: plain } = await workerWith({ objectives: [{ statement: "", from: [] }] });
+  await assert.rejects(plain.draftObjectives({ materials: MATS }), { code: "WORKER_BAD_OUTPUT" });
+});
+
 test("a worker that proposes nothing usable, or no list, is a refusal; no material or no worker is a state", async () => {
   for (const reply of [{ objectives: [] }, { objectives: [{ statement: "" }] }, { nope: 1 }, "not json at all"]) {
     const { worker } = await workerWith(reply);

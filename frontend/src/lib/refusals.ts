@@ -26,7 +26,7 @@ export interface Explained extends RefusalText {
 /** The codes contract §3 names. The table below must cover every one of them (refusals.test.ts iterates this). */
 export const CONTRACT_CODES = [
   "WORKER_NOT_CONFIGURED", "WORKER_UNREACHABLE", "WORKER_BAD_OUTPUT", "WORKER_TRUNCATED", "WORKER_FAILED",
-  "NO_MATERIALS", "MATERIAL_ROUND_PENDING", "ALREADY_PROPOSED", "NO_TEACHER_OUTCOMES", "OBJECTIVES_CONFIRMED",
+  "NO_MATERIALS", "MATERIAL_ROUND_PENDING", "ROUND_NOTHING_NEW", "ALREADY_PROPOSED", "NO_TEACHER_OUTCOMES", "OBJECTIVES_CONFIRMED",
   "OBJECTIVES_AUTO", "PROPOSE_FIRST", "SUGGESTIONS_PENDING", "NO_USABLE_SUGGESTIONS", "OBJECTIVES_PENDING",
   "NO_OBJECTIVES", "PASSCODE_REQUIRED", "PASSCODE_CANCELLED", "RATE_LIMITED", "URL_UNREACHABLE",
 ] as const;
@@ -130,6 +130,11 @@ export const REFUSALS: Readonly<Record<string, RefusalText>> = {
   },
 
   // ---- objectives: rounds and order
+  ROUND_NOTHING_NEW: {
+    what: "Silicus had nothing new to propose from these sources — everything it suggested is already on your course.",
+    saved: NOTHING_ADDED,
+    next: "Write one of your own, or go on to the plan when you’re happy with the list.",
+  },
   ALREADY_PROPOSED: {
     what: "Earlier proposals are still waiting for your decision, or this kind of round has already run.",
     saved: NOTHING_SENT,
@@ -226,12 +231,21 @@ export function passcodeVariant(message: string): "PASSCODE_REQUIRED" | "PASSCOD
 }
 
 /** Turn whatever the host threw into the three parts plus the host's own words for Details. */
-export function explainRefusal(e: unknown, act: Act = "other"): Explained {
+export interface ExplainOptions {
+  /** ALREADY_PROPOSED: are proposals still waiting? The sentence differs for a course where everything is decided. */
+  alreadyProposedWaiting?: boolean;
+}
+
+export function explainRefusal(e: unknown, act: Act = "other", opts: ExplainOptions = {}): Explained {
   const raw = typeof (e as { code?: unknown })?.code === "string" ? (e as { code: string }).code : "";
   const message = e instanceof Error ? e.message : e == null ? "" : String(e);
   const code = raw === "PASSCODE_REQUIRED" ? passcodeVariant(message) : raw;
   const entry = REFUSALS[code] ?? fallbackRefusal(act);
-  return { what: entry.what, saved: entry.saved, next: entry.nextFor?.[act] ?? entry.next, code: code || "UNKNOWN", details: sentence(message) };
+  const next =
+    code === "ALREADY_PROPOSED" && opts.alreadyProposedWaiting === false
+      ? "This kind of round has already run here, and nothing is waiting. Write one of your own, or move on."
+      : entry.nextFor?.[act] ?? entry.next;
+  return { what: entry.what, saved: entry.saved, next, code: code || "UNKNOWN", details: sentence(message) };
 }
 
 /** One line for places that hold a string (the AI status dialog's "Last attempt", older tests). */

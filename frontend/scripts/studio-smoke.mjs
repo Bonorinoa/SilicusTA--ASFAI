@@ -401,6 +401,13 @@ try {
   await enterPasscode().catch(() => false);
   check("R7 the confirm lands on Objectives and starts proposing from the sources there", await waitText("Not yours until you accept", 15000) && /From material:/.test(await body()));
   check("R7 one live region on the step after the wizard", (await liveRegions()).length === 1, JSON.stringify(await liveRegions()));
+  // ---- F1 (verifier): a long unbroken source name in the proposals' provenance must wrap, never widen the page.
+  await page.setViewport({ width: 390, height: 844 });
+  await sleep(500);
+  check("F1 at 390 the Objectives step does not scroll sideways with a 200-character source name in the provenance",
+    await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
+    await page.evaluate(() => `sw=${document.documentElement.scrollWidth} vw=${document.documentElement.clientWidth}`));
+  await page.setViewport({ width: 1440, height: 900 });
 } catch (e) {
   check("the walk finished without throwing", false, e.message);
   console.log("LAST BODY:", (await body().catch(() => "?")).slice(0, 400));

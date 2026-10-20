@@ -39,6 +39,22 @@ describe("explainRefusal", () => {
     expect(`${x.what} ${x.saved} ${x.next}`).not.toContain("503");
   });
 
+  it("ROUND_NOTHING_NEW has three plain parts of its own and is in the contract list", () => {
+    expect(CONTRACT_CODES).toContain("ROUND_NOTHING_NEW");
+    const x = explainRefusal(new HostError("the worker proposed no objectives that are not already on this course", "ROUND_NOTHING_NEW"), "propose");
+    expect(x.code).toBe("ROUND_NOTHING_NEW");
+    expect(x.what).toContain("nothing new");
+    expect(`${x.what} ${x.saved} ${x.next}`).not.toMatch(MACHINE);
+  });
+
+  it("ALREADY_PROPOSED's next step differs when nothing is actually waiting (F5)", () => {
+    const waiting = explainRefusal(new HostError("earlier proposals are still waiting for your decision", "ALREADY_PROPOSED"), "propose", { alreadyProposedWaiting: true });
+    expect(waiting.next).toContain("proposals waiting");
+    const done = explainRefusal(new HostError("objectives have already been proposed for this course", "ALREADY_PROPOSED"), "propose", { alreadyProposedWaiting: false });
+    expect(done.next).toContain("already run");
+    expect(done.next).not.toContain("proposals waiting");
+  });
+
   it("tells a wrong passcode from a dismissed prompt and from a prompt that could not open", () => {
     expect(explainRefusal(new HostError(MESSAGES.rejected, "PASSCODE_REQUIRED")).code).toBe("PASSCODE_REQUIRED");
     expect(explainRefusal(new HostError(MESSAGES.cancelled, "PASSCODE_REQUIRED")).code).toBe("PASSCODE_CANCELLED");

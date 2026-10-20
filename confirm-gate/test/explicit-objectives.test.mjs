@@ -104,6 +104,31 @@ test("explicit: confirm refuses when nothing is decided (NO_OBJECTIVES)", () => 
   );
 });
 
+test("explicit: a decision made after the teacher's confirm keeps the checkpoint confirmed (it does not silently reopen)", () => {
+  // Pins the actual gate behaviour (the comment at confirm-gate.mjs:623 was corrected to match it): a confirm
+  // is a close of the set. A later decision still records, but the checkpoint stays confirmed — the studio says
+  // so ("Removing one the plan uses means drafting a new plan"), and the host refuses a plan draft that cites
+  // nothing. A new PROPOSAL is what reopens it (below).
+  const ctx = makeCtx();
+  const [pA, pB] = twoProposals(ctx);
+  ctx.gate.confirmObjectives({
+    provenance: ctx.say("Accept both.").prov,
+    decisions: [{ verb: "accept", proposalId: pA.id }, { verb: "accept", proposalId: pB.id }],
+  });
+  ctx.gate.confirmObjectivesCheckpoint({ provenance: ctx.say("These are my objectives.").prov });
+  // Post-confirm decision: dropping the second.
+  ctx.gate.confirmObjectives({
+    provenance: ctx.say("Actually drop the second.").prov,
+    decisions: [{ verb: "drop", proposalId: pB.id }],
+  });
+  assert.equal(ctx.gate.checkpoints().objectives.status, "confirmed", "a decision after confirm does not reopen the checkpoint");
+  assert.equal(ctx.gate.checkpoints().objectives.note, "the teacher confirmed the objectives", "the confirm note survives the later decision");
+
+  // A new proposal, by contrast, reopens it (auto and explicit behave alike).
+  ctx.gate.proposeObjectives([{ kind: "local", statement: "Outcome C." }]);
+  assert.equal(ctx.gate.checkpoints().objectives.status, "open", "new proposals reopen the checkpoint, in both modes");
+});
+
 test("explicit: an auto-mode course refuses the explicit confirm (OBJECTIVES_AUTO)", () => {
   const ctx = makeCtx({ objectivesConfirm: "auto" });
   const [pA] = ctx.gate.proposeObjectives([{ kind: "local", statement: "Outcome A." }]);

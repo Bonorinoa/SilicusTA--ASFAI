@@ -176,7 +176,7 @@ a.crumb:hover { color: var(--fn-ink); }
   padding: 16px; display: flex; flex-direction: column; gap: 10px;
 }
 .statement { font-family: var(--fn-serif); font-size: 1.0625rem; line-height: 1.45; }
-.provenance { font-size: 0.75rem; color: var(--fn-ink-muted); }
+.provenance { font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; }
 .rowActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
 .objList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: obj; }

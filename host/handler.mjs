@@ -195,6 +195,9 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
             owner: String(b.owner), title: String(b.title),
             description: b.description ? String(b.description) : "",
             materials: Array.isArray(b.materials) ? b.materials : [],
+            // Checkpoint 3's mode (R4). Only the exact value "explicit" is stored; anything else (missing,
+            // "auto", a typo) is a normal auto course. CourseSession.create is the one place that decides it.
+            objectivesConfirm: b.objectivesConfirm,
           });
           return { status: 201, json: { ok: true, courseId: s.courseId, view: s.view() } };
         }
@@ -280,6 +283,9 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           } };
         }
         case "decisions":    return { status: 200, json: { decisions: s.decideObjectives({ decisions: b.decisions, text: b.text }) } };
+        // Checkpoint 3 in explicit mode: the teacher confirms the objectives. Body is { text } only; the
+        // session mints the teacher turn and the gate refuses OBJECTIVES_AUTO / OBJECTIVES_PENDING / NO_OBJECTIVES.
+        case "objectives/confirm": return { status: 200, json: s.confirmObjectives({ text: b.text }) };
         case "plan": {
           // The WORKER drafts from the confirmed objectives. The body is read and ignored:
           // a client cannot supply a plan any more than it can supply an objective.

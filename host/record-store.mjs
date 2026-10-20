@@ -49,17 +49,20 @@ export class RecordStore {
   }
 
   /** Create the course record (meta) and open its log. Throws if it exists. */
-  initCourse({ courseId, owner, title, description = "", materials = [], seed, at }) {
+  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm }) {
     if (this.#metas.has(courseId)) throw new Error(`course already exists: ${courseId}`);
+    // Only the exact checkpoint-3 mode "explicit" is recorded (R4). Anything else writes NO field, so an auto
+    // course's meta document and course.created event are byte-identical to a record written before the mode existed.
+    const mode = objectivesConfirm === "explicit" ? { objectivesConfirm } : {};
     const meta = Object.freeze({
       courseId, owner, title, description, materials,
-      seed, createdAt: at ?? Date.now(),
+      seed, ...mode, createdAt: at ?? Date.now(),
     });
     const text = metaText(meta);
     this.#metas.set(courseId, text);
     this.#onWrite({ type: "meta", courseId, text });
     const log = this.log(courseId);
-    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, at: meta.createdAt });
+    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, ...mode, at: meta.createdAt });
     return meta;
   }
 

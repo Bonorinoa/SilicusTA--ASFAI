@@ -1,8 +1,9 @@
 /**
  * useCourse — one course over the real host, for the Studio screens.
  *
- * The same thin-client contract as LiveCourse: read the host's view, post intents, show refusals in the host's
- * own words. Nothing here decides anything; every verb still leaves as an intent and the gate still decides.
+ * The same thin-client contract as LiveCourse: read the host's view, post intents. A refusal becomes three plain
+ * parts from the one table (lib/refusals.ts, R5) with the host's own words kept for a closed Details. Nothing
+ * here decides anything; every verb still leaves as an intent and the gate still decides.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeIntent } from "../gate/harness";
@@ -13,7 +14,8 @@ import { onPasscodeAsking } from "../browser/passcode";
 import { MESSAGES } from "../browser/site";
 import { plural } from "../lib/plural";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
-import { suggestRefusalText } from "../live/suggest";
+import { explainRefusal, type Act, type Explained } from "../lib/refusals";
+import { recordedNames, type Skipped } from "./sourceUse";
 
 export type WaitKind = "objectives" | "suggest" | "plan";
 /**
@@ -25,8 +27,6 @@ export type WaitKind = "objectives" | "suggest" | "plan";
 export interface Waiting { kind: WaitKind; phase: "passcode" | "working"; startedAt: number; what: string }
 export interface WorkerInfo { configured: boolean; zdr?: boolean; model?: string | null; typicalSeconds?: TypicalSeconds; passcodeRequired?: boolean }
 
-const sentence = (m: string) => { const t = m.trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? "" : ".") : ""; };
-const messageOf = (e: unknown) => sentence(e instanceof Error ? e.message : String(e));
 
 /**
  * B5: a passcode prompt the teacher dismisses ("Not now") is not a failure — nothing was sent and the
@@ -38,6 +38,13 @@ const isPasscodeCancelled = (e: unknown): boolean => {
   const err = e as { code?: string; message?: string } | null;
   return err?.code === "PASSCODE_REQUIRED" && err?.message === MESSAGES.cancelled;
 };
+
+/**
+ * The teacher-turn words that ride with recorded brief answers. One definition, so the brief step and the
+ * onboarding wizard send the SAME intent for the same answers.
+ */
+export const intakeText = (answers: Record<string, string>): string =>
+  answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n");
 
 /** The worker's status, shared by every Studio screen. */
 export function useWorker(): WorkerInfo | null {
@@ -52,10 +59,18 @@ export function useCourse(courseId: string) {
   const [view, setView] = useState<HostView | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  // A plain notice (good news, skipped sources) and a refusal (three parts + Details) never show together.
+  const [notice, setNoticeText] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Explained | null>(null);
+  const setNotice = (text: string | null) => { setNoticeText(text); setProblem(null); };
+  const refuse = (e: unknown, act: Act) => { setNoticeText(null); setProblem(explainRefusal(e, act)); };
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   // Material text lives in this tab only (materials/session.ts): never in the record, never in storage.
   const [sources, setSourcesState] = useState<HeldFile[]>(() => heldFor(courseId));
+  // R6: the sources the host skipped in the last round from sources, so each row can say why. Tab-only, like the text.
+  const [skipped, setSkipped] = useState<Skipped[]>([]);
+  // ...and the name the host recorded for each source it read (a web page's own title for a link).
+  const [recordedAs, setRecordedAs] = useState<Record<string, string>>({});
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
 
@@ -70,16 +85,16 @@ export function useCourse(courseId: string) {
     }
   }, [courseId]);
 
-  useEffect(() => { setView(null); setSourcesState(heldFor(courseId)); void reload(); }, [courseId, reload]);
+  useEffect(() => { setView(null); setSkipped([]); setRecordedAs({}); setSourcesState(heldFor(courseId)); void reload(); }, [courseId, reload]);
 
   const setSources = (next: HeldFile[]) => { keepForCourse(courseId, next); setSourcesState(heldFor(courseId)); };
 
-  /** Run one act: busy while it runs, refusal as the notice, the view reloaded after. */
-  const run = (fn: () => Promise<unknown>, prefix = "") => {
+  /** Run one act: busy while it runs, a refusal explained in plain parts, the view reloaded after. */
+  const run = (fn: () => Promise<unknown>, act: Act = "other") => {
     setBusy(true);
     setNotice(null);
     return fn()
-      .catch((e) => setNotice(prefix ? `${prefix} ${messageOf(e)}` : messageOf(e)))
+      .catch((e) => refuse(e, act))
       .finally(async () => { await reload(); if (live.current) setBusy(false); });
   };
 
@@ -100,23 +115,23 @@ export function useCourse(courseId: string) {
   }), []);
 
   /** An AI step: the same, plus the waiting state the one status line reads. */
-  const runAi = (kind: WaitKind, fn: () => Promise<unknown>, onError: (e: unknown) => string) => {
+  const runAi = (kind: WaitKind, fn: () => Promise<unknown>, act: Act) => {
     setBusy(true);
     setNotice(null);
     setWaiting({ kind, phase: "working", startedAt: Date.now(), what: waitingWhat(kind) });
     return fn()
-      .catch((e) => { if (!isPasscodeCancelled(e)) setNotice(onError(e)); })
+      .catch((e) => { if (!isPasscodeCancelled(e)) refuse(e, act); })
       .finally(async () => { await reload(); if (live.current) { setWaiting(null); setBusy(false); } });
   };
 
   const actions = {
-    confirmSources: () => run(() => host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." })),
+    confirmSources: () => run(() => host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." }), "confirm"),
     answerBrief: (answers: Record<string, string>) =>
       run(() => host.answerIntake(courseId, {
-        text: answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n"),
+        text: intakeText(answers),
         answers,
-      }), "Not saved."),
-    confirmBrief: () => run(() => host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." })),
+      }), "brief"),
+    confirmBrief: () => run(() => host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." }), "brief"),
     /**
      * One click, up to three intents, stopping at the first refusal: record the answers (when anything
      * is unsaved or changed), confirm the source list (when it is not on the record yet), then confirm
@@ -127,31 +142,35 @@ export function useCourse(courseId: string) {
       run(async () => {
         if (answers) {
           await host.answerIntake(courseId, {
-            text: answers.outcomes_from === "materials" ? "Propose the outcomes from my materials." : Object.values(answers).join("\n"),
+            text: intakeText(answers),
             answers,
           });
         }
         if (sources) await host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." });
         await host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." });
-      }, "The brief wasn't confirmed."),
-    proposeFromAnswers: () => run(() => host.proposeObjectives(courseId), "Nothing was proposed."),
+      }, "brief"),
+    proposeFromAnswers: () => run(() => host.proposeObjectives(courseId), "propose"),
     proposeFromSources: (materials: MaterialInput[]) =>
       runAi("objectives", async () => {
         const r = await host.proposeFromMaterials(courseId, { materials });
-        if (r.skipped.length) setNotice(`Some material was skipped: ${r.skipped.map((s) => `${s.name} (${s.reason})`).join("; ")}`);
-      }, (e) => `Nothing was proposed. ${messageOf(e)}`),
-    suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), suggestRefusalText),
+        setSkipped(r.skipped);
+        setRecordedAs(recordedNames(materials as { name?: string; url?: string }[], r.skipped, r.materials ?? []));
+        if (r.skipped.length) setNotice(`${plural(r.skipped.length, "source was", "sources were")} skipped. Each one says why under Sources.`);
+      }, "propose"),
+    suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), "suggest"),
+    /** R4: the teacher's own close of the objectives on an explicit course. The host refuses it while one waits. */
+    confirmObjectives: () => run(() => host.confirmObjectives(courseId, { text: "Confirm the objectives." }), "confirm"),
     decide: (intent: DecisionIntent) =>
-      run(() => host.decide(courseId, { decisions: [intent], text: describeIntent(intent) }), "Not recorded."),
-    draftPlan: () => runAi("plan", () => host.proposePlan(courseId), (e) => `No plan was drafted. ${messageOf(e)}`),
-    confirmPlan: () => run(() => host.confirmPlan(courseId, { text: "Confirm this lesson plan." })),
+      run(() => host.decide(courseId, { decisions: [intent], text: describeIntent(intent) }), "decide"),
+    draftPlan: () => runAi("plan", () => host.proposePlan(courseId), "plan"),
+    confirmPlan: () => run(() => host.confirmPlan(courseId, { text: "Confirm this lesson plan." }), "confirm"),
     publish: () => run(async () => {
       const r = await host.publish(courseId, { text: "Publish the course package." });
       // Pin the published version on this device, as the live page does.
       const { anchor } = await host.anchor(courseId, r.version.version);
       // The published step says so itself; no notice on top of it.
       if (anchor && r.version) pinVersion(anchor);
-    }),
+    }, "publish"),
     exportVersion: () => run(async () => {
       const pkg = await host.exportCourse(courseId);
       download(new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" }), `silicus-course-${view?.versions.at(-1)?.version ?? 0}.json`);
@@ -159,7 +178,7 @@ export function useCourse(courseId: string) {
     pins: () => listPins(courseId),
   };
 
-  return { view, missing, busy, notice, setNotice, waiting, sources, setSources, reload, actions };
+  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, skipped, recordedAs, reload, actions };
 }
 
 export function download(blob: Blob, filename: string): void {
@@ -208,9 +227,10 @@ export function turnPhrase(v: HostView): string {
   // source list, the answers and the brief together, so one phrase covers both checkpoints.
   if (!st("files") || !st("outline")) return "Your turn: answer the three questions, then confirm the brief";
   if (!st("objectives")) {
-    return v.proposals.some((p) => p.status === "proposed")
-      ? "Your turn: accept, edit or drop each proposal"
-      : "Your turn: choose where the first proposals come from";
+    if (v.proposals.some((p) => p.status === "proposed")) return "Your turn: accept, edit or drop each proposal";
+    // R4: an explicit course waits for the teacher's own confirm once something is decided.
+    if (v.objectivesMode === "explicit" && v.proposals.some((p) => p.status !== "dropped")) return "Your turn: add more, or confirm the objectives";
+    return "Your turn: choose where the first proposals come from";
   }
   if (!v.plan || v.plan.status !== "confirmed") {
     if (!v.plan) return "Your turn: draft the lesson plan";

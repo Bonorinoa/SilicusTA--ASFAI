@@ -4,13 +4,14 @@
  * own answer (`grounded`, `refusal`), labelled as such; the host does the answering and the refusing.
  */
 import { useEffect, useId, useRef, useState } from "react";
+import { explainRefusal, type Explained } from "../lib/refusals";
 import { host, type HostView, type StudentAnswer } from "../gate/transport";
 import { TopBar, href } from "./StudioApp";
 import { Badge, Button, Skeleton, ui } from "./ui";
 import { useWorker } from "./useCourse";
 import s from "./Studio.module.css";
 
-interface Turn { q: string; a: StudentAnswer | null; error?: string }
+interface Turn { q: string; a: StudentAnswer | null; error?: Explained }
 type Expect = "answer" | "refuse";
 interface Probe { id: string; name: string; question: string; expect: Expect }
 
@@ -65,7 +66,7 @@ export function Rehearse({ courseId }: { courseId: string }) {
       if (probe) setResults((r) => ({ ...r, [probe.id]: { ok: probe.expect === "answer" ? a.grounded : !a.grounded, turn: index } }));
       return true;
     } catch (e) {
-      update((t) => t.map((x, i) => (i === index ? { ...x, error: e instanceof Error ? e.message : String(e) } : x)));
+      update((t) => t.map((x, i) => (i === index ? { ...x, error: explainRefusal(e, "ask") } : x)));
       return false;
     } finally {
       setAsking(false);
@@ -113,7 +114,8 @@ export function Rehearse({ courseId }: { courseId: string }) {
                       </span>
                     </button>
                   ) : t.error ? (
-                    <div className={s.bubbleA}><span className={`${s.bubbleAText} ${s.bubbleRefused}`}>No answer: {t.error}</span></div>
+                    <div className={s.bubbleA}><span className={`${s.bubbleAText} ${s.bubbleRefused}`}>No answer. {t.error.what} {t.error.next}</span>
+                      {t.error.details ? <details className={s.bubbleMeta}><summary>Details</summary>{t.error.details}</details> : null}</div>
                   ) : null}
                 </div>
               ))}

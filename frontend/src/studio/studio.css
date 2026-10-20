@@ -26,6 +26,9 @@
   --fn-soon-line: #b89a5e;
   --fn-shadow: 0 1px 2px rgba(34, 31, 26, 0.05), 0 8px 24px rgba(34, 31, 26, 0.06);
   --fn-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* R8: the shell stops here on wide screens, and the document keeps a reading measure. */
+  --fn-shell: 1280px;
+  --fn-measure: 680px;
 
   min-height: 100vh;
   background: var(--fn-desk);
@@ -39,6 +42,8 @@
   outline: 2px solid var(--fn-accent);
   outline-offset: 2px;
 }
+/* A step heading takes focus after a step change (B4) so screen readers start there; it is not a control. */
+.studio h1[tabindex="-1"]:focus { outline: none; }
 
 /* Base resets at zero specificity, so every component class wins over them. */
 :where(.studio) :where(h1, h2, h3) { font-family: var(--fn-serif); font-weight: 600; margin: 0; }

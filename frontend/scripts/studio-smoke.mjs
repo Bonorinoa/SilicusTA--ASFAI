@@ -112,6 +112,15 @@ const setVal = async (selector, value) => page.evaluate((sel, v) => {
   el.dispatchEvent(new Event("input", { bubbles: true }));
   return true;
 }, selector, value);
+/** Everything this origin holds in IndexedDB, read in the page (no store yet = nothing recorded). */
+const stored = () => page.evaluate(async () => {
+  const db = await new Promise((res, rej) => { const q = indexedDB.open("silicus-host"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  if (!db.objectStoreNames.contains("courses")) { db.close(); return { metas: [], events: [] }; }
+  const all = (name) => new Promise((res) => { const r = db.transaction(name, "readonly").objectStore(name).getAll(); r.onsuccess = () => res(r.result); });
+  const out = { metas: await all("courses"), events: await all("events") };
+  db.close();
+  return out;
+});
 const enterPasscode = async () => {
   const open = await page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"] input[type="password"]'));
   if (!open) return false;
@@ -182,38 +191,69 @@ try {
   let t = await body();
   check("the studio home shows 'Your courses' and 'New course'", /Your courses/.test(t) && /New course/.test(t));
 
-  // ---- new course
+  // ---- new course: the onboarding wizard (lane C, R7). The old one-sheet dialog with a source-NAMES field is gone.
   await clickBy("New course");
-  await sleep(300);
-  await page.type('dialog input[placeholder="How plants eat"]', "How plants eat");
-  await page.type('dialog input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
-  await page.type('dialog textarea[placeholder*="Photosynthesis"]', "Lesson notes\nChapter 4 slides\n" + "x".repeat(200));
-  await clickBy("Create course");
-  await page.waitForFunction(() => location.hash.startsWith("#/studio/"), { timeout: 8000 });
-  check("creating a course opens it in the studio", /#\/studio\//.test(await page.evaluate(() => location.hash)));
-
-  // ---- brief
-  await waitText("The brief");
-  await waitText("Step 1 of 4", 8000).catch(() => {});
+  check("the New course card opens the wizard, on its welcome at first run", await waitText("Let’s set up your course", 8000) && (await page.evaluate(() => location.hash)) === "#/studio/new");
+  await clickBy("Begin");
+  await waitText("Your course and learners", 5000);
+  const step1 = 'form[aria-label="Course and learners"] input';
+  await page.type(`${step1}[placeholder="How plants eat"]`, "How plants eat");
+  await page.type(`${step1}[placeholder="Ms. Lovelace"]`, "Ada Lovelace");
+  await page.type(`${step1}[placeholder="How plants make food from sunlight"]`, "How plants make food from sunlight");
+  check("step 1 waits for all four answers before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
+  await page.type(`${step1}[placeholder="Grade 4 science, ages 9–10"]`, "Grade 4 science, ages 9-10");
+  await clickBy("Continue");
+  await waitText("Drop files here", 5000);
   t = await body();
-  check("the Brief step renders (Step 1 of 4)", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
-  check("the three questions open before the sources are confirmed", /Three questions/.test(t));
-  check("a 200-character unbroken source name wraps: the Brief step does not scroll sideways", await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1 && document.body.innerText.includes("x".repeat(200))));
-  const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
-  check("three question fields render", nFields === 3, `found ${nFields}`);
-  await setVal('section[aria-label="Questions"] textarea', "Explain how a plant makes its food\nName what a plant needs to make sugar");
-  await page.evaluate(() => {
-    const ins = [...document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"])')];
-    const set = (el, v) => { if (!el) return; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, v); el.dispatchEvent(new Event("input", { bubbles: true })); };
-    set(ins[0], "How plants make food from sunlight"); set(ins[1], "Grade 4 science, ages 9-10");
-  });
-  await sleep(300);
-  check("the brief bar offers a quiet 'Save answers' secondary beside the confirm primary", /Save answers/.test(await body()));
-  // One click does the whole brief: confirm the source list (files), record the answers, confirm the outline.
-  await clickBy("Confirm the brief");
-  check("one click confirms the sources, saves the answers and confirms the brief (Objectives, Step 2 of 4)", await waitText("From your answers", 10000));
+  check("the sources step is one drop zone (files, paste, web page) with no source-name field", /Drop files here/.test(t) && /Or paste text, or a web page address/.test(t)
+    && await page.evaluate(() => ![...document.querySelectorAll("label")].some((l) => /^\s*(Name|Source name|Sources)\b/.test(l.textContent ?? ""))));
+  await clickBy("Continue without sources");
+  await waitText("Write a few", 5000);
+  await setVal('section[aria-label="Your objectives"] textarea', "Explain how a plant makes its food\nName what a plant needs to make sugar");
+  await sleep(200);
+  await clickBy("Continue");
+  check("the AI check names the missing passcode in plain words (online build)", await waitText("needs the demo passcode", 6000) && !/BAD_PASSCODE|WORKER_|passcodeRequired/.test(await body()));
+  // A REAL click on the primary (programmatic clicks keep focus on <body>; B5 below relies on real focus).
+  await clickPrimary("Continue");
+  await waitText("Review and confirm", 5000);
+  t = await body();
+  check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
+  check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
+  await clickPrimary("Confirm and create the course");
+  await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
+  check("confirming the review creates the course and opens it in the studio", /#\/studio\//.test(await page.evaluate(() => location.hash)));
+  check("it lands on Objectives (the brief is confirmed by the same click)", await waitText("From your answers", 10000));
+  const ev = (await stored()).events.sort((x, y) => x.seq - y.seq).map((e) => JSON.parse(e.line).event);
+  const trail = ev.filter((e) => ["course.created", "intake.answered", "checkpoint.confirmed"].includes(e.kind)).map((e) => e.kind === "checkpoint.confirmed" ? `${e.kind}:${e.id}` : e.kind);
+  check("one confirm leaves the brief's intents in the brief's order: create, answers, files, outline", JSON.stringify(trail) === JSON.stringify(["course.created", "intake.answered", "checkpoint.confirmed:files", "checkpoint.confirmed:outline"]), JSON.stringify(trail));
+  const created = ev.find((e) => e.kind === "course.created");
+  check("the course is created with no names-only material rows", Array.isArray(created?.materials ?? []) && (created?.materials ?? []).length === 0, JSON.stringify(created?.materials));
 
-  // ---- objectives
+  // ---- brief, looked back at (a wizard-made course never stops on it)
+  await clickBy("Brief");
+  await waitText("Step 1 of 4", 6000);
+  t = await body();
+  check("the Brief step renders (Step 1 of 4), looked back at", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
+  const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
+  check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value === "Grade 4 science, ages 9-10")), `found ${nFields}`);
+  // ---- lane C · F5: the header's AI status opens the same diagnosis as the wizard's AI check
+  await clickBy("AI needs passcode");
+  check("the studio's AI status opens the wizard's diagnosis", await waitText("AI drafting on this site needs the demo passcode", 4000) && await page.evaluate(() => !!document.querySelector('dialog[aria-label="AI status"][open]')));
+  await page.keyboard.press("Escape");
+  await sleep(300);
+  await clickBy("Objectives");
+  await waitText("From your answers", 6000);
+
+  // ---- objectives (lane D): the wizard made an EXPLICIT course (R4). Writing your own comes first, before any proposal (R3 UI).
+  check("D the course is explicit: one held 'Confirm objectives' primary, the add form before any proposal",
+    await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].filter((b) => b.textContent.trim() === "Confirm objectives" && b.disabled).length === 1
+      && !!document.querySelector('form[aria-label="Write your own objective"] input[placeholder="Students can…"]')));
+  await setVal('input[placeholder="Students can…"]', "Students can say where a plant gets its water.");
+  await sleep(300);
+  await clickBy("Add");
+  await sleep(900);
+  check("D adding your own objective before any proposal lands it in the document, and nothing confirms by itself",
+    /where a plant gets its water/.test(await body()) && /Your own objective/i.test(await body()) && /Step 2 of 4/i.test(await body()));
   await clickBy("Use my answers");
   await waitText("Proposals", 8000);
   await sleep(500);
@@ -232,8 +272,7 @@ try {
   check("B1 380: the status line does not force a sideways scroll", !g.sideways, `sideways=${g.sideways}`);
   await page.setViewport({ width: 1440, height: 900 });
   await sleep(400);
-  // Add the teacher's own objective BEFORE deciding every proposal: once the last one is
-  // decided the host auto-confirms objectives and the studio moves on (backend-asks #13).
+  // Add another of the teacher's own while proposals wait (an explicit course never confirms by itself).
   await setVal('input[placeholder="Students can…"]', "Students can explain why leaves are green.");
   await sleep(400);
   await clickBy("Add");
@@ -247,6 +286,11 @@ try {
     await clickBy("Drop it"); await sleep(300);
   }
   await sleep(400);
+  // ---- D · R4: every proposal decided, and the objectives still wait for the teacher's own confirm
+  check("D with every proposal decided the step stays open until the teacher confirms",
+    /Step 2 of 4/i.test(await body()) && await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled)));
+  await clickPrimary("Confirm objectives");
+  check("D confirming the objectives explicitly moves to the plan", await waitText("Objectives confirmed. On to the plan.", 6000) || await waitText("Step 3 of 4", 2000));
 
   // ---- B5: cancelling the passcode gives focus back to the step's primary action, every time
   // (a real mouse click opens it, so the invoking control — not <body> — is what the dialog stores)
@@ -324,6 +368,39 @@ try {
   await clickBy("Ask");
   await enterPasscode();
   check("the student helper answers from the published package", await waitText("A plant uses light, water and air", 8000));
+
+  // ---- lane C · R7: a second course through the wizard, proposing from a pasted source on arrival
+  await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  check("a returning teacher's wizard opens on step 1, without the welcome", await waitText("Your course and learners", 6000) && !/Let’s set up your course/.test(await body()));
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Leaves and light");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "Why leaves are green");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Grade 4 science, ages 9–10"]', "Grade 4 science");
+  await clickBy("Continue");
+  await waitText("Drop files here", 5000);
+  // The source is named by its own first line: a 200-character unbroken one must wrap, never widen the page.
+  await setVal('section[aria-label="Sources"] textarea', "x".repeat(200) + "\nPlants make their own food from light.\nLeaves hold the green pigment that catches light.");
+  await sleep(200);
+  await clickBy("Add text");
+  await waitText("Read in this tab", 4000);
+  await page.setViewport({ width: 390, height: 844 });
+  await sleep(400);
+  check("a 200-character unbroken first line names the pasted source, and at 390 the wizard does not scroll sideways",
+    await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1 && document.body.innerText.includes("x".repeat(40))));
+  await page.setViewport({ width: 1440, height: 900 });
+  await sleep(300);
+  await clickBy("Continue");
+  await waitText("Let Silicus propose objectives from my sources", 5000);
+  check("with a source and nothing written, proposing from sources is already chosen", await page.evaluate(() => document.querySelector('section[aria-label="Your objectives"] input[type="checkbox"]')?.checked === true));
+  await clickBy("Continue");
+  check("the AI check reads ready once the tab holds the passcode", await waitText("AI drafting is ready.", 6000));
+  await clickBy("Continue");
+  await waitText("Review and confirm", 5000);
+  await clickPrimary("Confirm and propose objectives");
+  await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
+  await enterPasscode().catch(() => false);
+  check("R7 the confirm lands on Objectives and starts proposing from the sources there", await waitText("Not yours until you accept", 15000) && /From material:/.test(await body()));
+  check("R7 one live region on the step after the wizard", (await liveRegions()).length === 1, JSON.stringify(await liveRegions()));
 } catch (e) {
   check("the walk finished without throwing", false, e.message);
   console.log("LAST BODY:", (await body().catch(() => "?")).slice(0, 400));

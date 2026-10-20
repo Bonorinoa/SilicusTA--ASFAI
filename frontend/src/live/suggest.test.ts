@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { HostError } from "../gate/transport";
 import type { ProposalView } from "../gate/types";
-import { SUGGEST_REFUSAL, suggestOffer, suggestRefusalText } from "./suggest";
+import { fallbackRefusal, refusalLine } from "../lib/refusals";
+import { SUGGEST_HELD, SUGGEST_REFUSAL, suggestOffer, suggestRefusalText } from "./suggest";
 
 const row = (source: string, status: ProposalView["status"] = "proposed"): ProposalView =>
   ({ id: `${source}-${status}`, kind: "local", status, statement: "s", originalStatement: "s", source, alignment: null, by: "ai" }) as unknown as ProposalView;
@@ -19,7 +20,7 @@ describe("suggestOffer", () => {
     expect(suggestOffer([row("from your answer")], false, false).show).toBe(false);
   });
   it("is held, with the reason, while an earlier set of suggestions is undecided", () => {
-    expect(suggestOffer([row("from your answer"), row("suggested by Silicus")], false, true)).toEqual({ show: true, blockedBy: SUGGEST_REFUSAL.SUGGESTIONS_PENDING });
+    expect(suggestOffer([row("from your answer"), row("suggested by Silicus")], false, true)).toEqual({ show: true, blockedBy: SUGGEST_HELD });
   });
 });
 
@@ -34,7 +35,10 @@ describe("suggestRefusalText: every host code has a plain sentence", () => {
       expect(text).toMatch(/[.]$/);
     });
   }
-  it("an unknown code still reads as a sentence, from the host's own words", () => {
-    expect(suggestRefusalText(new HostError("the worker timed out", "WORKER_FAILED"))).toBe("Nothing was suggested. The worker timed out.");
+  it("an unknown code still reads as plain words that name what to try, never the host's raw message", () => {
+    const text = suggestRefusalText(new HostError("the worker timed out", "SOMETHING_NEW"));
+    expect(text).toBe(refusalLine(fallbackRefusal("suggest")));
+    expect(text).toMatch(/^Silicus couldn’t suggest more objectives\. .*Try again/);
+    expect(text).not.toContain("the worker timed out");
   });
 });

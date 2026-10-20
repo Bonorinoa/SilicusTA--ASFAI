@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after } from "node:test";
 import { createApp } from "../server.mjs";
+import { errorResponse, HttpError } from "../handler.mjs";
 import { connectedAsfai, ANSWERS } from "./asfai-fixture.mjs";
 import { PlanWorker } from "../worker.mjs";
 import { startMockWorker } from "./mock-worker.mjs";
@@ -263,4 +264,24 @@ test("a tampered event log is refused over HTTP (fail closed)", async () => {
   assert.equal(res.status, 409);
   assert.equal(res.json.code, "LOG_INTEGRITY");
   await h.stop();
+});
+
+/* R5: every refusal on the host AI path leaves with a stable code from contract §3 — no teacher copy here, and
+   never a bare 500. The one code that no route emits yet (MATERIAL_ROUND_PENDING, R3) is pinned at 409 so the
+   mapping is fixed before the route starts using it. */
+test("R5: the AI-path refusal codes map to stable statuses, and the code survives every one", () => {
+  const codes = ["WORKER_NOT_CONFIGURED", "WORKER_UNREACHABLE", "WORKER_BAD_OUTPUT", "WORKER_TRUNCATED", "WORKER_FAILED",
+    "NO_MATERIALS", "ALREADY_PROPOSED", "NO_TEACHER_OUTCOMES", "PROPOSE_FIRST", "SUGGESTIONS_PENDING",
+    "NO_USABLE_SUGGESTIONS", "OBJECTIVES_PENDING", "NO_OBJECTIVES", "URL_UNREACHABLE"];
+  for (const code of codes) {
+    const r = errorResponse(Object.assign(new Error(`refused: ${code}`), { code }));
+    assert.equal(r.json.ok, false, code);
+    assert.equal(r.json.code, code, code);
+    assert.ok([401, 409, 422, 501, 502].includes(r.status), `${code} -> ${r.status}`);
+    assert.notEqual(r.status, 500, `${code} must not be an internal error`);
+  }
+  const conflict = errorResponse(new HttpError(409, "MATERIAL_ROUND_PENDING", "the earlier proposals are still waiting"));
+  assert.equal(conflict.status, 409, "the new code is a conflict, not a fallback 502");
+  assert.equal(conflict.json.code, "MATERIAL_ROUND_PENDING");
+  assert.equal(conflict.json.message, "the earlier proposals are still waiting", "the host's own words stay in the message; the frontend owns the copy");
 });

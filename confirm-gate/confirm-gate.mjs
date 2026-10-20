@@ -275,6 +275,11 @@ function hashStatement(statement) {
  * @property {() => number} [clock]
  * @property {() => string} [idFactory]  Local-id minting. Defaults to random `urn:uuid` ids;
  *   inject {@link deterministicIdFactory} to make state exactly replayable from an event log.
+ * @property {"auto"|"explicit"} [objectivesConfirm]  How checkpoint 3 (`objectives`) confirms. `"auto"`
+ *   (default, the historical behaviour): the checkpoint confirms itself once every proposal carries a teacher
+ *   decision, and reopens when new proposals arrive. `"explicit"`: a teacher decision never confirms it — the
+ *   teacher closes it with {@link ConfirmGate#confirmObjectivesCheckpoint}, which needs at least one decided
+ *   objective and no proposal still waiting. New proposals after a confirm reopen it in both modes.
  */
 
 /**
@@ -312,9 +317,11 @@ export class ConfirmGate {
   #dirty = false;
   /** @type {() => string} */
   #idFactory;
+  /** @type {"auto"|"explicit"} */
+  #objectivesConfirm;
 
   /** @param {ConfirmGateOptions} options */
-  constructor({ courseId, owner, title = "", description = "", ledger = new TurnLedger(), hostGuard = null, materials = [], clock = () => Date.now(), idFactory = mintLocalId }) {
+  constructor({ courseId, owner, title = "", description = "", ledger = new TurnLedger(), hostGuard = null, materials = [], clock = () => Date.now(), idFactory = mintLocalId, objectivesConfirm = "auto" }) {
     this.#courseId = requireText(courseId, "courseId");
     this.#owner = requireText(owner, "owner");
     this.#title = title;
@@ -324,6 +331,10 @@ export class ConfirmGate {
     this.#materials = Object.freeze([...materials]);
     this.#clock = clock;
     this.#idFactory = idFactory;
+    if (objectivesConfirm !== "auto" && objectivesConfirm !== "explicit") {
+      throw new ConfirmGateError(`objectivesConfirm must be "auto" or "explicit", got: ${String(objectivesConfirm)}`, "BAD_INPUT");
+    }
+    this.#objectivesConfirm = objectivesConfirm;
   }
 
   /** @returns {TurnLedgerType} */
@@ -606,7 +617,12 @@ export class ConfirmGate {
     }
     const prov = this.#requireTeacherProvenance(provenance);
     const applied = decisions.map((decision) => this.#applyDecision(decision, prov));
-    if (this.#undecidedProposalIds().length === 0) {
+    if (this.#objectivesConfirm === "explicit") {
+      // Explicit mode: a teacher decision never confirms checkpoint 3. The teacher closes it with
+      // confirmObjectivesCheckpoint; until then the checkpoint stays open, exactly as it does mid-round in
+      // auto mode. (A decision made after an explicit confirm leaves it open again: re-confirm.)
+      this.#touchCheckpoint("objectives");
+    } else if (this.#undecidedProposalIds().length === 0) {
       const cp = this.#checkpoints.get("objectives");
       cp.status = "confirmed";
       cp.provenance = prov;
@@ -615,6 +631,46 @@ export class ConfirmGate {
       this.#touchCheckpoint("objectives");
     }
     return Object.freeze(applied);
+  }
+
+  /**
+   * Explicit teacher confirmation of checkpoint 3 — `objectivesConfirm: "explicit"` only (R4). In auto mode
+   * the checkpoint confirms itself and this refuses `OBJECTIVES_AUTO` (the UI never offers the button there).
+   * Needs a real teacher turn (the same provenance gate as every confirmation), at least one decided objective
+   * and no proposal still waiting. A later proposal reopens the checkpoint exactly as in auto mode.
+   *
+   * Codes: OBJECTIVES_AUTO | OBJECTIVES_PENDING | NO_OBJECTIVES (plus the provenance codes).
+   *
+   * @param {{provenance: TeacherProvenance}} spec
+   * @returns {Readonly<{id: string, status: string, provenance: ValidatedProvenance, note: string|null}>}
+   */
+  confirmObjectivesCheckpoint({ provenance } = {}) {
+    if (this.#objectivesConfirm !== "explicit") {
+      throw new ConfirmGateError(
+        "this course confirms its objectives automatically; there is nothing for the teacher to close",
+        "OBJECTIVES_AUTO",
+      );
+    }
+    this.#requirePriorCheckpoints("objectives");
+    const prov = this.#requireTeacherProvenance(provenance);
+    if (this.#undecidedProposalIds().length > 0) {
+      throw new ConfirmGateError(
+        "a proposal is still waiting for the teacher's decision",
+        "OBJECTIVES_PENDING",
+      );
+    }
+    if (this.#confirmed.size === 0) {
+      throw new ConfirmGateError(
+        "no objective has been decided yet, so there is nothing to confirm",
+        "NO_OBJECTIVES",
+      );
+    }
+    const cp = this.#checkpoints.get("objectives");
+    cp.status = "confirmed";
+    cp.provenance = prov;
+    cp.note = "the teacher confirmed the objectives";
+    this.#markDirty();
+    return Object.freeze({ ...cp });
   }
 
   /** @returns {string[]} Registry ids still awaiting a first teacher decision. */

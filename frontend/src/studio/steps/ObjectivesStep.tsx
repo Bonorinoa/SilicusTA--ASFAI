@@ -1,10 +1,12 @@
 /**
  * Objectives: what is yours sits in the document; what Silicus proposed waits in the tray until you decide.
  * Every button sends one intent; the host decides whether it stands.
+ *
+ * Writing your own is always open while the objectives are not confirmed, before any proposal too (R3 UI).
+ * On an explicit course (view.objectivesMode, R4) the step ends on the teacher's own "Confirm objectives".
  */
 import { useId, useState } from "react";
 import { answerText } from "../../components/AiWaiting";
-import { BROWSER_MODE } from "../../gate/mode";
 import type { MaterialInput } from "../../gate/transport";
 import type { ProposalView } from "../../gate/types";
 import { plural } from "../../lib/plural";
@@ -12,9 +14,9 @@ import { suggestOffer } from "../../live/suggest";
 import type { StepProps } from "../CourseStudio";
 import { Badge, Button, Skeleton, ui } from "../ui";
 import { ActionBar } from "./ActionBar";
+import { DECIDED, objectivesOffer } from "./objectivesOffer";
 import s from "../Studio.module.css";
 
-const DECIDED = new Set(["accepted", "renamed", "added"]);
 const provenance = (r: ProposalView): string => {
   const src = r.source ? r.source.charAt(0).toUpperCase() + r.source.slice(1) : r.by === "teacher" ? "Your own" : "Proposed";
   if (r.reworded) return `Reworded by you · ${src.toLowerCase()}`;
@@ -30,55 +32,69 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   const dropped = rows.filter((r) => r.status === "dropped");
   const confirmed = view.checkpoints.objectives?.status === "confirmed";
   const drafting = c.waiting?.kind === "objectives" || c.waiting?.kind === "suggest";
-  const offer = suggestOffer(rows, confirmed, worker?.configured === true);
+  const suggest = suggestOffer(rows, confirmed, worker?.configured === true);
   const [showDropped, setShowDropped] = useState(false);
   const [newText, setNewText] = useState("");
   const addId = useId();
 
   const answers = view.intake.answers ?? {};
-  const fromSourcesAsked = answers.outcomes_from === "materials";
   const typedOutcomes = answerText(answers.learning_outcomes).trim() !== "" || Array.isArray(answers.learning_outcomes);
   const materials: MaterialInput[] = [...c.sources.map((h) => ({ name: h.name, text: h.text })), ...links.map((url) => ({ url }))];
+  const offer = objectivesOffer({ rows, mode: view.objectivesMode, confirmed, sourceCount: materials.length, hasOutcomes: typedOutcomes, workerConfigured: worker?.configured });
+  const explicit = offer.mode === "explicit";
+  const nothingYet = rows.length === 0 && !drafting;
 
   const decide = c.actions.decide;
+  const written = mine.length > 0;
 
-  // ---- nothing proposed yet: two ways in --------------------------------------------------------------
-  if (rows.length === 0 && !drafting) {
-    return (
-      <div className={s.doc}>
-        <div className={s.docInner}>
-          <header className={s.docHead}>
-            <p className={s.kicker}>Step 2 of 4</p>
-            <h1 className={s.docTitle}>Learning objectives</h1>
-            <p className={s.docLede}>What learners should be able to do by the end. Where should the first proposals come from?</p>
-          </header>
-          <div className={s.paths}>
-            <div className={s.pathCard}>
-              <h2 className={s.pathTitle}>From your sources</h2>
-              <p className={s.docLede} style={{ fontSize: "0.9375rem" }}>
-                {materials.length
-                  ? `Silicus reads ${plural(materials.length, "source")} and proposes objectives. You decide each one.`
-                  : "Add a file, some text or a web page on the left first."}
-              </p>
-              <div style={{ marginTop: "auto" }}>
-                <Button variant="primary" data-primary="true" disabled={c.busy || materials.length === 0 || worker?.configured === false} onClick={() => void c.actions.proposeFromSources(materials)}>Propose from sources</Button>
-              </div>
-              {worker?.configured === false ? <p className={s.provenance}>AI drafting isn’t set up {BROWSER_MODE ? "on this site" : "on this host"}.</p> : null}
+  // ---- the ways to get proposals: from the sources, from the brief's answers -------------------------------
+  // In an auto course the first proposal is the step's primary, as before; in an explicit course the one
+  // primary is "Confirm objectives", so these stay secondary.
+  const sourcesHint = materials.length === 0
+    ? "Add a file, some text or a web page under Sources, and Silicus can propose objectives from it."
+    : written
+      ? `Silicus reads ${plural(materials.length, "source")} and matches the style of the ${plural(mine.length, "objective")} you already have.`
+      : `Silicus reads ${plural(materials.length, "source")} and proposes objectives. Once you have written some, it matches their style.`;
+  const ways = !drafting && (offer.sources.show || offer.answers.show || (nothingYet && !confirmed)) ? (
+    <section className={s.paths} aria-label="Ways to get proposals">
+      {offer.sources.show || (nothingYet && materials.length === 0) ? (
+        <div className={s.pathCard}>
+          <h2 className={s.pathTitle}>From your sources</h2>
+          <p className={s.docLede} style={{ fontSize: "0.9375rem" }}>{sourcesHint}</p>
+          {offer.sources.show ? (
+            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
+              <Button
+                variant={explicit || written ? "secondary" : "primary"}
+                data-primary={explicit || written ? undefined : "true"}
+                disabled={c.busy || offer.sources.heldBy !== null}
+                onClick={() => void c.actions.proposeFromSources(materials)}
+              >Propose from my sources</Button>
+              {offer.sources.heldBy ? <p className={s.provenance}>{offer.sources.heldBy}</p> : null}
             </div>
-            {!fromSourcesAsked ? (
-              <div className={s.pathCard}>
-                <h2 className={s.pathTitle}>From your answers</h2>
-                <p className={s.docLede} style={{ fontSize: "0.9375rem" }}>Each outcome you wrote in the brief becomes a proposal. No AI involved.</p>
-                <div style={{ marginTop: "auto" }}>
-                  <Button disabled={c.busy || !typedOutcomes} onClick={() => void c.actions.proposeFromAnswers()}>Use my answers</Button>
-                </div>
-              </div>
-            ) : null}
+          ) : null}
+        </div>
+      ) : null}
+      {offer.answers.show ? (
+        <div className={s.pathCard}>
+          <h2 className={s.pathTitle}>From your answers</h2>
+          <p className={s.docLede} style={{ fontSize: "0.9375rem" }}>Each outcome you wrote in the brief becomes a proposal. No AI involved.</p>
+          <div style={{ marginTop: "auto" }}>
+            <Button disabled={c.busy} onClick={() => void c.actions.proposeFromAnswers()}>Use my answers</Button>
           </div>
         </div>
+      ) : null}
+    </section>
+  ) : null;
+
+  const addForm = offer.canWrite ? (
+    <form className={s.addRow} aria-label="Write your own objective" onSubmit={(e) => { e.preventDefault(); if (newText.trim()) { void decide({ verb: "add", statement: newText.trim() }); setNewText(""); } }}>
+      <div className={ui.field}>
+        <label className={ui.label} htmlFor={addId}>{written || rows.length > 0 ? "Add one of your own" : "Write your own"}</label>
+        <input id={addId} className={ui.input} value={newText} onChange={(e) => setNewText(e.target.value)} placeholder="Students can…" maxLength={2000} />
       </div>
-    );
-  }
+      <Button type="submit" disabled={c.busy || !newText.trim()} style={{ marginTop: 26 }}>Add</Button>
+    </form>
+  ) : null;
 
   const tray = (
     <aside className={s.tray} aria-label="Proposals">
@@ -94,14 +110,34 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
         </div>
       ) : null}
       {!drafting && waitingRows.length === 0 ? <p className={s.trayEmpty}>Nothing waiting. Everything proposed has a decision.</p> : null}
-      {offer.show && !drafting ? (
+      {suggest.show && !drafting ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <Button variant="quiet" size="small" disabled={c.busy || offer.blockedBy !== null} onClick={() => void c.actions.suggestMore()}>Suggest up to 3 more</Button>
-          {offer.blockedBy ? <p className={s.provenance}>{offer.blockedBy}</p> : null}
+          <Button variant="quiet" size="small" disabled={c.busy || suggest.blockedBy !== null} onClick={() => void c.actions.suggestMore()}>Suggest up to 3 more</Button>
+          {suggest.blockedBy ? <p className={s.provenance}>{suggest.blockedBy}</p> : null}
         </div>
       ) : null}
     </aside>
   );
+
+  const lede = nothingYet
+    ? "What learners should be able to do by the end. Write your own, let Silicus propose some, or both."
+    : mine.length === 0
+      ? "Accept, edit or drop each proposal under Proposals. Accepted ones land here."
+      : `${plural(mine.length, "objective")} ${explicit ? "decided" : "accepted"}${waitingRows.length ? `, ${plural(waitingRows.length, "proposal")} waiting` : ""}.`;
+
+  const bar = confirmed && looking ? (
+    <ActionBar text={<><strong>Objectives confirmed.</strong> Rewording keeps the plan. Removing one the plan uses means drafting a new plan.</>}>
+      <Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button>
+    </ActionBar>
+  ) : offer.confirm.show && !drafting ? (
+    <ActionBar text={<><strong>{offer.confirm.text[0]}</strong> {offer.confirm.text[1]}</>}>
+      <Button variant="primary" data-primary="true" disabled={c.busy || !offer.confirm.enabled} onClick={() => void c.actions.confirmObjectives()}>Confirm objectives</Button>
+    </ActionBar>
+  ) : !confirmed && !drafting && !nothingYet ? (
+    <ActionBar text={waitingRows.length
+      ? <><strong>{plural(waitingRows.length, "proposal")} waiting.</strong> The objectives aren’t confirmed yet.</>
+      : <><strong>Every proposal is decided.</strong></>} />
+  ) : null;
 
   return (
     <>
@@ -110,14 +146,10 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
           <header className={s.docHead}>
             <p className={s.kicker}>Step 2 of 4</p>
             <h1 className={s.docTitle}>Learning objectives</h1>
-            <p className={s.docLede}>
-              {mine.length === 0
-                ? "Accept, edit or drop each proposal under Proposals. Accepted ones land here."
-                : `${plural(mine.length, "objective")} accepted${waitingRows.length ? `, ${plural(waitingRows.length, "proposal")} waiting` : ""}.`}
-            </p>
+            <p className={s.docLede}>{lede}</p>
           </header>
 
-          {mine.length === 0 ? (
+          {mine.length === 0 && !nothingYet ? (
             drafting ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }} aria-hidden="true">
                 <Skeleton height={72} radius={9} /><Skeleton height={72} radius={9} />
@@ -131,13 +163,9 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
             </ol>
           ) : null}
 
-          <form className={s.addRow} onSubmit={(e) => { e.preventDefault(); if (newText.trim()) { void decide({ verb: "add", statement: newText.trim() }); setNewText(""); } }}>
-            <div className={ui.field}>
-              <label className={ui.label} htmlFor={addId}>Add one of your own</label>
-              <input id={addId} className={ui.input} value={newText} onChange={(e) => setNewText(e.target.value)} placeholder="Students can…" maxLength={2000} />
-            </div>
-            <Button type="submit" disabled={c.busy || !newText.trim()} style={{ marginTop: 26 }}>Add</Button>
-          </form>
+          {addForm}
+
+          {ways}
 
           {dropped.length > 0 ? (
             <div>
@@ -146,18 +174,10 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
             </div>
           ) : null}
 
-          {confirmed && looking ? (
-            <ActionBar text={<><strong>Objectives confirmed.</strong> Rewording keeps the plan. Removing one the plan uses means drafting a new plan.</>}>
-              <Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button>
-            </ActionBar>
-          ) : !confirmed && !drafting ? (
-            <ActionBar text={waitingRows.length
-              ? <><strong>{plural(waitingRows.length, "proposal")} waiting.</strong> The objectives aren’t confirmed yet.</>
-              : <><strong>Every proposal is decided.</strong></>} />
-          ) : null}
+          {bar}
         </div>
       </div>
-      {!confirmed || waitingRows.length > 0 ? tray : null}
+      {(rows.some((r) => r.by !== "teacher") || drafting) && (!confirmed || waitingRows.length > 0) ? tray : null}
     </>
   );
 }

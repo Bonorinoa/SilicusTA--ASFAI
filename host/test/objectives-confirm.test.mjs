@@ -9,7 +9,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CourseStore } from "../store.mjs";
@@ -149,6 +149,27 @@ test("an old-shape record (no field) replays as auto, keeps its confirmed object
     reloaded.view().objectives.map((o) => o.statement).sort(),
     ITEMS.map((i) => i.statement).sort(),
   );
+});
+
+test("the mode is read from the CHAINED course.created event only: editing meta.json cannot flip an auto course", () => {
+  // meta.json is a convenience copy outside the hash chain. If the mode fell back to it, a one-line edit there
+  // would turn an auto course explicit on replay and un-confirm its objectives while verify() still says ok.
+  const root = mkdtempSync(join(tmpdir(), "silicus-objconfirm-meta-"));
+  const store = new CourseStore(root);
+  const session = CourseSession.create(store, { owner: OWNER, title: "T" });
+  reachObjectives(session);
+  proposeAndAcceptBoth(session);
+  assert.equal(session.view().checkpoints.objectives.status, "confirmed");
+
+  const rel = readdirSync(root, { recursive: true }).map(String).find((p) => p.endsWith("meta.json"));
+  assert.ok(rel, "found the course's meta.json");
+  const file = join(root, rel);
+  const meta = JSON.parse(readFileSync(file, "utf8"));
+  writeFileSync(file, JSON.stringify({ ...meta, objectivesConfirm: "explicit" }, null, 2) + "\n");
+
+  const reloaded = CourseSession.load(store, session.courseId);
+  assert.equal(reloaded.view().objectivesMode, "auto", "an unchained meta edit does not change the mode");
+  assert.equal(reloaded.view().checkpoints.objectives.status, "confirmed", "and the confirmed objectives stay confirmed");
 });
 
 test("only the exact value \"explicit\" is stored; \"auto\", \"banana\", \"\" and a missing field are all auto", () => {

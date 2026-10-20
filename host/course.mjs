@@ -82,7 +82,10 @@ export class CourseSession {
     // gate. A record with no such field — anything created before the mode existed — reads as "auto": flipping
     // a global default would silently change what every old course's log means.
     const created = log.read().find((record) => record.event?.kind === "course.created")?.event ?? null;
-    const storedMode = created?.objectivesConfirm ?? meta.objectivesConfirm;
+    // Read ONLY from the hash-chained course.created event. meta.json is an unchained convenience copy: falling
+    // back to it would let a one-line file edit flip an auto course explicit and un-confirm its objectives on
+    // replay while chain verification still passes.
+    const storedMode = created?.objectivesConfirm;
     this.#objectivesMode = storedMode === "explicit" ? "explicit" : "auto";
     this.#ledger = new TurnLedger({ clock: () => this.#now });
     // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.

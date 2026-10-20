@@ -5,6 +5,23 @@ compatible with graph ontologies more generally. ASFAI is a protocol, not the mo
 AI assists, the teacher confirms: every
 objective, plan and published version passes a recorded human checkpoint.
 
+## Install
+
+Three ways to get Silicus in front of a new user:
+
+1. **Try the hosted app** at https://silicus-ta.vercel.app. Ask Augusto for the demo passcode. Courses stay in
+   that browser; use Export to keep a copy.
+2. **Run it locally** (Node 22 recommended; see "Run it" below). Plain `npm start` runs with the AI worker off.
+3. **Self-host on Vercel** from your own fork, with your own key and passcode (`docs/DEPLOY.md`).
+
+**Agents setting this up for someone:** follow [`docs/INSTALL-FOR-AGENTS.md`](docs/INSTALL-FOR-AGENTS.md). It has
+the exact commands, what the user must supply, how to check each path worked, the common failures, and the rules
+(no secrets in output or commits, no push or deploy without the user's word, ASFAI is optional).
+
+## Walkthrough
+
+Screenshots land here in card F.
+
 ## Why it exists
 
 Most course-assistant tools let the model decide. Silicus is the counterexample: confirmation

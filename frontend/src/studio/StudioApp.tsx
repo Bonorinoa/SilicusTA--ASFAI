@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BROWSER_MODE } from "../gate/mode";
 import { PasscodeDialog } from "../browser/PasscodeDialog";
 import { Home } from "./Home";
+import { NewCourseWizard } from "./NewCourseWizard";
 import { CourseStudio } from "./CourseStudio";
 import { Rehearse } from "./Rehearse";
 import { Learn } from "./Learn";
@@ -33,6 +34,7 @@ export function StudioApp() {
     <div className="studio">
       {BROWSER_MODE ? <PasscodeDialog /> : null}
       {route.page === "home" ? <Home /> : null}
+      {route.page === "new" ? <NewCourseWizard /> : null}
       {route.page === "course" ? <CourseStudio key={route.id} courseId={route.id} /> : null}
       {route.page === "rehearse" ? <Rehearse key={route.id} courseId={route.id} /> : null}
       {route.page === "learn" ? <Learn key={route.id} courseId={route.id} /> : null}
@@ -52,6 +54,7 @@ export function Wordmark() {
 export function TopBar({ crumbs = [], center, right }: { crumbs?: { label: string; href?: string }[]; center?: ReactNode; right?: ReactNode }) {
   return (
     <header className={s.topbar}>
+      <div className={s.topInner}>
       <nav className={s.brand} aria-label="Breadcrumb">
         <Wordmark />
         {crumbs.map((c) => (
@@ -63,6 +66,7 @@ export function TopBar({ crumbs = [], center, right }: { crumbs?: { label: strin
       </nav>
       {center}
       <div className={s.topRight}>{right}</div>
+      </div>
     </header>
   );
 }

@@ -113,3 +113,12 @@
 }
 .textarea { resize: vertical; line-height: 1.5; }
 .input:focus, .textarea:focus { outline: 2px solid var(--fn-accent); outline-offset: 0; border-color: var(--fn-accent); }
+
+/* R5: a refusal in three parts, the host's words behind a closed Details. */
+.refusal { display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.refusalWhat { font-weight: 600; }
+.refusalNext { font-weight: 600; color: var(--fn-ink); }
+.refusalNext::before { content: "Next: "; font-weight: 400; color: var(--fn-ink-soft); }
+.refusalDetails { margin-top: 4px; font-size: 0.8125rem; color: var(--fn-ink-soft); }
+.refusalDetails summary { cursor: pointer; width: max-content; }
+.refusalDetails > span { display: block; margin-top: 4px; }

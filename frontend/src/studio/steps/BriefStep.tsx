@@ -7,6 +7,7 @@ import type { StepProps } from "../CourseStudio";
 import { PasscodeNote } from "../PasscodeNote";
 import { ActionBar } from "./ActionBar";
 import s from "../Studio.module.css";
+import { sourceKey } from "../sourceUse";
 
 const LABELS: Record<string, { label: string; hint: string; placeholder: string }> = {
   topic: { label: "Topic", hint: "What this lesson is about.", placeholder: "How plants make food from sunlight" },
@@ -21,7 +22,8 @@ export function BriefStep({ c, view, worker, looking }: StepProps) {
   const recorded = view.intake.answers ?? {};
   const names = materialNamesOf(view.course.materials);
   // Text added in this tab under a name the record doesn't list yet.
-  const tabOnly = c.sources.filter((h) => !names.includes(h.name));
+  // A held file covers a recorded name ignoring case and extension (R6), the same match the Sources panel uses.
+  const tabOnly = c.sources.filter((h) => !names.some((n) => sourceKey(n) === sourceKey(h.name)));
 
   const initial = () => {
     const a: Record<string, string> = {};

@@ -4,7 +4,6 @@ import { BrowserRecord, type RecordStatus } from "../browser/BrowserRecord";
 import { BROWSER_MODE } from "../gate/mode";
 import { host, type CourseSummary } from "../gate/transport";
 import { plural } from "../lib/plural";
-import { NewCourseDialog } from "./NewCourseDialog";
 import { TopBar, href } from "./StudioApp";
 import { Skeleton } from "./ui";
 import s from "./Studio.module.css";
@@ -20,7 +19,6 @@ const NEXT = ["Brief", "Objectives", "Plan", "Publish"];
 export function Home() {
   const [courses, setCourses] = useState<CourseSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [recordStatus, setRecordStatus] = useState<RecordStatus>(null);
 
   const load = () => host.listCourses().then((r) => setCourses([...r.courses].sort((a, b) => b.createdAt - a.createdAt))).catch(() => setFailed(true));
@@ -49,11 +47,11 @@ export function Home() {
           </div>
         ) : (
           <section aria-label="Courses" className={s.cards}>
-            <button type="button" className={s.newCard} onClick={() => setCreating(true)}>
+            <a className={s.newCard} href={href.newCourse}>
               <span className={s.newPlus} aria-hidden="true">+</span>
               <span className={s.courseTitle}>New course</span>
-              <span className={s.courseMeta}>A title and your name. Sources can come later.</span>
-            </button>
+              <span className={s.courseMeta}>Five short steps: the course, your sources, your objectives, an AI check, then you confirm.</span>
+            </a>
             {courses === null
               ? [0, 1].map((i) => (
                 <div key={i} className={s.courseCard} aria-hidden="true">
@@ -106,7 +104,6 @@ export function Home() {
 
         {BROWSER_MODE ? <BrowserRecord hasCourses={(courses?.length ?? 0) > 0} onChanged={() => void load()} status={recordStatus} onStatus={setRecordStatus} /> : null}
       </main>
-      <NewCourseDialog open={creating} onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); window.location.hash = href.course(id); }} />
     </>
   );
 }

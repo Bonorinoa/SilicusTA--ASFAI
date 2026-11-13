@@ -9,7 +9,11 @@ repair round, and again at `6a956d8` after round 3; the spine notes below say wh
 
 | Document | Kind | Use it for |
 |---|---|---|
-| [`STATUS.md`](STATUS.md) | current, canonical | What is built, what is open, how to run it, the latest evidence |
+| [`STATUS.md`](STATUS.md) | current, canonical | What is built, what is open, how to run it, the latest evidence. Has a 13 Nov owner box |
+| [`NEXT.md`](NEXT.md) | current plan, 13 Nov | December demo strategy, work packages, decisions owed, asks for Michael |
+| [`committee/2026-11-12-teacher-gap.md`](committee/2026-11-12-teacher-gap.md) | dated, 12 Nov, read-only audit at `3a01b1d` | Which STATUS §2 teacher-side items are still open in source |
+| [`committee/2026-11-12-marble-examples.md`](committee/2026-11-12-marble-examples.md) | dated, 12 Nov | Marble lesson walk for ages 7 to 9, ids from the live graph |
+| [`committee/2026-11-12-student-preview.html`](committee/2026-11-12-student-preview.html) | dated, 12 Nov, labelled mock | Scripted student space. No model was called. Not deployed |
 | [`committee/2026-10-19-briefing.md`](committee/2026-10-19-briefing.md) | dated draft, 19 Oct | The committee briefing. The main text is the `20acaea` snapshot. The last section, "After the repair round", is current for `6a956d8` (it now covers round 3) |
 | [`early-testers.md`](early-testers.md) | current, 19 Oct | The page to hand a teacher who will try the prototype: what works, what is not real, known rough edges, how to report |
 | [`verification/2026-10-19-heldout-misses-live.md`](verification/2026-10-19-heldout-misses-live.md) | dated, 19 Oct, measurement | The 47 net misses asked to the live model: 47 of 47 refused. One model, one fixture, one run |

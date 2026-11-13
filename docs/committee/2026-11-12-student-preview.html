@@ -1,0 +1,140 @@
+<!--
+  PREVIEW MOCK. Not a product page. Not deployed. Not hosted on constitution.asfai.org.
+  Task:   Student-side preview mock (committee, 2026-11-12)
+  Root:   /Users/bonorinoa/Hermes/Projects/silicus-asfai-handoff
+  Route:  anthropic / claude-sonnet-5-5   (profile: creative)
+  Locks read: docs/STATUS.md section 2 item 1 ("Students cannot reach a published version") at main 33e6c44.
+  Refusal words come from the code, not from this file:
+    host/student.mjs  OFF_TOPIC   = "That isn't part of this lesson. Ask your teacher."
+    host/student.mjs  NOT_EVIDENCE = "Asking questions here is not evidence of learning."
+    host/student.mjs  ASSESSMENT  = "I can't tell you how you're doing. Your teacher decides that."  (not drawn here)
+  The lesson "How seeds travel" is invented for this mock. It is not a course and not a Marble id.
+  Every line of the conversation is scripted by hand. No model was called.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PREVIEW · Student space mock · not a live page</title>
+<style>
+  :root {
+    --oxblood: #6b1d2a; --sand: #e9dfcc; --cream: #faf6ec; --ink: #2a2321; --mute: #6f655e;
+    --rule: #cfc4ae; --warn: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sand); color: var(--ink);
+    font: 17px/1.55 "Times New Roman", Times, serif; }
+  .sans { font-family: Helvetica, Arial, sans-serif; }
+  /* Banner: loud on purpose, so no screenshot of this can pass for a product page */
+  .banner { background: var(--oxblood); color: var(--cream); padding: 14px 24px;
+    font: 600 14px/1.45 Helvetica, Arial, sans-serif; border-bottom: 6px double var(--cream); }
+  .banner b { letter-spacing: .14em; font-size: 15px; }
+  .banner span { font-weight: 400; display: block; margin-top: 2px; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 56px; }
+  .specimen { background: var(--cream); border: 2px dashed var(--oxblood); padding: 26px 28px; position: relative; }
+  .stamp { position: absolute; top: 12px; right: 16px; border: 2px solid var(--oxblood); color: var(--oxblood);
+    font: 700 11px/1 Helvetica, Arial, sans-serif; letter-spacing: .18em; padding: 5px 8px; transform: rotate(3deg); }
+  .num { font: 700 12px/1 Helvetica, Arial, sans-serif; color: var(--oxblood); letter-spacing: .12em; margin: 30px 0 8px; }
+  .num:first-of-type { margin-top: 4px; }
+  h1 { font-size: 30px; margin: 6px 0 2px; font-weight: 400; }
+  h2 { font-size: 21px; margin: 0 0 8px; font-weight: 400; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+  .meta { font: 13px/1.4 Helvetica, Arial, sans-serif; color: var(--mute); margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  td { padding: 8px 10px; vertical-align: top; }
+  td.id { font: 600 12px/1.9 Helvetica, Arial, sans-serif; color: var(--oxblood); width: 120px; white-space: nowrap; }
+  tr:nth-child(odd) td { background: #f1eadb; }
+  .scope { font: 13px/1.45 Helvetica, Arial, sans-serif; color: var(--mute); margin: 18px 0 12px; }
+  .turn { margin: 14px 0; max-width: 88%; }
+  .who { font: 600 11px/1 Helvetica, Arial, sans-serif; letter-spacing: .1em; color: var(--mute); margin-bottom: 4px; }
+  .bubble { padding: 10px 14px; border: 1px solid var(--rule); background: #fff; }
+  .student { margin-left: auto; }
+  .student .bubble { background: var(--sand); }
+  .cite { font: 12px/1.4 Helvetica, Arial, sans-serif; margin-top: 8px; color: var(--oxblood); }
+  .cite span { display: inline-block; border: 1px solid var(--oxblood); padding: 1px 7px; margin-right: 6px; }
+  .refuse .bubble { border-left: 4px solid var(--warn); }
+  .tag { font: 600 11px/1 Helvetica, Arial, sans-serif; color: var(--warn); margin-top: 8px; }
+  .note { font: 12px/1.4 Helvetica, Arial, sans-serif; color: var(--mute); margin-top: 6px; }
+  .input { display: flex; gap: 8px; margin-top: 18px; }
+  .input div { flex: 1; border: 1px dashed var(--mute); padding: 10px 12px; color: var(--mute);
+    font: italic 14px Helvetica, Arial, sans-serif; background: repeating-linear-gradient(135deg,#f5efe0,#f5efe0 8px,#efe7d3 8px,#efe7d3 16px); }
+  .input i { font-style: normal; border: 1px dashed var(--mute); padding: 10px 14px; color: var(--mute); font: 14px Helvetica, Arial, sans-serif; }
+  .truth { margin-top: 30px; border-top: 3px double var(--oxblood); padding-top: 14px;
+    font: 14px/1.5 Helvetica, Arial, sans-serif; }
+  .truth li { margin: 5px 0; }
+  .foot { font: 12px/1.5 Helvetica, Arial, sans-serif; color: var(--mute); margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<div class="banner" role="note">
+  <b>PREVIEW</b> &nbsp;This is a mock for committee review. It is not a deployed student page.
+  <span>It shows what a student would see. It runs on the teacher's device, and class codes are not live.</span>
+</div>
+
+<main class="wrap">
+  <div class="specimen">
+    <div class="stamp">PREVIEW · NOT LIVE</div>
+
+    <div class="num">01 · A PUBLISHED LESSON</div>
+    <h1>How seeds travel</h1>
+    <p class="meta">Version 1 · published by your teacher · invented for this mock</p>
+
+    <div class="num">02 · WHAT THE LESSON CONTAINS</div>
+    <table>
+      <tr><td class="id">OBJECTIVE 1</td><td>Name three ways seeds travel: wind, water and animals.</td></tr>
+      <tr><td class="id">OBJECTIVE 2</td><td>Explain why a seed that travels away from its parent plant has a better chance to grow.</td></tr>
+      <tr><td class="id">ACTIVITY 1</td><td>Match a maple seed, a coconut and a burr to the way each one travels: wind, water or animals.</td></tr>
+      <tr><td class="id">ACTIVITY 2</td><td>Draw one seed and label how it moves.</td></tr>
+    </table>
+
+    <div class="num">03 · ASK ABOUT THIS LESSON</div>
+    <p class="scope">Answers only from version 1 of this lesson: 2 objectives and 2 activities. It has not read your materials, and nothing a student asks is saved.</p>
+
+    <div class="turn student">
+      <div class="who">STUDENT</div>
+      <div class="bubble">What ways do seeds travel in this lesson?</div>
+    </div>
+
+    <div class="turn">
+      <div class="who">HELPER · GROUNDED ANSWER</div>
+      <div class="bubble">
+        Your teacher's plan names three ways: wind, water and animals. In the first activity you match a maple seed, a coconut and a burr to them.
+        <div class="cite"><span>Objective 1</span><span>Activity 1</span></div>
+      </div>
+      <div class="note">Based on your teacher's plan. Asking questions here is not evidence of learning.</div>
+    </div>
+
+    <div class="turn student">
+      <div class="who">STUDENT</div>
+      <div class="bubble">How fast can a cheetah run?</div>
+    </div>
+
+    <div class="turn refuse">
+      <div class="who">HELPER · REFUSAL</div>
+      <div class="bubble">
+        That isn't part of this lesson. Ask your teacher.
+        <div class="tag">REFUSED · NOT IN THE PUBLISHED VERSION · no citation, so no answer</div>
+      </div>
+      <div class="note">Asking questions here is not evidence of learning.</div>
+    </div>
+
+    <div class="input" aria-hidden="true">
+      <div>Typing is turned off in this preview.</div><i>Ask</i>
+    </div>
+
+    <div class="truth">
+      <b>What is true about this page</b>
+      <ul>
+        <li><b>This preview runs on the teacher's device. Class codes are not live.</b> Students cannot reach a published course yet: the record lives in the teacher's browser (online) or on the teacher's computer (local). Source: <code>docs/STATUS.md</code> section 2, item 1.</li>
+        <li>There is no sign-in on this page because there is nothing to sign in to. Student access through ASFAI has not been built.</li>
+        <li>The lesson is made up. The two chat turns are written by hand. No model was called, so this shows the wording and the layout, not how well the live helper answers.</li>
+        <li>The real helper has two refusal kinds in code: <code>off_topic</code> (drawn above) and <code>assessment</code> (a request for a grade or "how am I doing"). Only the first is drawn here.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="foot">Silicus TA 3.0 · committee preview · 12 November 2026 · a local file, not hosted anywhere · ASFAI is the protocol; this page is not an ASFAI service.</p>
+</main>
+</body>
+</html>

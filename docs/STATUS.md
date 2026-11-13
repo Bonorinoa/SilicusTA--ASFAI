@@ -20,6 +20,29 @@ Dated verification reports, decision memos and plans are historical records. The
 > At `6b49604` the route keeps material **names only** for new writes. **Legacy and imported records can still carry
 > raw text.** The invariant is still violated for those records. See §2 item 13.
 
+> **Owner update, 13 November 2026 (not a re-audit).** Read this box before §1. The audit below still describes
+> `6a956d8` / `v0.6.0`, and no product code has changed since `3a01b1d` (only docs commits after it).
+> - **Team.** Stephen is no longer on the project. Michael (repo owner of `redbeard-26/asfai-education`) holds the
+>   institutional access. Augusto, working with agents, is the only developer of this prototype. Every
+>   "Stephen" question in older records (hosting, server-side record, sign-in) is now either Augusto's
+>   decision or an ask to Michael. The list is in [`NEXT.md`](NEXT.md) §4.
+> - **Item 2 is narrowed in code.** A read-only audit on 12 Nov found that the v0.6.0 sprint (`1db6b51`) added an
+>   explicit objectives-confirm gate that the wizard uses. A course created through the raw API still
+>   auto-confirms. Record: [`committee/2026-11-12-teacher-gap.md`](committee/2026-11-12-teacher-gap.md).
+>   Items 1, 3, 4, 5, 6, 7, 10, 11, 13, 16 and 19 are still open in source as of that audit.
+> - **Knowledge sources are a suggestion seam, not a curriculum store.** On the local host only, plan drafting
+>   may pull context from ASFAI's Marble map and from a JSON file named by `SILICUS_ONTOLOGY_FILE`. The plan
+>   shows them as "suggested alignment". They are not saved, they do not become objectives, and the student
+>   helper never sees them. The online app has none of this until asfai-education CORS issue #16 is fixed.
+>   Silicus's own local ASFAI login was not exercised on 12 to 13 Nov; only the Hermes connector was
+>   (`list_programs` answered).
+> - **New committee artifacts (12 Nov):** a Marble lesson walk for ages 7 to 9
+>   ([`committee/2026-11-12-marble-examples.md`](committee/2026-11-12-marble-examples.md)), and a labelled,
+>   scripted student-space mock
+>   ([`committee/2026-11-12-student-preview.html`](committee/2026-11-12-student-preview.html)). The mock
+>   called no model and is not a deployed page.
+> - **What comes next** (December member demo, decisions owed, Michael asks): [`NEXT.md`](NEXT.md).
+
 Docs map: [`INDEX.md`](INDEX.md). Committee briefing: [`committee/2026-10-19-briefing.md`](committee/2026-10-19-briefing.md).
 Delivery history 12 to 19 October: [`committee/2026-10-12-to-19-delivery.md`](committee/2026-10-12-to-19-delivery.md).
 

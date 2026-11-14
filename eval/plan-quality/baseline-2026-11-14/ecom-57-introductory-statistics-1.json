@@ -1,0 +1,87 @@
+{
+  "course": "ecom-57-introductory-statistics",
+  "run": 1,
+  "courseId": "urn:uuid:0229d1d8-d778-4531-b069-27e1cd2f53cb",
+  "title": "Ecom 57, introductory statistics",
+  "courseLabel": "Ecom 57, introductory statistics, ages 19",
+  "modelId": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openai",
+  "zdr": true,
+  "draftLatencyMs": 3049,
+  "planSha256": "fd8cbe6b82ac046fe223297426e55864234e270d9798ad8cafe2050f018b27af",
+  "chainHead": "f6691ea84687706338ef7722190a3e0d849fffffb1a6106f6dce4211b0ef9145",
+  "chainVerify": {
+    "ok": true,
+    "events": 8
+  },
+  "intake": {
+    "questionsFrom": "local",
+    "outlineAuthorizedBefore": false,
+    "outlineAuthorizedAfter": true
+  },
+  "objectives": [
+    {
+      "id": "urn:uuid:9d28afc3-ecf9-c7fd-3f87-b487d99db2ae",
+      "statement": "Interpret a regression coefficient in plain language"
+    },
+    {
+      "id": "urn:uuid:381d79d6-d0d4-8a74-867c-4b12374d0626",
+      "statement": "Explain why correlation does not imply causation"
+    },
+    {
+      "id": "urn:uuid:719bf5eb-769a-6e36-4da5-cfe6e033bc5c",
+      "statement": "Read a scatter plot and describe the direction and strength of the association"
+    }
+  ],
+  "plan": {
+    "id": "urn:uuid:6d720d2d-b6d5-30ed-0ad1-75a15b1d89a7",
+    "courseId": "urn:uuid:0229d1d8-d778-4531-b069-27e1cd2f53cb",
+    "courseVersion": 1,
+    "title": "Introductory Statistics: Scatterplots, Regression Coefficients, and Causation",
+    "audience": {
+      "ageRangeStart": 19,
+      "ageRangeEnd": 19
+    },
+    "status": "draft",
+    "activities": [
+      {
+        "id": "urn:uuid:719a3573-9d0c-1666-761a-2b6952addd92",
+        "title": "Reading Scatter Plots",
+        "minutes": 15,
+        "objectiveIds": [
+          "urn:uuid:719bf5eb-769a-6e36-4da5-cfe6e033bc5c"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Students examine several scatter plots from the course notes and verbally describe each association's direction (positive, negative, or none) and strength (weak, moderate, strong). They also sketch a rough line of best fit on paper.",
+        "teacherDoes": "The teacher projects example scatter plots, models descriptive language ('moderate positive association'), and prompts students to justify their answers. The teacher circulates to observe student sketches and verbal descriptions.",
+        "evidenceIfAny": "observation"
+      },
+      {
+        "id": "urn:uuid:330df575-f0d4-e4ca-1563-9169d06655c0",
+        "title": "Interpreting a Regression Coefficient",
+        "minutes": 20,
+        "objectiveIds": [
+          "urn:uuid:9d28afc3-ecf9-c7fd-3f87-b487d99db2ae"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Students work individually on a worksheet containing a regression output (e.g., y = 5 + 2x). They write a plain-language interpretation of the coefficient for x, including units and direction of effect.",
+        "teacherDoes": "The teacher reviews the formula and provides one worked example. Then the teacher monitors and offers feedback as students write their interpretations, clarifying common errors like confusing units or causal language.",
+        "evidenceIfAny": "work-product"
+      },
+      {
+        "id": "urn:uuid:ed213882-b412-5867-f73d-b6c5be72f689",
+        "title": "Why Correlation Does Not Imply Causation",
+        "minutes": 15,
+        "objectiveIds": [
+          "urn:uuid:381d79d6-d0d4-8a74-867c-4b12374d0626"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Students discuss in pairs a set of real-world examples (e.g., ice cream sales and drowning) and explain why a strong correlation does not necessarily mean one variable causes the other. They also identify potential confounding variables.",
+        "teacherDoes": "The teacher facilitates a whole-class discussion, prompting students to articulate causal pitfalls. The teacher provides counterexamples and emphasizes the role of random assignment in establishing causation.",
+        "evidenceIfAny": "observation"
+      }
+    ],
+    "proposedBy": "ai",
+    "proposedAt": 1794689590493
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "course": "smart-versus-not-smart-devices",
+  "run": 2,
+  "courseId": "urn:uuid:15bee629-60a8-40a5-94e9-12374b470ea3",
+  "title": "Smart Versus Not-Smart Devices",
+  "courseLabel": "Smart Versus Not-Smart Devices, ages 5-8",
+  "modelId": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openai",
+  "zdr": true,
+  "draftLatencyMs": 4211,
+  "planSha256": "8487bafc50090b934846e189a7eb2d4b72a652beebdd70fabf39033ee9814dde",
+  "chainHead": "838e48cbe77f75fdbde77306154afbb62b835dd1d8aedb5504475371c940d994",
+  "chainVerify": {
+    "ok": true,
+    "events": 8
+  },
+  "intake": {
+    "questionsFrom": "local",
+    "outlineAuthorizedBefore": false,
+    "outlineAuthorizedAfter": true
+  },
+  "objectives": [
+    {
+      "id": "urn:uuid:4774da98-b221-41d0-e0f2-752145ff8743",
+      "statement": "Sort objects into 'responds to input' and 'does the same thing every time'"
+    },
+    {
+      "id": "urn:uuid:9864cae8-aed6-33ed-0f44-fcb76ebe9908",
+      "statement": "Know that a smart speaker is not a radio"
+    },
+    {
+      "id": "urn:uuid:45512bd3-67f1-7f8a-9502-8d622ae7203e",
+      "statement": "Know that an automatic door senses and responds"
+    }
+  ],
+  "plan": {
+    "id": "urn:uuid:a0644a57-dbe7-5da9-c2d6-20394125329b",
+    "courseId": "urn:uuid:15bee629-60a8-40a5-94e9-12374b470ea3",
+    "courseVersion": 1,
+    "title": "Smart Devices: How They Respond to Input",
+    "audience": {
+      "ageRangeStart": 5,
+      "ageRangeEnd": 8
+    },
+    "status": "draft",
+    "activities": [
+      {
+        "id": "urn:uuid:7065d368-6818-d7c8-f609-93459a47f320",
+        "title": "Sort It Out: React or Repeat?",
+        "minutes": 8,
+        "objectiveIds": [
+          "urn:uuid:4774da98-b221-41d0-e0f2-752145ff8743"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Sort picture cards of objects (e.g., a light switch, a motion-sensor light, a toaster, a smart speaker) into two groups: 'responds to input' and 'does the same thing every time'.",
+        "teacherDoes": "Lay out the cards and a two-column sorting mat. Guide learners to discuss what 'input' means and then sort each card, asking 'Does this change based on what you do or what happens around it?'",
+        "evidenceIfAny": "work-product"
+      },
+      {
+        "id": "urn:uuid:b21a0c34-9a01-8b18-3888-d3e85f66e4e5",
+        "title": "Smart Speaker vs. Radio",
+        "minutes": 5,
+        "objectiveIds": [
+          "urn:uuid:9864cae8-aed6-33ed-0f44-fcb76ebe9908"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Compare a smart speaker and a radio by pointing out that the radio always plays the same station, while a smart speaker listens for your voice and chooses music or answers questions.",
+        "teacherDoes": "Show a picture of a radio and a smart speaker. Ask learners to describe how each works, prompting them to notice that the smart speaker changes based on what you say, while a radio just plays what it's set to.",
+        "evidenceIfAny": "observation"
+      },
+      {
+        "id": "urn:uuid:de7472b6-8e62-28f6-3950-06bede51da29",
+        "title": "The Automatic Door Senses You",
+        "minutes": 7,
+        "objectiveIds": [
+          "urn:uuid:45512bd3-67f1-7f8a-9502-8d622ae7203e"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Act out being a person walking toward an automatic door, then describe how the door 'senses' movement and 'responds' by opening. Draw or say what the door notices and what it does.",
+        "teacherDoes": "Use a simple prop (like a toy door or your hands) to model the automatic door. Ask learners to show what happens when someone approaches and when nobody is there, guiding them to connect sensing and responding.",
+        "evidenceIfAny": "observation"
+      }
+    ],
+    "proposedBy": "ai",
+    "proposedAt": 1794689578300
+  }
+}

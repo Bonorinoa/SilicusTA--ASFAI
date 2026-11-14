@@ -233,11 +233,11 @@ async function runOne(api, spec, run, outDir, worker) {
   };
   const fileName = `${spec.slug}-${run}.json`;
   const filePath = join(outDir, fileName);
+  // Write ONCE: the record file stays byte-identical to what gets hashed, so the
+  // manifest's fileSha256 can be re-verified against the file on disk afterwards.
   writeFileSync(filePath, JSON.stringify(record, null, 2) + "\n");
   const onDisk = readFileSync(filePath, "utf8");
   const fileSha256 = sha256(onDisk);
-  record.fileSha256 = fileSha256;
-  writeFileSync(filePath, JSON.stringify(record, null, 2) + "\n");
   return { record, filePath, fileSha256 };
 }
 

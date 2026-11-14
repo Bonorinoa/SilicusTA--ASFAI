@@ -1,0 +1,87 @@
+{
+  "course": "ecom-57-introductory-statistics",
+  "run": 2,
+  "courseId": "urn:uuid:316e2a0e-1286-419a-9ed5-3363fd0079d3",
+  "title": "Ecom 57, introductory statistics",
+  "courseLabel": "Ecom 57, introductory statistics, ages 19",
+  "modelId": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openai",
+  "zdr": true,
+  "draftLatencyMs": 8209,
+  "planSha256": "087d13b84f3734c54a37d258fb8b4332bafb602d9be0ed9e178888ebc48e1619",
+  "chainHead": "c1427e0a46f9761ab8c280398400c8574fee0b2f11c966bbb67b8919afac2724",
+  "chainVerify": {
+    "ok": true,
+    "events": 8
+  },
+  "intake": {
+    "questionsFrom": "local",
+    "outlineAuthorizedBefore": false,
+    "outlineAuthorizedAfter": true
+  },
+  "objectives": [
+    {
+      "id": "urn:uuid:23599043-34fb-9d7a-4ef4-15319881b644",
+      "statement": "Interpret a regression coefficient in plain language"
+    },
+    {
+      "id": "urn:uuid:83a285c7-d8c6-ba4d-2365-c6a113c78ca5",
+      "statement": "Explain why correlation does not imply causation"
+    },
+    {
+      "id": "urn:uuid:c41fec94-2f00-75b4-7ab2-d4fde2d5ded4",
+      "statement": "Read a scatter plot and describe the direction and strength of the association"
+    }
+  ],
+  "plan": {
+    "id": "urn:uuid:f99a5885-e26b-7b14-b061-c713e61e160c",
+    "courseId": "urn:uuid:316e2a0e-1286-419a-9ed5-3363fd0079d3",
+    "courseVersion": 1,
+    "title": "Introductory Statistics: Scatterplots, Regression, and Correlation",
+    "audience": {
+      "ageRangeStart": 19,
+      "ageRangeEnd": 19
+    },
+    "status": "draft",
+    "activities": [
+      {
+        "id": "urn:uuid:c132ae0e-23d7-109c-4476-d7321dc060b7",
+        "title": "Reading Scatterplots",
+        "minutes": 15,
+        "objectiveIds": [
+          "urn:uuid:c41fec94-2f00-75b4-7ab2-d4fde2d5ded4"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Examine several scatter plots and write a description of the direction (positive, negative, or no association) and strength (weak, moderate, strong) for each.",
+        "teacherDoes": "Display scatter plots, model how to assess direction and strength, and provide guided practice with feedback.",
+        "evidenceIfAny": "work-product"
+      },
+      {
+        "id": "urn:uuid:be52847f-347f-dca0-5325-4d0f99e86693",
+        "title": "Interpreting Regression Coefficients",
+        "minutes": 20,
+        "objectiveIds": [
+          "urn:uuid:23599043-34fb-9d7a-4ef4-15319881b644"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Given regression output for a real-world scenario, write a plain-language interpretation of the slope coefficient (e.g., \"for each additional unit of X, Y changes by b units on average\").",
+        "teacherDoes": "Explain the meaning of the regression coefficient with concrete examples, then distribute practice problems and circulate to assist.",
+        "evidenceIfAny": "work-product"
+      },
+      {
+        "id": "urn:uuid:1d71435c-a8a3-2517-8924-ca65134ce563",
+        "title": "Correlation vs Causation",
+        "minutes": 20,
+        "objectiveIds": [
+          "urn:uuid:83a285c7-d8c6-ba4d-2365-c6a113c78ca5"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Analyze paired examples of correlated variables and write a short explanation of why a causal conclusion is not justified, referencing potential confounders or alternative explanations.",
+        "teacherDoes": "Present classic examples (e.g., ice cream sales and drowning), lead a discussion, and clarify that correlation does not imply causation.",
+        "evidenceIfAny": "work-product"
+      }
+    ],
+    "proposedBy": "ai",
+    "proposedAt": 1794689598713
+  }
+}

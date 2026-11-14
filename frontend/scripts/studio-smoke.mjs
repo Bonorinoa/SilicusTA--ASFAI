@@ -105,6 +105,12 @@ const clickBy = async (label) => {
   await sleep(300);
   return hit;
 };
+/** G2b: click a step-1 control by its accessible text (radio cards are labels, steppers are aria-labelled). */
+const clickLabel = (text) => page.evaluate((t) => {
+  const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(t));
+  if (el) el.click();
+  return !!el;
+}, text);
 const setVal = async (selector, value) => page.evaluate((sel, v) => {
   const el = document.querySelector(sel); if (!el) return false;
   const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -200,8 +206,24 @@ try {
   await page.type(`${step1}[placeholder="How plants eat"]`, "How plants eat");
   await page.type(`${step1}[placeholder="Ms. Lovelace"]`, "Ada Lovelace");
   await page.type(`${step1}[placeholder="How plants make food from sunlight"]`, "How plants make food from sunlight");
-  check("step 1 waits for all four answers before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
-  await page.type(`${step1}[placeholder="Grade 4 science, ages 9–10"]`, "Grade 4 science, ages 9-10");
+  check("step 1 waits for the learners' ages before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
+  // ---- G2b: who the learners are. Early primary (4–8), then the steppers refine to 5–12.
+  check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]').length) === 7);
+  await clickLabel("Early primary");
+  await clickLabel("Youngest age: one year older");
+  for (let i = 0; i < 4; i++) await clickLabel("Oldest age: one year older");
+  check("G2b the strip names the chosen ages and counts skill-map topics from the coverage route", await page.waitForFunction(() => /Ages 5–12 · [\d,]+ skill-map topics/.test(document.body.innerText), { timeout: 20000 }).then(() => true, () => false) && /Ages 5–12 · [\d,]+ skill-map topics/.test(await body()) && await page.evaluate(() => document.querySelectorAll('[role="img"][aria-label^="Skill-map topics at each age"] > span[data-on="true"]').length === 8));
+  t = await body();
+  check("G2b the consequence strip shows stage 1 (the youngest sets it), the topic count and the plan voice", /Stage 1 of 4/.test(t) && /skill-map topics fit these ages/.test(t) && /Plan voice/i.test(t));
+  // Topic from the skill map: search, pick the anchor, then edit the pre-filled topic.
+  await page.type('form[aria-label="Course and learners"] input[type="search"]', "AI in Daily Life");
+  await page.waitForFunction(() => document.querySelector('ul[aria-label="Skill-map topics"] button'), { timeout: 15000 }).catch(() => null);
+  await clickBy("AI in Daily Life");
+  check("G2b picking a skill-map topic sets the anchor, pre-fills the topic and shows the Marble credit", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false)
+    && await page.evaluate(() => [...document.querySelectorAll('form[aria-label="Course and learners"] input')].some((i) => i.value === "AI in Daily Life")) && /Marble Skill Taxonomy \(v1\)/.test(await body()));
+  await setVal('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "How plants make food from sunlight");
+  await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
+  await sleep(200);
   await clickBy("Continue");
   await waitText("Drop files here", 5000);
   t = await body();
@@ -217,6 +239,7 @@ try {
   await clickPrimary("Continue");
   await waitText("Review and confirm", 5000);
   t = await body();
+  check("G2b the review shows ages, stage and the anchor", /Ages 5–12 · Early primary · AI stage 1 of 4/.test(t) && /AI in Daily Life/.test(t) && /Marble Skill Taxonomy/.test(t));
   check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
   check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
   await clickPrimary("Confirm and create the course");
@@ -227,6 +250,7 @@ try {
   const trail = ev.filter((e) => ["course.created", "intake.answered", "checkpoint.confirmed"].includes(e.kind)).map((e) => e.kind === "checkpoint.confirmed" ? `${e.kind}:${e.id}` : e.kind);
   check("one confirm leaves the brief's intents in the brief's order: create, answers, files, outline", JSON.stringify(trail) === JSON.stringify(["course.created", "intake.answered", "checkpoint.confirmed:files", "checkpoint.confirmed:outline"]), JSON.stringify(trail));
   const created = ev.find((e) => e.kind === "course.created");
+  check("G2b the course is created with ages 5–12 and the anchor mt_AzTrT5ySCx", JSON.stringify(created?.ages) === JSON.stringify({ min: 5, max: 12 }) && created?.marbleAnchor === "mt_AzTrT5ySCx", JSON.stringify({ ages: created?.ages, anchor: created?.marbleAnchor }));
   check("the course is created with no names-only material rows", Array.isArray(created?.materials ?? []) && (created?.materials ?? []).length === 0, JSON.stringify(created?.materials));
 
   // ---- brief, looked back at (a wizard-made course never stops on it)
@@ -235,7 +259,7 @@ try {
   t = await body();
   check("the Brief step renders (Step 1 of 4), looked back at", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
   const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
-  check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value === "Grade 4 science, ages 9-10")), `found ${nFields}`);
+  check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value.includes("Grade 4 science, ages 9-10"))), `found ${nFields}`);
   // ---- lane C · F5: the header's AI status opens the same diagnosis as the wizard's AI check
   await clickBy("AI needs passcode");
   check("the studio's AI status opens the wizard's diagnosis", await waitText("AI drafting on this site needs the demo passcode", 4000) && await page.evaluate(() => !!document.querySelector('dialog[aria-label="AI status"][open]')));
@@ -379,8 +403,20 @@ try {
   check("a returning teacher's wizard opens on step 1, without the welcome", await waitText("Your course and learners", 6000) && !/Let’s set up your course/.test(await body()));
   await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Leaves and light");
   await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  // ---- G2b: ages 19–22 have no skill-map topics: it says so, the teacher writes their own, no anchor.
+  await clickLabel("University / adult");
+  await clickLabel("Youngest age: one year older");
+  for (let i = 0; i < 3; i++) await clickLabel("Oldest age: one year younger");
+  check("G2b ages 19–22: the consequence strip says there are no suggestions", await waitText("No suggestions at these ages: you write your own objectives.", 15000) && /Ages 19–22 · 0 skill-map topics/.test(await body()));
+  check("G2b ages 19–22: the skill-map option is off and says why; writing your own is chosen", await page.evaluate(() => {
+    const r = [...document.querySelectorAll('form[aria-label="Course and learners"] label')];
+    const map = r.find((l) => /Start from the skill map/.test(l.textContent ?? ""))?.querySelector("input");
+    const own = r.find((l) => /^Write your own/.test((l.textContent ?? "").trim()))?.querySelector("input");
+    return !!map?.disabled && !!own?.checked && !document.querySelector('form[aria-label="Course and learners"] input[type="search"]');
+  }) && /No skill-map topics at these ages\. Write your own\./.test(await body()));
   await page.type('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "Why leaves are green");
-  await page.type('form[aria-label="Course and learners"] input[placeholder="Grade 4 science, ages 9–10"]', "Grade 4 science");
+  await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science");
+  await sleep(200);
   await clickBy("Continue");
   await waitText("Drop files here", 5000);
   // The source is named by its own first line: a 200-character unbroken one must wrap, never widen the page.
@@ -406,6 +442,11 @@ try {
   await enterPasscode().catch(() => false);
   check("R7 the confirm lands on Objectives and starts proposing from the sources there", await waitText("Not yours until you accept", 15000) && /From material:/.test(await body()));
   check("R7 one live region on the step after the wizard", (await liveRegions()).length === 1, JSON.stringify(await liveRegions()));
+  {
+    const all = (await stored()).events.map((e) => JSON.parse(e.line).event).filter((e) => e.kind === "course.created");
+    const leaves = all.find((e) => e.title === "Leaves and light");
+    check("G2b the second course is created with ages 19–22 and no anchor", JSON.stringify(leaves?.ages) === JSON.stringify({ min: 19, max: 22 }) && leaves?.marbleAnchor === undefined, JSON.stringify(leaves ? { ages: leaves.ages, anchor: leaves.marbleAnchor } : all.map((e) => e.title)));
+  }
   // ---- F1 (verifier): a long unbroken source name in the proposals' provenance must wrap, never widen the page.
   await page.setViewport({ width: 390, height: 844 });
   await sleep(500);

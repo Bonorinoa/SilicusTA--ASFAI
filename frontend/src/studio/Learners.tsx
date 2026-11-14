@@ -13,24 +13,36 @@ import { ui } from "./ui";
 import w from "./Wizard.module.css";
 
 export interface Coverage { overlapping: number; perAge: { age: number; count: number }[] }
-/** `null` = not asked yet or in flight; "unavailable" = this host has no skill map. */
+/**
+ * `null` = nothing yet; "unavailable" = this host has no skill map; `overlapping: -1` = bars drawn,
+ * count for the chosen ages still on its way. Read the count through countOf.
+ */
 export type CoverageState = Coverage | null | "unavailable";
+export const countOf = (c: CoverageState): number | null => (c && c !== "unavailable" && c.overlapping >= 0 ? c.overlapping : null);
 
-/** Topics per age for the chosen range, from the coverage route; refetched when the ages change. */
+/**
+ * Topics per age for the chosen range, from the coverage route; refetched when the ages change.
+ * Before a choice it asks for the whole strip (3–25), so the bars are drawn and the skill map is warm
+ * when the teacher picks. A count is only returned for the ages it was asked for (never a stale one);
+ * the bars stay put between answers, since every answer carries the same 3–25 strip.
+ */
 export function useCoverage(ages: Audience["ages"]): CoverageState {
-  const [cov, setCov] = useState<CoverageState>(null);
-  const min = ages?.min, max = ages?.max;
+  const [got, setGot] = useState<{ key: string; cov: Coverage | "unavailable" } | null>(null);
+  const [bars, setBars] = useState<Coverage["perAge"]>([]);
+  const lo = ages?.min ?? 3, hi = ages?.max ?? 25;
+  const key = `${lo}-${hi}`;
   useEffect(() => {
-    if (min === undefined || max === undefined) { setCov(null); return; }
     let live = true;
     const t = setTimeout(() => {
-      host.marbleCoverage(min, max)
-        .then((r) => { if (live) setCov({ overlapping: r.overlapping, perAge: r.perAge }); })
-        .catch(() => { if (live) setCov("unavailable"); });
+      host.marbleCoverage(lo, hi)
+        .then((r) => { if (live) { setGot({ key, cov: { overlapping: r.overlapping, perAge: r.perAge } }); setBars(r.perAge); } })
+        .catch(() => { if (live) setGot({ key, cov: "unavailable" }); });
     }, 120);
     return () => { live = false; clearTimeout(t); };
-  }, [min, max]);
-  return cov;
+  }, [lo, hi, key]);
+  if (got?.cov === "unavailable") return "unavailable";
+  if (got && got.key === key) return got.cov;
+  return bars.length ? { overlapping: -1, perAge: bars } : null;
 }
 
 export const MarbleCredit = () => (
@@ -87,7 +99,7 @@ function AgeStrip({ ages, coverage }: { ages: Audience["ages"]; coverage: Covera
   const bars = coverage && coverage !== "unavailable" ? coverage.perAge : [];
   const top = Math.max(1, ...bars.map((b) => b.count));
   const inRange = (age: number) => !!ages && age >= ages.min && (age <= ages.max || (ages.max > 25 && age === 25));
-  const count = coverage && coverage !== "unavailable" ? coverage.overlapping : null;
+  const count = countOf(coverage);
   const caption = !ages ? "Choose your learners to see the skill map at their ages."
     : coverage === "unavailable" ? `${agesText(ages)} · the skill map is not available here.`
     : count === null ? `${agesText(ages)} · counting…`
@@ -117,7 +129,8 @@ export function TopicField({ aud, coverage, topic, onTopic, onAnchor, onClear }:
   const [mode, setMode] = useState<"map" | "write">("map");
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Anchor[] | null>(null);
-  const hasMap = !!aud.ages && !!coverage && coverage !== "unavailable" && coverage.overlapping > 0;
+  const n = countOf(coverage);
+  const hasMap = !!aud.ages && n !== null && n > 0;
   const effective = hasMap ? mode : "write";
   const min = aud.ages?.min, max = aud.ages?.max;
 
@@ -134,8 +147,8 @@ export function TopicField({ aud, coverage, topic, onTopic, onAnchor, onClear }:
 
   const why = !aud.ages ? "Choose your learners first."
     : coverage === "unavailable" ? "The skill map is not available here. Write your own."
-    : coverage === null ? "Counting skill-map topics…"
-    : coverage.overlapping === 0 ? "No skill-map topics at these ages. Write your own."
+    : n === null ? "Counting skill-map topics…"
+    : n === 0 ? "No skill-map topics at these ages. Write your own."
     : "Search topics that fit these ages.";
 
   return (
@@ -201,7 +214,7 @@ export function Consequences({ stage, coverage }: { stage: Stage | null; coverag
   const pending = "Choose your learners to see this.";
   const map = stage === null ? pending
     : coverage === "unavailable" ? "The skill map is not available here: you write your own objectives."
-    : skillMapLine(coverage === null ? null : coverage.overlapping);
+    : skillMapLine(countOf(coverage));
   return (
     <section className={w.consequences} aria-label="What your choices change">
       <div className={w.tile}>
@@ -209,7 +222,7 @@ export function Consequences({ stage, coverage }: { stage: Stage | null; coverag
         {stage ? <span className={w.tileLead}>Stage {stage} of 4</span> : null}
         <span className={w.tileText}>{stage ? AI_RULE[stage] : pending}</span>
       </div>
-      <div className={w.tile} data-tone={stage !== null && (coverage === "unavailable" || (coverage && coverage.overlapping === 0)) ? "none" : undefined}>
+      <div className={w.tile} data-tone={stage !== null && (coverage === "unavailable" || countOf(coverage) === 0) ? "none" : undefined}>
         <span className={w.tileTitle}>Skill map (Marble)</span>
         <span className={w.tileText}>{map === NO_SUGGESTIONS ? NO_SUGGESTIONS : map}</span>
       </div>

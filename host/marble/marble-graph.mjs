@@ -113,13 +113,19 @@ export class MarbleGraph {
   /** Full trimmed topic by id, or null. */
   get(id) { return this.#byId.get(id) ?? null; }
 
-  /** Plain lexical scoring over name, description and evidence; age-overlap filtered; bounded. */
-  search(query, { ageMin = MARBLE_MIN_AGE, ageMax = MARBLE_MAX_AGE, limit = 10 } = {}) {
+  /** Plain lexical scoring over name, description and evidence; age-overlap filtered; bounded.
+   * `scope` (G2a) is the course's skill-map anchor: `{ subject, domain }`. When set, only topics
+   * whose subject OR domain matches the anchor's are candidates at all — a Computing/AI anchor
+   * makes "Daily Life in a Roman Town" (History) unreachable even when the words overlap, which
+   * is the point of an anchored course. Without scope, the current whole-band behaviour stays. */
+  search(query, { ageMin = MARBLE_MIN_AGE, ageMax = MARBLE_MAX_AGE, limit = 10, scope = null } = {}) {
     const q = terms(query);
     if (q.length === 0) return [];
     const take = Math.max(0, Math.min(50, Number(limit) || 10));
     const out = [];
+    const scoped = Boolean(scope && typeof scope === "object");
     for (const t of this.topics) {
+      if (scoped && String(t.subject ?? "") !== String(scope.subject ?? "") && String(t.domain ?? "") !== String(scope.domain ?? "")) continue;
       const lo = Number.isFinite(Number(t.ageRangeStart)) ? Number(t.ageRangeStart) : MARBLE_MIN_AGE;
       const hi = Number.isFinite(Number(t.ageRangeEnd)) ? Number(t.ageRangeEnd) : MARBLE_MAX_AGE;
       if (lo > ageMax || hi < ageMin) continue;
@@ -149,6 +155,79 @@ export class MarbleGraph {
     const row = (e) => ({ topicId: e.topicId, name: this.#byId.get(e.topicId)?.name ?? null, strength: e.strength, reason: e.reason ?? "" });
     return (this.#dependents.get(id) ?? []).map(row);
   }
+
+  /**
+   * The wizard's histogram strip (G2a). For a requested age range, how many topics overlap it,
+   * and how many topics are live at each single age from 3 to 25. One pass over the topics.
+   * @param {{min?: number, max?: number}} [range]
+   * @returns {{overlapping: number, perAge: {age: number, count: number}[]}}
+   */
+  coverage({ min = MARBLE_MIN_AGE, max = MARBLE_MAX_AGE } = {}) {
+    const lo = Number.isFinite(Number(min)) ? Number(min) : MARBLE_MIN_AGE;
+    const hi = Number.isFinite(Number(max)) ? Number(max) : MARBLE_MAX_AGE;
+    const perAge = [];
+    let overlapping = 0;
+    for (const t of this.topics) {
+      const a = Number.isFinite(Number(t.ageRangeStart)) ? Number(t.ageRangeStart) : MARBLE_MIN_AGE;
+      const b = Number.isFinite(Number(t.ageRangeEnd)) ? Number(t.ageRangeEnd) : MARBLE_MAX_AGE;
+      if (a <= hi && b >= lo) overlapping += 1;
+    }
+    for (let age = 3; age <= 25; age += 1) {
+      let count = 0;
+      for (const t of this.topics) {
+        const a = Number.isFinite(Number(t.ageRangeStart)) ? Number(t.ageRangeStart) : MARBLE_MIN_AGE;
+        const b = Number.isFinite(Number(t.ageRangeEnd)) ? Number(t.ageRangeEnd) : MARBLE_MAX_AGE;
+        if (a <= age && b >= age) count += 1;
+      }
+      perAge.push({ age, count });
+    }
+    return { overlapping, perAge };
+  }
+
+  /**
+   * The anchor's neighbourhood (G2a): prerequisites TWO hops up and dependents ONE hop down,
+   * deduplicated by topic id (first edge wins), each row carrying the full trimmed node (id,
+   * name, subject, domain, ages, evidence) plus the edge's strength, reason and hop distance.
+   * @returns {{anchor: object, prerequisites: object[], dependents: object[]} | null}
+   */
+  neighbourhood(id) {
+    const t = this.#byId.get(id);
+    if (!t) return null;
+    const rowOf = (topicId, strength, reason, hops) => {
+      const n = this.#byId.get(topicId);
+      if (!n) return null;
+      return {
+        id: n.id, name: n.name, subject: n.subject ?? "", domain: n.domain ?? "",
+        ageRangeStart: Number.isFinite(Number(n.ageRangeStart)) ? Number(n.ageRangeStart) : MARBLE_MIN_AGE,
+        ageRangeEnd: Number.isFinite(Number(n.ageRangeEnd)) ? Number(n.ageRangeEnd) : MARBLE_MAX_AGE,
+        strength, reason: reason ?? "", hops,
+        evidence: Array.isArray(n.evidence) ? [...n.evidence] : [],
+      };
+    };
+    const prerequisites = [];
+    const dependents = [];
+    // Dedupe PER DIRECTION: a topic that is both a prerequisite and a dependent of the anchor
+    // (a cycle in the map) must still appear once on each side, not vanish from one.
+    const seenPrereq = new Set();
+    const seenDependent = new Set();
+    const push = (list, seen, topicId, strength, reason, hops) => {
+      if (seen.has(topicId)) return;
+      const row = rowOf(topicId, strength, reason, hops);
+      if (!row) return;
+      seen.add(topicId);
+      list.push(row);
+    };
+    for (const e of this.#prereqs.get(id) ?? []) push(prerequisites, seenPrereq, e.prerequisiteId, e.strength, e.reason, 1);
+    for (const e of this.#prereqs.get(id) ?? []) {
+      for (const e2 of this.#prereqs.get(e.prerequisiteId) ?? []) push(prerequisites, seenPrereq, e2.prerequisiteId, e2.strength, e2.reason, 2);
+    }
+    for (const e of this.#dependents.get(id) ?? []) push(dependents, seenDependent, e.topicId, e.strength, e.reason, 1);
+    return {
+      anchor: { id: t.id, name: t.name, subject: t.subject ?? "", domain: t.domain ?? "", ageRangeStart: t.ageRangeStart, ageRangeEnd: t.ageRangeEnd },
+      prerequisites,
+      dependents,
+    };
+  }
 }
 
 /**
@@ -177,5 +256,7 @@ export function createMarbleService(load) {
       if (!t) return null;
       return { ...t, prerequisites: g.prerequisites(id), dependents: g.dependents(id) };
     },
+    async coverage(range = {}) { return (await graph()).coverage(range); },
+    async neighbourhood(id) { return (await graph()).neighbourhood(id); },
   };
 }

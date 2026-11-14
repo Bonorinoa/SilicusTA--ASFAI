@@ -92,10 +92,11 @@ function withTimeout(promise, ms) {
  *
  * @param {KnowledgeSource[]} sources
  * @param {{topic?: string, objectives?: {id: string, statement: string}[], course?: string,
+ *          ages?: {min: number, max: number} | null, anchor?: string | null,
  *          limit?: number, allowEgress?: string[], timeoutMs?: number}} query
  * @returns {Promise<Readonly<Citation>[]>}
  */
-export async function retrieveAll(sources, { topic = "", objectives = [], course = "", limit = 8, allowEgress = [], timeoutMs = 4000 } = {}) {
+export async function retrieveAll(sources, { topic = "", objectives = [], course = "", ages = null, anchor = null, limit = 8, allowEgress = [], timeoutMs = 4000 } = {}) {
   const usable = (sources ?? []).filter((s) => {
     try {
       if (!s?.enabled) return false;
@@ -105,7 +106,7 @@ export async function retrieveAll(sources, { topic = "", objectives = [], course
   const settled = await Promise.all(
     usable.map(async (s) => {
       try {
-        const hits = await withTimeout(Promise.resolve(s.retrieve({ topic, objectives, course, limit })), timeoutMs);
+        const hits = await withTimeout(Promise.resolve(s.retrieve({ topic, objectives, course, ages, anchor, limit })), timeoutMs);
         return Array.isArray(hits) ? { s, hits } : { s, hits: [] };
       } catch {
         return { s, hits: [] };

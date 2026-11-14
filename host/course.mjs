@@ -29,6 +29,7 @@ import { retrieveAll, verifyCitations } from "./knowledge.mjs";
 import { reasonsOf } from "./reasons.mjs";
 import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
+import { agesError, stageForAges } from "./ages.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -44,8 +45,21 @@ export class CourseIntegrityError extends Error {
 }
 
 export class CourseSession {
-  /** Register a NEW course (a fresh per-course id seed) and return its session. */
-  static create(store, { owner, title, description = "", materials = [], objectivesConfirm } = {}) {
+  /**
+   * Register a NEW course (a fresh per-course id seed) and return its session.
+   * `ages` (G2a, owner 14 Nov) is the structured `{min, max}` band, validated HERE so no caller
+   * (the HTTP handler, the browser host, a test) can persist a bad one; absent stays absent
+   * (a legacy course). `marbleAnchor` is an mt_* id the handler has already checked against the
+   * snapshot; it is a POINTER, never an identity — it is stored on the record, never proposed,
+   * never confirmed, never part of a sealed objective list.
+   */
+  static create(store, { owner, title, description = "", materials = [], objectivesConfirm, ages = null, marbleAnchor = null } = {}) {
+    const agesMsg = agesError(ages);
+    if (agesMsg !== null) {
+      const e = new Error(agesMsg);
+      e.code = "BAD_AGES";
+      throw e;
+    }
     const courseId = `urn:uuid:${randomUUID()}`;
     const seed = `urn:uuid:${randomUUID()}`;
     // The record keeps NAMES only: whatever the client sent is reduced to `{name}` here, before meta.json,
@@ -54,7 +68,8 @@ export class CourseSession {
     // "explicit" is stored; a missing field, "auto", "banana" or anything else stores NOTHING, so an auto
     // course's record is byte-identical to one written before the mode existed and replays as "auto".
     const objectivesMode = objectivesConfirm === "explicit" ? "explicit" : undefined;
-    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, at: Date.now() });
+    const anchor = typeof marbleAnchor === "string" && marbleAnchor.length > 0 ? marbleAnchor : undefined;
+    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, ages, marbleAnchor: anchor, at: Date.now() });
     return CourseSession.load(store, courseId);
   }
 
@@ -87,6 +102,13 @@ export class CourseSession {
     // replay while chain verification still passes.
     const storedMode = created?.objectivesConfirm;
     this.#objectivesMode = storedMode === "explicit" ? "explicit" : "auto";
+    // Structured ages and the skill-map anchor (G2a) are read from the SAME hash-chained event,
+    // never from meta.json: an unchained edit must not be able to move the course's ages or
+    // anchor while chain verification still passes. Absent is a legacy course: null, no stage,
+    // no anchor, and (from G1b) no Marble suggestions.
+    const storedAges = (created?.ages && typeof created.ages === "object") ? { min: created.ages.min, max: created.ages.max } : null;
+    this.#ages = agesError(storedAges) === null ? storedAges : null;
+    this.#anchor = typeof created?.marbleAnchor === "string" && created.marbleAnchor.length > 0 ? created.marbleAnchor : null;
     this.#ledger = new TurnLedger({ clock: () => this.#now });
     // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.
     this.#intake = new LessonIntake({ ledger: this.#ledger, courseId: meta.courseId });
@@ -113,6 +135,10 @@ export class CourseSession {
   #intake;
   /** @type {"auto"|"explicit"} Checkpoint-3 confirmation mode, read from the course record at construction. */
   #objectivesMode;
+  /** @type {{min: number, max: number} | null} Structured ages from the course record (G2a); null = legacy. */
+  #ages;
+  /** @type {string | null} The skill-map anchor (an mt_* id in the snapshot), or null (G2a). */
+  #anchor;
   #validations = [];
   #planAt = null;
   /** @type {string[]} proposal ids in the order the AI proposed them */
@@ -610,8 +636,11 @@ export class CourseSession {
     // Retrieval is per request and is NOT written to the log. A source that sends the teacher's
     // words to ASFAI is consulted only for a course whose answers the teacher has already sent
     // there: no new egress without the teacher's own act. Every failure degrades to no context.
+    // The structured ages and the skill-map anchor (G2a) ride along: the Marble source uses them
+    // instead of parsing the free-text answer, so a course with an anchor never needs its answer
+    // re-read for age or domain.
     const context = await retrieveAll(sources, {
-      topic, objectives, course, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
+      topic, objectives, course, ages: this.#ages ?? null, anchor: this.#anchor, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
     });
 
     let drafted;
@@ -859,6 +888,12 @@ export class CourseSession {
       course: {
         courseId: this.meta.courseId, owner: this.meta.owner, title: this.meta.title,
         description: this.meta.description, materials: this.meta.materials ?? [], createdAt: this.meta.createdAt,
+        // Structured demographics (G2a; absent on legacy courses). `stage` derives from the
+        // youngest age (1 under 8, 2 at 8-11, 3 at 12-14, 4 at 15+); P2 uses it. `marbleAnchor`
+        // is the skill-map anchor — a pointer (the node this lesson is about), never an
+        // objective id, never confirmed, never part of a sealed objective list.
+        ...(this.#ages ? { ages: { min: this.#ages.min, max: this.#ages.max }, stage: stageForAges(this.#ages) } : {}),
+        ...(this.#anchor ? { marbleAnchor: this.#anchor } : {}),
       },
       checkpoints: this.#gate.checkpoints(),
       objectivesMode: this.#objectivesMode,

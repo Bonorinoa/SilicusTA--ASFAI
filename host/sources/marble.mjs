@@ -17,9 +17,15 @@
  * carries the node's age range either way, so neither the worker nor the teacher mistakes it
  * for course content. It is only ever CONTEXT.
  *
+ * G2a (owner 14 Nov): a course's audience may be the STRUCTURED `ages` record instead of the
+ * free-text answer, and a course may carry a **skill-map anchor** (an mt_* id). When it does,
+ * suggestions prefer the anchor's subject and domain and the dependent-walk stops crossing
+ * into unrelated domains; without an anchor the current behaviour stays, filtered by ages.
+ *
  * Egress: null. The teacher's words go nowhere; the snapshot is already on this device.
  */
 import { KnowledgeSource, makeCitation } from "../knowledge.mjs";
+import { agesError } from "../ages.mjs";
 import { audienceAges, overlaps, MARBLE_MIN_AGE, MARBLE_MAX_AGE } from "../marble/marble-graph.mjs";
 
 export class MarbleSource extends KnowledgeSource {
@@ -38,7 +44,7 @@ export class MarbleSource extends KnowledgeSource {
   get canVerify() { return true; }       // membership in the snapshot
   get egress() { return null; }          // nothing leaves the device
 
-  async retrieve({ topic = "", objectives = [], limit = 8, course = "" } = {}) {
+  async retrieve({ topic = "", objectives = [], limit = 8, course = "", ages = null, anchor = null } = {}) {
     if (!this.enabled) return [];
     const query = [topic, ...(objectives ?? []).map((o) => o?.statement)]
       .map((q) => String(q ?? "").trim().slice(0, 300))
@@ -46,29 +52,50 @@ export class MarbleSource extends KnowledgeSource {
       .join(" ");
     if (!query) return [];
 
-    // Grain guard: the audience comes from the teacher's OWN course answer ("AI literacy,
-    // ages 8-10"). Wholly outside Marble's band -> nothing, even when the words match.
-    // G1b (C1): unreadable -> nothing. The parser is widened for the phrasings teachers type,
-    // but an audience the parser cannot place in an age band is never searched whole-band.
-    const band = audienceAges(course);
+    // The audience band: the course's STRUCTURED ages (G2a) when they exist — the teacher's free
+    // text is NEVER parsed for ages then, and a malformed structured block fails closed instead
+    // of falling back to words. Without structured ages the free-text answer is read as before,
+    // and (G1b, C1) an unreadable answer fails closed too: never a whole-band search.
+    let band;
+    if (ages !== null && ages !== undefined) {
+      if (agesError(ages) !== null) return [];
+      band = { min: ages.min, max: ages.max };
+    } else {
+      band = audienceAges(course);
+    }
     if (!band) return [];
     if (!overlaps(band, { min: MARBLE_MIN_AGE, max: MARBLE_MAX_AGE })) return [];
     const { min, max } = band;
     const take = Math.max(1, Math.min(50, Number(limit) || 10));
 
+    // The skill-map anchor (G2a): suggestions prefer its subject and domain. An anchor topic
+    // missing from the snapshot fails closed (never a whole-band search). The SAME scope guards
+    // the dependent-walk below, so the walk stops crossing into unrelated domains — "Daily Life
+    // in a Roman Town" (History) is unreachable for a Computing/Artificial-Intelligence anchor
+    // even when the words overlap (the verifier's example; the walk had been pulling it in).
+    let scope = null;
+    if (typeof anchor === "string" && anchor) {
+      let a = null;
+      try { a = await this.#marble.get(anchor); } catch { return []; }
+      if (!a) return [];
+      scope = { subject: String(a.subject ?? ""), domain: String(a.domain ?? "") };
+    }
+
     let hits;
     try {
-      ({ hits } = await this.#marble.search(query, { ageMin: min, ageMax: max, limit: take }));
+      ({ hits } = await this.#marble.search(query, { ageMin: min, ageMax: max, limit: take, ...(scope ? { scope } : {}) }));
     } catch {
       return []; // an unreadable snapshot is a state (no context), never a course failure
     }
     if (!Array.isArray(hits)) return [];
 
-    const scope = { min, max };
     const inBand = (t) => {
       const lo = Number(t?.ageRangeStart); const hi = Number(t?.ageRangeEnd);
-      return Number.isFinite(lo) && Number.isFinite(hi) && lo <= scope.max && hi >= scope.min;
+      return Number.isFinite(lo) && Number.isFinite(hi) && lo <= max && hi >= min;
     };
+    const inScope = (t) => !scope
+      || String(t?.subject ?? "") === scope.subject
+      || String(t?.domain ?? "") === scope.domain;
     const labelFor = (name, lo, hi) => Number.isFinite(lo) && Number.isFinite(hi)
       && !/\(ages? [^)]*\)\s*$/i.test(name) ? `${name} (ages ${lo}–${hi})` : name;
     const out = [];
@@ -78,6 +105,7 @@ export class MarbleSource extends KnowledgeSource {
       let full = null;
       try { full = await this.#marble.get(id); } catch { return; } // a broken read is skipped, not fatal
       if (!full || !inBand(full)) return;
+      if (!inScope(full)) return;
       seen.add(id);
       out.push(makeCitation({
         ref: `marble:${id}`,
@@ -90,7 +118,8 @@ export class MarbleSource extends KnowledgeSource {
     // (committee walk 2026-11-12): hard prerequisites, soft unlocks, then the topics that
     // build on it — the same age band, never the words. A neighbour who cannot be mentioned
     // by any keyword ("AI in Daily Life" has none of "smart device") still belongs in the
-    // context, which is the entire point of reading a GRAPH and not a bag of words.
+    // context, which is the entire point of reading a GRAPH and not a bag of words. With an
+    // anchor, a neighbour outside its subject/domain is skipped: the walk never crosses.
     for (const h of hits) {
       if (!h || typeof h.id !== "string" || typeof h.name !== "string") continue;
       await pushTopic(h.id);

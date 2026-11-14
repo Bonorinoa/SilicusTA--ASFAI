@@ -18,6 +18,7 @@
  * fields it uses before anything is logged. See server.mjs for the route list.
  */
 import { CourseSession } from "./course.mjs";
+import { agesError } from "./ages.mjs";
 import { askStudent, packageOf } from "./student.mjs";
 import { DEFAULT_TYPICAL_SECONDS } from "./worker-config.mjs";
 
@@ -185,6 +186,27 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         if (!topic) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
         return { status: 200, json: topic };
       }
+      // The wizard's histogram strip (G2a): how many topics overlap a course age range, and how
+      // many topics are live at each single age 3..25. Read-only, no log write, same host both
+      // sides. `perAge` is always the full 3..25 strip so the UI can draw it without a second call.
+      if (parts[3] === "coverage" && method === "GET") {
+        const num = (v, d) => { const raw = url.searchParams.get(v); if (raw === null || raw === "") return d; const n = Number(raw); return Number.isInteger(n) ? n : NaN; };
+        const min = num("min", 3);
+        const max = num("max", 15);
+        if (!Number.isInteger(min) || !Number.isInteger(max) || min < 3 || max > 99 || min > max) {
+          throw new HttpError(400, "BAD_INPUT", "coverage needs integer min and max with 3 <= min <= max <= 99");
+        }
+        return { status: 200, json: { query: { min, max }, ...(await marble.coverage({ min, max })) } };
+      }
+      // The anchor's neighbourhood (G2a): prerequisites two hops up, dependents one hop down,
+      // each row with id, name, ages, subject, domain, strength, reason, evidence and hop count.
+      // Read-only, no log write. Extends the topics route instead of duplicating it.
+      if (parts[3] === "neighbourhood" && parts[4]) {
+        const id = decodeSegment(parts[4]);
+        const neighbourhood = await marble.neighbourhood(id);
+        if (!neighbourhood) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
+        return { status: 200, json: neighbourhood };
+      }
       throw new HttpError(404, "NOT_FOUND", "no such marble route");
     }
     if (parts[1] === "asfai") {
@@ -229,6 +251,22 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           // A JSON null, an array or a scalar is a clean refusal, not a 500 from reading `.owner` off it (E3).
           if (!b || typeof b !== "object" || Array.isArray(b)) throw new HttpError(400, "BAD_INPUT", "a course needs an owner and a title");
           if (!b.owner || !b.title) throw new HttpError(400, "BAD_INPUT", "owner and title are required");
+          // Structured ages (G2a): whole years 3..99, min <= max, plain-message refusals. Absent is
+          // a legacy course and stays absent. The same rule runs again inside CourseSession.create,
+          // so no caller can persist a bad block even by calling the session directly.
+          const agesMsg = agesError(b.ages);
+          if (agesMsg !== null) throw new HttpError(400, "BAD_AGES", agesMsg);
+          // The skill-map anchor (G2a): an mt_* id that EXISTS in the pinned snapshot. It is a
+          // pointer (the node this lesson is about), never an objective id, never confirmed. When
+          // the graph is not wired the anchor cannot be checked and is refused (fail closed);
+          // changing it after creation is out of scope.
+          const anchor = typeof b.marbleAnchor === "string" && b.marbleAnchor ? b.marbleAnchor : null;
+          if (anchor) {
+            if (!/^mt_[A-Za-z0-9_-]+$/.test(anchor)) throw new HttpError(400, "BAD_ANCHOR", "a marbleAnchor must be an mt_* topic id from the snapshot");
+            if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host, so an anchor cannot be checked");
+            const t = await marble.get(anchor);
+            if (!t) throw new HttpError(400, "UNKNOWN_ANCHOR", `no such Marble topic in the snapshot: ${anchor}`);
+          }
           const s = CourseSession.create(store, {
             owner: String(b.owner), title: String(b.title),
             description: b.description ? String(b.description) : "",
@@ -236,6 +274,8 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
             // Checkpoint 3's mode (R4). Only the exact value "explicit" is stored; anything else (missing,
             // "auto", a typo) is a normal auto course. CourseSession.create is the one place that decides it.
             objectivesConfirm: b.objectivesConfirm,
+            ages: b.ages ?? null,
+            marbleAnchor: anchor,
           });
           return { status: 201, json: { ok: true, courseId: s.courseId, view: s.view() } };
         }

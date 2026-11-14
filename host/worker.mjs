@@ -17,6 +17,7 @@
 import { EVIDENCE_KINDS } from "../confirm-gate/confirm-gate.mjs";
 import { unknownRefs } from "./knowledge.mjs";
 import { normalizeReasoning, reasoningBody } from "./worker-config.mjs";
+import { stageForAges } from "./ages.mjs";
 
 export const DEFAULT_WORKER_TIMEOUT_MS = 120_000;
 
@@ -129,9 +130,11 @@ export class PlanWorker {
    * emits must be one we supplied. Absent or empty, the call is exactly what it was before.
    *
    * @param {{objectives: {id: string, statement: string}[], topic?: string, materials?: string[], course?: string,
-   *          context?: {ref: string, label: string, text: string, source: string}[]}} input
+   *          context?: {ref: string, label: string, text: string, source: string}[],
+   *          ages?: {min: number, max: number} | null,
+   *          anchorPrereqs?: {id: string, name: string, evidence: string[]}[]}} input
    */
-  async draft({ objectives = [], topic = "", materials = [], course = "", context = [] } = {}) {
+  async draft({ objectives = [], topic = "", materials = [], course = "", context = [], ages = null, anchorPrereqs = [] } = {}) {
     if (!this.enabled) {
       throw new WorkerError(
         "WORKER_NOT_CONFIGURED",
@@ -142,8 +145,8 @@ export class PlanWorker {
       throw new WorkerError("NO_CONFIRMED_OBJECTIVES", "there are no confirmed objectives to draft from");
     }
 
-    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context }));
-    return validateSpec(spec, objectives, context);
+    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context, ages, anchorPrereqs }));
+    return validateSpec(spec, objectives, context, { ages });
   }
 
   /**
@@ -286,19 +289,75 @@ function contextBlock(context) {
   ];
 }
 
-function buildPrompt({ objectives, topic, materials, course = "", context = [] }) {
+// credit: the learning-design fields, the four phases and the age-stage AI rules below restate
+// Sarah Chardonnens, SYNAPSE model (University of Fribourg). Restated in our own words.
+
+/** The stage's AI rule, as the PROMPT states it. Rendered only when the course has structured ages. */
+const STAGE_RULES = {
+  1: "Audience AI rule (the youngest age sets the stage), stage 1 (under 8): learners do not use AI at all; nothing a child makes goes into a tool. Set every activity's aiStatus to forbidden, and give one plan-level aiPolicy line that says so.",
+  2: "Audience AI rule (the youngest age sets the stage), stage 2 (8-11): AI may be used only teacher-led and projected to the whole class, after the children have stated their own view first. No one child uses AI alone, and AI is never required. Give one plan-level aiPolicy line that states this.",
+  3: "Audience AI rule (the youngest age sets the stage), stage 3 (12-14): a learner may use AI alone only after a first try the teacher has seen. AI never starts the task and is never required; any permitted use needs a noAiAlternative.",
+  4: "Audience AI rule (the youngest age sets the stage), stage 4 (15+): any AI use is allowed, but the plan should record what is asked and used; \"required\" fits only a critical dialogue in which learners question the AI and check what it says.",
+};
+
+/** The plan-level aiPolicy line the host keeps for stages 1-2 (owner decision 3: one line at the top). */
+const STAGE_AI_POLICY = {
+  1: "AI in this course: learners do not use AI at all; nothing a child makes goes into a tool. The teacher may use AI to prepare.",
+  2: "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone.",
+};
+
+/**
+ * The anchor's hard prerequisites, as opening-activity material. Rendered ONLY when a course
+ * carries a skill-map anchor: the learner recalls or bets on a prerequisite before anything else.
+ */
+function anchorBlock(prereqs) {
+  if (!Array.isArray(prereqs) || prereqs.length === 0) return [];
+  return [
+    "",
+    "The course is anchored to a skill-map topic. Its hard prerequisites are material for the OPENING activity: learners recall or bet on the prerequisite before anything else, and the activity says so.",
+    "Hard prerequisites:",
+    ...prereqs.map((p) => {
+      const id = oneLine(p?.id, 80);
+      const name = oneLine(p?.name, 120);
+      const ev = (Array.isArray(p?.evidence) ? p.evidence.map((e) => oneLine(e, 180)).filter(Boolean) : []).slice(0, 2);
+      return `- ${id}: ${name}${ev.length ? ` — evidence: ${ev.join("; ")}` : ""}`;
+    }),
+    "Also include one spaced review that revisits this lesson's idea in a new context.",
+  ];
+}
+
+function buildPrompt({ objectives, topic, materials, course = "", context = [], ages = null, anchorPrereqs = [] }) {
   // The teacher's own answer to "which course is this?" ("Grade 3 math, one 45-minute lesson") carries the length and
   // audience they want. Rendered ONLY when there is one, so without it the prompt is byte-identical to before.
   const courseLine = oneLine(course, 300);
+  const stage = stageForAges(ages);
   return [
     "Draft one lesson plan for a teacher, using ONLY the objectives below.",
     "Cite each activity's objectiveIds exactly as given. Do not invent objectives.",
     "Answer with JSON only, no prose, in this shape:",
     '{"title": string, "audience": {"ageRangeStart": number, "ageRangeEnd": number},',
+    ' "sessions": [{"session": number, "evidence": {"kind": "none"|"observation"|"work-product", "whatLearnerProduces": string}}],',
+    ' "spacedReviews": [{"afterDays": number, "form": "recall-without-support"|"near-transfer"|"far-transfer"|"explain-to-absent", "whatChanges": string, "prompt": string}],',
+    ' "aiPolicy": string,',
     ' "activities": [{"title": string, "minutes": number, "objectiveIds": [string],',
-    '  "learnerDoes": string, "teacherDoes": string, "evidenceIfAny": "none"|"observation"|"work-product"}]}',
+    '  "learnerDoes": string, "teacherDoes": string, "evidenceIfAny": "none"|"observation"|"work-product",',
+    '  "phase": 1|2|3|4, "supportingPhase": 1|2|3|4, "targetOperation": string,',
+    '  "operationDoneBy": "learner"|"peer"|"teacher"|"ai",',
+    '  "learnerFirst": string, "helpAfter": "none"|"peer"|"teacher"|"textbook"|"worked-example"|"ai",',
+    '  "aiStatus": "forbidden"|"permitted"|"required", "noAiAlternative": string,',
+    '  "decisionAfterHelp": string, "channels": ["speaking"|"drawing"|"writing"|"handling"|"discussion"|"diagram"|"enactment"], "session": number}]}',
     `evidenceIfAny must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
     "Student chat is never evidence of learning.",
+    "",
+    "Learning design notes (every field is optional; give each one you can):",
+    "- Who does the thinking: name the operation the objective is about (targetOperation) and who does it here (operationDoneBy: learner, peer, teacher or ai). The learner should do the thinking the objective is about.",
+    "- First try before help: before any help (helpAfter: peer, teacher, textbook, worked-example or ai) the learner makes a first try (learnerFirst): a prediction, bet, draft or first attempt. A first try is never written by the AI or the teacher.",
+    "- A decision after help: once help arrives the learner decides (decisionAfterHelp): keeps, changes or rejects what they had, and says why. Help does not end the task.",
+    "- All four phases across the plan: 1 notice and guess (learners state a belief, bet or prior view, or react to a surprising item, before any explanation), 2 try and fix (attempt, err and correct, or compare with a variant), 3 check and steer (explain their own approach, pick a standard to judge by, decide what to keep or change), 4 keep and reuse (recall without support, use the idea in a new setting). Mark the main phase (phase) and optionally a second one (supportingPhase).",
+    "- One planned piece of evidence per sitting: sessions names each sitting (session) and the ONE thing the learner says or makes there (evidence.whatLearnerProduces), fixed before the sitting. Chat is never evidence.",
+    "- A later review or transfer: at least one spacedReviews entry with a time offset (afterDays), a learner action without support (form), what differs from the lesson (whatChanges: context, format or example) and the task (prompt).",
+    "- Several channels and no style labels: vary how learners meet or show the idea (channels: speaking, drawing, writing, handling, discussion, diagram, enactment). Never label learners by a fixed style (no \"visual\", \"auditory\" or \"kinaesthetic learner\").",
+    "- AI status is told before the task (aiStatus: forbidden, permitted or required). A permitted or required use has a noAiAlternative, and the learner's target operation stays with the learner.",
     "",
     `Topic: ${topic || "(not given)"}`,
     `Materials: ${materials.length ? materials.join("; ") : "(none named)"}`,
@@ -306,15 +365,52 @@ function buildPrompt({ objectives, topic, materials, course = "", context = [] }
     "Objectives:",
     ...objectives.map((o) => `- ${o.id}: ${o.statement}`),
     ...(courseLine ? ["Fit the plan to any length or audience the teacher states above."] : []),
+    ...(stage ? ["", STAGE_RULES[stage]] : []),
+    ...anchorBlock(anchorPrereqs),
     ...contextBlock(context),
   ].join("\n");
+}
+
+/* ---- Schema v2 (P2): the learning-design fields. All optional, so a v1 plan stays valid. ---- */
+
+const PHASES = [1, 2, 3, 4];
+const OPERATION_DONE_BY = ["learner", "peer", "teacher", "ai"];
+const HELP_AFTER = ["none", "peer", "teacher", "textbook", "worked-example", "ai"];
+const AI_STATUSES = ["forbidden", "permitted", "required"];
+const CHANNELS = ["speaking", "drawing", "writing", "handling", "discussion", "diagram", "enactment"];
+const REVIEW_FORMS = ["recall-without-support", "near-transfer", "far-transfer", "explain-to-absent"];
+
+/** A short text field: control-char-stripped, one line, bounded. Absent when not a string. */
+function textField(value, max) {
+  return typeof value === "string" ? clean(value, max) : undefined;
+}
+
+/** An enum field: the value when it is one of the allowed set; otherwise dropped with a note. */
+function enumField(value, allowed, what, notes) {
+  if (value === undefined || value === null) return undefined;
+  if (allowed.includes(value)) return value;
+  notes.push(`dropped ${what} "${String(value)}": allowed values are ${allowed.join(", ")}.`);
+  return undefined;
+}
+
+/** A whole-number field in a range (phase: 1-4; session: >= 1). Invalid values are dropped with a note. */
+function intField(value, minInclusive, maxInclusive, what, notes, { absent } = {}) {
+  if (value === undefined || value === null) return undefined;
+  if (Number.isInteger(value) && value >= minInclusive && (maxInclusive === undefined || value <= maxInclusive)) return value;
+  notes.push(`dropped ${what}: must be a whole number${minInclusive !== 1 ? ` between ${minInclusive} and ${maxInclusive}` : " of 1 or more"}.`);
+  return absent;
 }
 
 /**
  * The gate's rules, applied to a model's output BEFORE it is proposed. A worker
  * that violates them produces a refusal, not a course with a broken plan in it.
+ *
+ * The stage is computed HERE from the course's structured ages, never by the model.
+ * Learner AI use the stage does not allow is clamped and every clamp lands in the
+ * plan-level `notes` list the teacher can see. A course with no structured ages
+ * gets no aiStatus or aiPolicy claims at all.
  */
-function validateSpec(spec, objectives, context = []) {
+function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
   if (!spec || typeof spec !== "object") throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no plan object");
   const title = typeof spec.title === "string" ? spec.title.trim() : "";
   if (!title) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's plan has no title");
@@ -322,6 +418,8 @@ function validateSpec(spec, objectives, context = []) {
   const activities = Array.isArray(spec.activities) ? spec.activities : [];
   if (activities.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's plan has no activities");
 
+  const stage = stageForAges(ages);
+  const notes = [];
   const known = new Set(objectives.map((o) => o.id));
   const normalized = activities.map((a) => {
     if (!a || typeof a !== "object") throw new WorkerError("WORKER_BAD_OUTPUT", "an activity is not an object");
@@ -348,6 +446,69 @@ function validateSpec(spec, objectives, context = []) {
       throw new WorkerError("WORKER_BAD_OUTPUT", `activity cites a reference we did not supply: ${ghosts[0]}`);
     }
     const citations = [...new Set(cited)].slice(0, 8);
+
+    // ---- Schema v2 per-activity fields (optional; v1 plans carry none of them) ----
+    const phase = intField(a.phase, 1, 4, "phase", notes);
+    const supportingPhase = intField(a.supportingPhase, 1, 4, "supportingPhase", notes);
+    const targetOperation = textField(a.targetOperation, 200);
+    const operationDoneBy = enumField(a.operationDoneBy, OPERATION_DONE_BY, "operationDoneBy", notes);
+    const learnerFirst = textField(a.learnerFirst, 300);
+    const helpAfter = enumField(a.helpAfter, HELP_AFTER, "helpAfter", notes);
+    const decisionAfterHelp = textField(a.decisionAfterHelp, 300);
+    const noAiAlternative = textField(a.noAiAlternative, 300);
+    const channels = (() => {
+      if (a.channels === undefined || a.channels === null) return undefined;
+      if (!Array.isArray(a.channels)) { notes.push("dropped channels: must be a list of channels."); return undefined; }
+      const seen = [];
+      for (const c of a.channels) {
+        if (CHANNELS.includes(c) && !seen.includes(c)) seen.push(c);
+        else notes.push(`dropped channel "${String(c)}": allowed channels are ${CHANNELS.join(", ")}.`);
+      }
+      return seen.length > 0 ? seen : undefined;
+    })();
+    const session = intField(a.session, 1, undefined, "session", notes);
+
+    // ---- AI status: the stage gates it, and the clamp is recorded in notes. ----
+    let aiStatus;
+    if ("aiStatus" in a) {
+      if (stage === null) {
+        notes.push("dropped aiStatus: this course has no structured ages.");
+      } else if (!AI_STATUSES.includes(a.aiStatus)) {
+        notes.push(`dropped aiStatus "${String(a.aiStatus)}": allowed values are forbidden, permitted, required.`);
+      } else {
+        aiStatus = a.aiStatus;
+        if (stage === 1 && aiStatus !== "forbidden") {
+          aiStatus = "forbidden";
+          notes.push(`aiStatus "${a.aiStatus}" clamped to "forbidden": learners at this stage do not use AI at all.`);
+        } else if (stage === 2 && aiStatus === "required") {
+          aiStatus = "permitted";
+          notes.push('aiStatus "required" clamped to "permitted": at this stage AI use must be teacher-led and projected, after pupils state their own view first; never required.');
+        } else if (stage === 3 && aiStatus === "required") {
+          aiStatus = "permitted";
+          notes.push('aiStatus "required" clamped to "permitted": at this stage AI may follow only a first try the teacher has seen; never required.');
+        }
+        if (aiStatus !== "forbidden" && !noAiAlternative) {
+          notes.push("a permitted or required AI use needs a noAiAlternative.");
+        }
+        if (stage === 3 && aiStatus !== "forbidden" && !learnerFirst) {
+          notes.push("at this stage a permitted AI use must follow a first try the teacher has seen.");
+        }
+      }
+    }
+
+    const v2 = {
+      ...(phase !== undefined ? { phase } : {}),
+      ...(supportingPhase !== undefined ? { supportingPhase } : {}),
+      ...(targetOperation !== undefined ? { targetOperation } : {}),
+      ...(operationDoneBy !== undefined ? { operationDoneBy } : {}),
+      ...(learnerFirst !== undefined ? { learnerFirst } : {}),
+      ...(helpAfter !== undefined ? { helpAfter } : {}),
+      ...(aiStatus !== undefined ? { aiStatus } : {}),
+      ...(noAiAlternative !== undefined ? { noAiAlternative } : {}),
+      ...(decisionAfterHelp !== undefined ? { decisionAfterHelp } : {}),
+      ...(channels !== undefined ? { channels } : {}),
+      ...(session !== undefined ? { session } : {}),
+    };
     return {
       title: String(a.title ?? "").trim() || "Untitled activity",
       minutes: Number.isFinite(a.minutes) ? a.minutes : 0,
@@ -356,11 +517,123 @@ function validateSpec(spec, objectives, context = []) {
       teacherDoes,
       evidenceIfAny,
       ...(citations.length > 0 ? { citations } : {}),
+      ...v2,
     };
   });
 
+  // ---- Plan-level v2 fields ----
+  let sessions = [];
+  if (spec.sessions !== undefined) {
+    if (!Array.isArray(spec.sessions)) {
+      notes.push("dropped sessions: must be a list.");
+    } else {
+      for (const s of spec.sessions) {
+        if (!s || typeof s !== "object" || !Number.isInteger(s.session) || s.session < 1 || !s.evidence || typeof s.evidence !== "object") {
+          notes.push("dropped a session entry: each session needs a whole session number of 1 or more and one evidence object.");
+          continue;
+        }
+        const kind = s.evidence.kind;
+        if (!EVIDENCE_KINDS.includes(kind)) {
+          notes.push(`dropped a session's evidence kind "${String(kind)}": chat is never evidence, and the kinds are ${EVIDENCE_KINDS.join(", ")}.`);
+          continue;
+        }
+        const whatLearnerProduces = textField(s.evidence.whatLearnerProduces, 400);
+        if (!whatLearnerProduces) {
+          notes.push("dropped a session's evidence: whatLearnerProduces must say what the learner produces.");
+          continue;
+        }
+        sessions.push({ session: s.session, evidence: { kind, whatLearnerProduces } });
+      }
+      const seenSessions = new Set();
+      for (const s of sessions) {
+        if (seenSessions.has(s.session)) notes.push(`more than one evidence entry names session ${s.session}: only one planned piece can count.`);
+        seenSessions.add(s.session);
+      }
+      sessions.sort((x, y) => x.session - y.session);
+    }
+  }
+
+  let spacedReviews = [];
+  if (spec.spacedReviews !== undefined) {
+    if (!Array.isArray(spec.spacedReviews)) {
+      notes.push("dropped spacedReviews: must be a list.");
+    } else {
+      for (const r of spec.spacedReviews) {
+        if (!r || typeof r !== "object" || !Number.isInteger(r.afterDays) || r.afterDays < 0) {
+          notes.push("dropped a spaced review: afterDays must be a whole number of days or more.");
+          continue;
+        }
+        const form = enumField(r.form, REVIEW_FORMS, "review form", notes);
+        if (!form) continue;
+        const whatChanges = textField(r.whatChanges, 300);
+        const prompt = textField(r.prompt, 400);
+        if (!whatChanges || !prompt) {
+          notes.push("dropped a spaced review: whatChanges and prompt must say what differs and the task.");
+          continue;
+        }
+        spacedReviews.push({ afterDays: r.afterDays, form, whatChanges, prompt });
+      }
+      spacedReviews.sort((x, y) => x.afterDays - y.afterDays);
+    }
+  }
+
+  let aiPolicy;
+  if (spec.aiPolicy !== undefined) {
+    const proposed = typeof spec.aiPolicy === "string" ? clean(spec.aiPolicy, 400) : "";
+    if (!proposed) {
+      notes.push("dropped aiPolicy: must be one line of text.");
+    } else if (stage === null) {
+      notes.push("dropped aiPolicy: this course has no structured ages.");
+    } else if (stage === 1 || stage === 2) {
+      if (proposed === STAGE_AI_POLICY[stage]) {
+        aiPolicy = proposed;
+      } else {
+        // owner decision 3: stages 1-2 show one AI line; the STAGE owns that line, the model never does.
+        aiPolicy = STAGE_AI_POLICY[stage];
+        notes.push(`replaced aiPolicy with the stage rule: ${STAGE_AI_POLICY[stage]}`);
+      }
+    } else {
+      notes.push("dropped aiPolicy: only stages 1 and 2 carry a plan-level AI line.");
+    }
+  }
+  // Absent stays absent: the line is optional in the data, and the UI renders the stage rule
+  // itself (view.course.stage), so a v1 plan is never widened with host-authored content.
+
   const audience = spec.audience && typeof spec.audience === "object" ? { ...spec.audience } : undefined;
-  return { title, ...(audience ? { audience } : {}), activities: normalized };
+  const dedupedNotes = notes.length > 0 ? [...new Set(notes)] : [];
+  return {
+    title,
+    ...(audience ? { audience } : {}),
+    ...(sessions.length > 0 ? { sessions } : {}),
+    ...(spacedReviews.length > 0 ? { spacedReviews } : {}),
+    ...(aiPolicy !== undefined ? { aiPolicy } : {}),
+    activities: normalized,
+    ...(dedupedNotes.length > 0 ? { notes: dedupedNotes } : {}),
+  };
+}
+
+/**
+ * The schema-v2 slice of a NORMALIZED spec, for the host's plan view. The gate keeps the
+ * v1 record (it drops unknown fields silently); the host attaches these per-plan, exactly
+ * like citations - host metadata, never gate state - so the teacher's UI and later cards
+ * can read the learning-design fields without widening the trust core.
+ */
+const PLAN_DESIGN_ACTIVITY_KEYS = [
+  "phase", "supportingPhase", "targetOperation", "operationDoneBy", "learnerFirst", "helpAfter",
+  "aiStatus", "noAiAlternative", "decisionAfterHelp", "channels", "session",
+];
+export function planDesignOf(spec) {
+  if (!spec || typeof spec !== "object") return null;
+  const activities = Array.isArray(spec.activities) ? spec.activities.map((a) => {
+    if (!a || typeof a !== "object") return null;
+    const out = {};
+    for (const k of PLAN_DESIGN_ACTIVITY_KEYS) if (k in a) out[k] = a[k];
+    return Object.keys(out).length > 0 ? out : null;
+  }) : [];
+  const out = {};
+  if (activities.some((a) => a !== null)) out.activities = activities;
+  for (const k of ["sessions", "spacedReviews", "aiPolicy", "notes"]) if (k in spec) out[k] = spec[k];
+  return Object.keys(out).length > 0 ? out : null;
 }
 
 

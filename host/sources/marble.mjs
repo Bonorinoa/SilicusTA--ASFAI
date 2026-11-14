@@ -154,4 +154,28 @@ export class MarbleSource extends KnowledgeSource {
       return { ok: true, unknown: [], checked: false }; // could not check; never claim it did
     }
   }
+
+  /**
+   * The anchor's HARD prerequisites (both neighbourhood hops, G2a) as opening-activity material:
+   * id, name and evidence lines, bounded. Any failure degrades to no material, never an error.
+   */
+  async anchorPrerequisites(id) {
+    if (!this.enabled || typeof id !== "string" || id === "") return [];
+    let nb = null;
+    try { nb = await this.#marble.neighbourhood(id); } catch { return []; }
+    if (!nb || !Array.isArray(nb.prerequisites)) return [];
+    const TOPICS = 6;
+    const EVIDENCE_LINES = 2;
+    const out = [];
+    for (const p of nb.prerequisites) {
+      if (p?.strength !== "hard") continue;
+      if (out.length >= TOPICS) break;
+      out.push({
+        id: String(p.id ?? "").slice(0, 80),
+        name: String(p.name ?? "").slice(0, 120),
+        evidence: (Array.isArray(p.evidence) ? p.evidence.map((e) => String(e ?? "").replace(/\s+/g, " ").trim().slice(0, 180)).filter(Boolean) : []).slice(0, EVIDENCE_LINES),
+      });
+    }
+    return out;
+  }
 }

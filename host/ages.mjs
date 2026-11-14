@@ -38,8 +38,8 @@ export function agesError(value) {
  * @param {{min?: number}} [ages]
  * @returns {1 | 2 | 3 | 4 | null} null when there is no structured ages (legacy courses)
  */
-export function stageForAges({ min } = {}) {
-  const m = Number(min);
+export function stageForAges(ages = {}) {
+  const m = Number(ages?.min);
   if (!Number.isFinite(m)) return null;
   if (m < 8) return 1;
   if (m <= 11) return 2;

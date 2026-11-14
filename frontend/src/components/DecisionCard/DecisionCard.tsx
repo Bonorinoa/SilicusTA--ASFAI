@@ -259,6 +259,16 @@ export function DecisionCard({
         </div>
       </footer>}
 
+      {/* G1b C2: wherever a Marble suggestion is on screen the studio credits it with the
+          upstream line verbatim; present only when an alignment row is actually shown. */}
+      {rows.some((r) => r.alignment) ? (
+        <p className={styles.marbleCredit}>
+          Marble Skill Taxonomy (v1) · © Generative Spark, Inc. (Marble) ·{" "}
+          <a href="https://withmarble.com" target="_blank" rel="noreferrer">https://withmarble.com</a> · licensed under
+          ODbL 1.0 (database) and CC BY-SA 4.0 (content).
+        </p>
+      ) : null}
+
     </section>
   );
 }

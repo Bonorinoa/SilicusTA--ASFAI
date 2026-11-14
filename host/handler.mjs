@@ -49,6 +49,19 @@ function answerText(b) {
   return b.text;
 }
 
+/**
+ * A percent-encoded path segment the CLIENT sent. A malformed `%` makes decodeURIComponent
+ * throw, and that is the client's fault: 400, never a 500 (verifier L1; the same house pattern
+ * now holds on the marble topic route, the course id route and the archive ref route).
+ */
+function decodeSegment(part) {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    throw new HttpError(400, "BAD_URI", "malformed percent-encoding in the uri");
+  }
+}
+
 /** Every refusal, as a status and a JSON body. Shared, so both hosts answer a failure identically. */
 export function errorResponse(err) {
   const send = (status, json) => ({ status, json });
@@ -167,7 +180,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         return { status: 200, json: { query: { q, ageMin, ageMax, limit }, hits } };
       }
       if (parts[3] === "topics" && parts[4]) {
-        const id = decodeURIComponent(parts[4]);
+        const id = decodeSegment(parts[4]);
         const topic = await marble.topic(id);
         if (!topic) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
         return { status: 200, json: topic };
@@ -229,7 +242,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
       }
 
-      const courseId = decodeURIComponent(parts[2]);
+      const courseId = decodeSegment(parts[2]);
 
       // A student asks about the PUBLISHED course. Read-only and outside the course lock: it writes
       // nothing, and a slow model call must not hold up the teacher. Only {question, history} are read.
@@ -259,7 +272,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         return { status: 200, json: { anchor: s.publishAnchor(version) } };
       }
       if (tail.startsWith("archive/") && method === "GET") {
-        const ref = decodeURIComponent(tail.slice("archive/".length));
+        const ref = decodeSegment(tail.slice("archive/".length));
         const record = requireArchives().load(ref);
         const ver = archives.verify(ref, record.digest);
         return { status: 200, json: { verified: ver.verified, ref, digest: record.digest, archivedAt: record.archivedAt, export: record.payload } };

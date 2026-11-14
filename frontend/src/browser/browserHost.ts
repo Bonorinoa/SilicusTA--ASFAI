@@ -93,7 +93,7 @@ export async function createBrowserHost(opts: BrowserHostOptions = {}): Promise<
     ? (typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("silicus-host"))
     : opts.channel;
 
-  // Marble's open taxonomy (withmarbleapp/os-taxonomy, ODbL-1.0), read from the SNAPSHOT that
+  // Marble's open taxonomy (withmarbleapp/os-taxonomy; database ODbL 1.0, Marble-authored text CC BY-SA 4.0), read from the SNAPSHOT that
   // ships with this build. Egress null: the teacher's words go nowhere; the pinned data is
   // already on this device. Lazy: the 2 MB snapshot is fetched and parsed on first use.
   const marble = createMarbleService(opts.marbleLoad ?? (async () => {

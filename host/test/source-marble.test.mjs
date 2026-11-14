@@ -8,7 +8,8 @@
  *
  * Grain guard: a course wholly outside ages 3..15 gets NOTHING (a "maximum likelihood" query
  * for a 19-year-old course cites nothing), and a query with hits that do not overlap the
- * course's ages also returns nothing.
+ * course's ages also returns nothing. Since G1b (owner, 14 Nov), an audience the parser cannot
+ * place in an age band FAILS CLOSED: no citations at all, never a search of the whole band.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -43,14 +44,14 @@ test("the source is local, verifying, and carries its own namespace", async () =
   assert.equal(s.egress, null, "nothing leaves the device: no egress, so no permission is ever needed");
   assert.equal(s.canVerify, true, "membership in the snapshot is a real check");
   assert.equal(s.enabled, true);
-  const out = await retrieveAll([s], { topic: "AI in daily life", allowEgress: [] });
+  const out = await retrieveAll([s], { topic: "AI in daily life", course: "Computing, ages 5-12", allowEgress: [] });
   assert.ok(out.length > 0, "a no-egress source is consulted for a course that never touched ASFAI");
   assert.ok(out.every((c) => c.source === "marble" && c.ref.startsWith("marble:")));
   assert.equal(out[0].ref, "marble:mt_AzTrT5ySCx", "the strongest overlap leads");
 });
 
 test("the retrieval label carries the node's age range, once, like the ASFAI source", async () => {
-  const out = await src().retrieve({ topic: "AI in daily life", limit: 3 });
+  const out = await src().retrieve({ topic: "AI in daily life", course: "Computing, ages 5-12", limit: 3 });
   const ai = out.find((c) => c.ref === "marble:mt_AzTrT5ySCx");
   assert.ok(ai, "AI in Daily Life is retrieved");
   assert.match(ai.label, /^AI in Daily Life \(ages 5–12\)$/);
@@ -79,6 +80,10 @@ test("a query for a course with no overlaps returns nothing, even when the words
   assert.deepEqual(out, [], "the wrong grain is a pass for the architecture, not a Marble miss to paper over");
   const yearOld = await s.retrieve({ topic: "maximum likelihood", course: "a 19-year-old course", limit: 5 });
   assert.deepEqual(yearOld, []);
+  // G1b C1: the spaced phrasings from the verifier's record are read as bands now, so they also return nothing.
+  for (const course of ["19 year olds", "16 to 18 year olds", "17 and 18 year olds", "16–18 year olds", "19 year old students"]) {
+    assert.deepEqual(await s.retrieve({ topic: "maximum likelihood", course, limit: 5 }), [], `outside 3–15: ${course}`);
+  }
 });
 
 test("when the audience ages overlap the Marble band, hits are filtered to that overlap", async () => {
@@ -91,8 +96,13 @@ test("when the audience ages overlap the Marble band, hits are filtered to that 
   assert.ok(broad.some((c) => c.ref === "marble:mt_AzTrT5ySCx"), "5-12 overlaps 12-15");
 });
 
-test("no audience age in the answer means the whole Marble band is in play, and nothing is sent", async () => {
-  const out = await src().retrieve({ topic: "AI in daily life", course: "How machines notice things", limit: 2 });
-  assert.ok(out.length > 0, "no age band is no constraint");
-  assert.ok(out.every((c) => c.ref.startsWith("marble:")));
+test("an audience the source cannot read fails closed: no citations at all (C1)", async () => {
+  const s = src();
+  // The owner's named case: a university phrasing that reads as no age band must NOT fall back to
+  // the whole 3–15 graph ("Likelihood Language" is a children's node that would lexically match).
+  assert.deepEqual(await s.retrieve({ topic: "maximum likelihood", course: "Econometrics for 2nd-year undergraduates", limit: 5 }), []);
+  // Any unreadable text — no number, no "ages", a grade instead of ages — also returns nothing.
+  assert.deepEqual(await s.retrieve({ topic: "AI in daily life", course: "How machines notice things", limit: 2 }), []);
+  assert.deepEqual(await s.retrieve({ topic: "AI in daily life", course: "Grade 4 science", limit: 2 }), []);
+  assert.deepEqual(await s.retrieve({ topic: "AI in daily life", course: "", limit: 2 }), []);
 });

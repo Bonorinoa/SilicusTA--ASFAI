@@ -137,6 +137,16 @@ test("audienceAges reads a course answer's age band; nothing else", () => {
   assert.deepEqual(audienceAges("students aged 9"), { min: 9, max: 9 });
   assert.equal(audienceAges("How machines notice things"), null, "no age band, no constraint");
   assert.equal(audienceAges("Grade 4 science"), null, "a grade is not an age");
+  // G1b C1: the spaced phrasings teachers actually type (verifier H1) — a space before "year olds"
+  // used to be unreadable, which sent the search over the WHOLE 3–15 band.
+  assert.deepEqual(audienceAges("19 year olds"), { min: 19, max: 19 });
+  assert.deepEqual(audienceAges("19 year old students"), { min: 19, max: 19 });
+  assert.deepEqual(audienceAges("16 to 18 year olds"), { min: 16, max: 18 });
+  assert.deepEqual(audienceAges("17 and 18 year olds"), { min: 17, max: 18 });
+  assert.deepEqual(audienceAges("16–18 year olds"), { min: 16, max: 18 });
+  assert.deepEqual(audienceAges("8-10 year olds"), { min: 8, max: 10 });
+  // and what must STAY unreadable, so the source can fail closed on it:
+  assert.equal(audienceAges("Econometrics for 2nd-year undergraduates"), null);
   assert.equal(audienceAges(""), null);
   assert.equal(audienceAges(undefined), null);
 });

@@ -34,7 +34,10 @@ export function terms(text) {
   return [...new Set(raw.filter((t) => !STOP.has(t) && t.length > 1).map((t) => (t.length > 4 && t.endsWith("s") ? t.slice(0, -1) : t)))];
 }
 
-/** A course answer's age band, when the teacher names one: "ages 8-10", "aged 19", "19-year-old", "19 and up". */
+/** A course answer's age band, when the teacher names one: "ages 8-10", "aged 19", "19-year-old",
+ * "19 and up", and since G1b the spaced phrasings teachers type ("19 year olds",
+ * "16 to 18 year olds", "17 and 18 year olds", "16–18 year olds"). Anything else is null, and the
+ * SOURCE then fails closed (a null band means "unreadable", never "the whole 3–15 band"). */
 export function audienceAges(text) {
   const s = String(text ?? "");
   const toBand = (lo, hi) => ({ min: Math.min(lo, hi), max: Math.max(lo, hi) });
@@ -43,9 +46,16 @@ export function audienceAges(text) {
   if (m) return toBand(Number(m[1]), Number(m[2]));
   m = s.match(/(\d{1,2})\s*(?:-|–|—)\s*(\d{1,2})\s*(?:-|\s)?year-?olds?/i);
   if (m) return toBand(Number(m[1]), Number(m[2]));
+  // G1b C1: a space before "year olds" — "16 to 18 year olds", "16–18 year olds", "8-10 year olds".
+  m = s.match(/(\d{1,2})\s*(?:-|–|—|to)\s*(\d{1,2})\s+year\s+olds?/i);
+  if (m) return toBand(Number(m[1]), Number(m[2]));
+  m = s.match(/(\d{1,2})\s+and\s+(\d{1,2})\s+year\s+olds?/i);
+  if (m) return toBand(Number(m[1]), Number(m[2]));
   m = s.match(/(?:ages?|aged)\s*(\d{1,2})\s*(?:\+|and\s*up|or\s*older|plus)/i);
   if (m) return { min: Number(m[1]), max: Infinity };
   m = s.match(/(\d{1,2})\s*[- ]year-?old/i);
+  if (m) return { min: Number(m[1]), max: Number(m[1]) };
+  m = s.match(/(\d{1,2})\s+year\s+olds?/i);
   if (m) return { min: Number(m[1]), max: Number(m[1]) };
   m = s.match(/(?:aged|age(?:\s|$))\s*(\d{1,2})\b/i);
   if (m) return { min: Number(m[1]), max: Number(m[1]) };

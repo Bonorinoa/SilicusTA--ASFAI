@@ -68,7 +68,12 @@ describe("parity: one API, two hosts", () => {
     // It was a real course: published, grounded, the forged keys cut away on both hosts.
     expect(transcript.find((s: any) => s.path.endsWith("/publish"))?.status).toBe(200);
     expect(transcript.filter((s: any) => s.path.endsWith("/student/ask")).at(-1)?.json.grounded).toBe(true);
-    expect(disk.lines.join("\n")).not.toMatch(/forged|attacker|mt_1/);
+    // Forged keys are cut away: the provenance words never appear, and the forged alignment is
+    // asserted by its EXACT value ("mt_1" as a JSON string) — never as a prefix, because a real
+    // Marble ref like `marble:mt_1z-…` legitimately contains the substring mt_1 (L2).
+    const joined = disk.lines.join("\n");
+    expect(joined).not.toMatch(/forged|attacker/);
+    expect(joined).not.toContain('"mt_1"');
   }, 60_000);
 
   it("Marble parity: the browser host serves the same read-only search and topic shapes the Node host serves, from the same snapshot", async () => {

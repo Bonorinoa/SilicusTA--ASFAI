@@ -91,6 +91,10 @@ test("the routes are read-only and refuse bad input", async () => {
   const ghosts = await get("/api/knowledge/marble/topics/mt_NOT_REAL");
   assert.equal(ghosts.status, 404);
   assert.equal(ghosts.json.code, "UNKNOWN_TOPIC");
+  // L1 (verifier): a malformed percent-encoded id is the CLIENT's fault — a 400, never a 500.
+  const badUri = await get("/api/knowledge/marble/topics/%");
+  assert.equal(badUri.status, 400);
+  assert.equal(badUri.json.code, "BAD_URI");
   assert.equal((await get("/api/knowledge/marble/search?q=x&limit=9999")).json.query.limit, 50, "limit is bounded");
 });
 

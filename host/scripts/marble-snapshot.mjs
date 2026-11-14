@@ -12,7 +12,7 @@
  *
  *   host/data/marble/marble-snapshot.json   one JSON both hosts load; the frontend build
  *                                           serves it as a static asset (import ?url)
- *   host/data/marble/ODbL-ATTRIBUTION.md    the notice that must sit next to it
+ *   host/data/marble/MARBLE-ATTRIBUTION.md  the notice that must sit next to it (both licences)
  *
  * The bytes that were downloaded are the hashes recorded here: `topicsSha256` is the hash of
  * the raw topics.json response, not of the trimmed copy. Tests re-check that the committed
@@ -36,11 +36,16 @@ export const PIN = {
 const TOPIC_FIELDS = ["id", "type", "subject", "domain", "name", "description", "evidence", "ageRangeStart", "ageRangeEnd"];
 const EDGE_FIELDS = ["topicId", "prerequisiteId", "strength", "reason"];
 
-export const ATTRIBUTION =
-  "Contains information from the Marble Skill Taxonomy, made available under the Open Database License v1.0.\n" +
-  `Source repository: ${PIN.repo}, pinned at commit ${PIN.commit}.\n` +
-  "Any rights in individual contents of the database are licensed under the Database Contents License.\n" +
-  `Snapshot written ${new Date().toISOString().slice(0, 10)}.`;
+export const ATTRIBUTION = `Marble Skill Taxonomy (v1) · © Generative Spark, Inc. (Marble) · https://withmarble.com · licensed under ODbL 1.0 (database) and CC BY-SA 4.0 (content).
+
+Source repository: \`${PIN.repo}\`, pinned at commit \`${PIN.commit}\`.
+
+The trimmed snapshot in this folder (\`marble-snapshot.json\`) is a **derived database** built from that
+repository. It is offered under the [Open Database License v1.0](https://opendatacommons.org/licenses/odbl/1-0/);
+the Marble-authored content inside it (topic \`name\`, \`description\`, \`evidence\`, dependency \`reason\`s) is offered
+under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), matching the upstream's own multi-licence
+terms (its \`LICENSE\` and \`LICENSE-CONTENT\` files at the pinned commit). No other upstream files are vendored.
+Snapshot written ${new Date().toISOString().slice(0, 10)}.`;
 
 const url = (file) => `https://raw.githubusercontent.com/${PIN.repo}/${PIN.commit}/data/${file}`;
 
@@ -77,7 +82,7 @@ async function main() {
   const json = JSON.stringify(doc);
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, "marble-snapshot.json"), json);
-  await writeFile(join(outDir, "ODbL-ATTRIBUTION.md"), `# Marble Skill Taxonomy — attribution (ODbL-1.0)\n\n${ATTRIBUTION}\n`);
+  await writeFile(join(outDir, "MARBLE-ATTRIBUTION.md"), `# Marble Skill Taxonomy — attribution\n\n${ATTRIBUTION}\n`);
   const gz = gzipSync(Buffer.from(json, "utf8")).length;
   process.stdout.write(`wrote ${resolve(join(outDir, "marble-snapshot.json"))}\n`);
   process.stdout.write(`topics=${doc.topicCount} edges=${doc.edgeCount} commit=${doc.source.commit}\n`);

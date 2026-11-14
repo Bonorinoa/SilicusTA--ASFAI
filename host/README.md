@@ -336,7 +336,7 @@ not in the sealed package, never required.
 
 ### The Marble graph: read-only routes (G1)
 
-Marble (`withmarbleapp/os-taxonomy`, ODbL-1.0) is open data we read ourselves, from a pinned and
+Marble (`withmarbleapp/os-taxonomy`; database ODbL 1.0, Marble-authored text CC BY-SA 4.0) is open data we read ourselves, from a pinned and
 trimmed snapshot (`host/data/marble/marble-snapshot.json`, built by `host/scripts/marble-snapshot.mjs`
 from commit `d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63`; the raw files' sha256 are recorded inside the
 file). Both hosts serve the same two read-only routes; they take no course id, write nothing and never

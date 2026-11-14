@@ -1,7 +1,8 @@
 /**
  * marble.mjs — Marble's open skill taxonomy as a knowledge source (the LOCAL one).
  *
- * Marble (withmarbleapp/os-taxonomy, ODbL-1.0) is a children's graph, ages 3 to 15. This
+ * Marble (withmarbleapp/os-taxonomy; database ODbL 1.0, Marble-authored text CC BY-SA 4.0) is a
+ * children's graph, ages 3 to 15. This
  * source reads a PINNED, TRIMMED snapshot that ships with the app — no network, no OAuth,
  * no ASFAI — so both hosts can draw on it, and the online app finally has a knowledge
  * source (asfai-education CORS issue #16 forced the browser host to serve none).
@@ -10,9 +11,11 @@
  * nothing (normal) or a plausible-looking children's node ("maximum likelihood" →
  * "Likelihood Language", ages 9-10, is the documented live behaviour of the same data).
  * So when the teacher's own course answer puts the audience entirely outside 3 to 15, this
- * source returns nothing at all; and when only a band of the graph overlaps the audience,
- * only that band is searched. The label carries the node's age range either way, so neither
- * the worker nor the teacher mistakes it for course content. It is only ever CONTEXT.
+ * source returns nothing at all; when only a band of the graph overlaps the audience,
+ * only that band is searched; and (G1b, owner 14 Nov) when the audience cannot be read at
+ * all, this source FAILS CLOSED — no citations, never a search of the whole band. The label
+ * carries the node's age range either way, so neither the worker nor the teacher mistakes it
+ * for course content. It is only ever CONTEXT.
  *
  * Egress: null. The teacher's words go nowhere; the snapshot is already on this device.
  */
@@ -45,9 +48,12 @@ export class MarbleSource extends KnowledgeSource {
 
     // Grain guard: the audience comes from the teacher's OWN course answer ("AI literacy,
     // ages 8-10"). Wholly outside Marble's band -> nothing, even when the words match.
+    // G1b (C1): unreadable -> nothing. The parser is widened for the phrasings teachers type,
+    // but an audience the parser cannot place in an age band is never searched whole-band.
     const band = audienceAges(course);
-    if (band && !overlaps(band, { min: MARBLE_MIN_AGE, max: MARBLE_MAX_AGE })) return [];
-    const { min, max } = band ?? { min: MARBLE_MIN_AGE, max: MARBLE_MAX_AGE };
+    if (!band) return [];
+    if (!overlaps(band, { min: MARBLE_MIN_AGE, max: MARBLE_MAX_AGE })) return [];
+    const { min, max } = band;
     const take = Math.max(1, Math.min(50, Number(limit) || 10));
 
     let hits;

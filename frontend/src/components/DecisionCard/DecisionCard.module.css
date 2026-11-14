@@ -231,6 +231,23 @@
   color: var(--color-rule-strong);
 }
 
+/* G1b C2: the studio's Marble credit — the upstream line verbatim, quiet, with the site
+   link live. It rides only with the alignment rows it credits. */
+.marbleCredit {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.marbleCredit a {
+  color: var(--color-ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--color-rule-strong);
+}
+
 /* The Marble key is audit content, not decoration: it gets the 12px floor and
    ink-soft, because 10px mono at muted ink is below comfortable legibility. */
 .alignmentKey {

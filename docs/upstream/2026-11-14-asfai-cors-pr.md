@@ -4,7 +4,9 @@ Upstream: `redbeard-26/asfai-education` · issue #16 · prepared 14 Nov 2026 by 
 
 - Branch on the fork: `fix/cors-browser-mcp-clients`
 - Base: `upstream/main` @ `dac19d3` (the sha the issue was observed against)
-- Commit: `77abe82` — 6 files changed (`src/lib/cors.ts` added, four route files, `tests/cors.test.ts` added)
+- Commits: `77abe82` (CORS implementation) + `40c1689` (look-alike rejection
+  tests) — 6 files changed (`src/lib/cors.ts` added, four route files,
+  `tests/cors.test.ts` added)
 
 ## What changed
 
@@ -23,8 +25,11 @@ One shared helper, `src/lib/cors.ts`, and four routes wiring it in:
   a public-client form post, never cookies.
 - `OPTIONS` handlers on `src/app/oauth/register/route.ts`,
   `src/app/oauth/token/route.ts`, `src/app/oauth/revoke/route.ts` and
-  `src/app/api/[transport]/route.ts` (the MCP route's preflight advertises the
-  route's full method set, `DELETE, GET, HEAD, OPTIONS, POST`).
+  `src/app/api/[transport]/route.ts`. On the default preflight (unlisted
+  Origin or env unset) the `allow` line keeps the route's full method set,
+  `DELETE, GET, HEAD, OPTIONS, POST`; a listed Origin instead gets the exact
+  header block, whose `Access-Control-Allow-Methods` is `POST, OPTIONS` per
+  issue #16 (GET/DELETE are not advertised for listed origins).
 - The headers are applied to the **real responses** too, including the 401 from
   `/api/mcp` — so a browser can read its `www-authenticate` and complete a
   challenge instead of swallowing the error.
@@ -67,12 +72,13 @@ build; the env-unset server answers every endpoint exactly as `dac19d3` does):
 
 | Endpoint | Listed Origin | Unlisted Origin | Env unset |
 |---|---|---|---|
-| `OPTIONS` x4 | `204` + full header block, `Vary: Origin` | `204`, no `access-control-*` | `204`, no `access-control-*` (identical to base) |
-| `POST /api/mcp` (no auth) | `401` + header block + `www-authenticate` | no `access-control-*` | no `access-control-*` (identical to base) |
+| `OPTIONS` x4 | `204` + full header block, `Vary: Origin` | `204`, no `access-control-*` (also for every look-alike: suffix/prefix of a listed origin, extra port, different scheme, trailing slash, upper-case, `null`, `*`) | `204`, no `access-control-*` (identical to base) |
+| `POST /api/mcp` (no auth) | `401` + header block + `www-authenticate` | no `access-control-*` (look-alikes too) | no `access-control-*` (identical to base) |
 
 Automated checks, all exit 0 on Node v22.22.3: `npm ci`, `npm test`
-(22 files / 118 tests, incl. the 21 new CORS tests), `npm run lint`,
-`npm run build`, `npm run build:plugin`, `npm run test:plugin`.
+(22 files / 173 tests, incl. 76 CORS tests: 21 allow-list behaviour + 55
+look-alike rejection), `npm run lint`, `npm run build`, `npm run build:plugin`,
+`npm run test:plugin`.
 
 ## Open questions from issue #16, with our recommended answers
 

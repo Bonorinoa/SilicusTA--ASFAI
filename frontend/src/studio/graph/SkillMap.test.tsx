@@ -61,6 +61,22 @@ describe("G2c pre-fill: a suggestion fills the teacher's own field and sends not
   });
 });
 
+describe("G2c (PM binding): the existing suggested-alignment strip carries the Marble credit", () => {
+  it("a waiting proposal with a suggested match shows the one credit line in the tray; none without", () => {
+    const aligned = { id: "urn:uuid:00000000-0000-0000-0000-000000000901", kind: "local", status: "proposed", statement: "Spot AI at home", originalStatement: null, source: "notes", by: "ai",
+      alignment: { publicId: "mt_AzTrT5ySCx", relationship: "closeMatch", suggested: true } };
+    const v = { ...view(), proposals: [aligned] } as unknown as HostView;
+    const { unmount } = render(<ObjectivesStep c={makeC()} view={v} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    const tray = screen.getByRole("complementary", { name: "Proposals" });
+    expect(tray.textContent).toContain("suggested match mt_AzTrT5ySCx");
+    expect(tray.querySelector("[data-marble-credit]")).not.toBeNull();
+    unmount();
+    const plain = { ...view(), proposals: [{ ...aligned, alignment: null }] } as unknown as HostView;
+    render(<ObjectivesStep c={makeC()} view={plain} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    expect(screen.getByRole("complementary", { name: "Proposals" }).querySelector("[data-marble-credit]")).toBeNull();
+  });
+});
+
 describe("G2c neighbourhood view", () => {
   it("every box is focusable; focus (not hover) shows its evidence lines; the credit is there", async () => {
     render(<NeighbourhoodView data={AI_DAILY} defaultOpen />);

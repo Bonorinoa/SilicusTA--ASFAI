@@ -249,7 +249,7 @@ function ObjectiveItem({ row, index, busy, onDecide, canRedraft }: { row: Propos
   const [removing, setRemoving] = useState(false);
   const id = useId();
   return (
-    <li className={s.objItem} data-rise>
+    <li className={s.objItem} data-rise data-objective-id={row.id} data-by={row.by}>
       <span className={s.objNum}>{index}</span>
       <div className={s.objBody}>
         {editing ? (

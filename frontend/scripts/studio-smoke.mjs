@@ -294,6 +294,50 @@ try {
   await sleep(900);
   check("D adding your own objective before any proposal lands it in the document, and nothing confirms by itself",
     /where a plant gets its water/.test(await body()) && /Your own objective/i.test(await body()) && /Step 2 of 4/i.test(await body()));
+
+  // ---- G2c: the skill map on the objectives step (anchored 5–12 course only)
+  const g2cReady = await page.waitForSelector("[data-evidence-suggestions]", { timeout: 15000 }).then(() => true, () => false);
+  check("G2c objectives: the anchor's evidence lines are offered as wording, with the Marble credit", g2cReady
+    && await page.evaluate(() => document.querySelectorAll("[data-evidence-suggestions] button").length >= 1 && !!document.querySelector("[data-evidence-suggestions] [data-marble-credit]")));
+  const nb = await page.evaluate(() => {
+    const root = document.querySelector("[data-neighbourhood]");
+    const soft = root?.querySelector('path[data-edge="mt_AzTrT5ySCx>mt_kH1DzOPsXG"]');
+    const hard = root?.querySelector('path[data-edge="mt_WRRv1ABECC>mt_AzTrT5ySCx"]');
+    return { open: root?.open, nodes: root?.querySelectorAll("g[role=button][tabindex='0']").length ?? 0, soft: soft ? { s: soft.getAttribute("data-strength"), d: soft.getAttribute("stroke-dasharray") } : null,
+      hard: hard ? { s: hard.getAttribute("data-strength"), d: hard.getAttribute("stroke-dasharray") } : null, credit: !!root?.querySelector("[data-marble-credit]") };
+  });
+  check("G2c the neighbourhood view shows the soft (dashed) edge to mt_kH1DzOPsXG and the hard (solid) one from mt_WRRv1ABECC, focusable boxes, credit",
+    nb.open === true && nb.nodes >= 3 && nb.soft?.s === "soft" && nb.soft?.d === "5 4" && nb.hard?.s === "hard" && nb.hard?.d === null && nb.credit, JSON.stringify(nb));
+  // Keyboard: focusing a box shows its evidence lines without hover.
+  await page.evaluate((sel) => document.querySelector(sel)?.focus(), '[data-neighbourhood] g[data-node-id="mt_kH1DzOPsXG"]');
+  await sleep(200);
+  check("G2c focusing a box (no hover) shows its evidence lines", await page.evaluate(() => document.querySelector("[data-neighbourhood] [data-evidence-for]")?.getAttribute("data-evidence-for") === "mt_kH1DzOPsXG"
+    && /Data and Information for Computers/.test(document.querySelector("[data-neighbourhood] [data-evidence-for]")?.textContent ?? "")));
+  if (process.env.G2C_SHOTS) {
+    await page.evaluate((sel) => document.querySelector(sel)?.focus(), '[data-neighbourhood] g[data-node-id="mt_WRRv1ABECC"]');
+    await sleep(200);
+    const el = await page.$("[data-neighbourhood]");
+    await el.scrollIntoView();
+    await el.screenshot({ path: `${process.env.G2C_SHOTS}/2026-11-14-graph-neighbourhood-desktop.png` });
+    const sg = await page.$("[data-evidence-suggestions]");
+    await sg.screenshot({ path: `${process.env.G2C_SHOTS}/2026-11-14-graph-suggestions-desktop.png` });
+  }
+  const before = (await stored()).events.length;
+  await clickReal("Use as my objective");
+  const filled = await page.evaluate(() => document.querySelector('form[aria-label="Write your own objective"] input')?.value ?? "");
+  await sleep(500);
+  check("G2c 'Use as my objective' pre-fills the teacher's own field and records nothing",
+    /^Students can identify at least five examples of AI/.test(filled) && (await stored()).events.length === before, `filled=${JSON.stringify(filled)} events ${before}->${(await stored()).events.length}`);
+  await setVal('input[placeholder="Students can…"]', `${filled} Name two you use at home.`);
+  await sleep(300);
+  await clickBy("Add");
+  await sleep(900);
+  const g2cEv = (await stored()).events.map((e) => JSON.parse(e.line).event).filter((e) => JSON.stringify(e).includes("Name two you use at home."));
+  const g2cJson = JSON.stringify(g2cEv);
+  const g2cRow = await page.evaluate(() => { const li = [...document.querySelectorAll("li[data-objective-id]")].find((n) => /Name two you use at home\./.test(n.textContent)); return li ? { id: li.getAttribute("data-objective-id"), by: li.getAttribute("data-by"), own: /Your own/.test(li.textContent) } : null; });
+  check("G2c submitting it is the ordinary teacher add: one add intent with no Marble id; the objective is teacher-origin with a local URN",
+    g2cEv.length === 1 && g2cEv[0].kind === "objectives.decided" && g2cEv[0].decisions?.length === 1 && g2cEv[0].decisions[0].verb === "add" && !/mt_/.test(g2cJson)
+      && /^urn:uuid:[0-9a-f-]{36}$/.test(g2cRow?.id ?? "") && g2cRow?.by === "teacher" && g2cRow?.own === true, `${JSON.stringify(g2cRow)} ${g2cJson.slice(0, 300)}`);
   await clickBy("Use my answers");
   await waitText("Proposals", 8000);
   await sleep(500);
@@ -331,6 +375,23 @@ try {
     /Step 2 of 4/i.test(await body()) && await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled)));
   await clickPrimary("Confirm objectives");
   check("D confirming the objectives explicitly moves to the plan", await waitText("Objectives confirmed. On to the plan.", 6000) || await waitText("Step 3 of 4", 2000));
+
+  // ---- G2c: the confirmed objective from the skill map is the teacher's own, and the plan opens on the strip
+  await waitText("Step 3 of 4", 6000);
+  const strip = await page.waitForSelector("[data-prereq-strip]", { timeout: 10000 }).then(() => page.evaluate(() => {
+    const r = document.querySelector("[data-prereq-strip]");
+    return { text: r.textContent, hard: r.querySelector('[data-marble-id="mt_WRRv1ABECC"]')?.getAttribute("data-strength"), soft: r.querySelector('[data-marble-id="mt_u6SYiVx7FX"]')?.textContent ?? null, credit: !!r.querySelector("[data-marble-credit]") };
+  }), () => null);
+  check("G2c plan: the strip names mt_WRRv1ABECC as the hard prerequisite, the soft one as optional, with the credit",
+    !!strip && strip.hard === "hard" && /Before this, learners need: Smart Versus Not-Smart Devices \(hard prerequisite\)/.test(strip.text) && (strip.soft === null || /\(optional\)/.test(strip.soft)) && strip.credit, JSON.stringify(strip));
+  check("G2c plan: the neighbourhood view is there, collapsed", await page.evaluate(() => { const d = document.querySelector("[data-neighbourhood]"); return !!d && d.open === false && !!d.querySelector("[data-marble-credit]"); }));
+  await clickBy("Objectives");
+  await waitText("Objectives confirmed", 6000);
+  check("G2c after confirming, the skill-map objective is in the confirmed list as the teacher's own",
+    await page.evaluate(() => [...document.querySelectorAll("li[data-objective-id]")].some((li) => /Name two you use at home\./.test(li.textContent) && /Your own/.test(li.textContent) && li.getAttribute("data-by") === "teacher" && /^urn:uuid:/.test(li.getAttribute("data-objective-id"))))
+      && (await stored()).events.map((e) => JSON.parse(e.line).event).some((e) => e.kind === "checkpoint.confirmed" && e.id === "objectives"));
+  await clickBy("Back to the current step");
+  await waitText("Step 3 of 4", 6000);
 
   // ---- B5: cancelling the passcode gives focus back to the step's primary action, every time
   // (a real mouse click opens it, so the invoking control — not <body> — is what the dialog stores)

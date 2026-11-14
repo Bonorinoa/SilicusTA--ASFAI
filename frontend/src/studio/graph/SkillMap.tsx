@@ -110,7 +110,7 @@ export function NeighbourhoodView({ data, defaultOpen = false }: { data: MarbleN
             })}
           </svg>
         </div>
-        <section className={g.evidence} aria-live="polite" aria-label="Evidence lines" data-evidence-for={chosen.id}>
+        <section className={g.evidence} aria-label="Evidence lines" data-evidence-for={chosen.id}>
           <p className={g.evKicker}>{relationOf(chosen.node, chosen.column)} · {ages(chosen.node.ageRangeStart, chosen.node.ageRangeEnd)}</p>
           <h3 className={g.evTitle}>{chosen.node.name}</h3>
           {reason ? <p className={g.evReason}>Why it is linked: {reason}</p> : null}

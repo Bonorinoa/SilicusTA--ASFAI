@@ -211,8 +211,14 @@ const enc = encodeURIComponent;
 export const host = {
   health: () => call<{ ok: boolean; courses: number }>("GET", "/health"),
   listCourses: () => call<{ courses: CourseSummary[] }>("GET", "/courses"),
-  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit" }) =>
+  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit"; ages?: { min: number; max: number }; marbleAnchor?: string }) =>
     call<{ ok: true; courseId: string; view: HostView }>("POST", "/courses", b),
+  /** Marble skill map (read-only, G1/G2a). Topics per age for the wizard's strip. */
+  marbleCoverage: (min: number, max: number) =>
+    call<{ query: { min: number; max: number }; overlapping: number; perAge: { age: number; count: number }[] }>("GET", `/knowledge/marble/coverage?min=${min}&max=${max}`),
+  marbleSearch: (q: string, ageMin: number, ageMax: number, limit = 8) =>
+    call<{ hits: { id: string; name: string; subject: string; domain: string; ageRangeStart: number; ageRangeEnd: number; score: number }[] }>(
+      "GET", `/knowledge/marble/search?q=${enc(q)}&ageMin=${ageMin}&ageMax=${ageMax}&limit=${limit}`),
   getCourse: (id: string) => call<HostView>("GET", `/courses/${enc(id)}`),
   exportCourse: (id: string) => call<Record<string, unknown>>("GET", `/courses/${enc(id)}/export`),
   verify: (id: string) => call<{ ok: boolean; events: number; head: string }>("GET", `/courses/${enc(id)}/verify`),

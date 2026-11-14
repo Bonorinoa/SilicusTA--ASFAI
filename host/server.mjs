@@ -17,6 +17,8 @@
  *   POST /api/courses/:id/intake/answer      the teacher's reply {text?, answers?} (records a real turn; arms the round)
  *   POST /api/courses/:id/plan/validate      the HOST calls asfai_lesson.validate_outline on the drafted plan (a signal, not a confirmation)
  *   GET  /api/knowledge/status               which knowledge sources are in play (config + capability, never a path or credential)
+ *   GET  /api/knowledge/marble/search        read-only Marble search (q, ageMin, ageMax, limit)
+ *   GET  /api/knowledge/marble/topics/:id    read-only Marble topic with prerequisites and dependents
  *   GET  /api/asfai/status                   is ASFAI connected (never a token)
  *   POST /api/asfai/connect                  begin the consent flow -> {authorizeUrl} (the teacher's click completes it)
  *   GET  /api/asfai/callback                 the OAuth redirect (state is single-use)
@@ -50,9 +52,15 @@ import { AsfaiClient } from "./asfai/mcp.mjs";
 import { AsfaiService } from "./asfai/service.mjs";
 import { AsfaiGraphSource } from "./sources/asfai-graph.mjs";
 import { LocalOntologySource } from "./sources/local-ontology.mjs";
+import { MarbleSource } from "./sources/marble.mjs";
+import { createMarbleService } from "./marble/marble-graph.mjs";
+import { readFile } from "node:fs/promises";
 
 const ASFAI_MCP_URL = process.env.SILICUS_ASFAI_MCP_URL ?? "https://constitution.asfai.org/education/api/mcp";
 const ASFAI_PRM_URL = process.env.SILICUS_ASFAI_PRM_URL ?? "https://constitution.asfai.org/education/.well-known/oauth-protected-resource";
+
+/** The committed, pinned Marble snapshot (scripts/marble-snapshot.mjs re-generates it). */
+const MARBLE_SNAPSHOT_URL = new URL("./data/marble/marble-snapshot.json", import.meta.url);
 
 /**
  * The host holds an ASFAI credential and answers on loopback, so any web page the teacher has
@@ -108,7 +116,7 @@ export function workerFromEnv(env) {
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, workerEnv = process.env, sources = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, workerEnv = process.env, sources = null, marble = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -127,11 +135,14 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
   const planWorker = worker ?? workerFromEnv(workerEnv);
 
   // Knowledge sources the worker may draw on: CONFIG, never a request field. ASFAI's graph first
-  // (recommended; on unless SILICUS_SOURCE_ASFAI=0), then a local ontology file if one is named.
+  // (recommended; on unless SILICUS_SOURCE_ASFAI=0), then a local ontology file if one is named,
+  // then Marble's open taxonomy from the committed snapshot (on unless SILICUS_SOURCE_MARBLE=0).
   // A source that is not configured or not connected is a state, not an error.
+  const marbleSvc = marble ?? createMarbleService(async () => readFile(MARBLE_SNAPSHOT_URL, "utf8"));
   const knowledgeSources = sources ?? [
     ...(process.env.SILICUS_SOURCE_ASFAI === "0" ? [] : [new AsfaiGraphSource({ client: asfaiSvc.client, isConnected: () => asfaiSvc.status().connected === true })]),
     new LocalOntologySource({ file: process.env.SILICUS_ONTOLOGY_FILE ?? null }),
+    ...(process.env.SILICUS_SOURCE_MARBLE === "0" ? [] : [new MarbleSource({ marble: marbleSvc })]),
   ];
 
   // The API itself — routes, intents-only shapes, the per-course lock, verified replay per request and
@@ -143,6 +154,7 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
     worker: planWorker,
     typicalSeconds: typicalSecondsFromJson(workerEnv.SILICUS_TYPICAL_SECONDS),
     sources: knowledgeSources,
+    marble: marbleSvc,
     archives,
     prepareMaterials: (items) => prepareMaterials(items, { ...(fetchImpl ? { fetchImpl } : {}), ...(lookupImpl ? { lookupImpl } : {}), ...(ytdlp ? { ytdlp } : {}), ...(runImpl ? { runImpl } : {}) }),
     guard: (req, pathname) => guardRequest(req, allowedOrigins, pathname),

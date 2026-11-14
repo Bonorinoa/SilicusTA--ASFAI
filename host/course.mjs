@@ -611,7 +611,7 @@ export class CourseSession {
     // words to ASFAI is consulted only for a course whose answers the teacher has already sent
     // there: no new egress without the teacher's own act. Every failure degrades to no context.
     const context = await retrieveAll(sources, {
-      topic, objectives, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
+      topic, objectives, course, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
     });
 
     let drafted;

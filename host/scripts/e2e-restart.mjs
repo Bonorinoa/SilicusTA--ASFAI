@@ -130,13 +130,13 @@ const v1 = (await get(`/api/courses/${courseId}`)).json;
 check("view reports all five checkpoints confirmed", ["files", "outline", "objectives", "plan", "publish"].every((k) => v1.checkpoints[k].status === "confirmed"));
 
 const kn = (await get("/api/knowledge/status")).json.sources;
-check("knowledge sources: ASFAI's graph first, then the local ontology, both enabled",
-  kn.map((k) => k.id).join() === "asfai-graph,local-ontology" && kn.every((k) => k.enabled));
+check("knowledge sources: ASFAI's graph first, then the local ontology, then Marble, all enabled",
+  kn.map((k) => k.id).join() === "asfai-graph,local-ontology,marble" && kn.every((k) => k.enabled));
 const cites1 = v1.plan.citations ?? [];
 check("sources: a course whose answers went to ASFAI is aligned from ASFAI's graph and the ontology file",
   cites1.some((c) => c.source === "asfai-graph" && c.verified === true) && cites1.some((c) => c.source === "local-ontology" && c.verified === true),
   cites1.map((c) => c.ref).join(","));
-check("sources: the sealed version carries no alignment suggestions", !JSON.stringify(v1.versions).includes("asfai:mt_") && !JSON.stringify(v1.versions).includes("local:"));
+check("sources: the sealed version carries no alignment suggestions", !JSON.stringify(v1.versions).includes("asfai:mt_") && !JSON.stringify(v1.versions).includes("local:") && !JSON.stringify(v1.versions).includes("marble:mt_"));
 
 await stop(h1);
 check("host process terminated", true);

@@ -26,6 +26,9 @@ import { RecordStore } from "../../../host/record-store.mjs";
 import { PlanWorker } from "../../../host/worker.mjs";
 import { prepareMaterialsWith } from "../../../host/materials-core.mjs";
 import { buildBackup, readBackup } from "../../../host/backup.mjs";
+import { createMarbleService } from "../../../host/marble/marble-graph.mjs";
+import { MarbleSource } from "../../../host/sources/marble.mjs";
+import marbleSnapshotUrl from "../../../host/data/marble/marble-snapshot.json?url";
 import { clearAll, openDb, readAll, writeBatch, type EventRow, type MetaRow, type Write } from "./idb";
 import { passcodeKeeper, PASSCODE_KEY, type PasscodeKeeper } from "./passcode";
 import { createSite, type Site } from "./site";
@@ -57,6 +60,12 @@ export interface BrowserHostOptions {
   localStore?: () => Storage | null;
   /** Another tab wrote: re-read before the next request. null disables (tests). */
   channel?: { postMessage(m: unknown): void; onmessage: ((e: MessageEvent) => void) | null } | null;
+  /**
+   * Marble snapshot text loader. Defaults to fetching the built static asset (?url), so the
+   * online app finally has a knowledge source with no ASFAI dependency (CORS issue #16).
+   * Tests inject a fixture (or none: an unreadable loader degrades to no context).
+   */
+  marbleLoad?: () => Promise<string>;
 }
 
 const localOnly = () => Object.assign(
@@ -83,6 +92,15 @@ export async function createBrowserHost(opts: BrowserHostOptions = {}): Promise<
   const channel = opts.channel === undefined
     ? (typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("silicus-host"))
     : opts.channel;
+
+  // Marble's open taxonomy (withmarbleapp/os-taxonomy, ODbL-1.0), read from the SNAPSHOT that
+  // ships with this build. Egress null: the teacher's words go nowhere; the pinned data is
+  // already on this device. Lazy: the 2 MB snapshot is fetched and parsed on first use.
+  const marble = createMarbleService(opts.marbleLoad ?? (async () => {
+    const r = await fetchImpl(marbleSnapshotUrl);
+    if (!r.ok) throw new Error(`marble snapshot: HTTP ${r.status}`);
+    return r.text();
+  }));
 
   const db = await openDb(factory);
 
@@ -142,7 +160,8 @@ export async function createBrowserHost(opts: BrowserHostOptions = {}): Promise<
       return { configured: st.configured, zdr: st.zdr, provider: st.provider, passcodeRequired: st.passcodeRequired,
         ...(st.typicalSeconds !== undefined ? { typicalSeconds: st.typicalSeconds } : {}) };
     },
-    sources: [],
+    sources: [new MarbleSource({ marble })],
+    marble,
     archives: null,
     prepareMaterials: (items: unknown) => prepareMaterialsWith(items, (url: string) => site.resolveUrl(url)),
   });

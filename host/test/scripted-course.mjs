@@ -32,8 +32,10 @@ export function modelReply(prompt) {
   }
   if (p.startsWith("Draft one lesson plan")) {
     const ids = [...p.matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+    const refs = [...p.matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
     return { title: "How plants eat", audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation" })) };
+      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
+        ...(refs[i] ? { citations: [refs[i]] } : {}) })) };
   }
   if (p.startsWith("You are a study helper")) {
     return { inScope: true, answer: "A plant uses light, water and air to make sugar.", cites: ["[objective:1]", "activity:1"] };

@@ -74,6 +74,7 @@ export function errorResponse(err) {
  *   workerStatus     what /worker/status reports (default: the worker's own config)
  *   typicalSeconds   expected wait ranges for objectives, plans and answers
  *   sources          knowledge sources (config, never a request field)
+ *   marble           the Marble service ({search, topic}), or null where none is wired
  *   archives         a LocalArchive, or null where there is no archive folder
  *   prepareMaterials how the teacher's material items become named plain text
  *   guard            transport checks run right after the /api match (Node: loopback host + origin + JSON)
@@ -91,7 +92,7 @@ export function errorResponse(err) {
  */
 
 /** @param {HandlerDeps} deps */
-export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, typicalSeconds = DEFAULT_TYPICAL_SECONDS, sources: knowledgeSources = [], archives = null, prepareMaterials, guard = null }) {
+export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, typicalSeconds = DEFAULT_TYPICAL_SECONDS, sources: knowledgeSources = [], marble = null, archives = null, prepareMaterials, guard = null }) {
   const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider, model: planWorker.model, typicalSeconds }));
 
   /**
@@ -148,6 +149,29 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
     // Which knowledge sources are in play. Config and capability only: no URL, no path, no credential.
     if (parts[1] === "knowledge" && parts[2] === "status" && method === "GET") {
       return { status: 200, json: { sources: knowledgeSources.map((k) => ({ id: k.id, label: k.label, enabled: k.enabled, canVerify: k.canVerify })) } };
+    }
+    // Marble, read-only. Same routes on BOTH hosts (handler.mjs is shared): a studio card (G2)
+    // builds the alignment picker on these. They write nothing, take no course id and never touch
+    // the course log. The shapes are documented in host/README.md.
+    if (parts[1] === "knowledge" && parts[2] === "marble" && method === "GET") {
+      if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host");
+      if (parts[3] === "search") {
+        const q = String(url.searchParams.get("q") ?? "").trim().slice(0, 300);
+        if (!q) throw new HttpError(400, "BAD_INPUT", "search needs a q");
+        const num = (v, d) => { const n = Number(url.searchParams.get(v)); return Number.isFinite(n) ? n : d; };
+        const ageMin = num("ageMin", 3);
+        const ageMax = num("ageMax", 15);
+        const limit = Math.max(1, Math.min(50, Math.trunc(num("limit", 10))));
+        const { hits } = await marble.search(q, { ageMin, ageMax, limit });
+        return { status: 200, json: { query: { q, ageMin, ageMax, limit }, hits } };
+      }
+      if (parts[3] === "topics" && parts[4]) {
+        const id = decodeURIComponent(parts[4]);
+        const topic = await marble.topic(id);
+        if (!topic) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
+        return { status: 200, json: topic };
+      }
+      throw new HttpError(404, "NOT_FOUND", "no such marble route");
     }
     if (parts[1] === "asfai") {
       if (parts[2] === "status" && method === "GET") return { status: 200, json: asfaiSvc.status() };

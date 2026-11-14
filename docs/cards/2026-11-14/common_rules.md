@@ -36,6 +36,9 @@
   block with `kind=needs_input` and say which file the owner must create.
 - Do not edit dated records under `docs/verification/`, `docs/decisions/`, `.hermes/plans/`, or `docs/STATUS.md`.
 - Every number in your report comes from a command you ran in this card, with the command shown.
+- **You have about 60 tool calls per run.** Do not re-read the whole codebase. Commit a checkpoint
+  (`wip(<CARD>): …`) after each acceptance item that passes, so a second run resumes instead of restarting. If you
+  are near the cap, commit, then report what is left as **Open**.
 - Sarah Chardonnens's booklets are licensed material. They live only in
   `/Users/bonorinoa/Hermes/Projects/silicus-private/sarah/` (outside git). Never copy their text into the repository.
   Restate ideas in your own words, credit "Sarah Chardonnens, SYNAPSE model (University of Fribourg)", quote at most

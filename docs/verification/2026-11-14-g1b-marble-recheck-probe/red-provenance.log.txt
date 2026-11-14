@@ -1,0 +1,253 @@
+TAP version 13
+# node:internal/modules/esm/resolve:275
+#     throw new ERR_MODULE_NOT_FOUND(
+#           ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/confirm-gate/confirm-gate.mjs' imported from /Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/worker.mjs
+#     at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+#     at moduleResolve (node:internal/modules/esm/resolve:861:10)
+#     at defaultResolve (node:internal/modules/esm/resolve:985:11)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+#   code: 'ERR_MODULE_NOT_FOUND',
+#   url: 'file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/confirm-gate/confirm-gate.mjs'
+# }
+# Node.js v22.22.3
+# Subtest: test/http.test.mjs
+not ok 1 - test/http.test.mjs
+  ---
+  duration_ms: 44.839958
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/http.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: parseMarbleSnapshot accepts the trimmed shape and refuses garbage
+ok 2 - parseMarbleSnapshot accepts the trimmed shape and refuses garbage
+  ---
+  duration_ms: 1.03675
+  type: 'test'
+  ...
+# Subtest: get resolves the demo ids from the real snapshot, with the trimmed fields only
+ok 3 - get resolves the demo ids from the real snapshot, with the trimmed fields only
+  ---
+  duration_ms: 7.497125
+  type: 'test'
+  ...
+# Subtest: snapshot hashes match the recorded ones: the committed file names the exact bytes that were downloaded
+ok 4 - snapshot hashes match the recorded ones: the committed file names the exact bytes that were downloaded
+  ---
+  duration_ms: 4.6995
+  type: 'test'
+  ...
+# Subtest: prerequisites(id) returns hard and soft edges with reason, null for an unknown id
+ok 5 - prerequisites(id) returns hard and soft edges with reason, null for an unknown id
+  ---
+  duration_ms: 0.400417
+  type: 'test'
+  ...
+# Subtest: dependents(id): the topics that name this one as their prerequisite, with the edge direction held
+ok 6 - dependents(id): the topics that name this one as their prerequisite, with the edge direction held
+  ---
+  duration_ms: 0.138333
+  type: 'test'
+  ...
+# Subtest: an edge whose prerequisite is not in the snapshot is kept as a row the app cannot resolve
+ok 7 - an edge whose prerequisite is not in the snapshot is kept as a row the app cannot resolve
+  ---
+  duration_ms: 0.050666
+  type: 'test'
+  ...
+# Subtest: search scores name above description above evidence, filters by age overlap, and stays lexical
+ok 8 - search scores name above description above evidence, filters by age overlap, and stays lexical
+  ---
+  duration_ms: 0.577625
+  type: 'test'
+  ...
+# Subtest: search uses name, description AND evidence: a term only in the evidence line still hits
+ok 9 - search uses name, description AND evidence: a term only in the evidence line still hits
+  ---
+  duration_ms: 0.051875
+  type: 'test'
+  ...
+# Subtest: audienceAges reads a course answer's age band; nothing else
+not ok 10 - audienceAges reads a course answer's age band; nothing else
+  ---
+  duration_ms: 1.1365
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/marble-graph.test.mjs:130:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + null
+    - {
+    -   max: 19,
+    -   min: 19
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    min: 19
+    max: 19
+  actual: ~
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/marble-graph.test.mjs:142:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: createMarbleService loads lazily, caches, and retries a failed load
+ok 11 - createMarbleService loads lazily, caches, and retries a failed load
+  ---
+  duration_ms: 0.506959
+  type: 'test'
+  ...
+# node:internal/modules/esm/resolve:275
+#     throw new ERR_MODULE_NOT_FOUND(
+#           ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/confirm-gate/confirm-gate.mjs' imported from /Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/worker.mjs
+#     at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+#     at moduleResolve (node:internal/modules/esm/resolve:861:10)
+#     at defaultResolve (node:internal/modules/esm/resolve:985:11)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+#   code: 'ERR_MODULE_NOT_FOUND',
+#   url: 'file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/confirm-gate/confirm-gate.mjs'
+# }
+# Node.js v22.22.3
+# Subtest: test/marble-routes.test.mjs
+not ok 3 - test/marble-routes.test.mjs
+  ---
+  duration_ms: 42.889417
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/marble-routes.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: the source is local, verifying, and carries its own namespace
+ok 13 - the source is local, verifying, and carries its own namespace
+  ---
+  duration_ms: 1.578042
+  type: 'test'
+  ...
+# Subtest: the retrieval label carries the node's age range, once, like the ASFAI source
+ok 14 - the retrieval label carries the node's age range, once, like the ASFAI source
+  ---
+  duration_ms: 0.330834
+  type: 'test'
+  ...
+# Subtest: a citation is verified by membership, and a stranger's ref is reported unknown
+ok 15 - a citation is verified by membership, and a stranger's ref is reported unknown
+  ---
+  duration_ms: 0.582375
+  type: 'test'
+  ...
+# Subtest: an unloadable snapshot degrades to no context, and verification says it did not check
+ok 16 - an unloadable snapshot degrades to no context, and verification says it did not check
+  ---
+  duration_ms: 0.239959
+  type: 'test'
+  ...
+# Subtest: a query for a course with no overlaps returns nothing, even when the words match
+not ok 17 - a query for a course with no overlaps returns nothing, even when the words match
+  ---
+  duration_ms: 0.75325
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/source-marble.test.mjs:76:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    outside 3–15: 19 year olds
+    + actual - expected
+    
+    + [
+    +   {
+    +     label: 'Likelihood Language (ages 9–10)',
+    +     ref: 'marble:mt_EEE',
+    +     source: 'marble',
+    +     text: 'Say whether an event is certain, likely or impossible.'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      ref: 'marble:mt_EEE'
+      label: 'Likelihood Language (ages 9–10)'
+      text: 'Say whether an event is certain, likely or impossible.'
+      source: 'marble'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/source-marble.test.mjs:85:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: when the audience ages overlap the Marble band, hits are filtered to that overlap
+ok 18 - when the audience ages overlap the Marble band, hits are filtered to that overlap
+  ---
+  duration_ms: 0.697875
+  type: 'test'
+  ...
+# Subtest: an audience the source cannot read fails closed: no citations at all (C1)
+not ok 19 - an audience the source cannot read fails closed: no citations at all (C1)
+  ---
+  duration_ms: 0.252042
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/source-marble.test.mjs:99:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     label: 'Likelihood Language (ages 9–10)',
+    +     ref: 'marble:mt_EEE',
+    +     source: 'marble',
+    +     text: 'Say whether an event is certain, likely or impossible.'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      ref: 'marble:mt_EEE'
+      label: 'Likelihood Language (ages 9–10)'
+      text: 'Say whether an event is certain, likely or impossible.'
+      source: 'marble'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/red/host/test/source-marble.test.mjs:103:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 14
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 57.665958

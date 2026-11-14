@@ -1,0 +1,70 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+WATCH {"route":"","marbleCite":false,"alignKey":false,"credit":false,"creditTextContent":true,"creditVisible":[{"w":704,"h":96,"vis":"visible","disp":"block","color":"rgb(74, 68, 59)","size":"15px","inDetails":true}],"creditLinks":["https://withmarble.com/"],"licenceLinks":[]}
+PASS  the landing's primary opens the studio (#/studio)
+WATCH {"route":"#/studio","marbleCite":false,"alignKey":false,"credit":false,"creditTextContent":false,"creditVisible":[],"creditLinks":[],"licenceLinks":[]}
+PASS  the studio home shows 'Your courses' and 'New course'
+PASS  the New course card opens the wizard, on its welcome at first run
+PASS  step 1 waits for all four answers before it can continue
+PASS  the sources step is one drop zone (files, paste, web page) with no source-name field
+PASS  the AI check names the missing passcode in plain words (online build)
+PASS  the review shows everything that will be recorded
+PASS  nothing is recorded before the review's confirm
+PASS  confirming the review creates the course and opens it in the studio
+PASS  it lands on Objectives (the brief is confirmed by the same click)
+PASS  one confirm leaves the brief's intents in the brief's order: create, answers, files, outline — ["course.created","intake.answered","checkpoint.confirmed:files","checkpoint.confirmed:outline"]
+PASS  the course is created with no names-only material rows — []
+PASS  the Brief step renders (Step 1 of 4), looked back at — Silicus
+/
+Courses
+/
+How plants eat
+✓
+Brief
+2
+Objectives
+3
+Plan
+4
+Publish
+AI needs passcode
+2 decisions recorded
+SOURCES
+
+PASS  three question fields render, holding the wizard's answers — found 3
+PASS  the studio's AI status opens the wizard's diagnosis
+PASS  D the course is explicit: one held 'Confirm objectives' primary, the add form before any proposal
+PASS  D adding your own objective before any proposal lands it in the document, and nothing confirms by itself
+PASS  the proposals tray fills from the teacher's answers — 2 proposal(s)
+PASS  B1 the status line spans its row (not a sliver beside the tray) — line=968 parent=968 sideways=false
+PASS  B1 1440: the proposals tray sits in the right column, not squeezed under the status line — tray.left=1008 line.left=360
+PASS  B1 380: the status line does not force a sideways scroll — sideways=false
+PASS  adding the teacher's own objective works
+PASS  accepting a proposal puts it in the document
+PASS  D with every proposal decided the step stays open until the teacher confirms
+PASS  D confirming the objectives explicitly moves to the plan
+PASS  B5-a one live region after a cancelled passcode — ["Your turn: draft the lesson plan"]
+PASS  B5-b focus returns to the primary action after 20 cancels, both routes — 20/20
+PASS  drafting the plan completes and shows a draft
+PASS  one draft plan shows a Marble suggested alignment (the mock worker cited the local snapshot) — Suggested alignment3 referencesReferences the drafting assistant suggested. They are not requirements, not objectives, a
+WATCH {"route":"#/studio/urn%3Auuid%3A05ced5a3-fd4e-4ddc-b9bc-9062836bd0cf","marbleCite":true,"alignKey":false,"credit":false,"creditTextContent":false,"creditVisible":[],"creditLinks":[],"licenceLinks":[]}
+PASS  confirming the plan moves to Publish (Step 4 of 4)
+PASS  publishing asks for a second, explicit confirm
+WATCH {"route":"#/studio/urn%3Auuid%3A05ced5a3-fd4e-4ddc-b9bc-9062836bd0cf","marbleCite":false,"alignKey":false,"credit":false,"creditTextContent":false,"creditVisible":[],"creditLinks":[],"licenceLinks":[]}
+PASS  the published moment renders with the student and Rehearse links
+PASS  B2 the published screen stops asking to review and publish — status="Version 1 is published. Preview it or revise."
+PASS  Rehearse renders the simulator and the guardrail probes
+PASS  G4 20 cancelled passcodes in Rehearse keep the question and return focus, both routes — 20/20
+PASS  Rehearse refuses an off-topic question from the host's answer
+PASS  the student space is labelled a preview on this device
+PASS  the student space shows the published title and goals
+PASS  the student helper answers from the published package
+PASS  a returning teacher's wizard opens on step 1, without the welcome
+PASS  a 200-character unbroken first line names the pasted source, and at 390 the wizard does not scroll sideways
+PASS  with a source and nothing written, proposing from sources is already chosen
+PASS  the AI check reads ready once the tab holds the passcode
+PASS  R7 the confirm lands on Objectives and starts proposing from the sources there
+PASS  R7 one live region on the step after the wizard — ["Your turn: accept, edit or drop each proposal"]
+PASS  F1 at 390 the Objectives step does not scroll sideways with a 200-character source name in the provenance — sw=390 vw=390
+PASS  no console or page errors during the walk
+
+48/48 studio checks passed

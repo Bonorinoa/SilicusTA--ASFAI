@@ -1,0 +1,40 @@
+v22.22.3
+baseline (expect EXIT=0)
+   EXIT=0 # tests 37 # pass 37 # fail 0 
+   >>> SURVIVED
+C1-a fail-open again: null band -> whole 3-15 band
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 37 - an audience the source cannot read fails closed: no citations at all (C1)
+C1-b drop 'if (!band) return []' (null band -> crash/ whole band)
+   EXIT=1 # tests 37 # pass 34 # fail 3 
+not ok 33 - a citation is verified by membership, and a stranger's ref is reported unknown
+not ok 34 - an unloadable snapshot degrades to no context, and verification says it did not check
+not ok 37 - an audience the source cannot read fails closed: no citations at all (C1)
+C1-c parser: remove 'N to M year olds' (spaced) pattern
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 19 - audienceAges reads a course answer's age band; nothing else
+C1-d parser: remove 'N and M year olds' pattern
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 19 - audienceAges reads a course answer's age band; nothing else
+C1-e parser: remove single '19 year olds' (space) pattern
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 19 - audienceAges reads a course answer's age band; nothing else
+C1-f original G1: fail-open AND parser reverted (all three widenings gone)
+   EXIT=1 # tests 37 # pass 34 # fail 3 
+not ok 19 - audienceAges reads a course answer's age band; nothing else
+not ok 35 - a query for a course with no overlaps returns nothing, even when the words match
+not ok 37 - an audience the source cannot read fails closed: no citations at all (C1)
+L1-a topic route: raw decodeURIComponent
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 28 - the routes are read-only and refuse bad input
+L1-b course-id route: raw decodeURIComponent
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 6 - a malformed percent-encoded course id or archive ref is a 400, not a 500 (L1)
+L1-c archive-ref route: raw decodeURIComponent
+   EXIT=1 # tests 37 # pass 36 # fail 1 
+not ok 6 - a malformed percent-encoded course id or archive ref is a 400, not a 500 (L1)
+L1-d decodeSegment itself rethrows (all three routes)
+   EXIT=1 # tests 37 # pass 35 # fail 2 
+not ok 28 - the routes are read-only and refuse bad input
+not ok 6 - a malformed percent-encoded course id or archive ref is a 400, not a 500 (L1)
+mutants run: 10, survived: 0

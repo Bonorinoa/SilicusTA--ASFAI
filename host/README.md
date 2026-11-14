@@ -334,6 +334,30 @@ source, activities and whether a source actually checked it. ASFAI's graph is on
 course whose answers the teacher already sent to ASFAI. Citations are suggestions: not objectives,
 not in the sealed package, never required.
 
+### The Marble graph: read-only routes (G1)
+
+Marble (`withmarbleapp/os-taxonomy`, ODbL-1.0) is open data we read ourselves, from a pinned and
+trimmed snapshot (`host/data/marble/marble-snapshot.json`, built by `host/scripts/marble-snapshot.mjs`
+from commit `d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63`; the raw files' sha256 are recorded inside the
+file). Both hosts serve the same two read-only routes; they take no course id, write nothing and never
+touch the course log. The studio alignment picker (card G2) builds on them, so the shapes are stable:
+
+- `GET /api/knowledge/marble/search?q=<query>&ageMin=<n>&ageMax=<n>&limit=<n>`
+  → `{ "query": { "q", "ageMin", "ageMax", "limit" }, "hits": [{ "id", "name", "subject", "domain",
+  "ageRangeStart", "ageRangeEnd", "score" }] }`. Plain lexical scoring over name, description and
+  evidence — no embeddings, no model call. A topic is served only if its age band overlaps
+  `[ageMin, ageMax]` (defaults 3–15); `limit` is clamped to 1–50. `400 BAD_INPUT` without `q`.
+- `GET /api/knowledge/marble/topics/<id>` → the trimmed topic plus its edges:
+  `{ "id", "name", "subject", "domain", "description", "evidence", "ageRangeStart", "ageRangeEnd",
+  "prerequisites": { "hard": [{ "topicId", "name", "strength", "reason" }], "soft": [...] },
+  "dependents": [{ "topicId", "name", "strength", "reason" }] }`. `404 UNKNOWN_TOPIC` for an id not
+  in the snapshot. A Marble id (`mt_*`) is never an objective's identity and is never bound
+  automatically.
+
+`/api/knowledge/status` lists `marble` among the sources (`SILICUS_SOURCE_MARBLE=0` turns the Node-host
+source off; egress is null — nothing leaves the device — and `canVerify` is true, membership in the
+snapshot).
+
 ## The drafting worker (config only)
 
 Off unless a model is configured. One worker serves every model call (plan drafting, objectives from

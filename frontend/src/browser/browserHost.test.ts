@@ -16,6 +16,7 @@
  *   tabs          a second tab that writes over a stale copy fails closed, never overwrites
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MATERIAL, MATERIAL_SECRET, runScriptedCourse } from "../../../host/test/scripted-course.mjs";
@@ -69,6 +70,23 @@ describe("parity: one API, two hosts", () => {
     expect(transcript.filter((s: any) => s.path.endsWith("/student/ask")).at(-1)?.json.grounded).toBe(true);
     expect(disk.lines.join("\n")).not.toMatch(/forged|attacker|mt_1/);
   }, 60_000);
+
+  it("Marble parity: the browser host serves the same read-only search and topic shapes the Node host serves, from the same snapshot", async () => {
+    const r = await rig({ marbleLoad: async () => readFileSync(new URL("../../../host/data/marble/marble-snapshot.json", import.meta.url), "utf8") });
+    const s = await r.call("GET", "/api/knowledge/marble/search?q=AI%20in%20daily%20life&ageMin=5&ageMax=12&limit=3");
+    expect(s.status).toBe(200);
+    expect(s.json.hits).toHaveLength(3);
+    expect(s.json.hits[0]).toMatchObject({ id: "mt_AzTrT5ySCx", name: "AI in Daily Life", subject: "Computing" });
+    expect(s.json.query).toEqual({ q: "AI in daily life", ageMin: 5, ageMax: 12, limit: 3 });
+    const t = await r.call("GET", "/api/knowledge/marble/topics/mt_AzTrT5ySCx");
+    expect(t.status).toBe(200);
+    expect(t.json.prerequisites.hard[0]).toMatchObject({ topicId: "mt_WRRv1ABECC", name: "Smart Versus Not-Smart Devices", strength: "hard" });
+    expect(t.json.dependents[0]).toMatchObject({ topicId: "mt_kH1DzOPsXG", strength: "soft" });
+    expect((await r.call("GET", "/api/knowledge/marble/topics/mt_NOT_REAL")).status).toBe(404);
+    expect((await r.call("GET", "/api/knowledge/marble/search?q=")).status).toBe(400);
+    // read-only: the routes wrote nothing a course could log
+    expect((await r.call("GET", "/api/courses")).json.courses).toHaveLength(0);
+  });
 });
 
 describe("the record survives a reload, and a tampered record is flagged, never served", () => {
@@ -341,14 +359,16 @@ describe("the site's refusals become words a teacher can act on", () => {
 });
 
 describe("what needs the local app says so", () => {
-  it("ASFAI is off: status says unavailable, every ASFAI action refuses in words, no knowledge sources", async () => {
+  it("ASFAI is off: status says unavailable, every ASFAI action refuses in words, and Marble is the one local knowledge source", async () => {
     const r = await rig();
     expect((await r.call("GET", "/api/asfai/status")).json).toMatchObject({ connected: false, available: false });
     const connect = await r.call("POST", "/api/asfai/connect", {});
     expect(connect.json).toMatchObject({ code: "LOCAL_APP_ONLY" });
     const { c } = await readyCourse(r);
     expect((await r.call("POST", `${c}/intake/call`, {})).json.code).toBe("LOCAL_APP_ONLY");
-    expect((await r.call("GET", "/api/knowledge/status")).json).toEqual({ sources: [] });
+    expect((await r.call("GET", "/api/knowledge/status")).json).toEqual({
+      sources: [{ id: "marble", label: "Marble skill taxonomy", enabled: true, canVerify: true }],
+    });
     expect((await r.call("POST", `${c}/archive`, {})).json.code).toBe("LOCAL_APP_ONLY");
     expect((await r.call("GET", "/api/archives")).json).toEqual({ refs: [] });
   });

@@ -64,6 +64,7 @@ const AUDIENCE_BAND_LABEL = "Ages";
 const SOURCE_LABEL: Record<string, string> = {
   "asfai-graph": "ASFAI's skill map",
   "local-ontology": "your ontology file",
+  "marble": "Marble's skill taxonomy",
 };
 
 export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline" }: PlanCardProps) {

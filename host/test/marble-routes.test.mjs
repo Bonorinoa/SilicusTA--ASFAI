@@ -47,12 +47,14 @@ test("search returns the small, stable shape, honouring ages and limit", async (
   assert.equal(d.json.query.ageMin, 3);
   assert.equal(d.json.query.ageMax, 15);
   assert.equal(d.json.query.limit, 10);
-  // age filtering is a real filter, not display: a course ages 8-10 does not see the 11-12-only topics
-  const narrow = await get("/api/knowledge/marble/search?q=likelihood&ageMin=3&ageMax=8");
+  // age filtering is a real filter, not display: the real likelihood topics all start at 6,
+  // so a kindergarten band (3-5) that sits entirely below them is served nothing
+  const narrow = await get("/api/knowledge/marble/search?q=likelihood&ageMin=3&ageMax=5");
   assert.equal(narrow.json.hits.length, 0, "no hit overlaps the ages, so none is served");
-  // the route read nothing and wrote nothing: no courses, and the data dir holds no log
+  // the route read nothing and wrote nothing: no courses, and the data dir holds only the
+  // archive folder a host always creates
   assert.equal((await get("/api/courses")).json.courses.length, 0);
-  assert.deepEqual(readdirSync(dir), [], "no course, no log, no event");
+  assert.deepEqual(readdirSync(dir), ["archives"], "no course, no log, no event");
 });
 
 test("topic by id returns the node with its prerequisites and dependents", async () => {

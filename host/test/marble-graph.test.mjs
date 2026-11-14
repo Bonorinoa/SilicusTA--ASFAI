@@ -22,7 +22,7 @@ const FIXTURE = {
     { id: "mt_AAA", type: "CONCEPTUAL", subject: "Computing", domain: "Artificial Intelligence", name: "AI in Daily Life", description: "Spot artificial intelligence in everyday things.", evidence: ["five examples of AI at home"], ageRangeStart: 5, ageRangeEnd: 12 },
     { id: "mt_BBB", type: "CONCEPTUAL", subject: "Computing", domain: "Artificial Intelligence", name: "Smart Versus Not-Smart Devices", description: "Sort objects that respond to input from objects that always do the same thing.", evidence: [], ageRangeStart: 5, ageRangeEnd: 8 },
     { id: "mt_CCC", type: "CONCEPTUAL", subject: "Computing", domain: "Artificial Intelligence", name: "Voice Assistants and How They Work", description: "How a voice assistant hears and answers.", evidence: [], ageRangeStart: 5, ageRangeEnd: 8 },
-    { id: "mt_DDD", type: "CONCEPTUAL", subject: "Computing", domain: "Data Representation", name: "Data and Information for Computers", description: "Computers take data in and put data out.", evidence: [], ageRangeStart: 5, ageRangeEnd: 10 },
+    { id: "mt_DDD", type: "CONCEPTUAL", subject: "Computing", domain: "Data Representation", name: "Data and Information for Computers", description: "Computers take data in and put data out, a record of daily life.", evidence: [], ageRangeStart: 5, ageRangeEnd: 10 },
     { id: "mt_EEE", type: "CONCEPTUAL", subject: "Mathematics", domain: "Probability", name: "Likelihood Language", description: "Say whether an event is certain, likely or impossible.", evidence: [], ageRangeStart: 9, ageRangeEnd: 10 },
   ],
   dependencies: [

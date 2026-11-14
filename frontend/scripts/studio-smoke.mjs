@@ -312,6 +312,11 @@ try {
   await clickPrimary("Draft the lesson plan");
   await enterPasscode();
   check("drafting the plan completes and shows a draft", await waitText("Confirm the lesson plan", 15000));
+  const align = await page.evaluate(() => {
+    const el = document.querySelector('section[aria-label="Suggested alignment"]');
+    return el ? el.textContent ?? "" : "";
+  });
+  check("one draft plan shows a Marble suggested alignment (the mock worker cited the local snapshot)", /Marble/.test(align), align.slice(0, 120));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
 

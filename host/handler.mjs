@@ -86,6 +86,7 @@ export function errorResponse(err) {
  * @property {(() => any) | null} [workerStatus]
  * @property {any} [typicalSeconds]
  * @property {any[]} [sources]
+ * @property {any} [marble]               the read-only Marble graph service, or absent/null when not wired
  * @property {any} [archives]
  * @property {(items: any) => Promise<{materials: any[], skipped: any[]}>} prepareMaterials
  * @property {((raw: any, pathname: string) => void) | null} [guard]
@@ -158,7 +159,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
       if (parts[3] === "search") {
         const q = String(url.searchParams.get("q") ?? "").trim().slice(0, 300);
         if (!q) throw new HttpError(400, "BAD_INPUT", "search needs a q");
-        const num = (v, d) => { const n = Number(url.searchParams.get(v)); return Number.isFinite(n) ? n : d; };
+        const num = (v, d) => { const raw = url.searchParams.get(v); if (raw === null || raw === "") return d; const n = Number(raw); return Number.isFinite(n) ? n : d; };
         const ageMin = num("ageMin", 3);
         const ageMax = num("ageMax", 15);
         const limit = Math.max(1, Math.min(50, Math.trunc(num("limit", 10))));

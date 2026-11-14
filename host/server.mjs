@@ -116,7 +116,7 @@ export function workerFromEnv(env) {
 }
 
 /** Build the app over a data directory. Returns the (unlistened) http.Server. */
-export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, workerEnv = process.env, sources = null, marble = null, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
+export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGINS ? process.env.SILICUS_ALLOWED_ORIGINS.split(",") : DEFAULT_ORIGINS), dataDir = process.env.SILICUS_HOST_DATA ?? join(homedir(), ".silicus", "host"), asfai = null, worker = null, workerEnv = process.env, sources = null, marble = undefined, fetchImpl = undefined, lookupImpl = undefined, ytdlp = process.env.SILICUS_YTDLP ?? null, runImpl = undefined, port = Number(process.env.SILICUS_HOST_PORT ?? 8787) } = {}) {
   const store = new CourseStore(dataDir);
   // The host's OWN credential file, never another process's. Injectable for tests.
   const asfaiSvc = asfai ?? (() => {
@@ -138,7 +138,9 @@ export function createApp({ allowedOrigins = (process.env.SILICUS_ALLOWED_ORIGIN
   // (recommended; on unless SILICUS_SOURCE_ASFAI=0), then a local ontology file if one is named,
   // then Marble's open taxonomy from the committed snapshot (on unless SILICUS_SOURCE_MARBLE=0).
   // A source that is not configured or not connected is a state, not an error.
-  const marbleSvc = marble ?? createMarbleService(async () => readFile(MARBLE_SNAPSHOT_URL, "utf8"));
+  // undefined = default to the committed snapshot; an EXPLICIT null leaves the Marble routes
+  // unconfigured (the handler answers 501 MARBLE_NOT_CONFIGURED) — tests use that state.
+  const marbleSvc = marble === undefined ? createMarbleService(async () => readFile(MARBLE_SNAPSHOT_URL, "utf8")) : marble;
   const knowledgeSources = sources ?? [
     ...(process.env.SILICUS_SOURCE_ASFAI === "0" ? [] : [new AsfaiGraphSource({ client: asfaiSvc.client, isConnected: () => asfaiSvc.status().connected === true })]),
     new LocalOntologySource({ file: process.env.SILICUS_ONTOLOGY_FILE ?? null }),

@@ -19,16 +19,6 @@
 import { KnowledgeSource, makeCitation } from "../knowledge.mjs";
 import { audienceAges, overlaps, MARBLE_MIN_AGE, MARBLE_MAX_AGE } from "../marble/marble-graph.mjs";
 
-/** One citation's context text: the description, plus the evidence lines it implies. */
-function citeText(topic) {
-  const parts = [];
-  if (typeof topic.description === "string" && topic.description) parts.push(topic.description);
-  for (const e of Array.isArray(topic.evidence) ? topic.evidence : []) {
-    if (typeof e === "string" && e) parts.push(`Evidence: ${e}`);
-  }
-  return parts.join(" ");
-}
-
 export class MarbleSource extends KnowledgeSource {
   #marble;
 
@@ -68,23 +58,46 @@ export class MarbleSource extends KnowledgeSource {
     }
     if (!Array.isArray(hits)) return [];
 
+    const scope = { min, max };
+    const inBand = (t) => {
+      const lo = Number(t?.ageRangeStart); const hi = Number(t?.ageRangeEnd);
+      return Number.isFinite(lo) && Number.isFinite(hi) && lo <= scope.max && hi >= scope.min;
+    };
+    const labelFor = (name, lo, hi) => Number.isFinite(lo) && Number.isFinite(hi)
+      && !/\(ages? [^)]*\)\s*$/i.test(name) ? `${name} (ages ${lo}–${hi})` : name;
     const out = [];
-    for (const h of hits) {
-      if (!h || typeof h.id !== "string" || typeof h.name !== "string") continue;
-      // The graph's own name sometimes already ends in an age phrase; never print a second one.
-      const ages = Number.isFinite(h.ageRangeStart) && Number.isFinite(h.ageRangeEnd) && !/\(ages? [^)]*\)\s*$/i.test(h.name)
-        ? ` (ages ${h.ageRangeStart}–${h.ageRangeEnd})` : "";
+    const seen = new Set();
+    const pushTopic = async (id) => {
+      if (seen.has(id)) return;
       let full = null;
-      try { full = await this.#marble.get(h.id); } catch { /* degrade below */ }
+      try { full = await this.#marble.get(id); } catch { return; } // a broken read is skipped, not fatal
+      if (!full || !inBand(full)) return;
+      seen.add(id);
       out.push(makeCitation({
-        ref: `marble:${h.id}`,
-        label: `${h.name}${ages}`,
-        text: full ? citeText(full) : "",
+        ref: `marble:${id}`,
+        label: labelFor(String(full.name ?? ""), Number(full.ageRangeStart), Number(full.ageRangeEnd)),
+        text: typeof full.description === "string" ? full.description : "",
         source: this.id,
       }));
+    };
+    // Scored hits keep their places; around each hit the graph's OWN edges set the order
+    // (committee walk 2026-11-12): hard prerequisites, soft unlocks, then the topics that
+    // build on it — the same age band, never the words. A neighbour who cannot be mentioned
+    // by any keyword ("AI in Daily Life" has none of "smart device") still belongs in the
+    // context, which is the entire point of reading a GRAPH and not a bag of words.
+    for (const h of hits) {
+      if (!h || typeof h.id !== "string" || typeof h.name !== "string") continue;
+      await pushTopic(h.id);
       if (out.length >= take) break;
+      let n = null;
+      try { n = await this.#marble.topic(h.id); } catch { n = null; }
+      const rows = [...(n?.prerequisites?.hard ?? []), ...(n?.prerequisites?.soft ?? []), ...(n?.dependents ?? [])];
+      for (const row of rows) {
+        if (out.length >= take) break;
+        if (typeof row?.topicId === "string") await pushTopic(row.topicId);
+      }
     }
-    return out;
+    return out.slice(0, take);
   }
 
   /**

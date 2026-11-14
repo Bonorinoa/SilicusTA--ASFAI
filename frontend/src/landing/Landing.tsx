@@ -185,7 +185,8 @@ export function Landing() {
               <p className={styles.body}>
                 ASFAI is a protocol that checks a plan against its shared lesson format; Silicus works without it, and the
                 version on your computer can send a plan to ASFAI. Objectives can be aligned to Marble’s skill map (about
-                ages 4–15); a miss is normal.
+                ages 4–15); a miss is normal. Contains information from the Marble Skill Taxonomy, made available under the
+                Open Database License v1.0.
               </p>
               <p className={styles.body}>
                 On a set of 44 student questions the helper answered every definition question, refused every off-topic,

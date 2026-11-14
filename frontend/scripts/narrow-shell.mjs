@@ -439,15 +439,25 @@ try {
   const g2cBtn = (label) => page.evaluate((x) => { const b = [...document.querySelectorAll("button")].find((e) => !e.disabled && (e.textContent ?? "").trim() === x); b?.click(); return !!b; }, label);
   const g2cWait = (fn, ms = 10000, arg) => page.waitForFunction(fn, { timeout: ms }, arg).then(() => true, () => false);
   await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "AI in daily life"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
-  await g2cBtn("Continue");
-  await g2cWait(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources"));
-  await g2cBtn("Continue without sources");
-  await g2cWait(() => !!document.querySelector('section[aria-label="Your objectives"] textarea'));
+  // Each move retries its click until the next screen is there (a click can land while the step still settles).
+  const g2cMove = async (label, ready, ms = 12000) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      if (await page.evaluate(ready)) return true;
+      await g2cBtn(label);
+      await sleep(500);
+    }
+    return page.evaluate(ready);
+  };
+  await sleep(500);
+  const g2cWalk = [
+    await g2cMove("Continue", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
+    await g2cMove("Continue without sources", () => !!document.querySelector('section[aria-label="Your objectives"] textarea')),
+  ];
   await setValue('section[aria-label="Your objectives"] textarea', "Spot AI at home and at school");
-  await g2cBtn("Continue");
-  await sleep(800);
-  for (let i = 0; i < 3 && !(await bodyHas("Review and confirm")); i++) { await g2cBtn("Continue"); await sleep(700); }
-  await g2cBtn("Confirm and create the course");
+  g2cWalk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
+  g2cWalk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
+  if (g2cWalk.includes(false)) console.log(`G2c walk stalled: ${JSON.stringify(g2cWalk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
   const g2cIn = await g2cWait(() => !!document.querySelector("[data-evidence-suggestions]") && !!document.querySelector("[data-neighbourhood][open]"), 20000);
   check("G2c the anchored course opens on objectives with the suggestions and the open neighbourhood view", g2cIn);
   const g2cOverflow = async (label) => {

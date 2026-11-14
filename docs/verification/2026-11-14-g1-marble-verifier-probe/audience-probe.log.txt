@@ -1,0 +1,11 @@
+"ages 19 and up"                               band {"min":19,"max":null}  -> 0 citations 
+"a 19-year-old course"                         band {"min":19,"max":19}    -> 0 citations 
+"aged 19"                                      band {"min":19,"max":19}    -> 0 citations 
+"19 year olds"                                 band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"19 year old students"                         band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"16 to 18 year olds"                           band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"17 and 18 year olds"                          band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"Econometrics for 2nd-year undergraduates"     band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"University econometrics"                      band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"adult learners"                               band null                   -> 8 citations Ordering Likelihoods (ages 8–12)
+"ages 8-10"                                    band {"min":8,"max":10}     -> 5 citations Ordering Likelihoods (ages 8–12)

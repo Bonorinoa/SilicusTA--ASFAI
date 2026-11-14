@@ -1,0 +1,18 @@
+REQUESTS:
+  GET ORIGIN/
+  GET ORIGIN/assets/index-BrWC8iN6.js
+  GET ORIGIN/assets/index-MsHIpQza.css
+  GET ORIGIN/assets/source-serif-4-variable-BNk_--v2.woff2
+  GET ORIGIN/assets/public-sans-latin-wght-normal-DdeTHZLK.woff2
+  GET ORIGIN/assets/StudioApp-BWx3bKFV.js
+  GET ORIGIN/assets/site-BYbpwx1w.js
+  GET ORIGIN/assets/StudioApp-BcIgoI0P.css
+  GET ORIGIN/assets/browserHost-BFsj8gv4.js
+  GET ORIGIN/api/worker/status
+  GET ORIGIN/assets/marble-snapshot-B9Cjl5Qs.json
+  POST ORIGIN/api/worker
+  GET ORIGIN/assets/source-serif-4-variable-italic-CfMpusKC.woff2
+  POST ORIGIN/api/worker
+  POST ORIGIN/api/worker
+  POST ORIGIN/api/worker
+

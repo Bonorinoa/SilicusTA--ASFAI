@@ -9,6 +9,7 @@ import {
   AI_RULE, GROUPS, NO_SUGGESTIONS, PLAN_VOICE, agesText, skillMapLine,
   type Anchor, type Audience, type GroupId, type Stage,
 } from "./audience";
+import { MarbleCredit } from "../components/MarbleCredit/MarbleCredit";
 import { ui } from "./ui";
 import w from "./Wizard.module.css";
 
@@ -45,13 +46,7 @@ export function useCoverage(ages: Audience["ages"]): CoverageState {
   return bars.length ? { overlapping: -1, perAge: bars } : null;
 }
 
-export const MarbleCredit = () => (
-  <p className={w.credit}>
-    Marble Skill Taxonomy (v1) · © Generative Spark, Inc. (Marble) ·{" "}
-    <a href="https://withmarble.com" target="_blank" rel="noreferrer">https://withmarble.com</a> · licensed under
-    ODbL 1.0 (database) and CC BY-SA 4.0 (content).
-  </p>
-);
+export const StudioMarbleCredit = () => <MarbleCredit className={w.credit} />;
 
 // ------------------------------------------------------------------ who are your learners?
 export function LearnersField({ aud, coverage, onGroup, onStep }: {
@@ -85,9 +80,11 @@ export function LearnersField({ aud, coverage, onGroup, onStep }: {
       </div>
       <div className={w.refine}>
         <span>Exact ages:</span>
-        {stepper("min", "Youngest")}
-        <span>to</span>
-        {stepper("max", "Oldest")}
+        <span className={w.refineRange}>
+          {stepper("min", "Youngest")}
+          <span>to</span>
+          {stepper("max", "Oldest")}
+        </span>
       </div>
       <span id={hint} className={ui.hint}>Mixed ages are fine. The youngest sets the AI rules.</span>
       <AgeStrip ages={ages} coverage={coverage} />
@@ -196,14 +193,14 @@ export function TopicField({ aud, coverage, topic, onTopic, onAnchor, onClear }:
               )}
             </div>
           )}
-          <MarbleCredit />
+          <StudioMarbleCredit />
         </div>
       ) : null}
 
       <div className={ui.field}>
         <label className={ui.label} htmlFor={ids.topic}>{effective === "map" ? "Topic, in your words" : "Your topic"}</label>
         <input id={ids.topic} className={ui.input} value={topic} onChange={(e) => onTopic(e.target.value)} placeholder="How plants make food from sunlight" />
-        <span className={ui.hint}>{aud.anchor ? "Filled from the skill map. Edit it as you like; the anchor stays a pointer." : "What this lesson is about."}</span>
+        <span className={ui.hint}>{aud.anchor ? "Filled from the skill map. Edit it as you like." : "What this lesson is about."}</span>
       </div>
     </fieldset>
   );
@@ -225,6 +222,7 @@ export function Consequences({ stage, coverage }: { stage: Stage | null; coverag
       <div className={w.tile} data-tone={stage !== null && (coverage === "unavailable" || countOf(coverage) === 0) ? "none" : undefined}>
         <span className={w.tileTitle}>Skill map (Marble)</span>
         <span className={w.tileText}>{map === NO_SUGGESTIONS ? NO_SUGGESTIONS : map}</span>
+        {coverage && coverage !== "unavailable" ? <StudioMarbleCredit /> : null}
       </div>
       <div className={w.tile}>
         <span className={w.tileTitle}>Plan voice</span>

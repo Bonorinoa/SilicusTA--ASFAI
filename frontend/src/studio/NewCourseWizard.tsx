@@ -36,7 +36,7 @@ import {
   EMPTY_AUDIENCE, agesText, audienceAnswer, clearAnchor, groupName, pickAnchor, selectGroup, stageOf, stepAge,
   type Audience,
 } from "./audience";
-import { Consequences, LearnersField, MarbleCredit, TopicField, useCoverage } from "./Learners";
+import { Consequences, LearnersField, StudioMarbleCredit, TopicField, useCoverage } from "./Learners";
 
 type StepId = "welcome" | "course" | "sources" | "objectives" | "ai" | "review";
 const STEPS: { id: Exclude<StepId, "welcome">; label: string }[] = [
@@ -341,7 +341,7 @@ export function NewCourseWizard() {
           {row("Skill-map anchor", aud.anchor ? (
             <>
               {aud.anchor.name} <span className={ui.hint}>· ages {aud.anchor.ageRangeStart}–{aud.anchor.ageRangeEnd} · {aud.anchor.subject}</span>
-              <MarbleCredit />
+              <StudioMarbleCredit />
             </>
           ) : "None. You write your own objectives.", "course")}
           {row("About the class", notes.trim() || "Nothing added.", "course")}

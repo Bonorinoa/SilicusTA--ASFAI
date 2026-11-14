@@ -391,6 +391,51 @@ try {
   if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-confirm`, ["record-band"]); }
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
+  // ---- G2b: the new-course wizard's step 1 (learner cards, steppers, skill-map strip, anchor, consequences).
+  // Checked at every width: the page never scrolls sideways and nothing in the step crosses the viewport.
+  await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  await poll(() => bodyHas("Who are your learners?"));
+  const g2bClick = (t) => page.evaluate((x) => { const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(x)); el?.click(); return !!el; }, t);
+  await g2bClick("Early primary");
+  await g2bClick("Youngest age: one year older");
+  for (let i = 0; i < 4; i++) await g2bClick("Oldest age: one year older");
+  await page.waitForFunction(() => /Ages 5–12 · [\d,]+ skill-map topics/.test(document.body.innerText), { timeout: 20000 }).catch(() => null);
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "AI around us");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.type('form[aria-label="Course and learners"] input[type="search"]', "AI in Daily Life");
+  await page.waitForFunction(() => document.querySelector('ul[aria-label="Skill-map topics"] button'), { timeout: 15000 }).catch(() => null);
+  await page.evaluate(() => document.querySelector('ul[aria-label="Skill-map topics"] button')?.click());
+  await page.type('form[aria-label="Course and learners"] textarea', "Mixed class; two learners are new to English.");
+  check("G2b the wizard's step 1 reached the anchored state", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false));
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(250);
+    const m = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth;
+      const past = [...document.querySelectorAll('form[aria-label="Course and learners"] *')]
+        .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+        .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 30)}`);
+      return { sw: document.documentElement.scrollWidth, vw, past };
+    });
+    check(`G2b wizard step 1 does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+  }
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
+    const dir = process.env.NARROW_SHELL_WIZARD_SHOTS;
+    // A viewport as tall as the page (no fullPage stitching), so the sticky bar and footer sit where a reader expects them.
+    const tall = async (width, scale, file) => {
+      await page.setViewport({ width, height: 900, deviceScaleFactor: scale });
+      await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
+      await sleep(300);
+      const h = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewport({ width, height: h, deviceScaleFactor: scale });
+      await sleep(300);
+      await page.screenshot({ path: join(dir, file) });
+    };
+    await tall(1440, 1, "2026-11-14-wizard-step1-desktop.png");
+    await tall(390, 2, "2026-11-14-wizard-step1-390.png");
+  }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));
   check("the only network calls were the site's functions", api.calls.every((c) => ["/api/worker", "/api/worker/status"].includes(c.path)));
 

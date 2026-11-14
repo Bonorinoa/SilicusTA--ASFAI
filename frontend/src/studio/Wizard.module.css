@@ -152,8 +152,9 @@
 .group:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); box-shadow: inset 0 0 0 1px var(--fn-accent); }
 .group:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
 .groupAges { font-family: var(--fn-serif); font-size: 1.375rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.groupName { font-size: 0.8125rem; font-weight: 600; color: var(--fn-ink-soft); line-height: 1.25; }
+.groupName { font-size: 0.78125rem; font-weight: 600; color: var(--fn-ink-soft); line-height: 1.25; }
 .refine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--fn-ink-soft); }
+.refineRange { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--fn-line-dash); border-radius: 8px; overflow: hidden; background: #fffdf8; }
 .stepper button { border: 0; background: var(--fn-desk); width: 36px; min-height: 36px; font: inherit; font-size: 1rem; cursor: pointer; color: var(--fn-ink); }
 .stepper button:hover:not(:disabled) { background: var(--fn-line-soft); }

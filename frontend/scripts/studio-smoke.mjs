@@ -221,6 +221,21 @@ try {
   await clickBy("AI in Daily Life");
   check("G2b picking a skill-map topic sets the anchor, pre-fills the topic and shows the Marble credit", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false)
     && await page.evaluate(() => [...document.querySelectorAll('form[aria-label="Course and learners"] input')].some((i) => i.value === "AI in Daily Life")) && /Marble Skill Taxonomy \(v1\)/.test(await body()));
+  // G1bV gap (PM 14 Nov): ONE credit component on every Marble surface, with both licence texts and the attribution notice reachable.
+  const creditOn = (scope) => page.evaluate((sel) => {
+    const root = sel === "picker" ? document.querySelector('button[aria-label^="Clear the skill-map anchor"]')?.closest("div")?.parentElement : document.querySelector(sel);
+    const c = root?.querySelector('[data-marble-credit="true"]');
+    if (!c || !/Marble Skill Taxonomy \(v1\) · © Generative Spark, Inc\. \(Marble\)/.test(c.textContent ?? "")) return null;
+    const href = (k) => c.querySelector(`a[data-licence="${k}"]`)?.getAttribute("href") ?? null;
+    return { odbl: href("odbl"), cc: href("cc-by-sa"), attribution: href("attribution") };
+  }, scope);
+  const creditOk = (c) => !!c && /opendatacommons\.org\/licenses\/odbl\/1-0/.test(c.odbl ?? "") && /creativecommons\.org\/licenses\/by-sa\/4\.0/.test(c.cc ?? "") && /MARBLE-ATTRIBUTION.*\.md$/.test(c.attribution ?? "");
+  const pickerCredit = await creditOn("picker");
+  check("G1bV the skill-map anchor picker shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(pickerCredit), JSON.stringify(pickerCredit));
+  const stripCredit = await creditOn('section[aria-label="What your choices change"]');
+  check("G1bV the consequence strip shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(stripCredit), JSON.stringify(stripCredit));
+  const notice = await page.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, text: (await r.text()).slice(0, 2000) }; }, stripCredit?.attribution ?? "/missing");
+  check("G1bV the attribution notice ships with the app and names the pinned upstream", notice.status === 200 && /Marble Skill Taxonomy/.test(notice.text) && /d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63/.test(notice.text), `${notice.status}`);
   await setVal('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "How plants make food from sunlight");
   await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
   await sleep(200);
@@ -239,6 +254,7 @@ try {
   await clickPrimary("Continue");
   await waitText("Review and confirm", 5000);
   t = await body();
+  { const rc = await creditOn('section[aria-label="Review and confirm"]'); check("G1bV the review's anchor row shows the Marble credit with both licence links", creditOk(rc), JSON.stringify(rc)); }
   check("G2b the review shows ages, stage and the anchor", /Ages 5–12 · Early primary · AI stage 1 of 4/.test(t) && /AI in Daily Life/.test(t) && /Marble Skill Taxonomy/.test(t));
   check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
   check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);

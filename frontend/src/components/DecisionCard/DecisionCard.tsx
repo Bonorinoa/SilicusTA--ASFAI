@@ -3,6 +3,7 @@ import { BROWSER_MODE } from "../../gate/mode";
 import type { DecisionIntent, ProposalView } from "../../gate/types";
 import { plural } from "../../lib/plural";
 import { PlusIcon, StateIcon } from "../icons";
+import { MarbleCredit } from "../MarbleCredit/MarbleCredit";
 import styles from "./DecisionCard.module.css";
 
 /**
@@ -262,11 +263,7 @@ export function DecisionCard({
       {/* G1b C2: wherever a Marble suggestion is on screen the studio credits it with the
           upstream line verbatim; present only when an alignment row is actually shown. */}
       {rows.some((r) => r.alignment) ? (
-        <p className={styles.marbleCredit}>
-          Marble Skill Taxonomy (v1) · © Generative Spark, Inc. (Marble) ·{" "}
-          <a href="https://withmarble.com" target="_blank" rel="noreferrer">https://withmarble.com</a> · licensed under
-          ODbL 1.0 (database) and CC BY-SA 4.0 (content).
-        </p>
+        <MarbleCredit className={styles.marbleCredit} />
       ) : null}
 
     </section>

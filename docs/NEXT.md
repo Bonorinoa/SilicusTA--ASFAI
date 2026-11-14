@@ -4,6 +4,19 @@ Written 13 November 2026 by the PM session, for whoever picks the project up nex
 Status is [`STATUS.md`](STATUS.md) (read its 13 November owner box first). Where this page and STATUS disagree,
 STATUS wins.
 
+> **Owner decisions, 14 November 2026 (supersede §2 and §6 where they differ).**
+> - Strategy: a fully working **teacher** side; the student side is the teacher's preview plus a labelled mock.
+>   Theme: AI that is designed, not only a chat, with learning theory from committee members.
+> - Hosting on the ASFAI site is still wanted: ask Michael. Until then the Vercel deployment with the single demo
+>   passcode is the access control. Invite codes and accounts wait.
+> - **Marble is read directly** from its open dataset (`withmarbleapp/os-taxonomy`, ODbL), in both hosts. The demo no
+>   longer depends on asfai-education CORS #16. We still prepare the #16 fix as a branch on a fork for Michael.
+> - Sarah Chardonnens sent her booklets (kept outside git). Learning theory goes into the plan (rubric first, then
+>   prompt v2). She is no longer "parked" (§6 is superseded on this point).
+> - Model route: the owner's OpenRouter key, DeepSeek, zero data retention.
+> - Dates: target 1 December, hard stop 5 December, presentation 11 December.
+> - Cards for this round: [`cards/2026-11-14/`](cards/2026-11-14/) (board `silicusta-sprint`).
+
 ## 1. Where we are, in five lines
 
 - Product code is `v0.6.0` (`3a01b1d`), deployed on Vercel. Nothing in the product has changed since 19 October.

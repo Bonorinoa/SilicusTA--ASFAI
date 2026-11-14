@@ -65,7 +65,19 @@ test("neighbourhood: prerequisites two hops up and dependents one hop down, with
   const { get } = await boot();
   const r = await get("/api/knowledge/marble/neighbourhood/mt_AzTrT5ySCx");
   assert.equal(r.status, 200);
-  assert.deepEqual(r.json.anchor, { id: "mt_AzTrT5ySCx", name: "AI in Daily Life", subject: "Computing", domain: "Artificial Intelligence", ageRangeStart: 5, ageRangeEnd: 12 });
+  const { evidence: anchorEvidence, ...anchorRest } = r.json.anchor;
+  assert.deepEqual(anchorRest, { id: "mt_AzTrT5ySCx", name: "AI in Daily Life", subject: "Computing", domain: "Artificial Intelligence", ageRangeStart: 5, ageRangeEnd: 12 });
+  // G2c: the anchor carries its evidence lines (the objectives step offers them as wording to copy).
+  assert.equal(anchorEvidence.length, 3);
+  assert.match(anchorEvidence[0], /five examples of AI/);
+  // G2c: the walked edges, prerequisite -> topic, with their strength; both ends always in the view.
+  const ids = new Set(["mt_AzTrT5ySCx", ...r.json.prerequisites.map((p) => p.id), ...r.json.dependents.map((p) => p.id)]);
+  for (const e of r.json.edges) assert.ok(ids.has(e.from) && ids.has(e.to), `edge ${e.from}>${e.to} stays inside the view`);
+  const edge = (from, to) => r.json.edges.find((e) => e.from === from && e.to === to)?.strength;
+  assert.equal(edge("mt_WRRv1ABECC", "mt_AzTrT5ySCx"), "hard");
+  assert.equal(edge("mt_u6SYiVx7FX", "mt_AzTrT5ySCx"), "soft");
+  assert.equal(edge("mt_AzTrT5ySCx", "mt_kH1DzOPsXG"), "soft");
+  assert.ok(edge("mt_WRRv1ABECC", "mt_u6SYiVx7FX"), "the edge between two one-hop prerequisites survives the per-id dedupe");
 
   const rowKeys = ["ageRangeEnd", "ageRangeStart", "domain", "evidence", "hops", "id", "name", "reason", "strength", "subject"];
   for (const row of [...r.json.prerequisites, ...r.json.dependents]) {

@@ -188,7 +188,7 @@ export class MarbleGraph {
    * The anchor's neighbourhood (G2a): prerequisites TWO hops up and dependents ONE hop down,
    * deduplicated by topic id (first edge wins), each row carrying the full trimmed node (id,
    * name, subject, domain, ages, evidence) plus the edge's strength, reason and hop distance.
-   * @returns {{anchor: object, prerequisites: object[], dependents: object[]} | null}
+   * @returns {{anchor: object, prerequisites: object[], dependents: object[], edges: {from: string, to: string, strength: string}[]} | null}
    */
   neighbourhood(id) {
     const t = this.#byId.get(id);
@@ -217,15 +217,31 @@ export class MarbleGraph {
       seen.add(topicId);
       list.push(row);
     };
-    for (const e of this.#prereqs.get(id) ?? []) push(prerequisites, seenPrereq, e.prerequisiteId, e.strength, e.reason, 1);
+    // Every edge the walk followed (G2c), as {from: prerequisite, to: topic, strength}, so a view can
+    // draw the real arrows — including one between two one-hop prerequisites that the per-id dedupe
+    // above folds into a single row. Only edges whose two ends are both in the view are kept.
+    const walked = [];
+    const walk = (e) => walked.push({ from: e.prerequisiteId, to: e.topicId, strength: e.strength });
+    for (const e of this.#prereqs.get(id) ?? []) { walk(e); push(prerequisites, seenPrereq, e.prerequisiteId, e.strength, e.reason, 1); }
     for (const e of this.#prereqs.get(id) ?? []) {
-      for (const e2 of this.#prereqs.get(e.prerequisiteId) ?? []) push(prerequisites, seenPrereq, e2.prerequisiteId, e2.strength, e2.reason, 2);
+      for (const e2 of this.#prereqs.get(e.prerequisiteId) ?? []) { walk(e2); push(prerequisites, seenPrereq, e2.prerequisiteId, e2.strength, e2.reason, 2); }
     }
-    for (const e of this.#dependents.get(id) ?? []) push(dependents, seenDependent, e.topicId, e.strength, e.reason, 1);
+    for (const e of this.#dependents.get(id) ?? []) { walk(e); push(dependents, seenDependent, e.topicId, e.strength, e.reason, 1); }
+    const shown = new Set([id, ...prerequisites.map((r) => r.id), ...dependents.map((r) => r.id)]);
+    const seenEdge = new Set();
+    const edges = walked.filter((e) => {
+      const k = `${e.from}>${e.to}`;
+      if (!shown.has(e.from) || !shown.has(e.to) || e.from === e.to || seenEdge.has(k)) return false;
+      seenEdge.add(k);
+      return true;
+    });
     return {
-      anchor: { id: t.id, name: t.name, subject: t.subject ?? "", domain: t.domain ?? "", ageRangeStart: t.ageRangeStart, ageRangeEnd: t.ageRangeEnd },
+      // The anchor carries its own evidence lines (G2c): the objectives step offers them as wording a
+      // teacher may copy into their own objective field. They are never bound to an objective.
+      anchor: { id: t.id, name: t.name, subject: t.subject ?? "", domain: t.domain ?? "", ageRangeStart: t.ageRangeStart, ageRangeEnd: t.ageRangeEnd, evidence: Array.isArray(t.evidence) ? [...t.evidence] : [] },
       prerequisites,
       dependents,
+      edges,
     };
   }
 }

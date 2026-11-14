@@ -1,0 +1,94 @@
+/**
+ * SkillMap.test.tsx — G2c: the pre-fill sends nothing; the view is keyboard-focusable and shows evidence
+ * without hover; the strip marks hard vs optional; every surface carries the Marble credit.
+ */
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { host, type HostView } from "../../gate/transport";
+import type { StepProps } from "../CourseStudio";
+import { ObjectivesStep } from "../steps/ObjectivesStep";
+import { AI_DAILY } from "./fixture";
+import { _resetNeighbourhoodCache, NeighbourhoodView, PrereqStrip } from "./SkillMap";
+
+const ID = "urn:uuid:11111111-2222-3333-4444-555555555555";
+function view(anchor?: string): HostView {
+  return {
+    courseId: ID, objectivesMode: "explicit", proposals: [], objectives: [], versions: [], plan: null,
+    course: { courseId: ID, owner: "Ada", title: "AI around us", description: "", materials: [], createdAt: 1, ...(anchor ? { marbleAnchor: anchor, ages: { min: 5, max: 12 } } : {}) },
+    checkpoints: { objectives: { id: "objectives", status: "pending", provenance: null, note: null } },
+    intake: { answers: {} },
+  } as unknown as HostView;
+}
+const makeC = () => ({
+  view: null, missing: false, busy: false, notice: null, problem: null, setNotice: vi.fn(), waiting: null, sources: [], setSources: vi.fn(), reload: vi.fn(),
+  actions: { proposeFromAnswers: vi.fn(), proposeFromSources: vi.fn(), suggestMore: vi.fn(), decide: vi.fn(), confirmObjectives: vi.fn() },
+}) as unknown as StepProps["c"];
+
+afterEach(() => { vi.restoreAllMocks(); _resetNeighbourhoodCache(); });
+
+describe("G2c pre-fill: a suggestion fills the teacher's own field and sends nothing", () => {
+  it("a click changes the field; the record gains nothing until the teacher submits; then it is an ordinary add", async () => {
+    const spy = vi.spyOn(host, "marbleNeighbourhood").mockResolvedValue(AI_DAILY);
+    const c = makeC();
+    render(<ObjectivesStep c={c} view={view("mt_AzTrT5ySCx")} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    const panel = await screen.findByRole("region", { name: "Wording from the skill map" });
+    expect(spy).toHaveBeenCalledWith("mt_AzTrT5ySCx");
+    const input = screen.getByLabelText("Write your own") as HTMLInputElement;
+    expect(input.value).toBe("");
+
+    await userEvent.click(within(panel).getAllByRole("button", { name: "Use as my objective" })[0]);
+    expect(input.value).toBe("Students can identify at least five examples of AI in their daily life.");
+    expect(document.activeElement).toBe(input);
+    expect(c.actions.decide).not.toHaveBeenCalled();
+    expect(c.actions.confirmObjectives).not.toHaveBeenCalled();
+
+    await userEvent.type(input, " Name two at home.");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    // Exactly the existing write-your-own intent: a statement, no Marble id, no provenance from the client.
+    expect(c.actions.decide).toHaveBeenCalledTimes(1);
+    expect(c.actions.decide).toHaveBeenCalledWith({ verb: "add", statement: "Students can identify at least five examples of AI in their daily life. Name two at home." });
+    expect(JSON.stringify((c.actions.decide as ReturnType<typeof vi.fn>).mock.calls)).not.toContain("mt_");
+    expect(panel.querySelector("[data-marble-credit]")).not.toBeNull();
+  });
+
+  it("a course without an anchor looks exactly as before: no fetch, no skill-map surfaces", () => {
+    const spy = vi.spyOn(host, "marbleNeighbourhood");
+    render(<ObjectivesStep c={makeC()} view={view()} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.queryByText("Wording from the skill map")).toBeNull();
+    expect(document.querySelector("[data-neighbourhood]")).toBeNull();
+  });
+});
+
+describe("G2c neighbourhood view", () => {
+  it("every box is focusable; focus (not hover) shows its evidence lines; the credit is there", async () => {
+    render(<NeighbourhoodView data={AI_DAILY} defaultOpen />);
+    const boxes = document.querySelectorAll("g[role=button]");
+    expect(boxes).toHaveLength(6);
+    boxes.forEach((b) => expect(b.getAttribute("tabindex")).toBe("0"));
+    const ev = screen.getByRole("region", { name: "Evidence lines" });
+    expect(ev.getAttribute("data-evidence-for")).toBe("mt_AzTrT5ySCx");
+    await userEvent.tab(); // summary
+    await userEvent.tab(); // first box
+    await waitFor(() => expect(ev.getAttribute("data-evidence-for")).not.toBe("mt_AzTrT5ySCx"));
+    const smart = document.querySelector("[data-node-id=mt_WRRv1ABECC]") as SVGGElement;
+    act(() => smart.focus());
+    expect(ev.getAttribute("data-evidence-for")).toBe("mt_WRRv1ABECC");
+    expect(within(ev).getByText("Hard prerequisite · ages 5–8")).toBeInTheDocument();
+    expect(within(ev).getByText("Smart Versus Not-Smart Devices evidence")).toBeInTheDocument();
+    expect(document.querySelector("[data-edge='mt_AzTrT5ySCx>mt_kH1DzOPsXG']")?.getAttribute("stroke-dasharray")).toBe("5 4");
+    expect(document.querySelector("[data-edge='mt_WRRv1ABECC>mt_AzTrT5ySCx']")?.getAttribute("stroke-dasharray")).toBeNull();
+    expect(document.querySelector("[data-neighbourhood] [data-marble-credit]")).not.toBeNull();
+  });
+
+  it("the prerequisite strip names the hard prerequisite and marks the soft one optional, with the credit", () => {
+    render(<PrereqStrip data={AI_DAILY} />);
+    const strip = screen.getByRole("region", { name: "Before this lesson" });
+    expect(strip.textContent).toContain("Before this, learners need: Smart Versus Not-Smart Devices (hard prerequisite)");
+    expect(strip.querySelector("[data-marble-id=mt_WRRv1ABECC]")?.getAttribute("data-strength")).toBe("hard");
+    expect(strip.querySelector("[data-marble-id=mt_u6SYiVx7FX]")?.textContent).toContain("(optional)");
+    expect(strip.querySelector("[data-marble-id=mt_XbGfVhfiUz]")).toBeNull(); // two hops back: in the view, not the strip
+    expect(strip.querySelector("[data-marble-credit]")).not.toBeNull();
+  });
+});

@@ -44,6 +44,27 @@ export interface HostCourseMeta {
   description: string;
   materials: unknown[];
   createdAt: number;
+  /** Structured ages and AI stage (G2a); absent on legacy courses. */
+  ages?: { min: number; max: number };
+  stage?: number;
+  /** The skill-map anchor (an mt_* pointer to the node this lesson is about). Never an objective id. */
+  marbleAnchor?: string;
+}
+
+/** One topic in an anchor's neighbourhood (G2a/G2c). Read-only skill-map data, never an objective. */
+export interface MarbleNode {
+  id: string; name: string; subject: string; domain: string;
+  ageRangeStart: number; ageRangeEnd: number;
+  evidence: string[];
+  /** Absent on the anchor itself. */
+  strength?: "hard" | "soft"; reason?: string; hops?: number;
+}
+export interface MarbleNeighbourhood {
+  anchor: MarbleNode;
+  prerequisites: MarbleNode[];
+  dependents: MarbleNode[];
+  /** The edges the walk followed, prerequisite -> topic (G2c). Absent on an older host. */
+  edges?: { from: string; to: string; strength: "hard" | "soft" }[];
 }
 
 /** Checkpoint 2's host-side gate: the ASFAI intake round, driven by the host. */
@@ -219,6 +240,8 @@ export const host = {
   marbleSearch: (q: string, ageMin: number, ageMax: number, limit = 8) =>
     call<{ hits: { id: string; name: string; subject: string; domain: string; ageRangeStart: number; ageRangeEnd: number; score: number }[] }>(
       "GET", `/knowledge/marble/search?q=${enc(q)}&ageMin=${ageMin}&ageMax=${ageMax}&limit=${limit}`),
+  /** The anchor's neighbourhood: prerequisites two hops up, dependents one hop down, the edges walked. */
+  marbleNeighbourhood: (id: string) => call<MarbleNeighbourhood>("GET", `/knowledge/marble/neighbourhood/${enc(id)}`),
   getCourse: (id: string) => call<HostView>("GET", `/courses/${enc(id)}`),
   exportCourse: (id: string) => call<Record<string, unknown>>("GET", `/courses/${enc(id)}/export`),
   verify: (id: string) => call<{ ok: boolean; events: number; head: string }>("GET", `/courses/${enc(id)}/verify`),

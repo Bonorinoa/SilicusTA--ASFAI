@@ -5,7 +5,7 @@
  * Writing your own is always open while the objectives are not confirmed, before any proposal too (R3 UI).
  * On an explicit course (view.objectivesMode, R4) the step ends on the teacher's own "Confirm objectives".
  */
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { answerText } from "../../components/AiWaiting";
 import type { MaterialInput } from "../../gate/transport";
 import type { ProposalView } from "../../gate/types";
@@ -14,6 +14,9 @@ import { suggestOffer } from "../../live/suggest";
 import type { StepProps } from "../CourseStudio";
 import { Badge, Button, Skeleton, ui } from "../ui";
 import { ActionBar } from "./ActionBar";
+import { MarbleCredit } from "../../components/MarbleCredit/MarbleCredit";
+import { EvidenceSuggestions, NeighbourhoodView, useNeighbourhood } from "../graph/SkillMap";
+import g from "../graph/Graph.module.css";
 import { DECIDED, objectivesOffer } from "./objectivesOffer";
 import s from "../Studio.module.css";
 
@@ -38,6 +41,9 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   const [showDropped, setShowDropped] = useState(false);
   const [newText, setNewText] = useState("");
   const addId = useId();
+  const addInput = useRef<HTMLInputElement>(null);
+  // The skill map (G2c), only for a course with a Marble anchor. Read-only; a suggestion only fills the field.
+  const { data: map } = useNeighbourhood(view.course.marbleAnchor);
 
   const answers = view.intake.answers ?? {};
   const typedOutcomes = answerText(answers.learning_outcomes).trim() !== "" || Array.isArray(answers.learning_outcomes);
@@ -92,11 +98,20 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
     <form className={s.addRow} aria-label="Write your own objective" onSubmit={(e) => { e.preventDefault(); if (newText.trim()) { void decide({ verb: "add", statement: newText.trim() }); setNewText(""); } }}>
       <div className={ui.field}>
         <label className={ui.label} htmlFor={addId}>{written || rows.length > 0 ? "Add one of your own" : "Write your own"}</label>
-        <input id={addId} className={ui.input} value={newText} onChange={(e) => setNewText(e.target.value)} placeholder="Students can…" maxLength={2000} />
+        <input id={addId} ref={addInput} className={ui.input} value={newText} onChange={(e) => setNewText(e.target.value)} placeholder="Students can…" maxLength={2000} />
       </div>
       <Button type="submit" disabled={c.busy || !newText.trim()} style={{ marginTop: 26 }}>Add</Button>
     </form>
   ) : null;
+
+  // A suggestion PRE-FILLS the teacher's own field and moves focus there. No intent is sent: the record gains
+  // nothing until the teacher presses Add, and then it is their own objective (local URN, teacher origin).
+  const useSuggestion = (text: string) => {
+    setNewText(text);
+    const el = addInput.current;
+    if (el) { el.focus(); el.setSelectionRange(text.length, text.length); }
+  };
+  const suggestions = map && offer.canWrite ? <EvidenceSuggestions data={map} onUse={useSuggestion} /> : null;
 
   const tray = (
     <aside className={s.tray} aria-label="Proposals">
@@ -111,6 +126,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
           {[0, 1].map((i) => <div key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}><Skeleton width="92%" /><Skeleton width="64%" /></div>)}
         </div>
       ) : null}
+      {waitingRows.some((r) => r.alignment) ? <MarbleCredit className={g.credit} /> : null}
       {!drafting && waitingRows.length === 0 ? <p className={s.trayEmpty}>Nothing waiting. Everything proposed has a decision.</p> : null}
       {suggest.show && !drafting ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -167,7 +183,11 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
 
           {addForm}
 
+          {suggestions}
+
           {ways}
+
+          {map ? <NeighbourhoodView data={map} defaultOpen /> : null}
 
           {dropped.length > 0 ? (
             <div>

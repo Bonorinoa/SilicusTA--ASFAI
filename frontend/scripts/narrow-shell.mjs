@@ -434,6 +434,65 @@ try {
     await tall(1440, 1, "2026-11-14-wizard-step1-desktop.png");
     await tall(390, 2, "2026-11-14-wizard-step1-390.png");
   }
+
+  // ---- G2c: the skill map on the objectives and plan steps of the anchored course (5–12, AI in Daily Life).
+  const g2cBtn = (label) => page.evaluate((x) => { const b = [...document.querySelectorAll("button")].find((e) => !e.disabled && (e.textContent ?? "").trim() === x); b?.click(); return !!b; }, label);
+  const g2cWait = (fn, ms = 10000, arg) => page.waitForFunction(fn, { timeout: ms }, arg).then(() => true, () => false);
+  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "AI in daily life"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
+  await g2cBtn("Continue");
+  await g2cWait(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources"));
+  await g2cBtn("Continue without sources");
+  await g2cWait(() => !!document.querySelector('section[aria-label="Your objectives"] textarea'));
+  await setValue('section[aria-label="Your objectives"] textarea', "Spot AI at home and at school");
+  await g2cBtn("Continue");
+  await sleep(800);
+  for (let i = 0; i < 3 && !(await bodyHas("Review and confirm")); i++) { await g2cBtn("Continue"); await sleep(700); }
+  await g2cBtn("Confirm and create the course");
+  const g2cIn = await g2cWait(() => !!document.querySelector("[data-evidence-suggestions]") && !!document.querySelector("[data-neighbourhood][open]"), 20000);
+  check("G2c the anchored course opens on objectives with the suggestions and the open neighbourhood view", g2cIn);
+  const g2cOverflow = async (label) => {
+    for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+      await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+      await sleep(300);
+      const m = await page.evaluate(() => {
+        const vw = document.documentElement.clientWidth;
+        const past = [...document.querySelectorAll("[data-neighbourhood] *, [data-evidence-suggestions] *, [data-prereq-strip] *")]
+          .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+          .map((e) => `${e.tagName.toLowerCase()}.${String(e.className?.baseVal ?? e.className).slice(0, 30)}`);
+        const svg = document.querySelector("[data-neighbourhood] svg");
+        return { sw: document.documentElement.scrollWidth, vw, past, orient: svg?.getAttribute("data-orientation") ?? null };
+      });
+      check(`G2c ${label} does not overflow at ${w}px (view: ${m.orient})`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+    }
+  };
+  const g2cTall = async (width, scale, file) => {
+    await page.setViewport({ width, height: 900, deviceScaleFactor: scale });
+    await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
+    await sleep(400);
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewport({ width, height: h, deviceScaleFactor: scale });
+    await sleep(400);
+    await page.screenshot({ path: join(process.env.NARROW_SHELL_WIZARD_SHOTS, file) });
+  };
+  await g2cOverflow("objectives step (suggestions + neighbourhood)");
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  check("G2c at 390 px the view stacks into bands (narrow layout)", await page.evaluate(() => document.querySelector("[data-neighbourhood] svg")?.getAttribute("data-orientation") === "narrow"));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-objectives-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-objectives-desktop.png"); }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+  // Use a suggestion, add it, confirm the objectives: the plan step opens on the prerequisite strip.
+  await g2cBtn("Use as my objective");
+  await sleep(200);
+  await g2cBtn("Add");
+  await g2cWait(() => !!document.querySelector("li[data-objective-id]"), 8000);
+  await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
+  await g2cBtn("Confirm objectives");
+  const g2cPlan = await g2cWait(() => !!document.querySelector("[data-prereq-strip]") && /Step 3 of 4/i.test(document.body.innerText), 12000);
+  check("G2c confirming reaches the plan step, which opens on the prerequisite strip", g2cPlan);
+  await page.evaluate(() => { const d = document.querySelector("[data-neighbourhood]"); if (d) d.open = true; });
+  await sleep(300);
+  await g2cOverflow("plan step (strip + neighbourhood open)");
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-plan-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-plan-desktop.png"); }
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));

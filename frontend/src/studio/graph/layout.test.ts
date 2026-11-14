@@ -1,7 +1,7 @@
 /** layout.test.ts — G2c: the neighbourhood view's columns and edge styles, pure. */
 import { describe, expect, it } from "vitest";
 import { AI_DAILY } from "./fixture";
-import { asObjective, columnsOf, EDGE_STYLE, layoutNeighbourhood, relationOf } from "./layout";
+import { asObjective, columnsOf, EDGE_STYLE, layoutNeighbourhood, relationOf, wrapName } from "./layout";
 
 describe("G2c layout: nodes per column", () => {
   it("puts two-hop prerequisites in Foundations, one-hop in Prerequisites, the anchor alone, dependents in Unlocks next", () => {
@@ -24,6 +24,14 @@ describe("G2c layout: nodes per column", () => {
       expect(col[1].y).toBeGreaterThanOrEqual(col[0].y + col[0].h);
     }
     for (const n of l.nodes) expect(n.y + n.h).toBeLessThanOrEqual(l.height);
+    for (const n of l.nodes) expect(n.x + n.w).toBeLessThanOrEqual(l.width);
+  });
+
+  it("wraps a long name onto two lines in a wide box and clips only the last line", () => {
+    expect(wrapName("Voice Assistants and How They Work", 21, 2)).toEqual(["Voice Assistants and", "How They Work"]);
+    expect(wrapName("Data and Information for Computers", 21, 2)).toEqual(["Data and Information", "for Computers"]);
+    expect(wrapName("AI in Daily Life", 21, 2)).toEqual(["AI in Daily Life"]);
+    expect(wrapName("An Extremely Long Topic Name That Keeps Going On", 21, 2)).toEqual(["An Extremely Long", "Topic Name That Keep…"]);
   });
 
   it("narrow: bands stacked top to bottom in the same order, every box inside a 340-wide frame", () => {

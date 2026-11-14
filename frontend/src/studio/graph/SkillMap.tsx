@@ -103,8 +103,10 @@ export function NeighbourhoodView({ data, defaultOpen = false }: { data: MarbleN
                 >
                   <title>{`${n.node.name} (${n.id})`}</title>
                   <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={8} className={g.box} />
-                  <text x={n.x + 10} y={n.y + (lay.orientation === "wide" ? 23 : 21)} className={g.name}>{n.label}</text>
-                  <text x={n.x + 10} y={n.y + (lay.orientation === "wide" ? 43 : 39)} className={g.meta}>{ages(n.node.ageRangeStart, n.node.ageRangeEnd)} · {n.node.subject}</text>
+                  <text x={n.x + 10} y={n.y + 20} className={g.name}>
+                    {n.lines.map((l, k) => <tspan key={k} x={n.x + 10} dy={k === 0 ? 0 : 15}>{l}</tspan>)}
+                  </text>
+                  <text x={n.x + 10} y={n.y + n.h - 11} className={g.meta}>{ages(n.node.ageRangeStart, n.node.ageRangeEnd)}{lay.orientation === "narrow" ? ` · ${n.node.subject}` : ""}</text>
                 </g>
               );
             })}

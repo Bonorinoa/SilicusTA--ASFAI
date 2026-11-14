@@ -22,7 +22,7 @@ export const EDGE_STYLE: Record<Strength, { width: number; dash: string | null }
   soft: { width: 1.2, dash: "5 4" },
 };
 
-export interface LaidNode { id: string; column: ColumnKey; x: number; y: number; w: number; h: number; label: string; node: MarbleNode }
+export interface LaidNode { id: string; column: ColumnKey; x: number; y: number; w: number; h: number; label: string; lines: string[]; node: MarbleNode }
 export interface LaidEdge { from: string; to: string; strength: Strength; width: number; dash: string | null; d: string }
 export interface Layout {
   orientation: "wide" | "narrow";
@@ -53,8 +53,25 @@ export function edgesOf(n: MarbleNeighbourhood): { from: string; to: string; str
 
 export const clip = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`);
 
-const WIDE = { colX: 40, colStep: 210, w: 170, h: 58, top: 40, step: 76, width: 860, chars: 24 };
-const NARROW = { x: 44, w: 286, h: 50, step: 60, band: 30, bandGap: 14, width: 340, chars: 36 };
+/** A name on at most `lines` lines of about `chars` characters, word-wrapped, the last line clipped. */
+export function wrapName(name: string, chars: number, lines: number): string[] {
+  const out: string[] = [];
+  let cur = "";
+  const words = name.split(/\s+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    const next = cur ? `${cur} ${words[i]}` : words[i];
+    if (next.length <= chars || !cur) { cur = next; continue; }
+    out.push(cur);
+    cur = words[i];
+    if (out.length === lines - 1) { cur = words.slice(i).join(" "); break; }
+  }
+  if (cur) out.push(cur);
+  return out.slice(0, lines).map((l, i, all) => (i === all.length - 1 ? clip(l, chars) : l));
+}
+
+// Wide fits the studio's document column (about 650 px) at close to 1:1, so the names stay readable.
+const WIDE = { colX: 6, colStep: 166, w: 140, h: 62, top: 36, step: 74, width: 648, chars: 21, lines: 2 };
+const NARROW = { x: 44, w: 286, h: 50, step: 60, band: 30, bandGap: 14, width: 340, chars: 36, lines: 1 };
 
 export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" | "narrow" = "wide"): Layout {
   const cols = columnsOf(n);
@@ -66,9 +83,9 @@ export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" 
     const tallest = Math.max(1, ...COLUMNS.map((c) => cols[c.key].length));
     COLUMNS.forEach((c, i) => {
       const x = WIDE.colX + i * WIDE.colStep;
-      headers.push({ key: c.key, label: c.label, x, y: 22 });
+      headers.push({ key: c.key, label: c.label, x, y: 20 });
       const offset = ((tallest - cols[c.key].length) * WIDE.step) / 2;
-      cols[c.key].forEach((node, j) => nodes.push({ id: node.id, column: c.key, x, y: WIDE.top + offset + j * WIDE.step, w: WIDE.w, h: WIDE.h, label: clip(node.name, WIDE.chars), node }));
+      cols[c.key].forEach((node, j) => { const lines = wrapName(node.name, WIDE.chars, WIDE.lines); nodes.push({ id: node.id, column: c.key, x, y: WIDE.top + offset + j * WIDE.step, w: WIDE.w, h: WIDE.h, label: lines.join(" "), lines, node }); });
     });
     width = WIDE.width;
     height = WIDE.top + tallest * WIDE.step;
@@ -78,7 +95,7 @@ export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" 
       if (cols[c.key].length === 0) continue; // an empty band says nothing on a phone
       headers.push({ key: c.key, label: c.label, x: NARROW.x, y: y + 18 });
       y += NARROW.band;
-      for (const node of cols[c.key]) { nodes.push({ id: node.id, column: c.key, x: NARROW.x, y, w: NARROW.w, h: NARROW.h, label: clip(node.name, NARROW.chars), node }); y += NARROW.step; }
+      for (const node of cols[c.key]) { const lines = wrapName(node.name, NARROW.chars, NARROW.lines); nodes.push({ id: node.id, column: c.key, x: NARROW.x, y, w: NARROW.w, h: NARROW.h, label: lines.join(" "), lines, node }); y += NARROW.step; }
       y += NARROW.bandGap;
     }
     width = NARROW.width;
@@ -99,7 +116,7 @@ export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" 
       d = `M${x1},${ya} C${mid},${ya} ${mid},${yb} ${x2},${yb}`;
     } else {
       // Same column, or a phone: a loop in the gutter on the left of the boxes, nested by index.
-      const bulge = a.x - (orientation === "wide" ? 18 : 12 + (i % 4) * 7);
+      const bulge = a.x - (orientation === "wide" ? 14 : 12 + (i % 4) * 7);
       d = `M${a.x},${ya} C${bulge},${ya} ${bulge},${yb} ${b.x - 2},${yb}`;
     }
     edges.push({ from: e.from, to: e.to, strength: e.strength, ...EDGE_STYLE[e.strength], d });

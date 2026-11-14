@@ -21,7 +21,7 @@
 .node[data-selected="true"] .box { stroke: var(--fn-accent); stroke-width: 2; }
 .node:hover .box { stroke: var(--fn-ink-soft); }
 .node:focus-visible .box { stroke: var(--fn-accent); stroke-width: 3; }
-.name { font-size: 12.5px; font-weight: 600; fill: var(--fn-ink); }
+.name { font-size: 12px; font-weight: 600; fill: var(--fn-ink); }
 .meta { font-size: 11px; fill: var(--fn-ink-muted); }
 .evidence { border-top: 1px solid var(--fn-line-soft); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .evKicker { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fn-ink-muted); margin: 0; }

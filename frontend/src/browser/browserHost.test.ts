@@ -92,6 +92,43 @@ describe("parity: one API, two hosts", () => {
     // read-only: the routes wrote nothing a course could log
     expect((await r.call("GET", "/api/courses")).json.courses).toHaveLength(0);
   });
+
+  it("G2a parity: the browser host serves coverage and neighbourhood from the same snapshot, with the same refusals", async () => {
+    const r = await rig({ marbleLoad: async () => readFileSync(new URL("../../../host/data/marble/marble-snapshot.json", import.meta.url), "utf8") });
+    const c = await r.call("GET", "/api/knowledge/marble/coverage?min=9&max=10");
+    expect(c.status).toBe(200);
+    expect(c.json.query).toEqual({ min: 9, max: 10 });
+    expect(c.json.overlapping).toBe(1320);
+    expect(c.json.perAge).toHaveLength(23);
+    expect(c.json.perAge[0]).toEqual({ age: 3, count: 112 });
+    const n = await r.call("GET", "/api/knowledge/marble/neighbourhood/mt_AzTrT5ySCx");
+    expect(n.status).toBe(200);
+    expect(n.json.anchor).toMatchObject({ id: "mt_AzTrT5ySCx", name: "AI in Daily Life", subject: "Computing", domain: "Artificial Intelligence" });
+    expect(n.json.prerequisites.find((p: any) => p.id === "mt_WRRv1ABECC")).toMatchObject({ hops: 1, strength: "hard" });
+    expect(n.json.prerequisites.some((p: any) => p.id === "mt_XbGfVhfiUz" && p.hops === 2)).toBe(true);
+    expect(n.json.dependents[0]).toMatchObject({ id: "mt_kH1DzOPsXG", hops: 1 });
+    expect((await r.call("GET", "/api/knowledge/marble/neighbourhood/mt_NOT_REAL")).status).toBe(404);
+    expect((await r.call("GET", "/api/knowledge/marble/coverage?min=9&max=8")).status).toBe(400);
+    expect((await r.call("GET", "/api/courses")).json.courses).toHaveLength(0);
+  });
+
+  it("G2a parity: the browser host accepts ages + an anchor at creation and refuses bad values identically", async () => {
+    const r = await rig({ marbleLoad: async () => readFileSync(new URL("../../../host/data/marble/marble-snapshot.json", import.meta.url), "utf8") });
+    const post = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "AI literacy", ages: { min: 8, max: 10 }, marbleAnchor: "mt_AzTrT5ySCx" });
+    expect(post.status).toBe(201);
+    expect(post.json.view.course).toMatchObject({ ages: { min: 8, max: 10 }, marbleAnchor: "mt_AzTrT5ySCx", stage: 2 });
+    expect(post.json.view.integrity.events).toBe(1);
+    const badAges = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "T", ages: { min: 10, max: 8 } });
+    expect(badAges.status).toBe(400);
+    expect(badAges.json.code).toBe("BAD_AGES");
+    const ghost = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "T", ages: { min: 8, max: 10 }, marbleAnchor: "mt_GHOST" });
+    expect(ghost.status).toBe(400);
+    expect(ghost.json.code).toBe("UNKNOWN_ANCHOR");
+    const legacy = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "Old" });
+    expect(legacy.status).toBe(201);
+    expect(legacy.json.view.course).not.toHaveProperty("ages");
+    expect(legacy.json.view.course).not.toHaveProperty("marbleAnchor");
+  });
 });
 
 describe("the record survives a reload, and a tampered record is flagged, never served", () => {

@@ -16,6 +16,12 @@ STATUS wins.
 > - Model route: the owner's OpenRouter key, DeepSeek, zero data retention.
 > - Dates: target 1 December, hard stop 5 December, presentation 11 December.
 > - Cards for this round: [`cards/2026-11-14/`](cards/2026-11-14/) (board `silicusta-sprint`).
+> - Graph features approved for December (owner, 14 Nov): prerequisite strip, objective suggestions from a Marble
+>   node and its evidence lines, a two-hop neighbourhood view in the studio, a hard prerequisite as the phase-1
+>   warm-up, and a spaced review of the prerequisite as phase 4. Not in December: course paths (needs a
+>   course-of-lessons object), coverage maps, student progress on the graph (locks).
+> - The December build **replaces the current Vercel production deployment**, after the verifier gate and the
+>   owner's explicit go.
 
 ## 1. Where we are, in five lines
 

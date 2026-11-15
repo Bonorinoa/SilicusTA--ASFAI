@@ -2,6 +2,7 @@ import type { LessonPlanView, ObjectiveCiteView, PlanInvalidationView } from "..
 import { Fragment } from "react";
 import { plural } from "../../lib/plural";
 import styles from "./PlanCard.module.css";
+import { MarbleCredit } from "../MarbleCredit/MarbleCredit";
 import {
   AI_STATUS_LABEL, CHANNEL_LABEL, PHASE_LABEL, REVIEW_FORM_LABEL,
   adjustedNotes, aiPolicyPlain, reviewOffset, sessionEvidenceLine, showActivityAiTags,
@@ -368,7 +369,7 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                 <li key={c.ref} className={styles.keyItem}>
                   <span className={styles.keyNumber} aria-hidden="true">·</span>
                   <span className={styles.keyStatement}>
-                    {c.label}
+                    {c.label || c.ref}
                     <span className={styles.garnish}>
                       {` · from ${SOURCE_LABEL[c.source] ?? c.source}`}
                       {c.verified ? ` · checked against ${SOURCE_LABEL[c.source] ?? c.source}` : " · not independently checked"}
@@ -378,6 +379,7 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                 </li>
               ))}
             </ul>
+            {plan.citations.some((c) => c.source === "marble") ? <MarbleCredit className={styles.alignmentCredit} /> : null}
           </details>
         </section>
       ) : null}

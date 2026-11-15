@@ -101,7 +101,7 @@ export function NeighbourhoodView({ data, defaultOpen = false }: { data: MarbleN
                   onClick={() => setSelected(n.id)} onFocus={() => setSelected(n.id)} onMouseEnter={() => setSelected(n.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(n.id); } }}
                 >
-                  <title>{`${n.node.name} (${n.id})`}</title>
+                  <title>{`${n.node.name}. ${ages(n.node.ageRangeStart, n.node.ageRangeEnd)}.`}</title>
                   <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={8} className={g.box} />
                   <text x={n.x + 10} y={n.y + 20} className={g.name}>
                     {n.lines.map((l, k) => <tspan key={k} x={n.x + 10} dy={k === 0 ? 0 : 15}>{l}</tspan>)}

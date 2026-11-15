@@ -84,6 +84,13 @@ const FIELD_WORDS: [RegExp, string][] = [
   [/\bafterDays\b/g, "days until the review"],
 ];
 export function plainNote(note: string): string {
+  // PM 14 Nov: a "replaced the AI line" note must say what the plan shows. The host's note embeds the
+  // raw stage line; the plan renders the plain-words restatement, so restate the note the same way.
+  const m = note.match(/^replaced aiPolicy with the stage rule: (.*)$/i);
+  if (m) {
+    const plain = aiPolicyPlain(m[1]);
+    return plain ? `replaced the AI line with this stage's rule: ${plain}` : "replaced the AI line with this stage's rule (shown above)";
+  }
   return FIELD_WORDS.reduce((s, [re, w]) => s.replace(re, w), note);
 }
 

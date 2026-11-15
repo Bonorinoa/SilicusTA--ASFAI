@@ -342,6 +342,17 @@
   color: var(--color-ink-muted);
 }
 
+/* The one Marble credit line, inside the folded section with the rows it credits (H2a). */
+.alignmentCredit {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+.alignmentCredit a { color: inherit; }
+
 /* Metadata garnish: the wording in serif italic, the raw id in mono and
    non-italic, so machine data stops masquerading as prose. */
 .garnish {

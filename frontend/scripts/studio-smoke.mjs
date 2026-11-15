@@ -422,6 +422,18 @@ try {
     return el ? el.textContent ?? "" : "";
   });
   check("one draft plan shows a Marble suggested alignment (the mock worker cited the local snapshot)", /Marble/.test(align), align.slice(0, 120));
+  // H2a: the Marble credit lives inside "Suggested alignment", once; the section is never an empty area (collapsed: heading + count).
+  {
+    const sa = await page.evaluate(() => {
+      const el = document.querySelector('section[aria-label="Suggested alignment"]');
+      const d = el?.querySelector("details");
+      return { credits: el ? el.querySelectorAll("[data-marble-credit]").length : -1, inside: !!d?.querySelector("[data-marble-credit]"),
+        summary: d?.querySelector("summary")?.textContent ?? "", rows: d ? d.querySelectorAll("li").length : 0 };
+    });
+    const saCredit = await creditOn('section[aria-label="Suggested alignment"]');
+    check("H2a Suggested alignment holds exactly one Marble credit, inside the fold, with ODbL, CC BY-SA and attribution links; collapsed it shows its count",
+      sa.credits === 1 && sa.inside && creditOk(saCredit) && /Suggested alignment\s*\d+ references?/.test(sa.summary) && sa.rows >= 1, JSON.stringify(sa));
+  }
 
   // ---- P2ui: a v1 plan shows none of the learning design; "Draft again" brings the v2 plan, which does.
   const designOf = () => page.evaluate(() => ({

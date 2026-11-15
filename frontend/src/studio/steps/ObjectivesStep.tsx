@@ -15,7 +15,7 @@ import type { StepProps } from "../CourseStudio";
 import { Badge, Button, Skeleton, ui } from "../ui";
 import { ActionBar } from "./ActionBar";
 import { MarbleCredit } from "../../components/MarbleCredit/MarbleCredit";
-import { EvidenceSuggestions, NeighbourhoodView, useNeighbourhood } from "../graph/SkillMap";
+import { EvidenceSuggestions, NeighbourhoodView, NO_TOPICS_LINE, useNeighbourhood, useNoSkillMapTopics } from "../graph/SkillMap";
 import g from "../graph/Graph.module.css";
 import { DECIDED, objectivesOffer } from "./objectivesOffer";
 import s from "../Studio.module.css";
@@ -44,6 +44,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   const addInput = useRef<HTMLInputElement>(null);
   // The skill map (G2c), only for a course with a Marble anchor. Read-only; a suggestion only fills the field.
   const { data: map } = useNeighbourhood(view.course.marbleAnchor);
+  const noTopics = useNoSkillMapTopics(view.course.ages, !!view.course.marbleAnchor);
 
   const answers = view.intake.answers ?? {};
   const typedOutcomes = answerText(answers.learning_outcomes).trim() !== "" || Array.isArray(answers.learning_outcomes);
@@ -182,6 +183,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
           ) : null}
 
           {addForm}
+
+          {noTopics && offer.canWrite ? <p className={s.provenance} data-no-skill-map-topics>{NO_TOPICS_LINE}</p> : null}
 
           {suggestions}
 

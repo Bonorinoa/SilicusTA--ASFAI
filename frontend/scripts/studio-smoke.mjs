@@ -569,6 +569,9 @@ try {
     const leaves = all.find((e) => e.title === "Leaves and light");
     check("G2b the second course is created with ages 19–22 and no anchor", JSON.stringify(leaves?.ages) === JSON.stringify({ min: 19, max: 22 }) && leaves?.marbleAnchor === undefined, JSON.stringify(leaves ? { ages: leaves.ages, anchor: leaves.marbleAnchor } : all.map((e) => e.title)));
   }
+  check("H2a ages 19–22: the objectives step says once, quietly, that there are no skill-map topics",
+    await waitText("No skill-map topics for these ages. Write your own objectives.", 8000)
+      && await page.evaluate(() => document.querySelectorAll("[data-no-skill-map-topics]").length === 1 && !document.querySelector("[data-neighbourhood]")));
   // ---- F1 (verifier): a long unbroken source name in the proposals' provenance must wrap, never widen the page.
   await page.setViewport({ width: 390, height: 844 });
   await sleep(500);

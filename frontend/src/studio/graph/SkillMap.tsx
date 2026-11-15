@@ -17,6 +17,23 @@ import { asObjective, COLUMNS, layoutNeighbourhood, relationOf, type ColumnKey, 
 import g from "./Graph.module.css";
 
 // ---- data: one fetch per anchor per tab --------------------------------------------------------------------
+// H2a empty state: true only when the course has exact ages, no anchor, and the coverage route answers
+// that no skill-map topic overlaps them (e.g. 19–22). Unknown or failed coverage says nothing.
+export const NO_TOPICS_LINE = "No skill-map topics for these ages. Write your own objectives.";
+export function useNoSkillMapTopics(ages: { min: number; max: number } | undefined, anchored: boolean): boolean {
+  const [empty, setEmpty] = useState<{ key: string; empty: boolean } | null>(null);
+  const key = ages ? `${ages.min}-${ages.max}` : "";
+  useEffect(() => {
+    if (!ages || anchored) return;
+    let live = true;
+    host.marbleCoverage(ages.min, ages.max)
+      .then((r) => { if (live) setEmpty({ key, empty: r.overlapping === 0 }); })
+      .catch(() => { if (live) setEmpty(null); });
+    return () => { live = false; };
+  }, [key, anchored]); // eslint-disable-line react-hooks/exhaustive-deps
+  return !!ages && !anchored && empty?.key === key && empty.empty;
+}
+
 const cache = new Map<string, Promise<MarbleNeighbourhood>>();
 export function useNeighbourhood(anchorId: string | undefined): { data: MarbleNeighbourhood | null; failed: boolean } {
   const [state, setState] = useState<{ id?: string; data: MarbleNeighbourhood | null; failed: boolean }>({ data: null, failed: false });

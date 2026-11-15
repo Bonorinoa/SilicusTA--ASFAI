@@ -119,3 +119,32 @@ describe("G2c neighbourhood view", () => {
     expect(strip.querySelector("[data-marble-credit]")).not.toBeNull();
   });
 });
+
+describe("H2a empty state: a course whose ages have no skill-map topics", () => {
+  const unanchored = (min: number, max: number) => {
+    const v = view();
+    return { ...v, course: { ...v.course, ages: { min, max } } } as unknown as HostView;
+  };
+  it("ages 19–22 with no coverage: one quiet line under the teacher's own field", async () => {
+    const spy = vi.spyOn(host, "marbleCoverage").mockResolvedValue({ query: { min: 19, max: 22 }, overlapping: 0, perAge: [] });
+    render(<ObjectivesStep c={makeC()} view={unanchored(19, 22)} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    expect(await screen.findByText("No skill-map topics for these ages. Write your own objectives.")).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledWith(19, 22);
+    expect(document.querySelectorAll("[data-no-skill-map-topics]")).toHaveLength(1);
+  });
+  it("ages with coverage, an anchored course, or a course without ages: no line", async () => {
+    const spy = vi.spyOn(host, "marbleCoverage").mockResolvedValue({ query: { min: 5, max: 12 }, overlapping: 40, perAge: [] });
+    const { unmount } = render(<ObjectivesStep c={makeC()} view={unanchored(5, 12)} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+    expect(document.querySelector("[data-no-skill-map-topics]")).toBeNull();
+    unmount();
+    spy.mockClear();
+    vi.spyOn(host, "marbleNeighbourhood").mockResolvedValue(AI_DAILY);
+    const u2 = render(<ObjectivesStep c={makeC()} view={view("mt_AzTrT5ySCx")} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    u2.unmount();
+    render(<ObjectivesStep c={makeC()} view={view()} worker={{ configured: true }} looking={false} onLook={vi.fn()} links={[]} />);
+    expect(spy).not.toHaveBeenCalled();
+    expect(document.querySelector("[data-no-skill-map-topics]")).toBeNull();
+  });
+});

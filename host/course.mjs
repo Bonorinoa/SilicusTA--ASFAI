@@ -852,26 +852,44 @@ export class CourseSession {
   #planView() {
     const plan = this.#gate.currentPlan();
     if (!plan) return plan;
-    // The gate keeps the v1 record (it drops unknown fields silently). The schema-v2 slice rides
-    // as host metadata, like citations, so the teacher's view can read it without widening the gate.
-    const design = this.#planDesign.get(plan.id);
-    let out = plan;
-    if (design) {
-      const activities = plan.activities.map((a, i) => {
-        const d = design.activities?.[i];
-        return d ? { ...a, ...d } : a;
-      });
-      out = {
-        ...plan,
-        activities,
-        ...(design.sessions ? { sessions: design.sessions } : {}),
-        ...(design.spacedReviews ? { spacedReviews: design.spacedReviews } : {}),
-        ...(design.aiPolicy ? { aiPolicy: design.aiPolicy } : {}),
-        ...(design.notes ? { notes: design.notes } : {}),
-      };
-    }
+    const out = this.#withDesign(plan);
     const citations = this.#citations.get(plan.id);
     return citations ? { ...out, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : out;
+  }
+
+  /**
+   * A plan record with its schema-v2 learning design laid over it, for the teacher's view only.
+   * The gate keeps the v1 record (it drops unknown fields silently). The v2 slice rides as host
+   * metadata, like citations, so the teacher's view can read it without widening the gate. A plan
+   * with no design (v1) comes back as the same object.
+   */
+  #withDesign(plan) {
+    const design = plan ? this.#planDesign.get(plan.id) : undefined;
+    if (!design) return plan;
+    const activities = plan.activities.map((a, i) => {
+      const d = design.activities?.[i];
+      return d ? { ...a, ...d } : a;
+    });
+    return {
+      ...plan,
+      activities,
+      ...(design.sessions ? { sessions: design.sessions } : {}),
+      ...(design.spacedReviews ? { spacedReviews: design.spacedReviews } : {}),
+      ...(design.aiPolicy ? { aiPolicy: design.aiPolicy } : {}),
+      ...(design.notes ? { notes: design.notes } : {}),
+    };
+  }
+
+  /**
+   * Published versions for the teacher's view: each sealed lessonPlan gains the same design
+   * overlay as the draft it was confirmed from (P2ui), so the published plan page shows it. The
+   * sealed versions themselves, and export(), are untouched.
+   */
+  #versionsView() {
+    return this.#gate.versions().map((v) => {
+      const lp = v?.lessonPlan ? this.#withDesign(v.lessonPlan) : v?.lessonPlan;
+      return lp === v?.lessonPlan ? v : { ...v, lessonPlan: lp };
+    });
   }
 
   #objectiveView() {
@@ -934,7 +952,7 @@ export class CourseSession {
       invalidation: this.planInvalidation(),
       publish: (() => { const s = this.#gate.publishStatus(); return { ...s, reasons: reasonsOf(s.blockers) }; })(),
       revision: this.#revision(),
-      versions: this.#gate.versions(),
+      versions: this.#versionsView(),
       timeline: this.#timeline(),
       activity: activityOf(this.#log.read()),
       ledger: this.#ledger.list(),

@@ -172,6 +172,13 @@ check("schema v2: a stage-2 \"required\" was clamped to \"permitted\" with a not
 check("schema v2: a stage-2 plan carries one plan-level aiPolicy line (the stage's), with a replacement note",
   v2.plan.aiPolicy === "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone."
   && (v2.plan.notes ?? []).some((n) => n.startsWith("replaced aiPolicy")));
+check("schema v2 (P2ui): the published version's plan, in the teacher's view, carries the design it was confirmed with",
+  v2.versions[0].lessonPlan.activities[0].phase === 1 && v2.versions[0].lessonPlan.spacedReviews?.[0]?.afterDays === 7 && v2.versions[0].lessonPlan.id === v2.plan.id);
+{
+  const exp = (await get(`/api/courses/${courseId}/export`)).json;
+  check("schema v2 (P2ui): the export's sealed versions stay v1 (the overlay is view-only)",
+    Array.isArray(exp?.versions) && exp.versions.length === 1 && !("spacedReviews" in exp.versions[0].lessonPlan) && !("phase" in exp.versions[0].lessonPlan.activities[0]));
+}
 
 // ---- Phase 2 (Sprint 5): a SECOND course on the same data dir, answered locally. ASFAI is
 // connected on this host and the teacher simply never uses it: no MCP tool call may be made.

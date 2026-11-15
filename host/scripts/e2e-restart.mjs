@@ -29,12 +29,27 @@ const echoingWorker = ({ prompt }) => {
   if (/COURSE PACKAGE/.test(prompt)) return { inScope: true, answer: "An algorithm is a list of steps.", cites: ["objective:1"] };
   const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
   const refs = [...String(prompt).matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
+  // Schema v2: the scripted worker emits a learning-design plan. `required` at stage 2 (ages 8-10)
+  // exercises the host clamp -> "permitted" with a note; legacy courses get aiStatus dropped instead.
   return {
     title: "Seeing the claim: how AI answers are built",
     audience: { ageRangeStart: 8, ageRangeEnd: 10 },
+    sessions: [{ session: 1, evidence: { kind: "work-product", whatLearnerProduces: "The learner's marked transcript with one reason." } }],
+    spacedReviews: [{ afterDays: 7, form: "near-transfer", whatChanges: "a new AI answer on a different topic", prompt: "Mark the claim in this new answer and say what would back it up." }],
+    aiPolicy: "children may use the chatbot anytime", // contradicts stage 2: the host replaces it with the stage rule
     activities: ids.map((id, i) => ({
       title: `Activity ${i + 1}`, minutes: 20, objectiveIds: [id],
       learnerDoes: "Mark the claim.", teacherDoes: "Ask about evidence.", evidenceIfAny: "observation",
+      phase: (i % 4) + 1,
+      targetOperation: "find the claim in an AI answer",
+      operationDoneBy: "learner",
+      learnerFirst: "Each learner marks the claim they see first.",
+      helpAfter: i === 0 ? "none" : "teacher",
+      aiStatus: i === 0 ? "forbidden" : "required",
+      noAiAlternative: "Mark the claim in a printed transcript.",
+      decisionAfterHelp: "After the teacher's example, each learner keeps or changes their mark and says why.",
+      channels: ["writing", "discussion"],
+      session: 1,
       ...(refs[i] ? { citations: [refs[i]] } : {}),
     })),
   };
@@ -85,7 +100,7 @@ const stop = (child) => new Promise((r) => { child.once("exit", r); child.kill("
 const h1 = startHost();
 check("host process boots and answers /api/health", await waitHealthy());
 
-const created = await post("/api/courses", { owner: OWNER, title: "Lesson 3 | AI literacy" });
+const created = await post("/api/courses", { owner: OWNER, title: "Lesson 3 | AI literacy", ages: { min: 8, max: 10 } });
 const courseId = created.json.courseId;
 check("course created", created.status === 201 && !!courseId);
 
@@ -150,6 +165,13 @@ const ver = (await get(`/api/courses/${courseId}/verify`)).json;
 check("event-log hash chain verifies", ver.ok === true, `events=${ver.events}`);
 check("sealed version survived restart", v2.versions.length === 1 && v2.versions[0].objectiveRefs.length === 3);
 check("publish still legal after restart", v2.publish.canPublish === true);
+check("schema v2: the plan's phase and sessions survive restart",
+  v2.plan.activities[0].phase === 1 && v2.plan.sessions[0].session === 1 && v2.plan.sessions[0].evidence.kind === "work-product" && v2.plan.spacedReviews[0].afterDays === 7);
+check("schema v2: a stage-2 \"required\" was clamped to \"permitted\" with a note",
+  v2.plan.activities[1].aiStatus === "permitted" && (v2.plan.notes ?? []).some((n) => n.startsWith('aiStatus "required" clamped')));
+check("schema v2: a stage-2 plan carries one plan-level aiPolicy line (the stage's), with a replacement note",
+  v2.plan.aiPolicy === "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone."
+  && (v2.plan.notes ?? []).some((n) => n.startsWith("replaced aiPolicy")));
 
 // ---- Phase 2 (Sprint 5): a SECOND course on the same data dir, answered locally. ASFAI is
 // connected on this host and the teacher simply never uses it: no MCP tool call may be made.

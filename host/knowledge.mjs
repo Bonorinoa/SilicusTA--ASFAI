@@ -135,6 +135,29 @@ export async function retrieveAll(sources, { topic = "", objectives = [], course
 }
 
 /**
+ * The hard prerequisites of the course's skill-map anchor, for the drafting prompt: learners
+ * recall or bet on them in the opening activity (P2). First source that returns rows wins; a
+ * source without the capability, or a failure, degrades to no context (never a course failure).
+ *
+ * @param {KnowledgeSource[]} sources
+ * @param {string | null} anchor  an mt_* course anchor, or nothing
+ * @returns {Promise<{id: string, name: string, evidence: string[]}[]>}
+ */
+export async function anchorPrerequisites(sources, anchor) {
+  if (typeof anchor !== "string" || anchor === "" || !Array.isArray(sources)) return [];
+  for (const s of sources) {
+    if (typeof s?.anchorPrerequisites !== "function") continue;
+    try {
+      const rows = await s.anchorPrerequisites(anchor);
+      if (Array.isArray(rows) && rows.length > 0) return rows;
+    } catch {
+      // a broken source is a state (no material), never a draft failure
+    }
+  }
+  return [];
+}
+
+/**
  * Ask each source to check the citations it owns. Returns, per ref, whether it was
  * CHECKED and found real. Unknown refs are reported so the caller can drop them; an
  * unchecked ref (source cannot verify, or was unreachable) is never reported as verified.

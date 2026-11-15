@@ -25,7 +25,8 @@ import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { LessonIntake } from "./intake.mjs";
 import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, SOURCE_SUGGESTED, teacherStatement } from "./proposer.mjs";
 import { digestOf } from "./digest.mjs";
-import { retrieveAll, verifyCitations } from "./knowledge.mjs";
+import { retrieveAll, verifyCitations, anchorPrerequisites } from "./knowledge.mjs";
+import { planDesignOf } from "./worker.mjs";
 import { reasonsOf } from "./reasons.mjs";
 import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
@@ -141,6 +142,8 @@ export class CourseSession {
   #anchor;
   #validations = [];
   #planAt = null;
+  /** @type {Map<string, object>} schema-v2 learning-design per plan id (host metadata, never gate state) */
+  #planDesign = new Map();
   /** @type {string[]} proposal ids in the order the AI proposed them */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
@@ -272,6 +275,8 @@ export class CourseSession {
         }
         const planRecord = this.#gate.proposeLessonPlan(event.spec);
         if (Array.isArray(event.citations) && event.citations.length > 0) this.#citations.set(planRecord.id, event.citations);
+        const design = planDesignOf(event.spec);
+        if (design) this.#planDesign.set(planRecord.id, design);
         this.#planAt = event.at;
         return;
       }
@@ -642,10 +647,13 @@ export class CourseSession {
     const context = await retrieveAll(sources, {
       topic, objectives, course, ages: this.#ages ?? null, anchor: this.#anchor, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
     });
+    // The anchor's HARD prerequisites become opening-activity material in the prompt (P2):
+    // learners recall or bet on the prerequisite first. Not a context citation, never stored.
+    const anchorPrereqs = await anchorPrerequisites(sources, this.#anchor);
 
     let drafted;
     try {
-      drafted = await worker.draft({ objectives, topic, materials, course, context });
+      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }
@@ -844,8 +852,26 @@ export class CourseSession {
   #planView() {
     const plan = this.#gate.currentPlan();
     if (!plan) return plan;
+    // The gate keeps the v1 record (it drops unknown fields silently). The schema-v2 slice rides
+    // as host metadata, like citations, so the teacher's view can read it without widening the gate.
+    const design = this.#planDesign.get(plan.id);
+    let out = plan;
+    if (design) {
+      const activities = plan.activities.map((a, i) => {
+        const d = design.activities?.[i];
+        return d ? { ...a, ...d } : a;
+      });
+      out = {
+        ...plan,
+        activities,
+        ...(design.sessions ? { sessions: design.sessions } : {}),
+        ...(design.spacedReviews ? { spacedReviews: design.spacedReviews } : {}),
+        ...(design.aiPolicy ? { aiPolicy: design.aiPolicy } : {}),
+        ...(design.notes ? { notes: design.notes } : {}),
+      };
+    }
     const citations = this.#citations.get(plan.id);
-    return citations ? { ...plan, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : plan;
+    return citations ? { ...out, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : out;
   }
 
   #objectiveView() {

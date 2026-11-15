@@ -576,7 +576,14 @@ try {
   s3Walk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
   s3Walk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
   if (s3Walk.includes(false)) console.log(`H2b stage-3 walk stalled: ${JSON.stringify(s3Walk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
+  // No anchor, so no suggestions: the brief's outcomes come back as proposals ("Use my answers"); accept each.
+  await g2cMove("Use my answers", () => document.querySelectorAll('aside[aria-label="Proposals"] article').length > 0, 8000);
+  for (let i = 0; i < 10 && await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length) > 0; i++) {
+    await g2cBtn("Accept");
+    await sleep(400);
+  }
   await g2cWait(() => !!document.querySelector("li[data-objective-id]"), 10000);
+  await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
   await g2cMove("Confirm objectives", () => /Step 3 of 4/i.test(document.body.innerText), 12000);
   await g2cMove("Draft the lesson plan", () => !!document.querySelector('[role="dialog"] input[type="password"]') || !!document.querySelector("[data-session-evidence]"));
   if (await page.evaluate(() => !!document.querySelector('[role="dialog"] input[type="password"]'))) {
@@ -585,6 +592,7 @@ try {
   }
   const s3 = await g2cWait(() => !!document.querySelector("[data-adjusted]"), 20000);
   const s3Notes = await page.evaluate(() => [...document.querySelectorAll("[data-adjusted] li")].map((e) => e.textContent));
+  if (!s3) console.log(`H2b stage-3 plan missing at: ${(await page.evaluate(() => location.hash + " " + document.body.innerText)).slice(0, 900).replace(/\s+/g, " ")}`);
   check("H2b the stage-3 plan shows the host's clamp under 'Silicus adjusted'",
     s3 && s3Notes.length === 1 && /clamped to .?forbidden/i.test(s3Notes[0]) && /How a computer finds things fast/.test(await page.evaluate(() => document.body.innerText)), JSON.stringify({ s3Walk, s3Notes }));
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) await g2cTall(1440, 1, "2026-11-14-plan-v2-stage3.png");

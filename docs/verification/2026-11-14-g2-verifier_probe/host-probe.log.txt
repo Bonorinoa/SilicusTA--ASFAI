@@ -1,0 +1,88 @@
+PASS coverage 9-10 route == own count route=1320 own=1320 keys=query,overlapping,perAge
+PASS coverage 19-22 route == own count route=0 own=0 keys=query,overlapping,perAge
+PASS coverage 5-12 route == own count route=1884 own=1884 keys=query,overlapping,perAge
+PASS coverage 3-15 route == own count route=1912 own=1912 keys=query,overlapping,perAge
+PASS coverage 15-22 route == own count route=1 own=1 keys=query,overlapping,perAge
+PASS coverage 16-18 route == own count route=0 own=0 keys=query,overlapping,perAge
+PASS coverage 3-3 route == own count route=112 own=112 keys=query,overlapping,perAge
+PASS coverage 12-14 route == own count route=899 own=899 keys=query,overlapping,perAge
+PASS coverage strip is 3..25 and each age equals own single-age count [{"age":3,"count":112},{"age":4,"count":153},{"age":5,"count":393},{"age":6,"count":602},{"age":7,"count":863},{"age":8,"count":961},{"age":9,"count":1141},{"age":10,"count":1085},{"age":11,"count":10
+PASS coverage bad input min=2&max=5 -> 400 400
+PASS coverage bad input min=10&max=5 -> 400 400
+PASS coverage bad input min=a&max=b -> 400 400
+PASS coverage bad input min=3&max=100 -> 400 400
+PASS coverage bad input min=3.5&max=9 -> 400 400
+PASS neighbourhood mt_AzTrT5ySCx prereqs(2 hops) equal own BFS route=4 own=4
+PASS neighbourhood mt_AzTrT5ySCx dependents(1 hop) equal own BFS route=1 own=1
+PASS neighbourhood mt_AzTrT5ySCx every edge is a real snapshot dependency with its strength edges=6
+PASS neighbourhood mt_WRRv1ABECC prereqs(2 hops) equal own BFS route=1 own=1
+PASS neighbourhood mt_WRRv1ABECC dependents(1 hop) equal own BFS route=3 own=3
+PASS neighbourhood mt_WRRv1ABECC every edge is a real snapshot dependency with its strength edges=4
+PASS neighbourhood mt_kH1DzOPsXG prereqs(2 hops) equal own BFS route=5 own=5
+PASS neighbourhood mt_kH1DzOPsXG dependents(1 hop) equal own BFS route=6 own=6
+PASS neighbourhood mt_kH1DzOPsXG every edge is a real snapshot dependency with its strength edges=11
+PASS neighbourhood mt_N9zffZxuu5 prereqs(2 hops) equal own BFS route=9 own=9
+PASS neighbourhood mt_N9zffZxuu5 dependents(1 hop) equal own BFS route=0 own=0
+PASS neighbourhood mt_N9zffZxuu5 every edge is a real snapshot dependency with its strength edges=13
+PASS neighbourhood mt_zMEvtigoM3 prereqs(2 hops) equal own BFS route=9 own=9
+PASS neighbourhood mt_zMEvtigoM3 dependents(1 hop) equal own BFS route=1 own=1
+PASS neighbourhood mt_zMEvtigoM3 every edge is a real snapshot dependency with its strength edges=10
+PASS neighbourhood mt_MVovx37Xct prereqs(2 hops) equal own BFS route=2 own=2
+PASS neighbourhood mt_MVovx37Xct dependents(1 hop) equal own BFS route=2 own=2
+PASS neighbourhood mt_MVovx37Xct every edge is a real snapshot dependency with its strength edges=4
+PASS neighbourhood unknown id -> 404 404
+PASS neighbourhood malformed % -> 400 400
+PASS anchored Computing/AI {"min":8,"max":10} "AI in daily life": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":8,"max":10} "daily life": no Roman/Britain/rainforest, none outside subject+domain n=7 bad= out=
+PASS anchored Computing/AI {"min":8,"max":10} "army and conquest": no Roman/Britain/rainforest, none outside subject+domain n=0 bad= out=
+PASS anchored Computing/AI {"min":8,"max":10} "life in a town": no Roman/Britain/rainforest, none outside subject+domain n=7 bad= out=
+PASS anchored Computing/AI {"min":8,"max":10} "smart devices": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":5,"max":12} "AI in daily life": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":5,"max":12} "daily life": no Roman/Britain/rainforest, none outside subject+domain n=8 bad= out=
+PASS anchored Computing/AI {"min":5,"max":12} "army and conquest": no Roman/Britain/rainforest, none outside subject+domain n=0 bad= out=
+PASS anchored Computing/AI {"min":5,"max":12} "life in a town": no Roman/Britain/rainforest, none outside subject+domain n=8 bad= out=
+PASS anchored Computing/AI {"min":5,"max":12} "smart devices": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":9,"max":10} "AI in daily life": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":9,"max":10} "daily life": no Roman/Britain/rainforest, none outside subject+domain n=2 bad= out=
+PASS anchored Computing/AI {"min":9,"max":10} "army and conquest": no Roman/Britain/rainforest, none outside subject+domain n=0 bad= out=
+PASS anchored Computing/AI {"min":9,"max":10} "life in a town": no Roman/Britain/rainforest, none outside subject+domain n=2 bad= out=
+PASS anchored Computing/AI {"min":9,"max":10} "smart devices": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":3,"max":15} "AI in daily life": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS anchored Computing/AI {"min":3,"max":15} "daily life": no Roman/Britain/rainforest, none outside subject+domain n=8 bad= out=
+PASS anchored Computing/AI {"min":3,"max":15} "army and conquest": no Roman/Britain/rainforest, none outside subject+domain n=0 bad= out=
+PASS anchored Computing/AI {"min":3,"max":15} "life in a town": no Roman/Britain/rainforest, none outside subject+domain n=8 bad= out=
+PASS anchored Computing/AI {"min":3,"max":15} "smart devices": no Roman/Britain/rainforest, none outside subject+domain n=12 bad= out=
+PASS control: without anchor the Roman topics still appear (so the guard is what removes them) AI in Daily Life (ages 5–12) | Smart Versus Not-Smart Devices (ages 5–8) | Voice Assistants and How They Work (ages 5–8) | Data and Information for Computers (ages 5–10) | Daily Life in a Roman Town (ages 7–9) | Roman Army and Conquest of Britain (ages 7–9) | Greek and Roman Architecture (ages 9–11) | Roman Republic and Empire (ages 9–11) | Gladiators & Pompeii (ages 7–9) | Rainforest Products in Daily Life (ages 9–12) | Deforestation Causes & Scale (ages 9–12) | Managed environments for food (ages 10–12)
+PASS structured ages 8-10 beat free text 'ages 19 and up' (suggestions present) n=8
+PASS structured ages 19-22 beat free text 'ages 9-10' (no suggestions) n=0
+PASS 19-22 with an anchor: still no suggestions 
+PASS malformed ages fail closed, never to words 
+PASS legacy (no ages): free text without a readable band fails closed 
+PASS legacy (no ages): free text 'ages 9-10' is still read (unchanged G1b behaviour) n=8
+PASS anchor missing from snapshot fails closed 
+PASS ages 15-22 (overlaps 15 only) still return only topics that overlap 15..22 n=0
+PASS create min 2 -> 400 400 "ages must stay within 3 and 99"
+PASS create max 100 -> 400 400 "ages must stay within 3 and 99"
+PASS create min>max -> 400 400 "ages.min cannot be older than ages.max"
+PASS create string -> 400 400 "ages must be an object like { min, max }"
+PASS create fraction -> 400 400 "ages.min and ages.max must be whole years"
+PASS create numeric strings -> 400 400 "ages.min and ages.max must be whole years"
+PASS create array -> 400 400 "ages must be an object like { min, max }"
+PASS create unknown anchor -> 400 400 "no such Marble topic in the snapshot: mt_nope"
+PASS create path-like anchor -> 400 400 "a marbleAnchor must be an mt_* topic id from the snapshot"
+PASS create good -> 201 201 ""
+PASS create legacy no ages -> 201 201 ""
+PASS OBS non-string anchor 12345 (not a 400?) status=201 anchor=undefined
+PASS stage for youngest 3 = 1 got 1
+PASS stage for youngest 7 = 1 got 1
+PASS stage for youngest 8 = 2 got 2
+PASS stage for youngest 11 = 2 got 2
+PASS stage for youngest 12 = 3 got 3
+PASS stage for youngest 14 = 3 got 3
+PASS stage for youngest 15 = 4 got 4
+PASS stage for youngest 18 = 4 got 4
+PASS stage for youngest 99 = 4 got 4
+PASS client-sent stage is ignored (derived 2) got 2
+PASS legacy course view carries no ages/stage/anchor {"courseId":"urn:uuid:8117d3b0-f972-4385-8272-4422eec5e29f","owner":"teacher:t","title":"t","description":"","materials":[],"createdAt":1794705128228}
+
+86 PASS, 0 FAIL

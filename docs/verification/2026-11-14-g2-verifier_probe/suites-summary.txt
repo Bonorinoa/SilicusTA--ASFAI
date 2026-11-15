@@ -1,0 +1,14 @@
+export sha: 2a52a0e09c4366a67c0e880e8721273c283e134f
+.gitignore .hermes .vercelignore AGENTS.md README.md api confirm-gate docs eval frontend host patches vercel.json 
+npm-ci EXIT=0
+confirm-gate EXIT=0
+api EXIT=0
+host EXIT=0
+e2e EXIT=0
+fe-test EXIT=0
+fe-build EXIT=0
+studio EXIT=0
+browser-mode EXIT=0
+live-host EXIT=0
+narrow EXIT=0
+DONE

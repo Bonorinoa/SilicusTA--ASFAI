@@ -1,0 +1,8 @@
+import { mkdtempSync, readFileSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
+import { createApp } from "/Users/bonorinoa/Hermes/Projects/silicus-wt/G2V/host/server.mjs";
+import { createMarbleService } from "/Users/bonorinoa/Hermes/Projects/silicus-wt/G2V/host/marble/marble-graph.mjs";
+const raw = readFileSync("/Users/bonorinoa/Hermes/Projects/silicus-wt/G2V/host/data/marble/marble-snapshot.json", "utf8");
+const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "g2v-l2-")), sources: [], marble: createMarbleService(async () => raw) });
+await new Promise((r) => app.listen(0, "127.0.0.1", r));
+const r = await fetch(`http://127.0.0.1:${app.address().port}/api/courses`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ owner: "t", title: "t", ages: { min: 19, max: 22 }, marbleAnchor: "mt_AzTrT5ySCx" }) });
+const j = await r.json(); console.log("L2 ages 19-22 + anchor (5-12) ->", r.status, JSON.stringify(j.view?.course?.marbleAnchor), j.view?.course?.stage); app.closeAllConnections?.(); app.close();

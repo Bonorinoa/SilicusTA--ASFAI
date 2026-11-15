@@ -63,9 +63,9 @@ i2 = r'''
     const ev = await page.evaluate(() => document.querySelector("[data-neighbourhood] [data-evidence-for]")?.getAttribute("data-evidence-for") ?? null);
     check("PROBE KEYBOARD neighbourhood: the focused node shows its evidence with no hover", !!fi && ev === fi.id, `focused=${fi?.id} evidence-for=${ev}`);
     check("PROBE focus is visible on a neighbourhood node", !!fi && fi.fv && (!/none/.test(fi.outline) || !!fi.kidStroke), JSON.stringify(fi));
+    await page.keyboard.press("Enter"); await page.keyboard.press("Space"); await sleep(200);
     const seen = new Set(); let walked = 0; for (let i = 0; i < 14; i++) { await page.keyboard.press("Tab"); const f = await focusInfo(); if (f?.id) seen.add(f.id); walked++; }
     check("PROBE KEYBOARD neighbourhood: several nodes are tab stops", seen.size >= 2, [...seen].join(","));
-    await page.keyboard.press("Enter"); await page.keyboard.press("Space"); await sleep(200);
     check("PROBE keyboard Enter/Space on a node writes nothing to the course record", (await stored()).events.length === ev0, `${ev0}->${(await stored()).events.length}`);
     await page.focus('form[aria-label="Write your own objective"] input');
     let sb = await tabTo((f) => f.tag === "BUTTON" && /Use as my objective/.test(f.label), 40);

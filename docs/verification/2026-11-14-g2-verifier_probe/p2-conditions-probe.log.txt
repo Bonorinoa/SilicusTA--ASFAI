@@ -1,0 +1,4 @@
+OBS note-length with 20000-char hostile enum: 20110
+OBS stage1 permitted+helpAfter=ai+operationDoneBy=ai -> {"aiStatus":"forbidden","helpAfter":"ai","operationDoneBy":"ai"}
+OBS stage1 no aiStatus, helpAfter=ai -> {"helpAfter":"ai","operationDoneBy":"ai"}
+probe: 154/154 expectations hold

@@ -1,0 +1,10 @@
+node v22.22.3
+confirm-gate: # tests 50 # pass 50 # fail 0 # skipped 0 
+api: # tests 57 # pass 57 # fail 0 # skipped 0 
+host: # tests 395 # pass 395 # fail 0 # skipped 0 
+e2e: 58/58 acceptance checks passed  (data: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-e2e-wkO6Qp)
+frontend npm test:  Test Files 69 passed (69); Tests 722 passed (722);
+studio: 77/77 studio checks passed
+browser-mode: 339/339 browser-mode checks passed
+live-host: 87/87 live acceptance checks passed
+narrow: 43/43 narrow-shell checks passed

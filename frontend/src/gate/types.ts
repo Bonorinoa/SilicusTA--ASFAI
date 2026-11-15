@@ -90,6 +90,32 @@ export interface ActivityView {
   teacherDoes: string;
   evidenceIfAny: "none" | "observation" | "work-product";
   notEvidence?: string;
+  /* ---- plan schema v2 (learning design; host metadata, all optional — a v1 plan has none) ---- */
+  phase?: 1 | 2 | 3 | 4;
+  supportingPhase?: 1 | 2 | 3 | 4;
+  targetOperation?: string;
+  operationDoneBy?: "learner" | "peer" | "teacher" | "ai";
+  learnerFirst?: string;
+  helpAfter?: "none" | "peer" | "teacher" | "textbook" | "worked-example" | "ai";
+  aiStatus?: "forbidden" | "permitted" | "required";
+  noAiAlternative?: string;
+  decisionAfterHelp?: string;
+  channels?: readonly ("speaking" | "drawing" | "writing" | "handling" | "discussion" | "diagram" | "enactment")[];
+  session?: number;
+}
+
+/** One sitting's single planned piece of evidence (plan schema v2). */
+export interface PlanSessionView {
+  session: number;
+  evidence: { kind: "none" | "observation" | "work-product"; whatLearnerProduces: string };
+}
+
+/** A later review or transfer task (plan schema v2). */
+export interface SpacedReviewView {
+  afterDays: number;
+  form?: "recall-without-support" | "near-transfer" | "far-transfer" | "explain-to-absent";
+  whatChanges: string;
+  prompt: string;
 }
 
 /**
@@ -120,6 +146,13 @@ export interface LessonPlanView {
   proposedAt: number;
   /** Alignment suggestions the worker cited (host metadata; absent when it cited none). */
   citations?: readonly PlanCitationView[];
+  /* ---- plan schema v2 (host metadata; absent on a v1 plan) ---- */
+  sessions?: readonly PlanSessionView[];
+  spacedReviews?: readonly SpacedReviewView[];
+  /** Stages 1-2 only: the stage's one plan-level AI line (the host owns its wording). */
+  aiPolicy?: string;
+  /** What the host changed or dropped in the model's draft, for the teacher to see. */
+  notes?: readonly string[];
 }
 
 /** A confirmed objective as cited by plan activities. */

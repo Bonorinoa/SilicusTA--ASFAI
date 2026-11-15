@@ -2,6 +2,10 @@ import type { LessonPlanView, ObjectiveCiteView, PlanInvalidationView } from "..
 import { Fragment } from "react";
 import { plural } from "../../lib/plural";
 import styles from "./PlanCard.module.css";
+import {
+  AI_STATUS_LABEL, CHANNEL_LABEL, PHASE_LABEL, REVIEW_FORM_LABEL,
+  adjustedNotes, aiPolicyPlain, reviewOffset, sessionEvidenceLine, showActivityAiTags,
+} from "./design";
 
 /**
  * PlanCard — a confirmed `LessonPlanRecord` typeset as a printable, shareable
@@ -72,6 +76,12 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
   const totalMinutes = plan.activities.reduce((n, a) => n + a.minutes, 0);
+  // Plan schema v2 (learning design). Every piece is optional; a v1 plan draws none of it.
+  const policy = aiPolicyPlain(plan.aiPolicy);
+  const aiTags = showActivityAiTags(plan);
+  const evidenceLine = sessionEvidenceLine(plan.sessions);
+  const reviews = plan.spacedReviews ?? [];
+  const adjusted = adjustedNotes(plan.notes);
 
   return (
     <article className={styles.page} aria-label={`Lesson plan: ${plan.title}`}>
@@ -139,6 +149,28 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
         <span>Course version {plan.courseVersion}</span>
       </p>
 
+      {evidenceLine ? (
+        <p className={styles.sessionEvidence} data-session-evidence>
+          <span className={styles.designLabel}>Evidence for this session</span>{" "}
+          <span className={styles.designText}>{evidenceLine}</span>
+        </p>
+      ) : null}
+      {policy ? (
+        <p className={styles.aiPolicy} data-ai-policy>
+          <span className={styles.designLabel}>AI</span>{" "}
+          <span className={styles.designText}>{policy}</span>
+        </p>
+      ) : null}
+      {adjusted.shown.length > 0 ? (
+        <section className={styles.adjusted} aria-label="Silicus adjusted" data-adjusted>
+          <p className={styles.designLabel}>Silicus adjusted</p>
+          <ul className={styles.adjustedList}>
+            {adjusted.shown.map((n, i) => <li key={i}>{n}</li>)}
+            {adjusted.more > 0 ? <li>and {plural(adjusted.more, "more change")}.</li> : null}
+          </ul>
+        </section>
+      ) : null}
+
       <ol className={styles.activities}>
         {plan.activities.map((activity, index) => {
           const citedInActivity = activity.objectiveIds.filter((id) => citeNumber.has(id));
@@ -152,7 +184,51 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                 <h2 className={styles.activityTitle}>{activity.title}</h2>
                 <p className={styles.minutes}>{activity.minutes} min</p>
               </div>
+              {(() => {
+                const phase = activity.phase ? PHASE_LABEL[activity.phase] : null;
+                const support = activity.supportingPhase && activity.supportingPhase !== activity.phase ? PHASE_LABEL[activity.supportingPhase] : null;
+                const channels = (activity.channels ?? []).map((c) => CHANNEL_LABEL[c]).filter(Boolean);
+                const ai = aiTags && activity.aiStatus ? activity.aiStatus : null;
+                if (!phase && channels.length === 0 && !ai) return null;
+                const tip = `plan-${plan.id}-${activity.id}-noai`;
+                return (
+                  <p className={styles.designRow} data-design-row>
+                    {phase ? (
+                      <span className={styles.phase} data-phase={activity.phase}>
+                        <span className={styles.phaseNumber}>{activity.phase}</span> {phase}
+                        {support ? <span className={styles.phaseSupport}> · also {activity.supportingPhase} {support}</span> : null}
+                      </span>
+                    ) : null}
+                    {channels.length > 0 ? (
+                      <span className={styles.channels} data-channels>
+                        {channels.join(" · ")}
+                      </span>
+                    ) : null}
+                    {ai ? (
+                      <span
+                        className={styles.aiTag}
+                        data-ai-status={ai}
+                        tabIndex={activity.noAiAlternative ? 0 : undefined}
+                        aria-describedby={activity.noAiAlternative ? tip : undefined}
+                      >
+                        {AI_STATUS_LABEL[ai]}
+                        {activity.noAiAlternative ? (
+                          <span id={tip} role="tooltip" className={styles.chipTip}>
+                            Without AI: {activity.noAiAlternative}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </p>
+                );
+              })()}
 
+              {activity.learnerFirst ? (
+                <p className={styles.designLine} data-learner-first>
+                  <span className={styles.designLabel}>Learners first:</span>{" "}
+                  <span className={styles.designText}>{activity.learnerFirst}</span>
+                </p>
+              ) : null}
               <p className={styles.line}>
                 <span className={styles.lineLabel}>Learners</span>
                 <span className={styles.lineText}>{activity.learnerDoes}</span>
@@ -208,6 +284,19 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                 </p>
               ) : null}
 
+              {activity.decisionAfterHelp ? (
+                <p className={styles.designLine} data-then-decide>
+                  <span className={styles.designLabel}>Then they decide:</span>{" "}
+                  <span className={styles.designText}>{activity.decisionAfterHelp}</span>
+                </p>
+              ) : null}
+              {aiTags && activity.aiStatus && activity.aiStatus !== "forbidden" && activity.noAiAlternative ? (
+                <p className={`${styles.designLine} ${styles.printOnlyBlock}`} data-no-ai-print>
+                  <span className={styles.designLabel}>Without AI:</span>{" "}
+                  <span className={styles.designText}>{activity.noAiAlternative}</span>
+                </p>
+              ) : null}
+
               {activity.notEvidence ? (
                 <p className={styles.line}>
                   <span className={styles.lineLabel}>Not evidence</span>
@@ -219,6 +308,24 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
           );
         })}
       </ol>
+
+      {reviews.length > 0 ? (
+        <section className={styles.key} aria-label="Later" data-later>
+          <h2 className={styles.keyHeading}>Later</h2>
+          <ol className={styles.laterList}>
+            {reviews.map((r, i) => (
+              <li key={i} className={styles.laterItem}>
+                <span className={styles.laterWhen}>{reviewOffset(r.afterDays)}</span>
+                <span className={styles.laterBody}>
+                  {r.form ? <span className={styles.laterForm}>{REVIEW_FORM_LABEL[r.form]}. </span> : null}
+                  <span className={styles.laterChange}>What changes: {r.whatChanges}</span>
+                  <span className={styles.laterPrompt}>“{r.prompt}”</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
       <section className={styles.key} aria-label="Objectives referenced">
         <h2 className={styles.keyHeading}>Objectives referenced</h2>

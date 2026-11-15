@@ -11,3 +11,16 @@
   size: A4;
   margin: 20mm 22mm 22mm;
 }
+
+/* The plan's learning design (plan schema v2) prints whole: the header lines stay with the
+ * title, a spaced review or an activity's design row never splits across a page, and the
+ * "Silicus adjusted" list and the Later section print (they are not chrome). The no-AI
+ * alternative, a hover tooltip on screen, prints as its own line (PlanCard.module.css). */
+@media print {
+  [data-session-evidence],
+  [data-ai-policy] { break-after: avoid; }
+  [data-design-row],
+  [data-later] li,
+  [data-adjusted] { break-inside: avoid; }
+  [data-later] { break-before: auto; }
+}

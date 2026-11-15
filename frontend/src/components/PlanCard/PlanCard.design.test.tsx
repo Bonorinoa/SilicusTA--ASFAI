@@ -126,7 +126,11 @@ describe("PlanCard, plan schema v2 learning design", () => {
     };
     for (const [name, el] of Object.entries(cases)) {
       const { container, unmount } = render(el);
-      expect(stable(container.innerHTML), name).toBe(stable(golden[name]));
+      // H2a added the one Marble credit inside "Suggested alignment" (record case only, it cites Marble).
+      // The golden stays the pre-v2 bytes; everything except that one deliberate line must still match.
+      const credit = /<p class="[^"]*" data-marble-credit="true">.*?<\/p>/;
+      expect(container.querySelectorAll("[data-marble-credit]").length, name).toBe(name === "record" ? 1 : 0);
+      expect(stable(container.innerHTML.replace(credit, "")), name).toBe(stable(golden[name]));
       expect(container.querySelector("[data-ai-policy],[data-session-evidence],[data-later],[data-adjusted],[data-design-row],[data-learner-first]"), name).toBeNull();
       unmount();
     }

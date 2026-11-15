@@ -1,7 +1,7 @@
 /** layout.test.ts — G2c: the neighbourhood view's columns and edge styles, pure. */
 import { describe, expect, it } from "vitest";
 import { AI_DAILY } from "./fixture";
-import { asObjective, columnsOf, EDGE_STYLE, layoutNeighbourhood, relationOf, wrapName } from "./layout";
+import { asObjective, columnsOf, crossings, EDGE_STYLE, layoutNeighbourhood, relationOf, wrapName } from "./layout";
 
 describe("G2c layout: nodes per column", () => {
   it("puts two-hop prerequisites in Foundations, one-hop in Prerequisites, the anchor alone, dependents in Unlocks next", () => {
@@ -77,5 +77,45 @@ describe("G2c layout: edge styles", () => {
     expect(relationOf(c.prerequisites[1], "prerequisites")).toBe("Soft prerequisite (optional)");
     expect(asObjective("Identify at least five examples of AI in their daily life")).toBe("Students can identify at least five examples of AI in their daily life.");
     expect(asObjective("AI tools learn.")).toBe("Students can AI tools learn.");
+  });
+});
+
+describe("H2b layout on the mt_AzTrT5ySCx neighbourhood: wrap, order, ports", () => {
+  const PX = 7; // about 7 px a character at 12 px semibold; the text starts 10 px inside the box
+  it("wraps every name inside its wide box: no line wider than the box, nothing clipped", () => {
+    const l = layoutNeighbourhood(AI_DAILY, "wide");
+    for (const n of l.nodes) {
+      for (const line of n.lines) expect(line.length * PX, `${n.node.name}: "${line}"`).toBeLessThanOrEqual(n.w - 20);
+      expect(n.lines.join(" ")).toBe(n.node.name);
+      expect(20 + (n.lines.length - 1) * 15, "names stay above the ages line").toBeLessThan(n.h - 11 - 10);
+    }
+    expect(l.nodes.find((n) => n.id === "mt_XbGfVhfiUz")!.lines).toEqual(["Computers in", "Everyday Life"]);
+    expect(wrapName("Smart Versus Not-Smart Devices", 17, 3)).toEqual(["Smart Versus", "Not-Smart Devices"]);
+  });
+
+  it("orders Foundations by what they lead to, so a reorder removes the crossing", () => {
+    const [a, b, c, d] = AI_DAILY.prerequisites;
+    const swapped = { ...AI_DAILY, prerequisites: [a, b, d, c] }; // host lists Step-by-Step first: without the reorder, two edges cross
+    expect(columnsOf(swapped).foundations.map((n) => n.id)).toEqual(["mt__p5n8z5soJ", "mt_XbGfVhfiUz"]);
+    for (const data of [AI_DAILY, swapped]) {
+      const l = layoutNeighbourhood(data, "wide");
+      const col = (k: string) => l.nodes.filter((n) => n.column === k).sort((a, b) => a.y - b.y).map((n) => n.id);
+      const pre = col("prerequisites");
+      // Computers in Everyday Life leads to Smart Versus Not-Smart; Step-by-Step leads to Voice Assistants.
+      const want = pre[0] === "mt_WRRv1ABECC" ? ["mt_XbGfVhfiUz", "mt__p5n8z5soJ"] : ["mt__p5n8z5soJ", "mt_XbGfVhfiUz"];
+      expect(col("foundations")).toEqual(want);
+      expect(crossings(l)).toBe(0);
+    }
+  });
+
+  it("every edge enters its target at its own point", () => {
+    for (const o of ["wide", "narrow"] as const) {
+      const l = layoutNeighbourhood(AI_DAILY, o);
+      const end = (d: string) => d.trim().split(/\s+/).pop()!;
+      const byTarget = new Map<string, string[]>();
+      for (const e of l.edges) byTarget.set(e.to, [...(byTarget.get(e.to) ?? []), end(e.d)]);
+      expect(byTarget.get("mt_AzTrT5ySCx")!.length).toBe(2);
+      for (const [, ends] of byTarget) expect(new Set(ends).size).toBe(ends.length);
+    }
   });
 });

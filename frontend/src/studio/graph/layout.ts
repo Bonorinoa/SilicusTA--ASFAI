@@ -70,11 +70,52 @@ export function wrapName(name: string, chars: number, lines: number): string[] {
 }
 
 // Wide fits the studio's document column (about 650 px) at close to 1:1, so the names stay readable.
-const WIDE = { colX: 6, colStep: 166, w: 140, h: 62, top: 36, step: 74, width: 648, chars: 21, lines: 2 };
+// H2b: 17 characters of 12 px semibold fit the 120 px inside a 140 px box (about 7 px a character), so a
+// name wraps onto up to three lines instead of running past the box ("Computers in Everyday Life").
+const WIDE = { colX: 6, colStep: 166, w: 140, h: 74, top: 36, step: 86, width: 648, chars: 17, lines: 3 };
 const NARROW = { x: 44, w: 286, h: 50, step: 60, band: 30, bandGap: 14, width: 340, chars: 36, lines: 1 };
 
-export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" | "narrow" = "wide"): Layout {
+/**
+ * H2b: order each column to avoid crossings (one barycentre pass). The anchor and the one-hop prerequisites keep
+ * the host's order; Foundations sit at the mean position of the prerequisites they lead to, and Unlocks next at
+ * the mean position of what leads to them. Ties keep the host's order.
+ */
+export function orderColumns(n: MarbleNeighbourhood): Record<ColumnKey, MarbleNode[]> {
   const cols = columnsOf(n);
+  const edges = edgesOf(n);
+  const rank = (list: MarbleNode[]) => new Map(list.map((x, i) => [x.id, i]));
+  const byBary = (list: MarbleNode[], ref: Map<string, number>, linked: (id: string) => string[]) => {
+    const bary = (x: MarbleNode, i: number) => {
+      const ys = linked(x.id).map((id) => ref.get(id)).filter((v): v is number => v !== undefined);
+      return ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : i;
+    };
+    return list.map((x, i) => ({ x, i, b: bary(x, i) })).sort((a, b) => a.b - b.b || a.i - b.i).map((r) => r.x);
+  };
+  const pre = rank(cols.prerequisites);
+  const foundations = byBary(cols.foundations, pre, (id) => edges.filter((e) => e.from === id).map((e) => e.to));
+  const left = new Map([...pre, ...[...rank(cols.lesson)].map(([k]) => [k, 0] as [string, number])]);
+  const next = byBary(cols.next, left, (id) => edges.filter((e) => e.to === id).map((e) => e.from));
+  return { ...cols, foundations, next };
+}
+
+/** Straight-segment crossings between edges joining adjacent columns (wide layout). Tests use it. */
+export function crossings(l: Layout): number {
+  const at = new Map(l.nodes.map((b) => [b.id, b]));
+  const segs = l.edges.map((e) => [at.get(e.from)!, at.get(e.to)!] as const).filter(([a, b]) => a && b && a.x !== b.x);
+  let k = 0;
+  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++) {
+    const [a1, b1] = segs[i], [a2, b2] = segs[j];
+    if (a1.x !== a2.x || b1.x !== b2.x) continue;
+    if ((a1.y - a2.y) * (b1.y - b2.y) < 0) k++;
+  }
+  return k;
+}
+
+/** Evenly spaced points down a box's side, one per edge: the k-th of n. */
+const port = (b: LaidNode, k: number, n: number) => b.y + (b.h * (k + 1)) / (n + 1);
+
+export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" | "narrow" = "wide"): Layout {
+  const cols = orderColumns(n);
   const nodes: LaidNode[] = [];
   const headers: Layout["headers"] = [];
   let width: number;
@@ -104,12 +145,22 @@ export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" 
   const at = new Map(nodes.map((b) => [b.id, b]));
   const order = COLUMNS.map((c) => c.key);
   const edges: LaidEdge[] = [];
-  edgesOf(n).forEach((e, i) => {
-    const a = at.get(e.from);
-    const b = at.get(e.to);
-    if (!a || !b) return;
-    const ya = a.y + a.h / 2;
-    const yb = b.y + b.h / 2;
+  // H2b: every edge enters its target at its own point, and leaves its source at its own point, ordered by
+  // the other end's height so the bundle does not twist.
+  const drawn = edgesOf(n).filter((e) => at.has(e.from) && at.has(e.to));
+  const cy = (id: string) => { const b = at.get(id)!; return b.y + b.h / 2; };
+  type E = (typeof drawn)[number];
+  const slot = (id: string, side: "in" | "out", e: E) => {
+    const mine = drawn.filter((x) => (side === "in" ? x.to : x.from) === id);
+    const other = (x: E) => cy(side === "in" ? x.from : x.to);
+    const sorted = [...mine].sort((p, q) => other(p) - other(q) || drawn.indexOf(p) - drawn.indexOf(q));
+    return port(at.get(id)!, sorted.indexOf(e), sorted.length);
+  };
+  drawn.forEach((e, i) => {
+    const a = at.get(e.from)!;
+    const b = at.get(e.to)!;
+    const ya = slot(e.from, "out", e);
+    const yb = slot(e.to, "in", e);
     let d: string;
     if (orientation === "wide" && order.indexOf(a.column) < order.indexOf(b.column)) {
       const x1 = a.x + a.w, x2 = b.x - 2, mid = (x1 + x2) / 2;

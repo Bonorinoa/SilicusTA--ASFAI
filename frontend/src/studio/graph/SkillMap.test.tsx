@@ -78,6 +78,17 @@ describe("G2c (PM binding): the existing suggested-alignment strip carries the M
 });
 
 describe("G2c neighbourhood view", () => {
+  it("H2a: a box's tooltip is the topic name and its ages, never a raw mt_ id", () => {
+    render(<NeighbourhoodView data={AI_DAILY} defaultOpen />);
+    const titles = [...document.querySelectorAll("[data-neighbourhood] g[role=button] > title")].map((t) => t.textContent ?? "");
+    expect(titles).toHaveLength(6);
+    titles.forEach((t) => {
+      expect(t).not.toMatch(/mt_/);
+      expect(t).toMatch(/^.+\. .*\d.*\.$/); // "<name>. <ages>."
+    });
+    expect(titles.find((t) => t.startsWith("AI in Daily Life. "))).toMatch(/12/);
+  });
+
   it("every box is focusable; focus (not hover) shows its evidence lines; the credit is there", async () => {
     render(<NeighbourhoodView data={AI_DAILY} defaultOpen />);
     const boxes = document.querySelectorAll("g[role=button]");

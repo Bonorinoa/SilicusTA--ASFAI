@@ -149,6 +149,9 @@
   transition: border-color 140ms var(--fn-ease), background 140ms var(--fn-ease);
 }
 .group:hover { border-color: var(--fn-ink-muted); }
+/* H2a: a band the exact ages also touch — lighter than the clicked band (thin accent edge, no wash, no inset). */
+.group[data-covered="true"] { border-color: var(--fn-accent); border-style: dashed; }
+.rangeLabel { font-size: 0.8125rem; font-weight: 600; color: var(--fn-ink-soft); font-variant-numeric: tabular-nums; }
 .group:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); box-shadow: inset 0 0 0 1px var(--fn-accent); }
 .group:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
 .groupAges { font-family: var(--fn-serif); font-size: 1.375rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }

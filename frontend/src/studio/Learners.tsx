@@ -8,6 +8,7 @@ import { host } from "../gate/transport";
 import {
   AI_RULE, GROUPS, NO_SUGGESTIONS, PLAN_VOICE, agesText, skillMapLine,
   type Anchor, type Audience, type GroupId, type Stage,
+  bandsTouched, rangeLabel,
 } from "./audience";
 import { MarbleCredit } from "../components/MarbleCredit/MarbleCredit";
 import { ui } from "./ui";
@@ -56,6 +57,7 @@ export function LearnersField({ aud, coverage, onGroup, onStep }: {
   const name = useId();
   const hint = useId();
   const ages = aud.ages;
+  const covered = bandsTouched(ages);
   const stepper = (which: "min" | "max", label: string) => {
     const v = ages ? ages[which] : null;
     return (
@@ -71,7 +73,7 @@ export function LearnersField({ aud, coverage, onGroup, onStep }: {
       <legend className={ui.label}>Who are your learners?</legend>
       <div className={w.groups}>
         {GROUPS.map((g) => (
-          <label key={g.id} className={w.group}>
+          <label key={g.id} className={w.group} data-covered={aud.group !== g.id && covered.includes(g.id) ? "true" : undefined}>
             <input type="radio" name={name} value={g.id} className={w.visuallyHidden} checked={aud.group === g.id} onChange={() => onGroup(g.id)} />
             <span className={w.groupAges}>{g.label}</span>
             <span className={w.groupName}>{g.name}</span>
@@ -86,6 +88,7 @@ export function LearnersField({ aud, coverage, onGroup, onStep }: {
           {stepper("max", "Oldest")}
         </span>
       </div>
+      {ages ? <span className={w.rangeLabel} data-range-label aria-live="polite">{rangeLabel(ages)}</span> : null}
       <span id={hint} className={ui.hint}>Mixed ages are fine. The youngest sets the AI rules.</span>
       <AgeStrip ages={ages} coverage={coverage} />
     </fieldset>

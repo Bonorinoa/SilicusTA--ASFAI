@@ -84,6 +84,25 @@ export function agesText(ages: { min: number; max: number } | null): string {
   return ages.min === ages.max ? `Age ${ages.min}` : `Ages ${ages.min}–${ages.max}`;
 }
 
+/**
+ * H2a: the bands an exact range touches. Bands share their edge ages (8, 12, 15), so an edge alone does not
+ * count: 5–12 touches Early and Upper primary, not Lower secondary. A single age counts every band holding it.
+ */
+export function bandsTouched(ages: { min: number; max: number } | null): GroupId[] {
+  if (!ages) return [];
+  return GROUPS.filter((g) => ages.min === ages.max
+    ? ages.min >= g.min && ages.min <= g.max
+    : ages.min < g.max && ages.max > g.min).map((g) => g.id);
+}
+
+/** The line under the steppers: the range and the band(s) it covers, e.g. "Ages 5–12: Early primary and Upper primary". */
+export function rangeLabel(ages: { min: number; max: number } | null): string {
+  if (!ages) return "";
+  const names = bandsTouched(ages).map((id) => GROUPS.find((g) => g.id === id)!.name);
+  const list = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return list ? `${agesText(ages)}: ${list}` : agesText(ages);
+}
+
 export function groupName(a: Audience): string {
   return GROUPS.find((g) => g.id === a.group)?.name ?? "";
 }

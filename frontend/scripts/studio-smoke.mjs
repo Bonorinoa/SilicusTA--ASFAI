@@ -20,7 +20,7 @@ import { join, normalize, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import puppeteer from "puppeteer-core";
-import { modelReply, withPlanDesign } from "../../host/test/scripted-course.mjs";
+import { modelReply, scriptedPlanV2 } from "../../host/test/scripted-course.mjs";
 let planDrafts = 0;   // P2ui: the first plan draft is a v1 reply, every later one carries the v2 learning design
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
@@ -65,7 +65,7 @@ const server = createServer(async (req, res) => {
         else reply = modelReply(prompt);
       } else if (prompt.startsWith("Draft one lesson plan")) {
         planDrafts += 1;
-        reply = planDrafts === 1 ? modelReply(prompt) : withPlanDesign(modelReply(prompt));
+        reply = planDrafts === 1 ? modelReply(prompt) : scriptedPlanV2(prompt); // v1 first, then the scripted v2 plan (H2b)
       } else reply = modelReply(prompt);
       await sleep(prompt.startsWith("Draft one lesson plan") ? 800 : 200);
       if (reply?.error) return sendJson(502, { error: { code: "UPSTREAM_ERROR" } });
@@ -452,6 +452,8 @@ try {
     first: document.querySelectorAll("[data-learner-first]").length,
     tags: document.querySelectorAll("[data-ai-status]").length,
     text: document.body.innerText,
+    plan: document.querySelector('article[aria-label^="Lesson plan"]')?.innerText ?? "",
+    activities: [...document.querySelectorAll('article[aria-label^="Lesson plan"] h2')].map((h) => h.parentElement?.innerText ?? "").join("\n"),
   }));
   const d1 = await designOf();
   check("P2ui a v1 plan shows no policy line, phase chip, evidence line, Later section or adjusted list",
@@ -467,13 +469,12 @@ try {
   check("P2ui phase chips on the activities", d2.phases.length >= 2 && d2.phases[0] === "1 Notice and guess" && /^2 Try and fix/.test(d2.phases[1]), JSON.stringify(d2.phases));
   check("P2ui exactly one 'Evidence for this session' line", d2.evidence.length === 1 && /sorted card strip/.test(d2.evidence[0]), JSON.stringify(d2.evidence));
   check("P2ui the Later section lists each review with its offset", d2.later.length === 2 && d2.later[0].startsWith("In 2 days") && d2.later[1].startsWith("Next week"), JSON.stringify(d2.later).slice(0, 200));
-  check("P2ui 'Learners first' on activities, and the host's clamp shows under 'Silicus adjusted'",
-    d2.first >= 2 && d2.adjusted.some((n) => /clamped to "forbidden"/.test(n)) && d2.adjusted.some((n) => /replaced the AI line/i.test(n)), JSON.stringify(d2.adjusted).slice(0, 200));
-  { // H2a: the "replaced the AI line" note quotes exactly the AI line the plan shows, not a second sentence.
-    const shown = (d2.policy[0] ?? "").replace(/^AI\s*/, "").trim();
-    const replaced = d2.adjusted.find((n) => /replaced the AI line/i.test(n)) ?? "";
-    check("H2a 'Silicus adjusted' quotes the same AI sentence the plan shows", !!shown && replaced === `Replaced the AI line with this stage's rule: ${shown}`, JSON.stringify({ shown, replaced }));
-  }
+  // H2b: the scripted v2 plan matches the course (AI in Daily Life, 5–12), so the host has nothing to adjust.
+  // The "replaced the AI line" quote (H2a item 6) is unit-tested in PlanCard.design.test.tsx; the stage-3
+  // clamp note is shown and checked by narrow-shell.mjs on its own stage-3 course.
+  check("H2b the scripted v2 plan fits the course: 'Learners first' on all three activities, nothing under 'Silicus adjusted', no plants in the plan's title or activities (this smoke course's own title and objectives stay the plants ones)",
+    d2.first >= 3 && d2.adjusted.length === 0 && /Spotting AI in daily life/.test(d2.plan) && /Smart Versus Not-Smart Devices/.test(d2.plan) && !/How plants eat|Look at a leaf|Ask what it needs/.test(d2.plan.split("\n")[0] + d2.activities),
+    JSON.stringify({ first: d2.first, adjusted: d2.adjusted, head: d2.plan.slice(0, 120) }).slice(0, 300));
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));

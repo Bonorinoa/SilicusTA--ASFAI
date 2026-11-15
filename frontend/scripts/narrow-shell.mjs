@@ -26,7 +26,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
-import { modelReply, withPlanDesign } from "../../host/test/scripted-course.mjs";
+import { modelReply, scriptedPlanV2 } from "../../host/test/scripted-course.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
 const REPO = join(HERE, "..");
@@ -82,7 +82,7 @@ const server = createServer(async (req, res) => {
       if (req.headers["x-silicus-passcode"] !== PASSCODE) return sendJson(res, 401, { error: { code: "BAD_PASSCODE" } });
       if (url.pathname === "/api/fetch") return sendJson(res, 422, { error: { code: "URL_REFUSED" } });
       const parsed = JSON.parse(body || "{}");
-      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(((p) => p.startsWith("Draft one lesson plan") ? withPlanDesign(modelReply(p)) : modelReply(p))(parsed?.messages?.[0]?.content ?? "")) } }] });
+      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(((p) => p.startsWith("Draft one lesson plan") ? scriptedPlanV2(p) : modelReply(p))(parsed?.messages?.[0]?.content ?? "")) } }] });
     }
     return sendJson(res, 404, { error: { code: "NOT_FOUND" } });
   }
@@ -547,11 +547,47 @@ try {
     await page.emulateMediaType(null);
   }
   await page.emulateMediaType("print");
-  check("P2ui print media keeps the learning design (policy line, evidence line, phase chips, Later, Silicus adjusted)", await page.evaluate(() => {
+  check("P2ui print media keeps the learning design (policy line, evidence line, phase chips, Later)", await page.evaluate(() => {
     const vis = (sel) => [...document.querySelectorAll(sel)].some((e) => getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0);
-    return vis("[data-session-evidence]") && vis("[data-later]") && vis("[data-adjusted]") && vis("[data-ai-policy]") && vis("[data-phase]");
+    return vis("[data-session-evidence]") && vis("[data-later]") && vis("[data-ai-policy]") && vis("[data-phase]");
   }));
+  check("H2b the 5–12 scripted plan fits its course: no 'Silicus adjusted', no plants story",
+    await page.evaluate(() => !document.querySelector("[data-adjusted]") && /Spotting AI in daily life/.test(document.body.innerText) && !/How plants eat/.test(document.body.innerText)));
   await page.emulateMediaType(null);
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- H2b: a stage-3 course (ages 12–14, Computing, no anchor). The scripted plan's third activity asks for AI
+  // with no first try; the host clamps it and the plan shows the note under "Silicus adjusted".
+  await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  await poll(() => bodyHas("Who are your learners?"));
+  await g2bClick("Lower secondary");
+  await g2bClick("Oldest age: one year younger");
+  await g2bClick("Write your own");
+  await page.waitForFunction(() => /Ages 12–14/.test(document.body.innerText), { timeout: 10000 }).catch(() => null);
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Searching and sorting");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "How a computer searches and sorts"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
+  await sleep(400);
+  const s3Walk = [
+    await g2cMove("Continue", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
+    await g2cMove("Continue without sources", () => !!document.querySelector('section[aria-label="Your objectives"] textarea')),
+  ];
+  await setValue('section[aria-label="Your objectives"] textarea', "Explain why binary search needs a sorted list\nCarry out a bubble sort and count its swaps");
+  s3Walk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
+  s3Walk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
+  if (s3Walk.includes(false)) console.log(`H2b stage-3 walk stalled: ${JSON.stringify(s3Walk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
+  await g2cWait(() => !!document.querySelector("li[data-objective-id]"), 10000);
+  await g2cMove("Confirm objectives", () => /Step 3 of 4/i.test(document.body.innerText), 12000);
+  await g2cMove("Draft the lesson plan", () => !!document.querySelector('[role="dialog"] input[type="password"]') || !!document.querySelector("[data-session-evidence]"));
+  if (await page.evaluate(() => !!document.querySelector('[role="dialog"] input[type="password"]'))) {
+    await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+    await g2cBtn("Continue");
+  }
+  const s3 = await g2cWait(() => !!document.querySelector("[data-adjusted]"), 20000);
+  const s3Notes = await page.evaluate(() => [...document.querySelectorAll("[data-adjusted] li")].map((e) => e.textContent));
+  check("H2b the stage-3 plan shows the host's clamp under 'Silicus adjusted'",
+    s3 && s3Notes.length === 1 && /clamped to .?forbidden/i.test(s3Notes[0]) && /How a computer finds things fast/.test(await page.evaluate(() => document.body.innerText)), JSON.stringify({ s3Walk, s3Notes }));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) await g2cTall(1440, 1, "2026-11-14-plan-v2-stage3.png");
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));

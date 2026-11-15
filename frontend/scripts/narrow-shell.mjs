@@ -26,7 +26,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
-import { modelReply } from "../../host/test/scripted-course.mjs";
+import { modelReply, withPlanDesign } from "../../host/test/scripted-course.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
 const REPO = join(HERE, "..");
@@ -82,7 +82,7 @@ const server = createServer(async (req, res) => {
       if (req.headers["x-silicus-passcode"] !== PASSCODE) return sendJson(res, 401, { error: { code: "BAD_PASSCODE" } });
       if (url.pathname === "/api/fetch") return sendJson(res, 422, { error: { code: "URL_REFUSED" } });
       const parsed = JSON.parse(body || "{}");
-      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(modelReply(parsed?.messages?.[0]?.content ?? "")) } }] });
+      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(((p) => p.startsWith("Draft one lesson plan") ? withPlanDesign(modelReply(p)) : modelReply(p))(parsed?.messages?.[0]?.content ?? "")) } }] });
     }
     return sendJson(res, 404, { error: { code: "NOT_FOUND" } });
   }
@@ -503,6 +503,55 @@ try {
   await sleep(300);
   await g2cOverflow("plan step (strip + neighbourhood open)");
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-plan-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-plan-desktop.png"); }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- P2ui: the anchored course drafts a v2 plan (learning design on the page); nothing overflows, 390 px included.
+  await g2cMove("Draft the lesson plan", () => !!document.querySelector('[role="dialog"] input[type="password"]') || !!document.querySelector("[data-session-evidence]"));
+  if (await page.evaluate(() => !!document.querySelector('[role="dialog"] input[type="password"]'))) {
+    await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+    await g2cBtn("Continue");
+  }
+  const p2Plan = await g2cWait(() => !!document.querySelector("[data-session-evidence]") && !!document.querySelector("[data-later]"), 20000);
+  check("P2ui the anchored course's v2 plan shows the evidence line and the Later section", p2Plan);
+  const p2Sel = "[data-session-evidence] *, [data-ai-policy] *, [data-adjusted] *, [data-design-row] *, [data-learner-first] *, [data-then-decide] *, [data-later] *";
+  const p2Past = [];
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(300);
+    const past = await page.evaluate((sel) => {
+      const vw = document.documentElement.clientWidth;
+      return [...document.querySelectorAll(sel)].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+        .map((e) => `${e.tagName.toLowerCase()}.${(e.className || "").toString().slice(0, 30)}`);
+    }, p2Sel);
+    if (past.length) p2Past.push(`${w}px: ${past.slice(0, 3).join(", ")}`);
+  }
+  check("P2ui no learning-design element crosses the edge at 320–1440 px and at 390 px", p2Past.length === 0, p2Past.join("; "));
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  check("P2ui at 390 px the Later rows stack (offset above the prompt)", await page.evaluate(() => {
+    const li = document.querySelector("[data-later] li"); if (!li) return false;
+    const [a, b] = li.children; return !!a && !!b && b.getBoundingClientRect().top >= a.getBoundingClientRect().bottom - 1;
+  }));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
+    await g2cTall(390, 2, "2026-11-14-plan-v2-390.png");
+    await g2cTall(1440, 1, "2026-11-14-plan-v2-desktop.png");
+    await page.emulateMediaType("print");
+    // Print preview: the plan sheet alone, under print media, at A4's CSS width (210 mm ≈ 794 px).
+    await page.setViewport({ width: 794, height: 1200, deviceScaleFactor: 2 });
+    await sleep(300);
+    // A viewport as tall as the page, so no sticky chrome sits over the sheet in the capture.
+    await page.setViewport({ width: 794, height: await page.evaluate(() => document.documentElement.scrollHeight), deviceScaleFactor: 2 });
+    await sleep(400);
+    const sheet = await page.$('article[aria-label^="Lesson plan"]');
+    if (sheet) await sheet.screenshot({ path: join(process.env.NARROW_SHELL_WIZARD_SHOTS, "2026-11-14-plan-v2-print.png") });
+    await page.emulateMediaType(null);
+  }
+  await page.emulateMediaType("print");
+  check("P2ui print media keeps the learning design (policy line, evidence line, phase chips, Later, Silicus adjusted)", await page.evaluate(() => {
+    const vis = (sel) => [...document.querySelectorAll(sel)].some((e) => getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0);
+    return vis("[data-session-evidence]") && vis("[data-later]") && vis("[data-adjusted]") && vis("[data-ai-policy]") && vis("[data-phase]");
+  }));
+  await page.emulateMediaType(null);
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));

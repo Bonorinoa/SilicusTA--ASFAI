@@ -67,6 +67,26 @@ export function sessionEvidenceLine(sessions: readonly PlanSessionView[] | undef
   return rows.map((s) => `Session ${s.session}: ${s.evidence.whatLearnerProduces}`).join(" · ");
 }
 
+/** The host's notes name schema fields; the teacher reads plain words instead. */
+const FIELD_WORDS: [RegExp, string][] = [
+  [/\baiStatus\b/g, "AI use"],
+  [/\baiPolicy\b/g, "AI line"],
+  [/\bnoAiAlternative\b/g, "no-AI alternative"],
+  [/\boperationDoneBy\b/g, "who does the work"],
+  [/\bhelpAfter\b/g, "help afterwards"],
+  [/\bsupportingPhase\b/g, "second phase"],
+  [/\blearnerFirst\b/g, "learners-first step"],
+  [/\bdecisionAfterHelp\b/g, "decision after help"],
+  [/\btargetOperation\b/g, "target skill"],
+  [/\bspacedReviews\b/g, "later reviews"],
+  [/\bwhatLearnerProduces\b/g, "what the learner produces"],
+  [/\bwhatChanges\b/g, "what changes"],
+  [/\bafterDays\b/g, "days until the review"],
+];
+export function plainNote(note: string): string {
+  return FIELD_WORDS.reduce((s, [re, w]) => s.replace(re, w), note);
+}
+
 const NOTE_MAX = 180;
 const NOTES_MAX = 6;
 
@@ -77,7 +97,7 @@ export function adjustedNotes(notes: readonly string[] | undefined): { shown: st
     const one = n.replace(/\s+/g, " ").trim();
     return one.length > NOTE_MAX ? `${one.slice(0, NOTE_MAX - 1).trimEnd()}…` : one;
   };
-  const shown = all.slice(0, NOTES_MAX).map((n) => clip(n.charAt(0).toUpperCase() + n.slice(1)));
+  const shown = all.slice(0, NOTES_MAX).map((n) => { const p = plainNote(n); return clip(p.charAt(0).toUpperCase() + p.slice(1)); });
   return { shown, more: Math.max(0, all.length - NOTES_MAX) };
 }
 

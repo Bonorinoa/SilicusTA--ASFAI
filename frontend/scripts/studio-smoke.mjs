@@ -20,7 +20,8 @@ import { join, normalize, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import puppeteer from "puppeteer-core";
-import { modelReply } from "../../host/test/scripted-course.mjs";
+import { modelReply, withPlanDesign } from "../../host/test/scripted-course.mjs";
+let planDrafts = 0;   // P2ui: the first plan draft is a v1 reply, every later one carries the v2 learning design
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
 const REPO = join(HERE, "..");
@@ -62,6 +63,9 @@ const server = createServer(async (req, res) => {
         if (/game|ignore|instructions|address|my name/.test(q)) reply = { inScope: false, basis: "plan", refusal: "off_topic", answer: "", cites: [] };
         else if (/grade|pass|how am i doing|score|mark/.test(q)) reply = { inScope: false, basis: "plan", refusal: "assessment", answer: "", cites: [] };
         else reply = modelReply(prompt);
+      } else if (prompt.startsWith("Draft one lesson plan")) {
+        planDrafts += 1;
+        reply = planDrafts === 1 ? modelReply(prompt) : withPlanDesign(modelReply(prompt));
       } else reply = modelReply(prompt);
       await sleep(prompt.startsWith("Draft one lesson plan") ? 800 : 200);
       if (reply?.error) return sendJson(502, { error: { code: "UPSTREAM_ERROR" } });
@@ -418,6 +422,35 @@ try {
     return el ? el.textContent ?? "" : "";
   });
   check("one draft plan shows a Marble suggested alignment (the mock worker cited the local snapshot)", /Marble/.test(align), align.slice(0, 120));
+
+  // ---- P2ui: a v1 plan shows none of the learning design; "Draft again" brings the v2 plan, which does.
+  const designOf = () => page.evaluate(() => ({
+    policy: [...document.querySelectorAll("[data-ai-policy]")].map((e) => e.textContent),
+    evidence: [...document.querySelectorAll("[data-session-evidence]")].map((e) => e.textContent),
+    phases: [...document.querySelectorAll("[data-phase]")].map((e) => e.textContent),
+    later: [...document.querySelectorAll("[data-later] li")].map((e) => e.textContent),
+    adjusted: [...document.querySelectorAll("[data-adjusted] li")].map((e) => e.textContent),
+    first: document.querySelectorAll("[data-learner-first]").length,
+    tags: document.querySelectorAll("[data-ai-status]").length,
+    text: document.body.innerText,
+  }));
+  const d1 = await designOf();
+  check("P2ui a v1 plan shows no policy line, phase chip, evidence line, Later section or adjusted list",
+    d1.policy.length + d1.evidence.length + d1.phases.length + d1.later.length + d1.adjusted.length + d1.first + d1.tags === 0, JSON.stringify({ ...d1, text: undefined }));
+  const planIdBefore = await page.evaluate(() => document.querySelector("[data-session-evidence]") ? "v2" : (document.querySelector('article[aria-label^="Lesson plan"]')?.textContent ?? "").length);
+  await clickBy("Draft again");
+  await enterPasscode();
+  const gotV2 = await page.waitForFunction(() => !!document.querySelector("[data-session-evidence]"), { timeout: 15000 }).then(() => true, () => false);
+  const d2 = await designOf();
+  check("P2ui the v2 plan shows the stage-1 policy line once, in plain words",
+    gotV2 && d2.policy.length === 1 && /Children don’t use AI in this lesson\. You may use it to prepare\./.test(d2.policy[0]), JSON.stringify(d2.policy));
+  check("P2ui stage 1-2: no per-activity AI tag beside the policy line", d2.tags === 0, `tags=${d2.tags}`);
+  check("P2ui phase chips on the activities", d2.phases.length >= 2 && d2.phases[0] === "1 Notice and guess" && /^2 Try and fix/.test(d2.phases[1]), JSON.stringify(d2.phases));
+  check("P2ui exactly one 'Evidence for this session' line", d2.evidence.length === 1 && /sorted card strip/.test(d2.evidence[0]), JSON.stringify(d2.evidence));
+  check("P2ui the Later section lists each review with its offset", d2.later.length === 2 && d2.later[0].startsWith("In 2 days") && d2.later[1].startsWith("Next week"), JSON.stringify(d2.later).slice(0, 200));
+  check("P2ui 'Learners first' on activities, and the host's clamp shows under 'Silicus adjusted'",
+    d2.first >= 2 && d2.adjusted.some((n) => /clamped to "forbidden"/.test(n)) && d2.adjusted.some((n) => /replaced AI line/i.test(n)), JSON.stringify(d2.adjusted).slice(0, 200));
+  check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
 

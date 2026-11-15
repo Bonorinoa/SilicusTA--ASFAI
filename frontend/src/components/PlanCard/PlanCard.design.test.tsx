@@ -113,7 +113,7 @@ describe("PlanCard, plan schema v2 learning design", () => {
     render(<PlanCard plan={v2()} objectives={scenario.objectives} />);
     const box = screen.getByRole("region", { name: "Silicus adjusted" });
     expect(within(box).getAllByRole("listitem").map((l) => l.textContent)).toEqual([
-      'AiStatus "permitted" clamped to "forbidden": learners at this stage do not use AI at all.',
+      'AI use "permitted" clamped to "forbidden": learners at this stage do not use AI at all.',
     ]);
   });
 

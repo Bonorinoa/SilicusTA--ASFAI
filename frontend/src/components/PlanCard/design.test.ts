@@ -44,5 +44,7 @@ describe("learning-design wording (plan schema v2)", () => {
     expect(shown).toHaveLength(6);
     expect(more).toBe(2);
     expect(adjustedNotes(undefined)).toEqual({ shown: [], more: 0 });
+    expect(adjustedNotes(['aiStatus "required" clamped to "permitted": never required.', "a permitted or required AI use needs a noAiAlternative."]).shown)
+      .toEqual(['AI use "required" clamped to "permitted": never required.', "A permitted or required AI use needs a no-AI alternative."]);
   });
 });

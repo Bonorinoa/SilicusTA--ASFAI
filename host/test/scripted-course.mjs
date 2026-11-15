@@ -92,3 +92,27 @@ export async function runScriptedCourse(call) {
   await step("POST", `${c}/nope`, {});
   return { courseId: id, transcript };
 }
+
+/**
+ * The same learning design the mock worker's default plan carries (host/test/mock-worker.mjs), laid
+ * over a scripted plan reply: one evidence piece for session 1, one spaced review a week later, a
+ * plan-level AI line, and per-activity phase / learner-first / decision / AI status / channels.
+ * The smokes use it to show a schema-v2 plan in the browser (P2ui). A v1 reply stays modelReply's own.
+ */
+const DESIGN_ACTIVITIES = [
+  { phase: 1, targetOperation: "distinguish an AI use from a non-AI one", operationDoneBy: "learner", learnerFirst: "Each pair gives a guess and its reason.", helpAfter: "teacher", aiStatus: "forbidden", decisionAfterHelp: "Each pair keeps or changes its guess after the teacher explains, and says why.", channels: ["speaking", "discussion"], session: 1 },
+  { phase: 2, supportingPhase: 3, targetOperation: "apply the rule behind which devices decide", operationDoneBy: "learner", learnerFirst: "Each pair sorts the cards alone first.", helpAfter: "worked-example", aiStatus: "permitted", noAiAlternative: "The same sorting with paper cards only.", decisionAfterHelp: "Each pair keeps or changes each card after the class check and says why.", channels: ["handling", "writing"], session: 1 },
+];
+export function withPlanDesign(reply) {
+  if (!reply || !Array.isArray(reply.activities)) return reply;
+  return {
+    ...reply,
+    sessions: [{ session: 1, evidence: { kind: "work-product", whatLearnerProduces: "Each child's sorted card strip with one written reason." } }],
+    spacedReviews: [
+      { afterDays: 2, form: "recall-without-support", whatChanges: "no cards on the table this time", prompt: "Name two things at home that decide something by themselves." },
+      { afterDays: 7, form: "far-transfer", whatChanges: "new examples in a picture of a shop instead of the lesson's cards", prompt: "Spot the AI in this shop picture and say how you know." },
+    ],
+    aiPolicy: "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone.",
+    activities: reply.activities.map((a, i) => ({ ...a, ...DESIGN_ACTIVITIES[i % DESIGN_ACTIVITIES.length] })),
+  };
+}

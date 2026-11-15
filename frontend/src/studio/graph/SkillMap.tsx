@@ -192,7 +192,7 @@ export function EvidenceSuggestions({ data, onUse }: { data: MarbleNeighbourhood
           </li>
         ))}
       </ul>
-      <MarbleCredit className={g.credit} />
+      {/* H2a: one credit per surface — the objectives step credits Marble once, under the neighbourhood view. */}
     </section>
   );
 }

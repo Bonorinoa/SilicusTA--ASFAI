@@ -236,9 +236,11 @@ try {
   const creditOk = (c) => !!c && /opendatacommons\.org\/licenses\/odbl\/1-0/.test(c.odbl ?? "") && /creativecommons\.org\/licenses\/by-sa\/4\.0/.test(c.cc ?? "") && /MARBLE-ATTRIBUTION.*\.md$/.test(c.attribution ?? "");
   const pickerCredit = await creditOn("picker");
   check("G1bV the skill-map anchor picker shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(pickerCredit), JSON.stringify(pickerCredit));
-  const stripCredit = await creditOn('section[aria-label="What your choices change"]');
-  check("G1bV the consequence strip shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(stripCredit), JSON.stringify(stripCredit));
-  const notice = await page.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, text: (await r.text()).slice(0, 2000) }; }, stripCredit?.attribution ?? "/missing");
+  // H2a: one credit per surface — step 1 keeps the credit under the anchor card; the consequence strip carries no copy.
+  const step1Credits = await page.evaluate(() => ({ total: document.querySelectorAll('form[aria-label="Course and learners"] [data-marble-credit], section[aria-label="What your choices change"] [data-marble-credit]').length,
+    strip: document.querySelectorAll('section[aria-label="What your choices change"] [data-marble-credit]').length }));
+  check("H2a wizard step 1 shows exactly one Marble credit (under the anchor card), none in the consequence strip", step1Credits.total === 1 && step1Credits.strip === 0, JSON.stringify(step1Credits));
+  const notice = await page.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, text: (await r.text()).slice(0, 2000) }; }, pickerCredit?.attribution ?? "/missing");
   check("G1bV the attribution notice ships with the app and names the pinned upstream", notice.status === 200 && /Marble Skill Taxonomy/.test(notice.text) && /d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63/.test(notice.text), `${notice.status}`);
   await setVal('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "How plants make food from sunlight");
   await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
@@ -301,8 +303,13 @@ try {
 
   // ---- G2c: the skill map on the objectives step (anchored 5–12 course only)
   const g2cReady = await page.waitForSelector("[data-evidence-suggestions]", { timeout: 15000 }).then(() => true, () => false);
-  check("G2c objectives: the anchor's evidence lines are offered as wording, with the Marble credit", g2cReady
-    && await page.evaluate(() => document.querySelectorAll("[data-evidence-suggestions] button").length >= 1 && !!document.querySelector("[data-evidence-suggestions] [data-marble-credit]")));
+  check("G2c objectives: the anchor's evidence lines are offered as wording", g2cReady
+    && await page.evaluate(() => document.querySelectorAll("[data-evidence-suggestions] button").length >= 1));
+  { // H2a: one credit per surface — the objectives step credits Marble once, under the neighbourhood view.
+    const oc = await page.evaluate(() => ({ total: document.querySelectorAll("main [data-marble-credit]").length || document.querySelectorAll("[data-marble-credit]").length,
+      suggest: document.querySelectorAll("[data-evidence-suggestions] [data-marble-credit]").length, nb: document.querySelectorAll("[data-neighbourhood] [data-marble-credit]").length }));
+    check("H2a objectives step shows exactly one Marble credit, under the neighbourhood view, none under the suggestions", oc.total === 1 && oc.suggest === 0 && oc.nb === 1, JSON.stringify(oc));
+  }
   const nb = await page.evaluate(() => {
     const root = document.querySelector("[data-neighbourhood]");
     const soft = root?.querySelector('path[data-edge="mt_AzTrT5ySCx>mt_kH1DzOPsXG"]');

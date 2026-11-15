@@ -225,7 +225,7 @@ export function Consequences({ stage, coverage }: { stage: Stage | null; coverag
       <div className={w.tile} data-tone={stage !== null && (coverage === "unavailable" || countOf(coverage) === 0) ? "none" : undefined}>
         <span className={w.tileTitle}>Skill map (Marble)</span>
         <span className={w.tileText}>{map === NO_SUGGESTIONS ? NO_SUGGESTIONS : map}</span>
-        {coverage && coverage !== "unavailable" ? <StudioMarbleCredit /> : null}
+        {/* H2a: one credit per surface — step 1 keeps the one under the anchor card, not a copy here. */}
       </div>
       <div className={w.tile}>
         <span className={w.tileTitle}>Plan voice</span>

@@ -127,7 +127,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
           {[0, 1].map((i) => <div key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}><Skeleton width="92%" /><Skeleton width="64%" /></div>)}
         </div>
       ) : null}
-      {waitingRows.some((r) => r.alignment) ? <MarbleCredit className={g.credit} /> : null}
+      {/* One credit per surface (H2a): an anchored course already credits Marble under the neighbourhood view. */}
+      {!map && waitingRows.some((r) => r.alignment) ? <MarbleCredit className={g.credit} /> : null}
       {!drafting && waitingRows.length === 0 ? <p className={s.trayEmpty}>Nothing waiting. Everything proposed has a decision.</p> : null}
       {suggest.show && !drafting ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

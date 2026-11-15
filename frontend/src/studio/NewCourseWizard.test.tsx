@@ -181,11 +181,12 @@ describe("NewCourseWizard step 1 (G2b): learners, skill map, consequences", () =
     await user.click(await screen.findByRole("button", { name: /AI in daily life/ }));
     expect(mocks.marbleSearch).toHaveBeenLastCalledWith("ai daily", 8, 12);
     expect(screen.getByLabelText("Topic, in your words")).toHaveValue("AI in daily life");
-    // One credit component on each Marble surface here (anchor picker + consequence strip), each with both licences.
-    expect(screen.getAllByText(/Marble Skill Taxonomy \(v1\)/)).toHaveLength(2);
+    // H2a: one credit per surface — step 1 credits Marble once, under the anchor card; the consequence strip has none.
+    expect(screen.getAllByText(/Marble Skill Taxonomy \(v1\)/)).toHaveLength(1);
+    expect(screen.getByRole("region", { name: "What your choices change" }).querySelector("[data-marble-credit]")).toBeNull();
     expect(screen.getAllByRole("link", { name: "ODbL 1.0" })[0]).toHaveAttribute("href", "https://opendatacommons.org/licenses/odbl/1-0/");
     expect(screen.getAllByRole("link", { name: "CC BY-SA 4.0" })[0]).toHaveAttribute("href", "https://creativecommons.org/licenses/by-sa/4.0/");
-    expect(screen.getAllByRole("link", { name: "attribution notice" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "attribution notice" })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Clear the skill-map anchor AI in daily life" }));
     expect(screen.getByLabelText("Search the skill map")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Search the skill map"), "ai");

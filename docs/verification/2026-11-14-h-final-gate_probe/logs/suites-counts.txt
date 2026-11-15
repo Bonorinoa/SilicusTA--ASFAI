@@ -1,0 +1,17 @@
+confirm-gate: # tests 50 # pass 50 # fail 0 # cancelled 0 # skipped 0 
+api: # tests 57 # pass 57 # fail 0 # cancelled 0 # skipped 0 
+host: # tests 402 # pass 402 # fail 0 # cancelled 0 # skipped 0 
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/e2e.log:PASS  the second call, built from the teacher's answers, reaches ready_to_draft
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/e2e.log:58/58 acceptance checks passed  (data: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-e2e-uV609t)
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/fe-test.log:   ✓ the first-run intake — plain words, no fake progress > names what the course is built from, and says the material itself comes later  309ms
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/fe-test.log: Test Files  70 passed (70)
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/fe-test.log:      Tests  738 passed (738)
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/fe-build.log:✓ built in 2.21s
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/studio.log:80/80 studio checks passed
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/browser-mode.log:PASS  [setup] the built bundle names no server env variable or key
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/browser-mode.log:PASS  [setup] the built bundle holds nothing key-shaped
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/browser-mode.log:339/339 browser-mode checks passed
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/live-host.log:PASS  built app is served
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/live-host.log:PASS  built app is served
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/live-host.log:87/87 live acceptance checks passed
+/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/hv-logs/narrow.log:45/45 narrow-shell checks passed

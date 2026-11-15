@@ -1,0 +1,18 @@
+M1 PlanCard: credit removed from Suggested alignment
+      Tests  3 failed | 42 passed (45)
+M2 SkillMap: tooltip shows the mt_ id
+      Tests  1 failed | 19 passed (20)
+M3 empty-state line reworded
+      Tests  1 failed | 19 passed (20)
+M4 stage-3 permitted-without-first-try rule removed
+# tests 402 # pass 400 # fail 2 
+M5 host ceiling removed
+# tests 49 # pass 48 # fail 1 
+M6 api ceiling removed
+# tests 57 # pass 56 # fail 1 
+M7 anchor/ages overlap refusal removed
+# tests 402 # pass 402 # fail 0 
+M8 non-string marbleAnchor refusal removed
+# tests 402 # pass 402 # fail 0 
+restore check:
+clone identical to export

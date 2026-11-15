@@ -72,7 +72,7 @@ export function wrapName(name: string, chars: number, lines: number): string[] {
 // Wide fits the studio's document column (about 650 px) at close to 1:1, so the names stay readable.
 // H2b: 17 characters of 12 px semibold fit the 120 px inside a 140 px box (about 7 px a character), so a
 // name wraps onto up to three lines instead of running past the box ("Computers in Everyday Life").
-const WIDE = { colX: 6, colStep: 166, w: 140, h: 74, top: 36, step: 86, width: 648, chars: 17, lines: 3 };
+const WIDE = { colX: 6, colStep: 166, w: 140, h: 80, top: 36, step: 100, width: 648, chars: 17, lines: 3 };
 const NARROW = { x: 44, w: 286, h: 50, step: 60, band: 30, bandGap: 14, width: 340, chars: 36, lines: 1 };
 
 /**
@@ -165,8 +165,13 @@ export function layoutNeighbourhood(n: MarbleNeighbourhood, orientation: "wide" 
     if (orientation === "wide" && order.indexOf(a.column) < order.indexOf(b.column)) {
       const x1 = a.x + a.w, x2 = b.x - 2, mid = (x1 + x2) / 2;
       d = `M${x1},${ya} C${mid},${ya} ${mid},${yb} ${x2},${yb}`;
+    } else if (orientation === "wide" && a.column === b.column && Math.abs(a.y - b.y) === WIDE.step) {
+      // H2b: neighbours in one column: a short straight arrow across the gap between them, not a loop
+      // squeezed into the gutter the cross-column edges already use.
+      const x = a.x + a.w / 2;
+      d = a.y > b.y ? `M${x},${a.y} L${x},${b.y + b.h + 2}` : `M${x},${a.y + a.h} L${x},${b.y - 2}`;
     } else {
-      // Same column, or a phone: a loop in the gutter on the left of the boxes, nested by index.
+      // Same column (not neighbours), or a phone: a loop in the gutter on the left of the boxes, nested by index.
       const bulge = a.x - (orientation === "wide" ? 14 : 12 + (i % 4) * 7);
       d = `M${a.x},${ya} C${bulge},${ya} ${bulge},${yb} ${b.x - 2},${yb}`;
     }

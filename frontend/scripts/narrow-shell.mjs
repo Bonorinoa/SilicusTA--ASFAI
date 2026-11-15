@@ -491,10 +491,13 @@ try {
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-objectives-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-objectives-desktop.png"); }
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   // Use a suggestion, add it, confirm the objectives: the plan step opens on the prerequisite strip.
-  await g2cBtn("Use as my objective");
-  await sleep(200);
-  await g2cBtn("Add");
-  await g2cWait(() => !!document.querySelector("li[data-objective-id]"), 8000);
+  // H2b: use all three suggestions, so the scripted plan cites three of the course's own objectives.
+  for (let k = 0; k < 3; k++) {
+    await page.evaluate((i) => { const b = [...document.querySelectorAll("button")].filter((e) => (e.textContent ?? "").trim() === "Use as my objective")[i]; b?.click(); }, k);
+    await sleep(200);
+    await g2cBtn("Add");
+    await g2cWait((n) => document.querySelectorAll("li[data-objective-id]").length >= n, 8000, k + 1);
+  }
   await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
   await g2cBtn("Confirm objectives");
   const g2cPlan = await g2cWait(() => !!document.querySelector("[data-prereq-strip]") && /Step 3 of 4/i.test(document.body.innerText), 12000);

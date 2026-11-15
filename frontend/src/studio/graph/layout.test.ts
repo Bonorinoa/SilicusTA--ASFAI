@@ -60,7 +60,25 @@ describe("G2c layout: edge styles", () => {
     expect(e("mt_WRRv1ABECC", "mt_AzTrT5ySCx")).toMatchObject({ strength: "hard", dash: null });
     expect(e("mt_AzTrT5ySCx", "mt_kH1DzOPsXG")).toMatchObject({ strength: "soft", dash: "5 4" });
     expect(l.edges).toHaveLength(6);
-    for (const x of l.edges) expect(x.d).toMatch(/^M[\d.]+,[\d.]+ C/);
+    for (const x of l.edges) expect(x.d).toMatch(/^M[\d.]+,[\d.]+ [CL]/);
+  });
+  it("H2b: an edge between neighbours in one column is a short straight arrow across their gap, not a gutter loop", () => {
+    const l = layoutNeighbourhood(AI_DAILY, "wide");
+    const box = new Map(l.nodes.map((b) => [b.id, b]));
+    const same = l.edges.filter((x) => box.get(x.from)!.column === box.get(x.to)!.column);
+    expect(same.length).toBeGreaterThan(0);
+    for (const x of same) {
+      const a = box.get(x.from)!, b = box.get(x.to)!;
+      const m = x.d.match(/^M([\d.]+),([\d.]+) L([\d.]+),([\d.]+)$/);
+      expect(m).not.toBeNull();
+      const [x1, y1, x2, y2] = m!.slice(1).map(Number);
+      expect(x1).toBe(x2);
+      expect(x1).toBeGreaterThan(a.x); expect(x1).toBeLessThan(a.x + a.w);
+      // starts on the source's edge and stops just outside the target box
+      const [hi, lo] = a.y < b.y ? [a, b] : [b, a];
+      expect(Math.min(y1, y2)).toBeGreaterThanOrEqual(hi.y + hi.h);
+      expect(Math.max(y1, y2)).toBeLessThanOrEqual(lo.y);
+    }
   });
 
   it("without walked edges (older host) it draws the one-hop rows only", () => {

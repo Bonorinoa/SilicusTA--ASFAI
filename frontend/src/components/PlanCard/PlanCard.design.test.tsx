@@ -136,3 +136,21 @@ describe("PlanCard, plan schema v2 learning design", () => {
     }
   });
 });
+
+// H2a: when the host replaces the plan's AI line with the stage rule, the "Silicus adjusted" note and the AI line
+// on the plan must quote the same sentence — the plain-words one the plan shows — never the raw stage line beside it.
+describe("PlanCard, 'Silicus adjusted' quotes the AI line the plan shows", () => {
+  // The host's exact stage lines (host/worker.mjs STAGE_AI_POLICY) and its note format.
+  const HOST_STAGE = {
+    1: "AI in this course: learners do not use AI at all; nothing a child produces enters a tool. The teacher may use AI to prepare.",
+    2: "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone.",
+  } as const;
+  it.each([1, 2] as const)("stage %i: the note's quoted sentence is exactly the AI line shown", (stage) => {
+    render(<PlanCard plan={v2({ aiPolicy: HOST_STAGE[stage], notes: [`replaced aiPolicy with the stage rule: ${HOST_STAGE[stage]}`] })} objectives={scenario.objectives} />);
+    const shown = document.querySelector("[data-ai-policy] span:last-child")!.textContent!;
+    const note = within(screen.getByRole("region", { name: "Silicus adjusted" })).getByText(/^Replaced the AI line/).textContent!;
+    expect(note).toBe(`Replaced the AI line with this stage's rule: ${shown}`);
+    expect(note).not.toContain("AI in this course:");
+    expect(note).not.toMatch(/aiPolicy/);
+  });
+});

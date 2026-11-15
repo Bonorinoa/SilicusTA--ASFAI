@@ -468,7 +468,12 @@ try {
   check("P2ui exactly one 'Evidence for this session' line", d2.evidence.length === 1 && /sorted card strip/.test(d2.evidence[0]), JSON.stringify(d2.evidence));
   check("P2ui the Later section lists each review with its offset", d2.later.length === 2 && d2.later[0].startsWith("In 2 days") && d2.later[1].startsWith("Next week"), JSON.stringify(d2.later).slice(0, 200));
   check("P2ui 'Learners first' on activities, and the host's clamp shows under 'Silicus adjusted'",
-    d2.first >= 2 && d2.adjusted.some((n) => /clamped to "forbidden"/.test(n)) && d2.adjusted.some((n) => /replaced AI line/i.test(n)), JSON.stringify(d2.adjusted).slice(0, 200));
+    d2.first >= 2 && d2.adjusted.some((n) => /clamped to "forbidden"/.test(n)) && d2.adjusted.some((n) => /replaced the AI line/i.test(n)), JSON.stringify(d2.adjusted).slice(0, 200));
+  { // H2a: the "replaced the AI line" note quotes exactly the AI line the plan shows, not a second sentence.
+    const shown = (d2.policy[0] ?? "").replace(/^AI\s*/, "").trim();
+    const replaced = d2.adjusted.find((n) => /replaced the AI line/i.test(n)) ?? "";
+    check("H2a 'Silicus adjusted' quotes the same AI sentence the plan shows", !!shown && replaced === `Replaced the AI line with this stage's rule: ${shown}`, JSON.stringify({ shown, replaced }));
+  }
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));

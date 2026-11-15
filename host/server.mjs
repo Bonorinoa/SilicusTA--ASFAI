@@ -93,7 +93,16 @@ function guardRequest(req, allowedOrigins, pathname) {
  *   SILICUS_WORKER_ZDR       zero-data-retention routing: OpenRouter only (on by default for the preset; 0 turns it off). Asking for it on the Anthropic wire
  *                            refuses to start, because the host must not claim a guarantee it cannot make.
  *   SILICUS_WORKER_REASONING low (the OpenRouter preset default), medium, high, off, or model-default.
+ *   SILICUS_WORKER_MAX_TOKENS the reply cap in tokens (16,000 default; a usable number any size, the
+ *                            PlanWorker constructor clamps it to the 32,000 ceiling).
  */
+
+/** The env cap as a number, or undefined so the constructor's 16,000 default stands. */
+function SILICUS_WORKER_MAX_TOKENS(env) {
+  const n = Number(env.SILICUS_WORKER_MAX_TOKENS);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
 export function workerFromEnv(env) {
   const preset = env.SILICUS_WORKER_PROVIDER;
   const anthropic = preset === "anthropic";
@@ -105,6 +114,9 @@ export function workerFromEnv(env) {
     provider: anthropic ? "anthropic" : "openai",
     url: env.SILICUS_WORKER_URL || (anthropic ? "https://api.anthropic.com/v1/messages" : openrouter ? "https://openrouter.ai/api/v1/chat/completions" : null),
     model: env.SILICUS_WORKER_MODEL || (anthropic ? "claude-sonnet-5-5" : openrouter ? "deepseek/deepseek-v4-flash-0731" : null),
+    // SILICUS_WORKER_MAX_TOKENS is the one client-visible cap; the PlanWorker constructor clamps it
+    // to the shared 32,000 ceiling and falls back to the 16,000 default when it is not a usable number.
+    maxTokens: SILICUS_WORKER_MAX_TOKENS(env),
     apiKey: key,
     // The OpenRouter preset is zero-data-retention unless explicitly switched off (SILICUS_WORKER_ZDR=0).
     // Every other setup is opt-in, so nothing claims a guarantee it was not asked for.

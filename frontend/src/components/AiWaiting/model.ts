@@ -17,10 +17,11 @@ export type Range = readonly [number, number];
  * sample of 44 answers and 3 plan and 6 objective runs; widened by hand: 44 student calls p50 2.0 s /
  * p95 11.4 s, three plan runs 11.3 / 12.6 / 25.5 s, objectives.propose 2.2 / 3.2 / 6.4 s and
  * objectives.suggest 3.8 to 14.8 s. One public fixture, one rater day, DeepSeek v4 flash 0731 via
- * OpenRouter: pass the upper bound and the step says it is taking longer, it does not stop pretending. */
+ * OpenRouter: pass the upper bound and the step says it is taking longer, it does not stop pretending.
+ * The plan range widened to 10-60 when H raised the reply cap 4000 -> 16000 tokens. */
 export const DEFAULT_TYPICAL: Readonly<Record<Exclude<StepKind, "suggest">, Range>> = {
   objectives: [2, 10],
-  plan: [8, 30],
+  plan: [10, 60],
   answer: [2, 15],
 };
 

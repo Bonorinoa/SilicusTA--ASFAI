@@ -16,7 +16,9 @@ export function reasoningBody(value) {
 
 export const DEFAULT_TYPICAL_SECONDS = Object.freeze({
   objectives: Object.freeze([2, 10]),
-  plan: Object.freeze([8, 30]),
+  // H (14 Nov): the plan cap went 4000 -> 16000 tokens, so a long plan legitimately takes longer; the
+  // "usually" range widens to match (the function's own deadline is unchanged at 115 s).
+  plan: Object.freeze([10, 60]),
   answer: Object.freeze([2, 15]),
 });
 

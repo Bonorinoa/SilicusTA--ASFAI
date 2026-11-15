@@ -20,6 +20,9 @@ import { normalizeReasoning, reasoningBody } from "./worker-config.mjs";
 import { stageForAges } from "./ages.mjs";
 
 export const DEFAULT_WORKER_TIMEOUT_MS = 120_000;
+/** The reply cap (H): 16,000 tokens by default; an override may raise it but never past this ceiling. */
+export const DEFAULT_MAX_TOKENS = 16_000;
+export const MAX_TOKENS_CEILING = 32_000;
 
 /** A worker failure that is a refusal, not a crash. */
 export class WorkerError extends Error {
@@ -72,7 +75,7 @@ export class PlanWorker {
    * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
    * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = 4000, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", configHint = "" } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", configHint = "" } = {}) {
     // How to configure this worker is the TRANSPORT's business (the Node host passes its env-variable hint); this module
     // is shared with the browser bundle, so it names no server setting itself.
     this.#configHint = configHint ? ` (${configHint})` : "";
@@ -89,7 +92,7 @@ export class PlanWorker {
     this.#fetch = fetchImpl ?? fetch;
     this.#zdr = zdr === true;
     this.#reasoning = normalizeReasoning(reasoning);
-    this.#maxTokens = Number.isInteger(maxTokens) && maxTokens > 0 ? maxTokens : 4000;
+    this.#maxTokens = Math.min(Number.isInteger(maxTokens) && maxTokens > 0 ? maxTokens : DEFAULT_MAX_TOKENS, MAX_TOKENS_CEILING);
     // A model that never answers must not hold a course hostage: every request to a course runs behind
     // one lock, so an unbounded wait here would freeze the whole course. The deadline covers the body too.
     this.#timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_WORKER_TIMEOUT_MS;
@@ -294,15 +297,15 @@ function contextBlock(context) {
 
 /** The stage's AI rule, as the PROMPT states it. Rendered only when the course has structured ages. */
 const STAGE_RULES = {
-  1: "Audience AI rule (the youngest age sets the stage), stage 1 (under 8): learners do not use AI at all; nothing a child makes goes into a tool. Set every activity's aiStatus to forbidden, and give one plan-level aiPolicy line that says so.",
+  1: "Audience AI rule (the youngest age sets the stage), stage 1 (under 8): learners do not use AI at all; nothing a child produces enters a tool. Set every activity's aiStatus to forbidden, and give one plan-level aiPolicy line that says so.",
   2: "Audience AI rule (the youngest age sets the stage), stage 2 (8-11): AI may be used only teacher-led and projected to the whole class, after the children have stated their own view first. No one child uses AI alone, and AI is never required. Give one plan-level aiPolicy line that states this.",
-  3: "Audience AI rule (the youngest age sets the stage), stage 3 (12-14): a learner may use AI alone only after a first try the teacher has seen. AI never starts the task and is never required; any permitted use needs a noAiAlternative.",
+  3: "Audience AI rule (the youngest age sets the stage), stage 3 (12-14): a learner may turn to AI by themselves only once they have made an attempt the teacher has already watched. AI must never begin the task and is never required; any permitted use needs a noAiAlternative.",
   4: "Audience AI rule (the youngest age sets the stage), stage 4 (15+): any AI use is allowed, but the plan should record what is asked and used; \"required\" fits only a critical dialogue in which learners question the AI and check what it says.",
 };
 
 /** The plan-level aiPolicy line the host keeps for stages 1-2 (owner decision 3: one line at the top). */
 const STAGE_AI_POLICY = {
-  1: "AI in this course: learners do not use AI at all; nothing a child makes goes into a tool. The teacher may use AI to prepare.",
+  1: "AI in this course: learners do not use AI at all; nothing a child produces enters a tool. The teacher may use AI to prepare.",
   2: "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone.",
 };
 
@@ -350,13 +353,13 @@ function buildPrompt({ objectives, topic, materials, course = "", context = [], 
     "Student chat is never evidence of learning.",
     "",
     "Learning design notes (every field is optional; give each one you can):",
-    "- Who does the thinking: name the operation the objective is about (targetOperation) and who does it here (operationDoneBy: learner, peer, teacher or ai). The learner should do the thinking the objective is about.",
+    "- Who does the work: name the skill the objective asks for (targetOperation) and who performs it (operationDoneBy: learner, peer, teacher or ai). The learner must be the one performing that skill.",
     "- First try before help: before any help (helpAfter: peer, teacher, textbook, worked-example or ai) the learner makes a first try (learnerFirst): a prediction, bet, draft or first attempt. A first try is never written by the AI or the teacher.",
     "- A decision after help: once help arrives the learner decides (decisionAfterHelp): keeps, changes or rejects what they had, and says why. Help does not end the task.",
     "- All four phases across the plan: 1 notice and guess (learners state a belief, bet or prior view, or react to a surprising item, before any explanation), 2 try and fix (attempt, err and correct, or compare with a variant), 3 check and steer (explain their own approach, pick a standard to judge by, decide what to keep or change), 4 keep and reuse (recall without support, use the idea in a new setting). Mark the main phase (phase) and optionally a second one (supportingPhase).",
-    "- One planned piece of evidence per sitting: sessions names each sitting (session) and the ONE thing the learner says or makes there (evidence.whatLearnerProduces), fixed before the sitting. Chat is never evidence.",
+    "- Evidence, one fixed piece per sitting: sessions names each sitting (session) and the ONE thing the learner says or makes there (evidence.whatLearnerProduces), fixed before the sitting. Chat is never evidence.",
     "- A later review or transfer: at least one spacedReviews entry with a time offset (afterDays), a learner action without support (form), what differs from the lesson (whatChanges: context, format or example) and the task (prompt).",
-    "- Several channels and no style labels: vary how learners meet or show the idea (channels: speaking, drawing, writing, handling, discussion, diagram, enactment). Never label learners by a fixed style (no \"visual\", \"auditory\" or \"kinaesthetic learner\").",
+    "- Several channels and no style labels: vary the ways learners take in and express the idea (channels: speaking, drawing, writing, handling, discussion, diagram, enactment). Never label learners by a fixed style (no \"visual\", \"auditory\" or \"kinaesthetic learner\").",
     "- AI status is told before the task (aiStatus: forbidden, permitted or required). A permitted or required use has a noAiAlternative, and the learner's target operation stays with the learner.",
     "",
     `Topic: ${topic || "(not given)"}`,
@@ -389,7 +392,7 @@ function textField(value, max) {
 function enumField(value, allowed, what, notes) {
   if (value === undefined || value === null) return undefined;
   if (allowed.includes(value)) return value;
-  notes.push(`dropped ${what} "${String(value)}": allowed values are ${allowed.join(", ")}.`);
+  notes.push(`dropped ${what} "${clean(String(value), 60)}": allowed values are ${allowed.join(", ")}.`);
   return undefined;
 }
 
@@ -452,8 +455,20 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
     const supportingPhase = intField(a.supportingPhase, 1, 4, "supportingPhase", notes);
     const targetOperation = textField(a.targetOperation, 200);
     const operationDoneBy = enumField(a.operationDoneBy, OPERATION_DONE_BY, "operationDoneBy", notes);
+    // P2V C1: whoever the model names, the learner keeps the objective's own operation at every stage:
+    // the note says so, and the teacher sees it under "Silicus adjusted" (the value itself is kept,
+    // because the UI never renders it and the record must stay the model's own proposal).
+    if (operationDoneBy === "ai") {
+      notes.push('operationDoneBy "ai": the AI would do the learner\'s target operation; the learner must keep doing it.');
+    }
     const learnerFirst = textField(a.learnerFirst, 300);
-    const helpAfter = enumField(a.helpAfter, HELP_AFTER, "helpAfter", notes);
+    let helpAfter = enumField(a.helpAfter, HELP_AFTER, "helpAfter", notes);
+    // P2V C1: at stages 1-2 children never get help from the AI (stage 1: no AI at all; stage 2: no child
+    // uses AI on their own), so an "ai" help value cannot stand there. Dropped with a note, like the clamps.
+    if (helpAfter === "ai" && stage !== null && (stage === 1 || stage === 2)) {
+      notes.push('dropped helpAfter "ai": at this stage children never get help from the AI; help comes from a person, a book or a worked example.');
+      helpAfter = undefined;
+    }
     const decisionAfterHelp = textField(a.decisionAfterHelp, 300);
     const noAiAlternative = textField(a.noAiAlternative, 300);
     const channels = (() => {
@@ -462,7 +477,7 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
       const seen = [];
       for (const c of a.channels) {
         if (CHANNELS.includes(c) && !seen.includes(c)) seen.push(c);
-        else notes.push(`dropped channel "${String(c)}": allowed channels are ${CHANNELS.join(", ")}.`);
+        else notes.push(`dropped channel "${clean(String(c), 60)}": allowed channels are ${CHANNELS.join(", ")}.`);
       }
       return seen.length > 0 ? seen : undefined;
     })();
@@ -474,24 +489,27 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
       if (stage === null) {
         notes.push("dropped aiStatus: this course has no structured ages.");
       } else if (!AI_STATUSES.includes(a.aiStatus)) {
-        notes.push(`dropped aiStatus "${String(a.aiStatus)}": allowed values are forbidden, permitted, required.`);
+        notes.push(`dropped aiStatus "${clean(String(a.aiStatus), 60)}": allowed values are forbidden, permitted, required.`);
       } else {
         aiStatus = a.aiStatus;
         if (stage === 1 && aiStatus !== "forbidden") {
           aiStatus = "forbidden";
-          notes.push(`aiStatus "${a.aiStatus}" clamped to "forbidden": learners at this stage do not use AI at all.`);
+          notes.push(`aiStatus "${clean(String(a.aiStatus), 60)}" clamped to "forbidden": learners at this stage do not use AI at all.`);
         } else if (stage === 2 && aiStatus === "required") {
           aiStatus = "permitted";
           notes.push('aiStatus "required" clamped to "permitted": at this stage AI use must be teacher-led and projected, after pupils state their own view first; never required.');
         } else if (stage === 3 && aiStatus === "required") {
           aiStatus = "permitted";
-          notes.push('aiStatus "required" clamped to "permitted": at this stage AI may follow only a first try the teacher has seen; never required.');
+          notes.push('aiStatus "required" clamped to "permitted": at this stage AI may follow only an attempt the teacher has watched; it is never required.');
+        }
+        // P2V C2 (owner decision, 14 Nov): a stage-3 use marked AI "permitted" with no first try before it
+        // is clamped to "forbidden", exactly like the other stages' clamps, with a teacher-visible note.
+        if (stage === 3 && aiStatus === "permitted" && !learnerFirst) {
+          aiStatus = "forbidden";
+          notes.push('aiStatus "permitted" clamped to "forbidden": at this stage AI may follow only an attempt the teacher has watched.');
         }
         if (aiStatus !== "forbidden" && !noAiAlternative) {
           notes.push("a permitted or required AI use needs a noAiAlternative.");
-        }
-        if (stage === 3 && aiStatus !== "forbidden" && !learnerFirst) {
-          notes.push("at this stage a permitted AI use must follow a first try the teacher has seen.");
         }
       }
     }
@@ -534,7 +552,7 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
         }
         const kind = s.evidence.kind;
         if (!EVIDENCE_KINDS.includes(kind)) {
-          notes.push(`dropped a session's evidence kind "${String(kind)}": chat is never evidence, and the kinds are ${EVIDENCE_KINDS.join(", ")}.`);
+          notes.push(`dropped a session's evidence kind "${clean(String(kind), 60)}": chat is never evidence, and the kinds are ${EVIDENCE_KINDS.join(", ")}.`);
           continue;
         }
         const whatLearnerProduces = textField(s.evidence.whatLearnerProduces, 400);

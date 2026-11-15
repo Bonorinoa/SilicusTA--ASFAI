@@ -21,6 +21,7 @@ import { CourseSession } from "./course.mjs";
 import { agesError } from "./ages.mjs";
 import { askStudent, packageOf } from "./student.mjs";
 import { DEFAULT_TYPICAL_SECONDS } from "./worker-config.mjs";
+import { overlaps } from "./marble/marble-graph.mjs";
 
 export const MAX_BODY = 1 << 20;
 
@@ -259,13 +260,21 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           // The skill-map anchor (G2a): an mt_* id that EXISTS in the pinned snapshot. It is a
           // pointer (the node this lesson is about), never an objective id, never confirmed. When
           // the graph is not wired the anchor cannot be checked and is refused (fail closed);
-          // changing it after creation is out of scope.
+          // changing it after creation is out of scope. A non-string value is a 400 (G2V L2), not
+          // silently dropped; an anchor whose ages do not overlap the course's is refused (G2V L1).
+          if (b.marbleAnchor !== undefined && b.marbleAnchor !== null && typeof b.marbleAnchor !== "string") {
+            throw new HttpError(400, "BAD_ANCHOR", "a marbleAnchor must be an mt_* topic id string from the snapshot");
+          }
           const anchor = typeof b.marbleAnchor === "string" && b.marbleAnchor ? b.marbleAnchor : null;
           if (anchor) {
             if (!/^mt_[A-Za-z0-9_-]+$/.test(anchor)) throw new HttpError(400, "BAD_ANCHOR", "a marbleAnchor must be an mt_* topic id from the snapshot");
             if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host, so an anchor cannot be checked");
             const t = await marble.get(anchor);
             if (!t) throw new HttpError(400, "UNKNOWN_ANCHOR", `no such Marble topic in the snapshot: ${anchor}`);
+            const anchorAges = { min: Number(t?.ageRangeStart), max: Number(t?.ageRangeEnd) };
+            if (b.ages && Number.isFinite(anchorAges.min) && Number.isFinite(anchorAges.max) && !overlaps(anchorAges, b.ages)) {
+              throw new HttpError(400, "BAD_ANCHOR", `the anchor's ages (${anchorAges.min}–${anchorAges.max}) do not overlap the course ages (${b.ages.min}–${b.ages.max})`);
+            }
           }
           const s = CourseSession.create(store, {
             owner: String(b.owner), title: String(b.title),

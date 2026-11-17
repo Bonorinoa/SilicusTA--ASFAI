@@ -1,0 +1,27 @@
+Core_Booklet_Teaching_with_AI_EN.docx                   source_words=  6438 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 4  count>=4: 12
+Level_Booklet_Lower_Primary_EN.docx                     source_words=  6346 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 0  count>=4: 0
+Level_Booklet_Lower_Secondary_EN.docx                   source_words=  7179 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 4  count>=4: 8
+Level_Booklet_Upper_Primary_EN.docx                     source_words=  6777 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 0  count>=4: 0
+Level_Booklet_Upper_Secondary_EN.docx                   source_words=  7547 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 0  count>=4: 0
+2026-11-14-rubric-v0.3-changes.md                       source_words=   926 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 5  count>=4: 12
+2026-11-14-rubric-v0.3-decisions.md                     source_words=   148 runs>=6w: 0  longest=0
+    run lengths >=6: []
+    longest run at 4w threshold: 0  count>=4: 0
+2026-11-14-rubric-v0.3.md                               source_words=  2849 runs>=6w: 24  longest=11
+    run lengths >=6: [11, 11, 11, 11, 11, 11, 8, 8, 8, 8]
+    longest run at 4w threshold: 11  count>=4: 169
+2026-11-14-rubric-v0.2.md                               source_words=  2415 runs>=6w: 24  longest=11
+    run lengths >=6: [11, 11, 11, 11, 11, 11, 8, 8, 8, 8]
+    longest run at 4w threshold: 11  count>=4: 156

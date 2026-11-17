@@ -1,0 +1,14 @@
+==> log-e2e-restart.txt <==
+58/58 acceptance checks passed  (data: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-e2e-X8DKtW)
+
+==> log-browser-mode-smoke.txt <==
+339/339 browser-mode checks passed
+
+==> log-studio-smoke.txt <==
+80/80 studio checks passed
+
+==> log-live-host-smoke.txt <==
+87/87 live acceptance checks passed
+
+==> log-narrow-shell.txt <==
+45/45 narrow-shell checks passed

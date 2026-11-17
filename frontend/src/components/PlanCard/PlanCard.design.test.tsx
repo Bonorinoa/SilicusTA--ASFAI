@@ -117,6 +117,34 @@ describe("PlanCard, plan schema v2 learning design", () => {
     ]);
   });
 
+  it("H3 C2: a clamped activity carries the 'AI removed by Silicus: reword this step' marker on screen and in print, and the host's note names the activity", () => {
+    const [a0, a1, ...rest] = scenario.plan.activities;
+    const plan = v2({
+      activities: [
+        { ...a0, phase: 1, aiStatus: "forbidden" },
+        { ...a1, phase: 2, aiStatus: "forbidden", clamped: { from: "permitted", to: "forbidden", reason: "at this stage AI may follow only an attempt the teacher has watched" }, learnerDoes: "spotting the claim with a checklist" },
+        ...rest,
+      ],
+      notes: ['aiStatus "permitted" clamped to "forbidden" in activity 2 "Spotting the claim": at this stage AI may follow only an attempt the teacher has watched.'],
+    });
+    const { container } = render(<PlanCard plan={plan} objectives={scenario.objectives} />);
+    // the marker is ON the activity itself, once, with the exact fixed wording (UI never matches note text)
+    expect(document.querySelectorAll("[data-clamped]")).toHaveLength(1);
+    const marker = container.querySelector("[data-clamped]")!;
+    expect(marker.textContent).toMatch(/AI removed by Silicus: reword this step/);
+    // it sits inside the second activity's body (the clamped one)
+    const items = screen.getAllByRole("listitem").filter((li) => li.querySelector("[data-design-row]"));
+    expect(items[1].contains(marker)).toBe(true);
+    expect(items[0].contains(marker)).toBe(false);
+    // the note names the activity the marker points at
+    const box = screen.getByRole("region", { name: "Silicus adjusted" });
+    expect(within(box).getAllByRole("listitem")[0].textContent).toContain('in activity 2 "Spotting the claim"');
+    // print: the marker block is part of the sheet, shown in print media
+    const css = readFileSync(path.join(here, "PlanCard.module.css"), "utf8");
+    expect(css).toMatch(/\.clamped \{[\s\S]*?\}/);
+    expect(css).not.toMatch(/@media print \{[\s\S]*?\.clamped \{ display: none/);
+  });
+
   it("v1 fallback: a plan with no new fields renders exactly as before (golden HTML from the pre-v2 PlanCard)", () => {
     const golden = JSON.parse(readFileSync(path.join(here, "__fixtures__", "v1-plan.golden.json"), "utf8")) as Record<string, string>;
     const withCitations = { ...scenario.plan, citations: [{ ref: "marble:mt_x", label: "A topic", source: "marble", activityIndexes: [0], verified: true }] };

@@ -665,6 +665,26 @@
   overflow-wrap: anywhere;
 }
 
+/* H3 C2: a clamped activity (the host removed an AI use the stage does not allow) carries this
+   marker on the activity itself — screen and print — so the teacher sees exactly WHICH step to
+   reword. The host never rewrote the prose; this line is the instruction. */
+.clamped {
+  margin: var(--space-2) 0 0;
+  max-width: 36rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-rule-strong);
+  border-left: 3px solid var(--color-accent-strong);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-sm);
+  color: var(--color-ink);
+}
+.clamped::before {
+  content: "✕ ";
+  color: var(--color-accent-strong);
+}
+
 .designRow {
   display: flex;
   flex-wrap: wrap;

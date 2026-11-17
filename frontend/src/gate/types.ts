@@ -98,6 +98,8 @@ export interface ActivityView {
   learnerFirst?: string;
   helpAfter?: "none" | "peer" | "teacher" | "textbook" | "worked-example" | "ai";
   aiStatus?: "forbidden" | "permitted" | "required";
+  /** H3 C2: the host clamped this activity's AI status; the UI shows the marker instead of matching note text. */
+  clamped?: { from: "forbidden" | "permitted" | "required"; to: "forbidden" | "permitted" | "required"; reason: string };
   noAiAlternative?: string;
   decisionAfterHelp?: string;
   channels?: readonly ("speaking" | "drawing" | "writing" | "handling" | "discussion" | "diagram" | "enactment")[];

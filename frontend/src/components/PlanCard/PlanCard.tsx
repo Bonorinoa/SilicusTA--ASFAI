@@ -224,6 +224,12 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
                 );
               })()}
 
+              {activity.clamped ? (
+                <p className={styles.clamped} data-clamped>
+                  AI removed by Silicus: reword this step
+                </p>
+              ) : null}
+
               {activity.learnerFirst ? (
                 <p className={styles.designLine} data-learner-first>
                   <span className={styles.designLabel}>Learners first:</span>{" "}

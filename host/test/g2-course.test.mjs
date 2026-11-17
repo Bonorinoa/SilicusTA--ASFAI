@@ -115,6 +115,14 @@ test("bad ages are a 400 with a plain message; the anchor is checked against the
   const ghost = await post("/api/courses", { owner: "teacher:t", title: "T", ages: { min: 8, max: 10 }, marbleAnchor: "mt_GHOST" });
   assert.equal(ghost.status, 400);
   assert.equal(ghost.json.code, "UNKNOWN_ANCHOR");
+  // HV C1 (merge gate): an anchor whose ages do not overlap the course's, and a non-string
+  // marbleAnchor, are both a 400 with code BAD_ANCHOR (the anchor stays a pointer to what fits).
+  const noOverlap = await post("/api/courses", { owner: "teacher:t", title: "T", ages: { min: 19, max: 22 }, marbleAnchor: ANCHOR });
+  assert.equal(noOverlap.status, 400, `19-22 with the 5-12 anchor: ${JSON.stringify(noOverlap.json)}`);
+  assert.equal(noOverlap.json.code, "BAD_ANCHOR");
+  const numericAnchor = await post("/api/courses", { owner: "teacher:t", title: "T", ages: { min: 8, max: 10 }, marbleAnchor: 123 });
+  assert.equal(numericAnchor.status, 400, `marbleAnchor: 123: ${JSON.stringify(numericAnchor.json)}`);
+  assert.equal(numericAnchor.json.code, "BAD_ANCHOR");
   // missing ages + missing anchor is still a legacy course, not a refusal
   const plain = await post("/api/courses", { owner: "teacher:t", title: "T" });
   assert.equal(plain.status, 201);

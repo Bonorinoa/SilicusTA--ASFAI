@@ -424,10 +424,11 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
   const stage = stageForAges(ages);
   const notes = [];
   const known = new Set(objectives.map((o) => o.id));
-  const normalized = activities.map((a) => {
+  const normalized = activities.map((a, i) => {
     if (!a || typeof a !== "object") throw new WorkerError("WORKER_BAD_OUTPUT", "an activity is not an object");
     const ids = Array.isArray(a.objectiveIds) ? a.objectiveIds.map(String) : [];
-    if (ids.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", `activity "${String(a.title)}" cites no objective`);
+    const title = String(a.title ?? "").trim() || "Untitled activity";
+    if (ids.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", `activity "${title}" cites no objective`);
     for (const id of ids) {
       if (!known.has(id)) {
         throw new WorkerError("WORKER_BAD_OUTPUT", `activity cites an objective we did not send: ${id}`);
@@ -485,6 +486,16 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
 
     // ---- AI status: the stage gates it, and the clamp is recorded in notes. ----
     let aiStatus;
+    // H3 C2: when the stage clamps an activity's AI status, the note names the activity (its
+    // number in the plan and its title), and the activity itself carries the `clamped` flag with
+    // the reason, so the UI can show a marker without matching note text. The host never rewrites
+    // the activity's prose: the flag is what tells the teacher to reword this step.
+    let clamped;
+    const clampTo = (to, reason) => {
+      clamped = { from: aiStatus, to, reason };
+      notes.push(`aiStatus "${aiStatus}" clamped to "${to}" in activity ${i + 1} "${title}": ${reason}.`);
+      aiStatus = to;
+    };
     if ("aiStatus" in a) {
       if (stage === null) {
         notes.push("dropped aiStatus: this course has no structured ages.");
@@ -493,20 +504,16 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
       } else {
         aiStatus = a.aiStatus;
         if (stage === 1 && aiStatus !== "forbidden") {
-          aiStatus = "forbidden";
-          notes.push(`aiStatus "${clean(String(a.aiStatus), 60)}" clamped to "forbidden": learners at this stage do not use AI at all.`);
+          clampTo("forbidden", "learners at this stage do not use AI at all");
         } else if (stage === 2 && aiStatus === "required") {
-          aiStatus = "permitted";
-          notes.push('aiStatus "required" clamped to "permitted": at this stage AI use must be teacher-led and projected, after pupils state their own view first; never required.');
+          clampTo("permitted", "at this stage AI use must be teacher-led and projected, after pupils state their own view first; never required");
         } else if (stage === 3 && aiStatus === "required") {
-          aiStatus = "permitted";
-          notes.push('aiStatus "required" clamped to "permitted": at this stage AI may follow only an attempt the teacher has watched; it is never required.');
+          clampTo("permitted", "at this stage AI may follow only an attempt the teacher has watched; it is never required");
         }
         // P2V C2 (owner decision, 14 Nov): a stage-3 use marked AI "permitted" with no first try before it
         // is clamped to "forbidden", exactly like the other stages' clamps, with a teacher-visible note.
         if (stage === 3 && aiStatus === "permitted" && !learnerFirst) {
-          aiStatus = "forbidden";
-          notes.push('aiStatus "permitted" clamped to "forbidden": at this stage AI may follow only an attempt the teacher has watched.');
+          clampTo("forbidden", "at this stage AI may follow only an attempt the teacher has watched");
         }
         if (aiStatus !== "forbidden" && !noAiAlternative) {
           notes.push("a permitted or required AI use needs a noAiAlternative.");
@@ -522,13 +529,14 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
       ...(learnerFirst !== undefined ? { learnerFirst } : {}),
       ...(helpAfter !== undefined ? { helpAfter } : {}),
       ...(aiStatus !== undefined ? { aiStatus } : {}),
+      ...(clamped !== undefined ? { clamped } : {}),
       ...(noAiAlternative !== undefined ? { noAiAlternative } : {}),
       ...(decisionAfterHelp !== undefined ? { decisionAfterHelp } : {}),
       ...(channels !== undefined ? { channels } : {}),
       ...(session !== undefined ? { session } : {}),
     };
     return {
-      title: String(a.title ?? "").trim() || "Untitled activity",
+      title,
       minutes: Number.isFinite(a.minutes) ? a.minutes : 0,
       objectiveIds: ids,
       learnerDoes,
@@ -638,7 +646,7 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
  */
 const PLAN_DESIGN_ACTIVITY_KEYS = [
   "phase", "supportingPhase", "targetOperation", "operationDoneBy", "learnerFirst", "helpAfter",
-  "aiStatus", "noAiAlternative", "decisionAfterHelp", "channels", "session",
+  "aiStatus", "clamped", "noAiAlternative", "decisionAfterHelp", "channels", "session",
 ];
 export function planDesignOf(spec) {
   if (!spec || typeof spec !== "object") return null;

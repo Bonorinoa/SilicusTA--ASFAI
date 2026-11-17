@@ -13,7 +13,7 @@ import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { PlanWorker } from "../worker.mjs";
 import { startMockWorker } from "./mock-worker.mjs";
-import { modelReply, scriptedPlanV2 } from "./scripted-course.mjs";
+import { modelReply, scriptedPlanV2, staleStage3PlanV2 } from "./scripted-course.mjs";
 
 const MOCKS = [];
 after(() => MOCKS.forEach((m) => m.close()));
@@ -52,16 +52,31 @@ test("AI in Daily Life (5-12): a coherent stage-1 plan the host keeps without ad
   assert.equal(spec.notes, undefined, "nothing for Silicus to adjust");
 });
 
-test("stage-3 Computing (12-14): the AI-with-no-first-try activity is clamped, with a visible note", async () => {
+test("stage-3 Computing (12-14): the AI-with-no-first-try activity is clamped, with a visible note naming it", async () => {
   const spec = await draftWith({ topic: "Searching and sorting", ages: { min: 12, max: 14 } });
   assert.equal(spec.title, "How a computer finds things fast");
   assert.equal(spec.activities.length, 3);
   assert.ok(minutes(spec) >= 30 && minutes(spec) <= 40, `minutes ${minutes(spec)}`);
   assert.deepEqual(spec.activities.map((a) => a.aiStatus), ["forbidden", "permitted", "forbidden"]);
   assert.equal(spec.activities[2].learnerFirst, undefined, "the third activity has no first try");
-  assert.deepEqual(spec.notes, ['aiStatus "permitted" clamped to "forbidden": at this stage AI may follow only an attempt the teacher has watched.']);
+  // H3 C2: the clamp note names the activity (number and title), and the activity carries the
+  // clamped flag with the reason, so the UI never has to match note text.
+  assert.deepEqual(spec.notes, ['aiStatus "permitted" clamped to "forbidden" in activity 3 "Explain it in your own words": at this stage AI may follow only an attempt the teacher has watched.']);
+  assert.deepEqual(spec.activities[2].clamped, { from: "permitted", to: "forbidden", reason: "at this stage AI may follow only an attempt the teacher has watched" });
   assert.equal(spec.aiPolicy, undefined, "stage 3 carries no plan-level line");
   for (const a of spec.activities) assert.ok(a.objectiveIds.every((id) => ids.has(id)));
+});
+
+test("stage-3 fixture (unit only): when the clamped activity's prose still mentions AI, the host keeps the prose and the marker flag still shows", async () => {
+  // H3 C2: the host never rewrites an activity's prose. One fixture case keeps the old wording —
+  // a learner text that still mentions a chatbot — to prove the clamp marker does not depend on it.
+  const mock = await startMockWorker({ reply: ({ prompt }) => staleStage3PlanV2(prompt) });
+  MOCKS.push(mock);
+  const spec = await new PlanWorker({ url: mock.url, model: "test-model" }).draft({ objectives: OBJECTIVES, topic: "Searching and sorting", ages: { min: 12, max: 14 } });
+  assert.equal(spec.activities[2].aiStatus, "forbidden");
+  assert.match(spec.activities[2].learnerDoes, /chatbot/, "stale prose survives the clamp unchanged");
+  assert.equal("clamped" in spec.activities[2], true, "the marker flag is set on the clamped activity");
+  assert.ok(spec.notes.some((n) => n.startsWith('aiStatus "permitted" clamped to "forbidden" in activity 3 "Explain it in your own words"')));
 });
 
 test("the v1 scripted plan is unchanged for the v1 tests", () => {

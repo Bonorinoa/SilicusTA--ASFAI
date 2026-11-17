@@ -155,7 +155,7 @@ const STAGE3_COMPUTING = [
     noAiAlternative: "The pair checks its count against a printed worked trace.",
     decisionAfterHelp: "Each pair keeps or corrects its count after the check and says where it went wrong.", channels: ["handling", "discussion"] },
   { title: "Explain it in your own words", minutes: 15, phase: 3, supportingPhase: 4, session: 1,
-    learnerDoes: "Each learner asks a chatbot why halving is faster, then writes a short explanation of binary search for a younger student.",
+    learnerDoes: "Each learner explains, from the halving trace on the board, why the middle-check search finds a name faster, then writes a short explanation of binary search for a younger student.",
     teacherDoes: "Reads two explanations aloud and asks the class what each one leaves out.",
     evidenceIfAny: "work-product", targetOperation: "explain why binary search needs a sorted list", operationDoneBy: "learner",
     helpAfter: "ai", aiStatus: "permitted", noAiAlternative: "The learner uses the class's demonstration notes instead.",
@@ -186,4 +186,24 @@ export function scriptedPlanV2(prompt) {
     ],
     ...(stage === 1 || stage === 2 ? { aiPolicy: STAGE_POLICY[stage] } : {}),
     activities: build(DAILY_LIFE) };
+}
+
+/**
+ * H3 C2 — UNIT-TEST-ONLY fixture: the same stage-3 plan, but the third activity's prose still
+ * tells learners to ask a chatbot, as a real model reply might before anyone reworded it. The
+ * host clamps the aiStatus and never rewrites the prose; the test proves the clamped marker
+ * shows on the activity even though its text still mentions AI. The smokes and the screenshots
+ * use `scriptedPlanV2`'s reworded text instead.
+ */
+export function staleStage3PlanV2(prompt) {
+  const p = String(prompt ?? "");
+  const stage = Number(/stage (\d) \(/.exec(p)?.[1] ?? 0) || null;
+  if (stage !== 3) throw new Error("staleStage3PlanV2 is only defined for a stage-3 prompt");
+  const plan = scriptedPlanV2(prompt);
+  return {
+    ...plan,
+    activities: plan.activities.map((a, i) => i === 2
+      ? { ...a, learnerDoes: "Each learner asks a chatbot why halving is faster, then writes a short explanation of binary search for a younger student." }
+      : a),
+  };
 }

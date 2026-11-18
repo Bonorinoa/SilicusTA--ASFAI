@@ -1,0 +1,4 @@
+PROBE rows: [33mtrue[39m credits in card: [33m0[39m credits in section: [33m0[39m
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected 0 to be greater than 0
+      Tests  1 failed (1)

@@ -1,0 +1,120 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+PASS  the landing's primary opens the studio (#/studio)
+PASS  the studio home shows 'Your courses' and 'New course'
+PASS  the New course card opens the wizard, on its welcome at first run
+PASS  step 1 waits for the learners' ages before it can continue
+PASS  G2b five learner groups are one radio group
+PASS  G2b the strip names the chosen ages and counts skill-map topics from the coverage route
+PASS  G2b the consequence strip shows stage 1 (the youngest sets it), the topic count and the plan voice
+PASS  PROBE 390px no horizontal overflow: wizard step 1, ages 5-12 — {"sw":390,"vw":390,"off":[]}
+PASS  G2b picking a skill-map topic sets the anchor, pre-fills the topic and shows the Marble credit
+PASS  G1bV the skill-map anchor picker shows the Marble credit with ODbL, CC BY-SA and attribution links — {"odbl":"https://opendatacommons.org/licenses/odbl/1-0/","cc":"https://creativecommons.org/licenses/by-sa/4.0/","attribu
+PASS  G1bV the consequence strip shows the Marble credit with ODbL, CC BY-SA and attribution links — {"odbl":"https://opendatacommons.org/licenses/odbl/1-0/","cc":"https://creativecommons.org/licenses/by-sa/4.0/","attribu
+PASS  G1bV the attribution notice ships with the app and names the pinned upstream — 200
+PASS  the sources step is one drop zone (files, paste, web page) with no source-name field
+PASS  the AI check names the missing passcode in plain words (online build)
+PASS  G1bV the review's anchor row shows the Marble credit with both licence links — {"odbl":"https://opendatacommons.org/licenses/odbl/1-0/","cc":"https://creativecommons.org/licenses/by-sa/4.0/","attribu
+PASS  G2b the review shows ages, stage and the anchor
+PASS  the review shows everything that will be recorded
+PASS  nothing is recorded before the review's confirm
+PASS  confirming the review creates the course and opens it in the studio
+PASS  it lands on Objectives (the brief is confirmed by the same click)
+PASS  one confirm leaves the brief's intents in the brief's order: create, answers, files, outline — ["course.created","intake.answered","checkpoint.confirmed:files","checkpoint.confirmed:outline"]
+PASS  G2b the course is created with ages 5–12 and the anchor mt_AzTrT5ySCx — {"ages":{"min":5,"max":12},"anchor":"mt_AzTrT5ySCx"}
+PASS  the course is created with no names-only material rows — []
+PASS  the Brief step renders (Step 1 of 4), looked back at — Silicus
+/
+Courses
+/
+How plants eat
+✓
+Brief
+2
+Objectives
+3
+Plan
+4
+Publish
+AI needs passcode
+2 decisions recorded
+SOURCES
+
+PASS  three question fields render, holding the wizard's answers — found 3
+PASS  the studio's AI status opens the wizard's diagnosis
+PASS  D the course is explicit: one held 'Confirm objectives' primary, the add form before any proposal
+PASS  D adding your own objective before any proposal lands it in the document, and nothing confirms by itself
+PASS  G2c objectives: the anchor's evidence lines are offered as wording, with the Marble credit
+PASS  G2c the neighbourhood view shows the soft (dashed) edge to mt_kH1DzOPsXG and the hard (solid) one from mt_WRRv1ABECC, focusable boxes, credit — {"open":true,"nodes":6,"soft":{"s":"soft","d":"5 4"},"hard":{"s":"hard","d":null},"credit":true}
+PASS  G2c focusing a box (no hover) shows its evidence lines
+PROBE forms BEFORE resize {"forms":["Write your own objective"],"own":true,"vw":1440,"hash":"#/studio/urn%3Auuid%3Adb12f38f-1df4-4334-8d80-3279b8caf15d"}
+PASS  PROBE 390px no horizontal overflow: objectives step with the neighbourhood open — {"sw":390,"vw":390,"off":[]}
+PROBE forms AFTER resize {"forms":["Write your own objective"],"own":true,"vw":1440,"hash":"#/studio/urn%3Auuid%3Adb12f38f-1df4-4334-8d80-3279b8caf15d"}
+PASS  PROBE KEYBOARD neighbourhood: Tab reaches a node box (role=button, tabindex 0) — {"f":{"tag":"g","role":"button","id":"mt__p5n8z5soJ","label":"Step-by-Step Instructions. Foundation, two steps b","fv":t
+PASS  PROBE KEYBOARD neighbourhood: the focused node shows its evidence with no hover — focused=mt__p5n8z5soJ evidence-for=mt__p5n8z5soJ
+PASS  PROBE focus is visible on a neighbourhood node — {"tag":"g","role":"button","id":"mt__p5n8z5soJ","label":"Step-by-Step Instructions. Foundation, two steps b","fv":true,"
+PASS  PROBE KEYBOARD neighbourhood: several nodes are tab stops — mt_XbGfVhfiUz,mt_u6SYiVx7FX,mt_WRRv1ABECC,mt_AzTrT5ySCx,mt_kH1DzOPsXG
+PASS  PROBE keyboard Enter/Space on a node writes nothing to the course record — 5->5
+PASS  PROBE KEYBOARD 'Use as my objective' is a tab stop with a visible focus — {"tag":"BUTTON","role":null,"id":null,"label":"Use as my objective","fv":true,"outline":"solid 2px rgb(44, 74, 102)","bo
+PASS  PROBE keyboard Enter on a suggestion pre-fills the field and the log does not move (events before == after) — events 5->5 field="Students can identify at least five examples of AI in their "
+PASS  PROBE a second key activation still writes nothing
+PASS  PROBE the course log so far holds no mt_ objective id (anchor only on course.created)
+PASS  G2c 'Use as my objective' pre-fills the teacher's own field and records nothing — filled="Students can identify at least five examples of AI in their daily life." events 5->5
+PASS  G2c submitting it is the ordinary teacher add: one add intent with no Marble id; the objective is teacher-origin with a local URN — {"id":"urn:uuid:1ea1ec07-46aa-eab5-8a4d-25c8a85517e2","by":"teacher","own":true} [{"kind":"objectives.decided","decision
+PASS  the proposals tray fills from the teacher's answers — 2 proposal(s)
+PASS  B1 the status line spans its row (not a sliver beside the tray) — line=968 parent=968 sideways=false
+PASS  B1 1440: the proposals tray sits in the right column, not squeezed under the status line — tray.left=1008 line.left=360
+PASS  B1 380: the status line does not force a sideways scroll — sideways=false
+PASS  adding the teacher's own objective works
+PASS  accepting a proposal puts it in the document
+PASS  D with every proposal decided the step stays open until the teacher confirms
+PASS  D confirming the objectives explicitly moves to the plan
+PASS  G2c plan: the strip names mt_WRRv1ABECC as the hard prerequisite, the soft one as optional, with the credit — {"text":"Before this, learners need: Smart Versus Not-Smart Devices (hard prerequisite) · Voice Assistants and How They 
+PASS  G2c plan: the neighbourhood view is there, collapsed
+PASS  PROBE 390px no horizontal overflow: plan step with the prerequisite strip — {"sw":390,"vw":390,"off":[]}
+PASS  G2c after confirming, the skill-map objective is in the confirmed list as the teacher's own
+PASS  B5-a one live region after a cancelled passcode — ["Your turn: draft the lesson plan"]
+PASS  B5-b focus returns to the primary action after 20 cancels, both routes — 20/20
+PASS  drafting the plan completes and shows a draft
+PASS  one draft plan shows a Marble suggested alignment (the mock worker cited the local snapshot) — Suggested alignment4 referencesReferences the drafting assistant suggested. They are not requirements, not objectives, a
+PROBE A1 section {"hasSec":true,"marbleRows":4,"printAttr":"hide","credits":[{"inSec":false,"text":"Marble Skill Taxonomy (v1) · © Gener"},{"inSec":false,"text":"Marble Skill Taxonomy (v1) · © Gener"}],"detailsOpen":false}
+FAIL  PROBE ATTRIBUTION plan step: the 'Suggested alignment' section that lists Marble topics carries the credit line (G1bV A1) — {"hasSec":true,"marbleRows":4,"printAttr":"hide","credits":[{"inSec":false,"text":"Marble Skill Taxonomy (v1) · © Gener"},{"inSec":false,"text":"Marble Skill Taxonomy (v1) · © Gener"}],"detailsOpen":f
+PASS  PROBE 390px no horizontal overflow: plan step with a drafted plan and its alignment — {"sw":390,"vw":390,"off":[]}
+PASS  P2ui a v1 plan shows no policy line, phase chip, evidence line, Later section or adjusted list — {"policy":[],"evidence":[],"phases":[],"later":[],"adjusted":[],"first":0,"tags":0}
+PASS  P2ui the v2 plan shows the stage-1 policy line once, in plain words — ["AI Children don’t use AI in this lesson. You may use it to prepare."]
+PASS  P2ui stage 1-2: no per-activity AI tag beside the policy line — tags=0
+PASS  P2ui phase chips on the activities — ["1 Notice and guess","2 Try and fix · also 3 Check own work","1 Notice and guess","2 Try and fix · also 3 Check own wor
+PASS  P2ui exactly one 'Evidence for this session' line — ["Evidence for this session Each child's sorted card strip with one written reason."]
+PASS  P2ui the Later section lists each review with its offset — ["In 2 daysRecall without help. What changes: no cards on the table this time“Name two things at home that decide someth
+PASS  P2ui 'Learners first' on activities, and the host's clamp shows under 'Silicus adjusted' — ["AI use \"permitted\" clamped to \"forbidden\": learners at this stage do not use AI at all.","Replaced AI line with th
+PASS  P2ui the UI names no model or author it is not yet allowed to — 2074
+PASS  confirming the plan moves to Publish (Step 4 of 4)
+PASS  publishing asks for a second, explicit confirm
+PASS  the published moment renders with the student and Rehearse links
+PASS  B2 the published screen stops asking to review and publish — status="Version 1 is published. Preview it or revise."
+PASS  Rehearse renders the simulator and the guardrail probes
+PASS  G4 20 cancelled passcodes in Rehearse keep the question and return focus, both routes — 20/20
+PASS  Rehearse refuses an off-topic question from the host's answer
+PASS  the student space is labelled a preview on this device
+PASS  the student space shows the published title and goals
+PASS  the student helper answers from the published package
+PASS  a returning teacher's wizard opens on step 1, without the welcome
+PASS  PROBE KEYBOARD stage cards: a radio takes focus and the arrow keys move the selection — {"a0":6,"a1":1,"a2":2}
+PROBE stage-card focus style {"focusVisible":true,"labelOutline":"solid 2px","labelShadow":true,"labelBorder":"rgb(47, 76, 103)","radioOutline":"solid 2px","radioOpacity":"1","radioClip":"rect(0px, 0px, 0px, 0px)|absolute|1px","focusWithin":true}
+PASS  PROBE KEYBOARD Tab leaves the radio group for the next control (roving tabindex, one stop) — {"tag":"BUTTON","role":null,"id":null,"label":"Youngest age: one year younger","fv":true,"outline":"solid 2px rgb(44, 74
+PASS  PROBE focus is visible on the stage card (outline, ring or shadow resolves on the focused control or its label) — {"focusVisible":true,"labelOutline":"solid 2px","labelShadow":true,"labelBorder":"rgb(47, 76, 103)","radioOutline":"soli
+PASS  G2b ages 19–22: the consequence strip says there are no suggestions
+PASS  G2b ages 19–22: the skill-map option is off and says why; writing your own is chosen
+PASS  a 200-character unbroken first line names the pasted source, and at 390 the wizard does not scroll sideways
+PASS  with a source and nothing written, proposing from sources is already chosen
+PASS  the AI check reads ready once the tab holds the passcode
+PASS  R7 the confirm lands on Objectives and starts proposing from the sources there
+PASS  R7 one live region on the step after the wizard — ["Your turn: accept, edit or drop each proposal"]
+PASS  G2b the second course is created with ages 19–22 and no anchor — {"ages":{"min":19,"max":22}}
+PROBE 19-22 objectives page {"credit":0,"sugg":0,"nb":0,"strip":0,"marbleWords":[],"text":"Silicus\n/\nCourses\n/\nLeaves and light\n✓\nBrief\n2\nObjectives\n3\nPlan\n4\nPublish\nAI ready\n2 decisions recorded\nSOURCES\n✓ listed\nTXT\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\nRead in this tab · Text · 289 characters\nUsed for 3 proposals\n×\n+ Add a source\nYouTube\nLocal app only\n\nText is read in this tab, sent once when you ask for a draft, and forgotten on reload.\n\nYour turn: accept, edit or drop each proposal\n\nSTEP 2 OF 4\n\nLearning objectives\n\nAccept, edit or drop each proposal under Proposals. Accepted ones land here.\n\nAccepted objectives land here, numbered, with where each came from.\n\nAdd one of your own\nAdd\n\n3 proposals waiting. Decide each one, then confirm.\n\nConfirm objecti"}
+PASS  PROBE 19-22 course (no anchor): the objectives step shows no skill-map suggestions, neighbourhood, strip, alignment or credit — {"credit":0,"sugg":0,"nb":0,"strip":0,"marbleWords":[]}
+PROBE OBS 19-22 objectives step explains the absence in words: false
+PASS  F1 at 390 the Objectives step does not scroll sideways with a 200-character source name in the provenance — sw=390 vw=390
+PASS  no console or page errors during the walk
+
+94/95 studio checks passed
+PROBE EXIT=1

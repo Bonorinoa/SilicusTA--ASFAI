@@ -1,0 +1,18 @@
+// G2V: a PlanCard (no anchor, so no PrereqStrip / SkillMap on the page) that lists a Marble citation under "Suggested alignment".
+// Copy to frontend/src/components/PlanCard/zz-credit-probe.test.tsx and run: (cd frontend && npx vitest run src/components/PlanCard/zz-credit-probe.test.tsx)
+import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { buildPlanScenario } from "../../gate/demo";
+import { PlanCard } from "./PlanCard";
+
+describe("G2V credit probe", () => {
+  const scenario = buildPlanScenario();
+  const plan = { ...scenario.plan, citations: [{ ref: "marble:mt_AzTrT5ySCx", label: "AI in Daily Life (ages 5–12)", source: "marble", verified: true, activityIndexes: [0] }] } as never;
+  it("shows Marble rows in Suggested alignment; how many credit lines are in the card?", () => {
+    const { container } = render(<PlanCard plan={plan} objectives={scenario.objectives} />);
+    const sec = container.querySelector('section[aria-label="Suggested alignment"]');
+    console.log("PROBE rows:", (sec?.textContent ?? "").includes("Marble"), "credits in card:", container.querySelectorAll("[data-marble-credit]").length, "credits in section:", sec?.querySelectorAll("[data-marble-credit]").length);
+    expect(sec).not.toBeNull();
+    expect(sec?.querySelectorAll("[data-marble-credit]").length).toBeGreaterThan(0);   // what G1bV A1 asked for
+  });
+});

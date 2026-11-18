@@ -6,7 +6,7 @@
  *   #/studio/<id>/rehearse the teacher's student simulator
  *   #/learn/<id>           the student space
  *
- * Routes live in ./route.ts. It runs beside the original #/live page until it reaches parity; both are thin clients of the same host.
+ * Routes live in ./route.ts. The classic #/live page is gone (K1); old #/live links land on the landing page.
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { BROWSER_MODE } from "../gate/mode";

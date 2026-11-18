@@ -212,47 +212,65 @@ try {
   const step1 = 'form[aria-label="Course and learners"] input';
   await page.type(`${step1}[placeholder="How plants eat"]`, "How plants eat");
   await page.type(`${step1}[placeholder="Ms. Lovelace"]`, "Ada Lovelace");
-  await page.type(`${step1}[placeholder="How plants make food from sunlight"]`, "How plants make food from sunlight");
+  // M1: "What should they get out of it?" is the course's required topic field (the old anchor picker is gone).
+  await page.type(`${step1}[placeholder="Why leaves stay green, and what that tells us about light"]`, "How plants make food from sunlight");
   check("step 1 waits for the learners' ages before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
   // ---- G2b: who the learners are. Early primary (4–8), then the steppers refine to 5–12.
-  check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]:not([name="lesson-minutes"])').length) === 7);
+  check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]:not([name="lesson-minutes"])').length) === 5);
   await clickLabel("Early primary");
   await clickLabel("Youngest age: one year older");
   for (let i = 0; i < 4; i++) await clickLabel("Oldest age: one year older");
-  check("G2b the strip names the chosen ages and counts skill-map topics from the coverage route", await page.waitForFunction(() => /Ages 5–12 · [\d,]+ skill-map topics/.test(document.body.innerText), { timeout: 20000 }).then(() => true, () => false) && /Ages 5–12 · [\d,]+ skill-map topics/.test(await body()) && await page.evaluate(() => document.querySelectorAll('[role="img"][aria-label^="Skill-map topics at each age"] > span[data-on="true"]').length === 8));
-  t = await body();
-  check("G2b the consequence strip shows stage 1 (the youngest sets it), the topic count and the plan voice", /Stage 1 of 4/.test(t) && /skill-map topics fit these ages/.test(t) && /Plan voice/i.test(t));
-  // Topic from the skill map: search, pick the anchor, then edit the pre-filled topic.
-  await page.type('form[aria-label="Course and learners"] input[type="search"]', "AI in Daily Life");
-  await page.waitForFunction(() => document.querySelector('ul[aria-label="Skill-map topics"] button'), { timeout: 15000 }).catch(() => null);
-  await clickBy("AI in Daily Life");
-  check("G2b picking a skill-map topic sets the anchor, pre-fills the topic and shows the Marble credit", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false)
-    && await page.evaluate(() => [...document.querySelectorAll('form[aria-label="Course and learners"] input')].some((i) => i.value === "AI in Daily Life")) && /Marble Skill Taxonomy \(v1\)/.test(await body()));
+  check("M1 step 1's one consequence line names the stage, how many map topics fit (of the total) and the plan length",
+    await page.waitForFunction(() => /[\d,]+ of [\d,]+ map topics fit · one 45-minute plan/.test(document.querySelector("[data-consequences]")?.textContent ?? ""), { timeout: 20000 }).then(() => true, () => false),
+    await page.evaluate(() => document.querySelector("[data-consequences]")?.textContent ?? ""));
+  check("M1 step 1 has no anchor picker, no map search and no Marble credit (the map is step 2)",
+    await page.evaluate(() => !document.querySelector('form[aria-label="Course and learners"] input[type="search"]') && !document.querySelector('form[aria-label="Course and learners"] [data-marble-credit]') && !document.querySelector('button[aria-label^="Clear the skill-map anchor"]')));
+  await clickBy("+ Add a note about the class");
+  await sleep(200);
+  await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
+  await sleep(200);
+  await clickBy("Continue");
+  // ---- M1 · step 2, "On the skill map". No passcode in this tab yet, so the ranking call cannot run: the step
+  // falls back to search, with no error, and Continue waits for an anchor or Skip.
+  check("M1 step 2 'On the skill map' renders after step 1", await waitText("On the skill map", 6000) && await page.evaluate(() => !!document.querySelector('section[aria-label="On the skill map"]')));
+  const mapContinueDisabled = () => page.evaluate(() => [...document.querySelectorAll('section[aria-label="On the skill map"] button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue"));
+  check("M1 Continue is disabled on the map step until the teacher anchors or skips", await mapContinueDisabled());
+  // The browser host asks for the passcode before the ranking call; "Not now" sends nothing and the step falls back to search.
+  check("M1 the ranking call asks for the demo passcode first (browser host)", await page.waitForFunction(() => !!document.querySelector('[role="dialog"] input[type="password"]'), { timeout: 8000 }).then(() => true, () => false));
+  await clickBy("Not now");
+  check("M1 with no ranking (Not now) the map step shows search, not an error", await page.waitForFunction(() => !!document.querySelector("#map-search"), { timeout: 15000 }).then(() => true, () => false)
+    && !/error|failed/i.test(await page.evaluate(() => document.querySelector('section[aria-label="On the skill map"]')?.innerText ?? "")));
   // G1bV gap (PM 14 Nov): ONE credit component on every Marble surface, with both licence texts and the attribution notice reachable.
   const creditOn = (scope) => page.evaluate((sel) => {
-    const root = sel === "picker" ? document.querySelector('button[aria-label^="Clear the skill-map anchor"]')?.closest("div")?.parentElement : document.querySelector(sel);
+    const root = document.querySelector(sel);
     const c = root?.querySelector('[data-marble-credit="true"]');
     if (!c || !/Marble Skill Taxonomy \(v1\) · © Generative Spark, Inc\. \(Marble\)/.test(c.textContent ?? "")) return null;
     const href = (k) => c.querySelector(`a[data-licence="${k}"]`)?.getAttribute("href") ?? null;
     return { odbl: href("odbl"), cc: href("cc-by-sa"), attribution: href("attribution") };
   }, scope);
   const creditOk = (c) => !!c && /opendatacommons\.org\/licenses\/odbl\/1-0/.test(c.odbl ?? "") && /creativecommons\.org\/licenses\/by-sa\/4\.0/.test(c.cc ?? "") && /MARBLE-ATTRIBUTION.*\.md$/.test(c.attribution ?? "");
-  const pickerCredit = await creditOn("picker");
-  check("G1bV the skill-map anchor picker shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(pickerCredit), JSON.stringify(pickerCredit));
-  // H2a: one credit per surface — step 1 keeps the credit under the anchor card; the consequence strip carries no copy.
-  const step1Credits = await page.evaluate(() => ({ total: document.querySelectorAll('form[aria-label="Course and learners"] [data-marble-credit], section[aria-label="What your choices change"] [data-marble-credit]').length,
-    strip: document.querySelectorAll('section[aria-label="What your choices change"] [data-marble-credit]').length }));
-  check("H2a wizard step 1 shows exactly one Marble credit (under the anchor card), none in the consequence strip", step1Credits.total === 1 && step1Credits.strip === 0, JSON.stringify(step1Credits));
+  const mapCredits = () => page.evaluate(() => document.querySelectorAll("[data-marble-credit]").length);
+  await page.type("#map-search", "AI in Daily Life");
+  await page.waitForFunction(() => document.querySelector('button[aria-label="Anchor here: AI in Daily Life"]'), { timeout: 15000 }).catch(() => null);
+  check("M1 the map step shows exactly one Marble credit while searching", (await mapCredits()) === 1, `${await mapCredits()}`);
+  await page.evaluate(() => document.querySelector('button[aria-label="Anchor here: AI in Daily Life"]')?.click());
+  check("M1 anchoring a search result enables Continue and shows its lane, 'Your pick'", await page.waitForFunction(() => /Your pick, with what comes before and after it/.test(document.body.innerText)
+    && [...document.querySelectorAll('section[aria-label="On the skill map"] button[data-primary="true"]')].some((b) => !b.disabled && b.textContent.trim() === "Continue"), { timeout: 10000 }).then(() => true, () => false));
+  const pickerCredit = await creditOn('section[aria-label="On the skill map"]');
+  check("G1bV the map step shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(pickerCredit), JSON.stringify(pickerCredit));
+  check("M1 the map step still shows exactly one Marble credit with the lane drawn", (await mapCredits()) === 1, `${await mapCredits()}`);
   const notice = await page.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, text: (await r.text()).slice(0, 2000) }; }, pickerCredit?.attribution ?? "/missing");
   check("G1bV the attribution notice ships with the app and names the pinned upstream", notice.status === 200 && /Marble Skill Taxonomy/.test(notice.text) && /d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63/.test(notice.text), `${notice.status}`);
-  await setVal('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "How plants make food from sunlight");
-  await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
-  await sleep(200);
-  await clickBy("Continue");
+  await clickPrimary("Continue");
   await waitText("Drop files here", 5000);
   t = await body();
   check("the sources step is one drop zone (files, paste, web page) with no source-name field", /Drop files here/.test(t) && /Or paste text, or a web page address/.test(t)
     && await page.evaluate(() => ![...document.querySelectorAll("label")].some((l) => /^\s*(Name|Source name|Sources)\b/.test(l.textContent ?? ""))));
+  check("M1 with an anchor, 'Use the skill-map topics as a source' is the first source row, checked by default",
+    await page.evaluate(() => document.querySelector('input[aria-label="Use the skill-map topics as a source"]')?.checked === true));
+  // This walk keeps the no-sources path (the map source is covered by its own tests): untick it.
+  await page.evaluate(() => document.querySelector('input[aria-label="Use the skill-map topics as a source"]')?.click());
+  await sleep(200);
   await clickBy("Continue without sources");
   await waitText("Write a few", 5000);
   await setVal('section[aria-label="Your objectives"] textarea', "Explain how a plant makes its food\nName what a plant needs to make sugar");
@@ -306,37 +324,16 @@ try {
   check("D adding your own objective before any proposal lands it in the document, and nothing confirms by itself",
     /where a plant gets its water/.test(await body()) && /Your own objective/i.test(await body()) && /Step 2 of 4/i.test(await body()));
 
-  // ---- G2c: the skill map on the objectives step (anchored 5–12 course only)
+  // ---- M1 · the map once: the objectives step keeps the anchor's suggestions and one "On the map" line, no map.
   const g2cReady = await page.waitForSelector("[data-evidence-suggestions]", { timeout: 15000 }).then(() => true, () => false);
   check("G2c objectives: the anchor's evidence lines are offered as wording", g2cReady
     && await page.evaluate(() => document.querySelectorAll("[data-evidence-suggestions] button").length >= 1));
-  { // H2a: one credit per surface — the objectives step credits Marble once, under the neighbourhood view.
-    const oc = await page.evaluate(() => ({ total: document.querySelectorAll("main [data-marble-credit]").length || document.querySelectorAll("[data-marble-credit]").length,
-      suggest: document.querySelectorAll("[data-evidence-suggestions] [data-marble-credit]").length, nb: document.querySelectorAll("[data-neighbourhood] [data-marble-credit]").length }));
-    check("H2a objectives step shows exactly one Marble credit, under the neighbourhood view, none under the suggestions", oc.total === 1 && oc.suggest === 0 && oc.nb === 1, JSON.stringify(oc));
-  }
-  const nb = await page.evaluate(() => {
-    const root = document.querySelector("[data-neighbourhood]");
-    const soft = root?.querySelector('path[data-edge="mt_AzTrT5ySCx>mt_kH1DzOPsXG"]');
-    const hard = root?.querySelector('path[data-edge="mt_WRRv1ABECC>mt_AzTrT5ySCx"]');
-    return { open: root?.open, nodes: root?.querySelectorAll("g[role=button][tabindex='0']").length ?? 0, soft: soft ? { s: soft.getAttribute("data-strength"), d: soft.getAttribute("stroke-dasharray") } : null,
-      hard: hard ? { s: hard.getAttribute("data-strength"), d: hard.getAttribute("stroke-dasharray") } : null, credit: !!root?.querySelector("[data-marble-credit]") };
-  });
-  check("G2c the neighbourhood view shows the soft (dashed) edge to mt_kH1DzOPsXG and the hard (solid) one from mt_WRRv1ABECC, focusable boxes, credit",
-    nb.open === true && nb.nodes >= 3 && nb.soft?.s === "soft" && nb.soft?.d === "5 4" && nb.hard?.s === "hard" && nb.hard?.d === null && nb.credit, JSON.stringify(nb));
-  // Keyboard: focusing a box shows its evidence lines without hover.
-  await page.evaluate((sel) => document.querySelector(sel)?.focus(), '[data-neighbourhood] g[data-node-id="mt_kH1DzOPsXG"]');
-  await sleep(200);
-  check("G2c focusing a box (no hover) shows its evidence lines", await page.evaluate(() => document.querySelector("[data-neighbourhood] [data-evidence-for]")?.getAttribute("data-evidence-for") === "mt_kH1DzOPsXG"
-    && /Data and Information for Computers/.test(document.querySelector("[data-neighbourhood] [data-evidence-for]")?.textContent ?? "")));
-  if (process.env.G2C_SHOTS) {
-    await page.evaluate((sel) => document.querySelector(sel)?.focus(), '[data-neighbourhood] g[data-node-id="mt_WRRv1ABECC"]');
-    await sleep(200);
-    const el = await page.$("[data-neighbourhood]");
-    await el.scrollIntoView();
-    await el.screenshot({ path: `${process.env.G2C_SHOTS}/2026-11-14-graph-neighbourhood-desktop.png` });
-    const sg = await page.$("[data-evidence-suggestions]");
-    await sg.screenshot({ path: `${process.env.G2C_SHOTS}/2026-11-14-graph-suggestions-desktop.png` });
+  {
+    const oc = await page.evaluate(() => ({ total: document.querySelectorAll("[data-marble-credit]").length,
+      line: document.querySelector("[data-map-context]")?.textContent ?? null, lineCredit: document.querySelectorAll("[data-map-context] [data-marble-credit]").length,
+      map: document.querySelectorAll("[data-neighbourhood]").length }));
+    check("M1 the objectives step shows the 'On the map' line naming the anchor and no map", /^On the map: AI in Daily Life/.test(oc.line ?? "") && oc.map === 0, JSON.stringify(oc));
+    check("M1 the objectives step shows exactly one Marble credit (on the 'On the map' line)", oc.total === 1 && oc.lineCredit === 1, JSON.stringify(oc));
   }
   const before = (await stored()).events.length;
   await clickReal("Use as my objective");
@@ -566,17 +563,18 @@ try {
   await clickLabel("University / adult");
   await clickLabel("Youngest age: one year older");
   for (let i = 0; i < 3; i++) await clickLabel("Oldest age: one year younger");
-  check("G2b ages 19–22: the consequence strip says there are no suggestions", await waitText("No suggestions at these ages: you write your own objectives.", 15000) && /Ages 19–22 · 0 skill-map topics/.test(await body()));
-  check("G2b ages 19–22: the skill-map option is off and says why; writing your own is chosen", await page.evaluate(() => {
-    const r = [...document.querySelectorAll('form[aria-label="Course and learners"] label')];
-    const map = r.find((l) => /Start from the skill map/.test(l.textContent ?? ""))?.querySelector("input");
-    const own = r.find((l) => /^Write your own/.test((l.textContent ?? "").trim()))?.querySelector("input");
-    return !!map?.disabled && !!own?.checked && !document.querySelector('form[aria-label="Course and learners"] input[type="search"]');
-  }) && /No skill-map topics at these ages\. Write your own\./.test(await body()));
-  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "Why leaves are green");
+  check("M1 ages 19–22: the consequence line says no map topics fit", await page.waitForFunction(() => /\b0 of [\d,]+ map topics fit/.test(document.querySelector("[data-consequences]")?.textContent ?? ""), { timeout: 15000 }).then(() => true, () => false),
+    await page.evaluate(() => document.querySelector("[data-consequences]")?.textContent ?? ""));
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Why leaves stay green, and what that tells us about light"]', "Why leaves are green");
+  await clickBy("+ Add a note about the class");
+  await sleep(200);
   await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science");
   await sleep(200);
   await clickBy("Continue");
+  await waitText("On the skill map", 6000);
+  check("M1 ages 19–22: the map step has nothing to rank, shows search with no error, and Continue waits", await page.waitForFunction(() => !!document.querySelector("#map-search"), { timeout: 15000 }).then(() => true, () => false)
+    && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="On the skill map"] button[data-primary="true"]')].some((b) => b.disabled)));
+  await page.evaluate(() => document.querySelector('button[data-skip-map="true"]')?.click());
   await waitText("Drop files here", 5000);
   // The source is named by its own first line: a 200-character unbroken one must wrap, never widen the page.
   await setVal('section[aria-label="Sources"] textarea', "x".repeat(200) + "\nPlants make their own food from light.\nLeaves hold the green pigment that catches light.");

@@ -297,8 +297,8 @@ export function NewCourseWizard() {
             {stage === null ? "Choose your learners to see what changes." : [
               AI_RULE[stage].split(". ")[0].replace(/\.$/, ""),
               coverage === "unavailable" ? "the skill map is not available here" : countOf(coverage) !== null ? `${(countOf(coverage) ?? 0).toLocaleString("en-US")}${typeof coverage === "object" && coverage?.total ? ` of ${coverage.total.toLocaleString("en-US")}` : ""} map topics fit` : null,
-              `one ${lessonMinutes}-minute plan`,
             ].filter(Boolean).join(" · ")}
+            {stage === null ? null : <>{" · "}<span className={w.nowrap}>one {lessonMinutes}-minute plan</span></>}
           </p>
         </div>
         {foot(<Button variant="primary" data-primary="true" type="submit" disabled={!courseOk}>Continue</Button>,

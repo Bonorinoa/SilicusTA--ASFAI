@@ -45,7 +45,7 @@
 }
 .footBare { border-top: 0; padding-top: 4px; }
 .footNote { font-size: 0.8125rem; color: var(--fn-ink-muted); }
-.footButtons { display: flex; gap: 8px; margin-left: auto; }
+.footButtons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; min-width: 0; }
 
 /* ---- welcome ---- */
 .welcome { max-width: 720px; }
@@ -234,3 +234,4 @@
 .addNote:hover { color: var(--fn-accent-strong); text-decoration: underline; text-underline-offset: 3px; }
 .consequenceLine { margin: 0; font-size: 0.8125rem; color: var(--fn-ink-soft); padding: 10px 12px; background: var(--fn-desk); border-radius: 8px; line-height: 1.5; }
 .itemIcon input { width: 18px; height: 18px; margin: 0; accent-color: var(--fn-accent); }
+.nowrap { white-space: nowrap; }

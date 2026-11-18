@@ -29,7 +29,8 @@
 .laneHead { font-family: var(--fn-serif); font-size: 1rem; font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: baseline; }
 .laneNum { font-family: var(--fn-sans); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fn-ink-muted); font-weight: 400; }
 .row { position: relative; padding-top: 14px; }
-.arcs { position: absolute; left: 0; top: 0; width: 100%; height: 16px; overflow: visible; pointer-events: none; }
+.row[data-arcs] { padding-top: 24px; }
+.arcs { position: absolute; left: 0; top: 0; width: 100%; height: 24px; overflow: visible; pointer-events: none; }
 .arcs path { fill: none; stroke: var(--fn-line-dash); stroke-width: 1.25; }
 .chain { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
 .cell { position: relative; display: flex; min-width: 0; }
@@ -80,7 +81,8 @@
   .cell::before { content: ""; position: absolute; left: -5px; top: 50%; width: 9px; height: 9px; border-radius: 999px; background: var(--fn-line-dash); border: 0; transform: translateY(-50%); }
   .cell[data-in]::before { left: -5px; width: 9px; border-top: 0; }
   .cell[data-col="2"]::after { inset: 0 0 0 10px; }
-  .row { padding-top: 0; }
+  .row, .row[data-arcs] { padding-top: 0; }
+  .alsoItem { flex-direction: column; align-items: flex-start; gap: 2px; }
   .node { min-height: 0; }
   .detail { grid-template-columns: minmax(0, 1fr); }
   .actions { min-width: 0; }

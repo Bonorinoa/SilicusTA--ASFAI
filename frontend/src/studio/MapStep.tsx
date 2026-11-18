@@ -160,7 +160,7 @@ export function MapStep({ title, goal, ages, choice, onChoice }: {
           {shown.threads.map((th, ti) => (
             <section key={th.name} className={m.lane} aria-label={`Thread: ${th.name}`}>
               <h3 className={m.laneHead}><span className={m.laneNum}>{pick ? "" : `Thread ${ti + 1}`}</span>{th.name}</h3>
-              <div className={m.row}>
+              <div className={m.row} data-arcs={!narrow && th.edges.some((e) => e.to - e.from > 1) ? "true" : undefined}>
                 {!narrow ? <Arcs edges={th.edges} /> : null}
                 <ol className={m.chain}>
                   {th.chain.map((id, col) => id ? (
@@ -212,10 +212,12 @@ function Node({ t, r, sel, anchor, connected, onSelect }: { t: MarbleMapTopic; r
 function Arcs({ edges }: { edges: { from: number; to: number }[] }) {
   const skips = edges.filter((e) => e.to - e.from > 1);
   if (skips.length === 0) return null;
-  const x = (c: number) => c * 20 + 12;
+  // Column centres (five columns, 14 px gaps): the arc leaves each node's top centre, rises straight up and runs
+  // along the top of the 24 px band, so it stays above the number badges (which sit 8 px above a node's top-left).
+  const x = (c: number) => c * 20.4 + 9.1;
   return (
-    <svg className={m.arcs} viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
-      {skips.map((e) => <path key={`${e.from}-${e.to}`} d={`M ${x(e.from)} 10 Q ${(x(e.from) + x(e.to)) / 2} -6 ${x(e.to)} 10`} vectorEffect="non-scaling-stroke" />)}
+    <svg className={m.arcs} viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+      {skips.map((e) => <path key={`${e.from}-${e.to}`} d={`M ${x(e.from)} 24 C ${x(e.from)} 0 ${x(e.to)} 0 ${x(e.to)} 24`} vectorEffect="non-scaling-stroke" />)}
     </svg>
   );
 }

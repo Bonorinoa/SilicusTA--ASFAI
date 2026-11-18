@@ -57,12 +57,12 @@ export function objectivesOffer(args: {
   const { rows, confirmed } = args;
   const waiting = rows.filter((r) => r.status === "proposed");
   const decided = rows.filter((r) => DECIDED.has(r.status));
-  const modelWaiting = waiting.some((r) => MODEL_LABEL(r.source));
   const anyProposalRound = rows.some((r) => r.by !== "teacher");
 
   // Propose from sources. Explicit courses: a new round whenever nothing waits. Auto (older) courses: one round.
   const roundsLeft = mode === "explicit" ? true : !anyProposalRound;
-  const showSources = !confirmed && args.sourceCount > 0 && !modelWaiting && roundsLeft;
+  // K4 (C1): shown while proposals wait, held with "Decide the N proposals waiting first.", never hidden.
+  const showSources = !confirmed && args.sourceCount > 0 && roundsLeft;
   const heldBy = args.workerConfigured === false
     ? "AI drafting isn’t set up here. You can still write your own."
     : waiting.length > 0

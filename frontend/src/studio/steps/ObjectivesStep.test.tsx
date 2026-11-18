@@ -117,8 +117,9 @@ describe("objectivesOffer (display only; the host still refuses)", () => {
   it("explicit: a second round from sources is offered once the first is decided", () => {
     expect(objectivesOffer({ ...base, rows: [row("accepted", "from material: A")] }).sources).toEqual({ show: true, heldBy: null });
   });
-  it("explicit: not offered while a model-written proposal waits", () => {
-    expect(objectivesOffer({ ...base, rows: [row("proposed", "from material: A")] }).sources.show).toBe(false);
+  it("explicit: held, with the count, while model-written proposals wait (K4 C1: shown, never hidden)", () => {
+    const rows = [row("proposed", "from material: A"), row("proposed", "from material: B"), row("proposed", "from material: C")];
+    expect(objectivesOffer({ ...base, rows }).sources).toEqual({ show: true, heldBy: "Decide the 3 proposals waiting first." });
   });
   it("explicit: held, with the reason, while an answer-derived proposal waits", () => {
     expect(objectivesOffer({ ...base, rows: [row("proposed", "from your answer")] }).sources).toEqual({ show: true, heldBy: "Decide the 1 proposal waiting first." });
@@ -136,6 +137,14 @@ it("the propose button is held with its reason while an answer-derived proposal 
   const card = screen.getByRole("heading", { name: "From your sources" }).parentElement!;
   expect(within(card).getByRole("button", { name: "Propose objectives from sources" })).toBeDisabled();
   expect(within(card).getByText("Decide the 1 proposal waiting first.")).toBeInTheDocument();
+});
+
+it("K4 C1: with model proposals waiting, the propose button stays visible, held, with 'Decide the N proposals waiting first.'", () => {
+  // The teacher added Leaf notes after a round from another source; two proposals from that round still wait.
+  renderStep(view([row("proposed", "from material: Older handout"), row("proposed", "from material: Older handout")]), makeC([NOTES]));
+  const card = screen.getByRole("heading", { name: "From your sources" }).parentElement!;
+  expect(within(card).getByRole("button", { name: "Propose objectives from sources" })).toBeDisabled();
+  expect(within(card).getByText("Decide the 2 proposals waiting first.")).toBeInTheDocument();
 });
 
 describe("K1: propose again after adding a source", () => {

@@ -24,6 +24,12 @@ export const DEFAULT_WORKER_TIMEOUT_MS = 120_000;
 /** The reply cap (H): 16,000 tokens by default; an override may raise it but never past this ceiling. */
 export const DEFAULT_MAX_TOKENS = 16_000;
 export const MAX_TOKENS_CEILING = 32_000;
+/**
+ * K4 (C2): a reply at least this long (characters) is logged as "long", like a truncated one. Logging only: the
+ * line holds lengths and token counts, never the content. The PM's paid check reads it to tell a runaway loop from
+ * reasoning that ate the budget.
+ */
+export const LONG_REPLY_CHARS = 20_000;
 
 /** A worker failure that is a refusal, not a crash. */
 export class WorkerError extends Error {
@@ -55,6 +61,7 @@ export class PlanWorker {
   #model;
   #apiKey;
   #fetch;
+  #log;
   #zdr;
   #maxTokens;
   #timeoutMs;
@@ -76,7 +83,8 @@ export class PlanWorker {
    * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
    * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", configHint = "" } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", configHint = "", log = (line) => console.info(line) } = {}) {
+    this.#log = typeof log === "function" ? log : () => {};
     // How to configure this worker is the TRANSPORT's business (the Node host passes its env-variable hint); this module
     // is shared with the browser bundle, so it names no server setting itself.
     this.#configHint = configHint ? ` (${configHint})` : "";
@@ -195,13 +203,14 @@ export class PlanWorker {
       if (signal.aborted) throw new WorkerError("WORKER_UNREACHABLE", "the drafting worker did not answer in time");
       throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's response was not JSON");
     }
-    if (!anthropic && payload?.choices?.[0]?.finish_reason === "length") {
-      throw new WorkerError("WORKER_TRUNCATED", "The model ran out of room before finishing. Try again, or use less material.");
-    }
     // OpenAI wire: choices[0].message.content. Anthropic wire: content is a list of typed blocks.
     const content = anthropic
       ? (Array.isArray(payload?.content) ? payload.content.filter((b) => b?.type === "text" && typeof b.text === "string").map((b) => b.text).join("") : undefined)
       : payload?.choices?.[0]?.message?.content;
+    this.#logIfLongOrTruncated(payload, content, anthropic);
+    if (!anthropic && payload?.choices?.[0]?.finish_reason === "length") {
+      throw new WorkerError("WORKER_TRUNCATED", "The model ran out of room before finishing. Try again, or use less material.");
+    }
     if (typeof content !== "string" || (anthropic && content === "")) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no message content");
     // M1: token counts, when the wire reports them (OpenAI: prompt/completion_tokens; Anthropic: input/output_tokens).
     if (meta) {
@@ -215,6 +224,27 @@ export class PlanWorker {
     } catch {
       throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's message was not JSON");
     }
+  }
+
+  /**
+   * K4 (C2): one log line when a reply was cut at the token cap or is long. Lengths and counts only, never the
+   * content. Token counts appear only when the route reports them (OpenAI wire: usage.completion_tokens and
+   * usage.completion_tokens_details.reasoning_tokens, or OpenRouter's usage.reasoning_tokens; Anthropic wire:
+   * usage.output_tokens). Logging must never break a reply, so it swallows its own errors.
+   */
+  #logIfLongOrTruncated(payload, content, anthropic) {
+    try {
+      const finish = anthropic ? payload?.stop_reason : payload?.choices?.[0]?.finish_reason;
+      const truncated = anthropic ? finish === "max_tokens" : finish === "length";
+      const chars = typeof content === "string" ? content.length : 0;
+      if (!truncated && chars < LONG_REPLY_CHARS) return;
+      const u = payload?.usage ?? {};
+      const num = (v) => (Number.isFinite(Number(v)) && v !== null && v !== undefined ? Number(v) : null);
+      const completion = num(u.completion_tokens ?? u.output_tokens);
+      const reasoning = num(u.completion_tokens_details?.reasoning_tokens ?? u.reasoning_tokens);
+      this.#log(`worker reply: ${truncated ? "truncated" : "long"} finish=${finish ?? "?"} output_chars=${chars}`
+        + ` completion_tokens=${completion ?? "not reported"} reasoning_tokens=${reasoning ?? "not reported"} max_tokens=${this.#maxTokens}`);
+    } catch { /* logging never breaks a reply */ }
   }
 
   #requireEnabled() {

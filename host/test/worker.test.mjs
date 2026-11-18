@@ -8,7 +8,7 @@
  */
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_WORKER_TIMEOUT_MS, PlanWorker, WorkerError } from "../worker.mjs";
+import { DEFAULT_WORKER_TIMEOUT_MS, LONG_REPLY_CHARS, PlanWorker, WorkerError } from "../worker.mjs";
 import { workerFromEnv } from "../server.mjs";
 import { startMockWorker } from "./mock-worker.mjs";
 import { mkdtempSync } from "node:fs";
@@ -279,6 +279,34 @@ test("an OpenAI length finish is a clear truncation refusal before JSON parsing"
     code: "WORKER_TRUNCATED",
     message: "The model ran out of room before finishing. Try again, or use less material.",
   });
+});
+
+test("K4 C2: a truncated reply logs its length and the route's token counts, never the content", async () => {
+  const lines = [];
+  const reply = "{\"objectives\":[\"SECRET-MATERIAL-WORDS";
+  const fetchImpl = async () => new Response(JSON.stringify({
+    choices: [{ message: { content: reply }, finish_reason: "length" }],
+    usage: { completion_tokens: 32000, completion_tokens_details: { reasoning_tokens: 31000 } },
+  }), { status: 200, headers: { "content-type": "application/json" } });
+  const w = new PlanWorker({ url: "http://127.0.0.1:9/v1/chat/completions", model: "m", fetchImpl, log: (l) => lines.push(l) });
+  await assert.rejects(w.draftObjectives({ materials: MATS }), { code: "WORKER_TRUNCATED" });
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^worker reply: truncated finish=length output_chars=\d+ completion_tokens=32000 reasoning_tokens=31000 max_tokens=16000$/);
+  assert.ok(lines[0].includes(`output_chars=${reply.length}`));
+  assert.doesNotMatch(lines[0], /SECRET|objectives/);
+});
+
+test("K4 C2: a long reply is logged with 'not reported' counts when the route sends no usage; a short one is not logged", async () => {
+  const lines = [];
+  let content = JSON.stringify({ objectives: [{ statement: "x".repeat(LONG_REPLY_CHARS), from: ["week1-slides.txt"] }] });
+  const fetchImpl = async () => new Response(JSON.stringify({ choices: [{ message: { content }, finish_reason: "stop" }] }), { status: 200 });
+  const w = new PlanWorker({ url: "http://127.0.0.1:9/v1/chat/completions", model: "m", fetchImpl, log: (l) => lines.push(l) });
+  await w.draftObjectives({ materials: MATS }).catch(() => {});
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^worker reply: long finish=stop output_chars=\d+ completion_tokens=not reported reasoning_tokens=not reported/);
+  content = JSON.stringify({ objectives: [{ statement: "Students can explain an algorithm.", from: ["week1-slides.txt"] }] });
+  await w.draftObjectives({ materials: MATS }).catch(() => {});
+  assert.equal(lines.length, 1, "a short, complete reply logs nothing");
 });
 
 test("the PlanWorker default deadline is 120 seconds", () => {

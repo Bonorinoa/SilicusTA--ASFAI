@@ -26,7 +26,7 @@ export function Home() {
 
   return (
     <>
-      <TopBar right={<a className={s.crumb} href="#/">About</a>} />
+      <TopBar />
       <main className={s.page}>
         <div className={s.pageHead}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

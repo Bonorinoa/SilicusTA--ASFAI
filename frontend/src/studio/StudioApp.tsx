@@ -65,7 +65,8 @@ export function TopBar({ crumbs = [], center, right }: { crumbs?: { label: strin
         ))}
       </nav>
       {center}
-      <div className={s.topRight}>{right}</div>
+      {/* K4 (B2): every studio screen that uses the top bar carries one way out to the landing page. */}
+      <div className={s.topRight}>{right}<a className={s.crumb} href="#/">About Silicus</a></div>
       </div>
     </header>
   );

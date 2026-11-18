@@ -198,15 +198,20 @@ try {
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   check("the landing's primary opens the studio (#/studio)", await page.evaluate(() => [...document.querySelectorAll("main a")].some((a) => a.textContent === "Open the studio" && a.getAttribute("href") === "#/studio")));
 
+  // K4 (B2): the landing link ("About Silicus" -> #/) on every studio screen, recorded per screen as the walk goes.
+  const landing = {};
+  const markLanding = async (screen) => { landing[screen] = await page.evaluate(() => [...document.querySelectorAll('a[href="#/"]')].some((a) => /About Silicus/.test(a.textContent ?? ""))); };
   // ---- the studio home
   await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   let t = await body();
   check("the studio home shows 'Your courses' and 'New course'", /Your courses/.test(t) && /New course/.test(t));
+  await markLanding("Home");
 
   // ---- new course: the onboarding wizard (lane C, R7). The old one-sheet dialog with a source-NAMES field is gone.
   await clickBy("New course");
   check("the New course card opens the wizard, on its welcome at first run", await waitText("Let’s set up your course", 8000) && (await page.evaluate(() => location.hash)) === "#/studio/new");
+  await markLanding("Wizard welcome");
   await clickBy("Begin");
   await waitText("Your course and learners", 5000);
   const step1 = 'form[aria-label="Course and learners"] input';
@@ -217,6 +222,7 @@ try {
   check("step 1 waits for the learners' ages before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
   // ---- G2b: who the learners are. Early primary (4–8), then the steppers refine to 5–12.
   check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]:not([name="lesson-minutes"])').length) === 5);
+  await markLanding("Wizard step 1");
   await clickLabel("Early primary");
   await clickLabel("Youngest age: one year older");
   for (let i = 0; i < 4; i++) await clickLabel("Oldest age: one year older");
@@ -233,6 +239,7 @@ try {
   // ---- M1 · step 2, "On the skill map". No passcode in this tab yet, so the ranking call cannot run: the step
   // falls back to search, with no error, and Continue waits for an anchor or Skip.
   check("M1 step 2 'On the skill map' renders after step 1", await waitText("On the skill map", 6000) && await page.evaluate(() => !!document.querySelector('section[aria-label="On the skill map"]')));
+  await markLanding("Wizard step 2 (map)");
   const mapContinueDisabled = () => page.evaluate(() => [...document.querySelectorAll('section[aria-label="On the skill map"] button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue"));
   check("M1 Continue is disabled on the map step until the teacher anchors or skips", await mapContinueDisabled());
   // The browser host asks for the passcode before the ranking call; "Not now" sends nothing and the step falls back to search.
@@ -266,6 +273,7 @@ try {
   t = await body();
   check("the sources step is one drop zone (files, paste, web page) with no source-name field", /Drop files here/.test(t) && /Or paste text, or a web page address/.test(t)
     && await page.evaluate(() => ![...document.querySelectorAll("label")].some((l) => /^\s*(Name|Source name|Sources)\b/.test(l.textContent ?? ""))));
+  await markLanding("Wizard step 3 (sources)");
   check("M1 with an anchor, 'Use the skill-map topics as a source' is the first source row, checked by default",
     await page.evaluate(() => document.querySelector('input[aria-label="Use the skill-map topics as a source"]')?.checked === true));
   // This walk keeps the no-sources path (the map source is covered by its own tests): untick it.
@@ -284,6 +292,7 @@ try {
   { const rc = await creditOn('section[aria-label="Review and confirm"]'); check("G1bV the review's anchor row shows the Marble credit with both licence links", creditOk(rc), JSON.stringify(rc)); }
   check("K2 the review shows the lesson length (the default chip, 45)", /Lesson length\s*45 min lesson/.test(t), (t.match(/Lesson length[^\n]*\n?[^\n]*/) ?? [""])[0].slice(0, 80));
   check("G2b the review shows ages, stage and the anchor", /Ages 5–12 · Early primary · AI stage 1 of 4/.test(t) && /AI in Daily Life/.test(t) && /Marble Skill Taxonomy/.test(t));
+  await markLanding("Wizard review");
   check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
   check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
   await clickPrimary("Confirm and create the course");
@@ -303,6 +312,7 @@ try {
   await waitText("Step 1 of 4", 6000);
   t = await body();
   check("the Brief step renders (Step 1 of 4), looked back at", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
+  await markLanding("Course Brief");
   const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
   check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value.includes("Grade 4 science, ages 9-10"))), `found ${nFields}`);
   // ---- lane C · F5: the header's AI status opens the same diagnosis as the wizard's AI check
@@ -356,6 +366,7 @@ try {
   await sleep(500);
   const cards = await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length);
   check("the proposals tray fills from the teacher's answers", cards >= 1, `${cards} proposal(s)`);
+  await markLanding("Course Objectives");
   // ---- B1: the status line owns its row, and the proposals tray sits in the right column
   await sleep(400);
   let g = await statusLine();
@@ -426,6 +437,7 @@ try {
   await clickPrimary("Draft the lesson plan");
   await enterPasscode();
   check("drafting the plan completes and shows a draft", await waitText("Confirm the lesson plan", 15000));
+  await markLanding("Course Plan");
   const align = await page.evaluate(() => {
     const el = document.querySelector('section[aria-label="Suggested alignment"]');
     return el ? el.textContent ?? "" : "";
@@ -482,6 +494,7 @@ try {
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
+  await markLanding("Course Publish");
 
   // ---- publish
   await clickBy("Publish version 1…");
@@ -500,6 +513,7 @@ try {
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   await waitText("Type as a student would", 6000);
   check("Rehearse renders the simulator and the guardrail probes", /Ask what your students will ask/.test(await body()) && /Guardrail probes/.test(await body()));
+  await markLanding("Rehearse");
   // ---- G4: a cancelled passcode in Rehearse keeps the question the teacher typed, and focus returns to
   // the Ask button (the opener, since a real click focuses it). 20 repeats, both cancel routes. The tab
   // forgets the passcode first, so Ask really does ask for it again.
@@ -532,6 +546,9 @@ try {
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   t = await body();
   check("the student space is labelled a preview on this device", /Preview on this device/.test(t));
+  await markLanding("Learn");
+  { const missing = Object.entries(landing).filter(([, ok]) => !ok).map(([k]) => k);
+    check(`K4 B2 every studio screen has the "About Silicus" link to #/ (${Object.keys(landing).length} screens: wizard, four course tabs, Rehearse, Home, Learn)`, Object.keys(landing).length === 12 && missing.length === 0, missing.length ? `missing on: ${missing.join(", ")}` : JSON.stringify(Object.keys(landing))); }
   check("the student space shows the published title and goals", /How plants eat/.test(t) && /learning to/i.test(t));
   await page.type('input[placeholder="Ask about today’s lesson"]', "What do plants need?");
   await clickBy("Ask");

@@ -29,8 +29,6 @@ export function newSources(
 }
 
 export const DECIDED = new Set(["accepted", "renamed", "added"]);
-/** Model-written proposals carry one of these labels (host/course.mjs label(); SOURCE_SUGGESTED). */
-const MODEL_LABEL = (source: string | null) => !!source && (source.startsWith("from material:") || source === "suggested by Silicus");
 const ANSWER_LABEL = (source: string | null) => !!source && source.startsWith("from your answer");
 
 export interface ObjectivesOffer {

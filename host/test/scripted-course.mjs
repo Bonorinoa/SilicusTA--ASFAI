@@ -39,10 +39,29 @@ export function modelReply(prompt) {
       activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: share45(i), objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
         ...(refs[i] ? { citations: [refs[i]] } : {}) })) };
   }
+  if (p.startsWith("RANK skill-map topics")) return scriptedRankMap(p);
   if (p.startsWith("You are a study helper")) {
     return { inScope: true, answer: "A plant uses light, water and air to make sugar.", cites: ["[objective:1]", "activity:1"] };
   }
   return { error: "unexpected prompt" };
+}
+
+/**
+ * M1 · SCRIPTED ranking for "Why is the grass green?", ages 4–10: the real snapshot ids the D1 sketch uses. The
+ * ranks, thread names and "why" lines are scripted, not a model's, and every "why" says so. Only ids that the
+ * prompt actually listed are returned, so a course at other ages gets fewer (or none).
+ */
+export const SCRIPTED_RANKING = [
+  { id: "mt_gLy3ZgZWiN", thread: "Light", why: "[scripted] Colour is light we see: reflection is the core idea." },
+  { id: "mt_lutxvMlkwS", thread: "Plants", why: "[scripted] Staying green and healthy is about what plants need." },
+  { id: "mt_4i-FKXDDXh", thread: "Light", why: "[scripted] Comes right before Reflecting Light; a warm-up for the younger ones." },
+  { id: "mt_3v0VNkwquK", thread: "Plants", why: "[scripted] The younger version of what plants need." },
+  { id: "mt_6xsEXxKdUX", thread: "Plants", why: "[scripted] Leaves make food: a bridge to why they are green." },
+  { id: "mt_nwSWPTENmv", thread: "Light", why: "[scripted] Seeing is a sense: eyes detect light." },
+];
+export function scriptedRankMap(prompt) {
+  const listed = new Set([...String(prompt).matchAll(/^(mt_[A-Za-z0-9_-]+):/gm)].map((m) => m[1]));
+  return { suggestions: SCRIPTED_RANKING.filter((s) => listed.has(s.id)) };
 }
 
 /** The chat-completions body for a request body PlanWorker sent. */

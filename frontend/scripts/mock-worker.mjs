@@ -11,6 +11,7 @@
  */
 import http from "node:http";
 
+import { scriptedRankMap } from "../../host/test/scripted-course.mjs";
 const PORT = 8787;
 const DELAY = Number(process.env.MOCK_DELAY ?? 2500);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -31,6 +32,7 @@ function reply(text) {
       ],
     };
   }
+  if (prompt.startsWith("RANK skill-map topics")) return scriptedRankMap(prompt);
   if (prompt.startsWith("SUGGEST")) {
     return { objectives: [{ statement: "Students can describe where the oxygen we breathe comes from." }, { statement: "Students can label the parts of a leaf." }] };
   }

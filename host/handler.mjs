@@ -23,6 +23,7 @@ import { lessonMinutesError } from "./lesson-length.mjs";
 import { askStudent, packageOf } from "./student.mjs";
 import { DEFAULT_TYPICAL_SECONDS } from "./worker-config.mjs";
 import { overlaps } from "./marble/marble-graph.mjs";
+import { lane, mapLanes, mapSourceText, missingTitleWord, rankInput, validateRanking } from "./marble/rank-map.mjs";
 
 export const MAX_BODY = 1 << 20;
 
@@ -170,6 +171,33 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
     // Marble, read-only. Same routes on BOTH hosts (handler.mjs is shared): a studio card (G2)
     // builds the alignment picker on these. They write nothing, take no course id and never touch
     // the course log. The shapes are documented in host/README.md.
+    // M1 · the skill-map step. One model call ranks the topics that fit the ages; the host judges the reply against
+    // the snapshot and lays it out as lanes of real edges. Nothing is written. Any failure is an EMPTY map with a
+    // reason code, never an error page: the step then offers search.
+    if (parts[1] === "knowledge" && parts[2] === "marble" && parts[3] === "rank" && method === "POST") {
+      if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host");
+      const b = (await body()) ?? {};
+      if (!b.ages || agesError(b.ages) !== null) throw new HttpError(400, "BAD_AGES", agesError(b.ages ?? null) ?? "ranking needs the learners' ages");
+      const g = await marble.graph();
+      const topics = rankInput(g, b.ages);
+      let suggestions = [];
+      let usage = null;
+      let reason = null;
+      if (!planWorker?.enabled) reason = "WORKER_NOT_CONFIGURED";
+      else if (topics.length === 0) reason = "NO_TOPICS";
+      else {
+        try {
+          const r = await planWorker.rankMap({ title: String(b.title ?? ""), goal: String(b.goal ?? ""), ages: b.ages, topics });
+          usage = r.usage;
+          suggestions = validateRanking(r.raw, g, b.ages);
+          if (suggestions.length === 0) reason = "NO_VALID_SUGGESTIONS";
+        } catch (e) {
+          reason = e?.code ?? "WORKER_FAILED";
+        }
+      }
+      if (usage) console.info(`rankMap usage: input_tokens=${usage.input ?? "?"} output_tokens=${usage.output ?? "?"} topics=${topics.length}`);
+      return { status: 200, json: { ...mapLanes(g, suggestions, b.ages), counts: { fit: topics.length, total: g.topicCount }, usage, reason } };
+    }
     if (parts[1] === "knowledge" && parts[2] === "marble" && method === "GET") {
       if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host");
       if (parts[3] === "search") {
@@ -198,7 +226,19 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         if (!Number.isInteger(min) || !Number.isInteger(max) || min < 3 || max > 99 || min > max) {
           throw new HttpError(400, "BAD_INPUT", "coverage needs integer min and max with 3 <= min <= max <= 99");
         }
-        return { status: 200, json: { query: { min, max }, ...(await marble.coverage({ min, max })) } };
+        // M1: the total, and (when a title is given) the first title word no topic NAME at these ages contains.
+        const g = await marble.graph();
+        const title = String(url.searchParams.get("title") ?? "").slice(0, 200);
+        return { status: 200, json: { query: { min, max }, ...(await marble.coverage({ min, max })), total: g.topicCount, ...(title ? { missingWord: missingTitleWord(g, { min, max }, title) } : {}) } };
+      }
+      // M1: one lane around a topic the teacher found by search ("Your pick"): real edges only, no rank, no why.
+      if (parts[3] === "lane" && parts[4]) {
+        const id = decodeSegment(parts[4]);
+        const min = Number(url.searchParams.get("min")), max = Number(url.searchParams.get("max"));
+        const ages = Number.isInteger(min) && Number.isInteger(max) && min <= max ? { min, max } : null;
+        const l = lane(await marble.graph(), id, ages);
+        if (!l) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
+        return { status: 200, json: l };
       }
       // The anchor's neighbourhood (G2a): prerequisites two hops up, dependents one hop down,
       // each row with id, name, ages, subject, domain, strength, reason, evidence and hop count.
@@ -280,6 +320,19 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
               throw new HttpError(400, "BAD_ANCHOR", `the anchor's ages (${anchorAges.min}–${anchorAges.max}) do not overlap the course ages (${b.ages.min}–${b.ages.max})`);
             }
           }
+          // M1: one connected topic, a pointer like the anchor (never an objective id). It needs an anchor, must differ
+          // from it, exist in the snapshot and overlap the course ages. "From another thread" is the map step's rule:
+          // threads are a ranking view and are not recorded, so the host checks what it can.
+          let connected = null;
+          if (b.marbleConnected !== undefined && b.marbleConnected !== null) {
+            if (typeof b.marbleConnected !== "string" || !/^mt_[A-Za-z0-9_-]+$/.test(b.marbleConnected)) throw new HttpError(400, "BAD_CONNECTED", "a marbleConnected must be an mt_* topic id string from the snapshot");
+            if (!anchor) throw new HttpError(400, "BAD_CONNECTED", "a connected topic needs an anchor");
+            if (b.marbleConnected === anchor) throw new HttpError(400, "BAD_CONNECTED", "the connected topic must differ from the anchor");
+            const t = await marble.get(b.marbleConnected);
+            if (!t) throw new HttpError(400, "UNKNOWN_CONNECTED", `no such Marble topic in the snapshot: ${b.marbleConnected}`);
+            if (b.ages && !overlaps({ min: Number(t.ageRangeStart), max: Number(t.ageRangeEnd) }, b.ages)) throw new HttpError(400, "BAD_CONNECTED", "the connected topic's ages do not overlap the course ages");
+            connected = b.marbleConnected;
+          }
           const s = CourseSession.create(store, {
             owner: String(b.owner), title: String(b.title),
             description: b.description ? String(b.description) : "",
@@ -289,6 +342,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
             objectivesConfirm: b.objectivesConfirm,
             ages: b.ages ?? null,
             marbleAnchor: anchor,
+            marbleConnected: connected,
             lessonMinutes: b.lessonMinutes ?? null,
           });
           return { status: 201, json: { ok: true, courseId: s.courseId, view: s.view() } };
@@ -365,8 +419,18 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           // the proposals are written by the worker from the material, labelled with the names the
           // teacher supplied, and every one still waits for the teacher. Only `materials` is read.
           // The text is returned to nobody and kept nowhere; the log gets names, digests and sizes.
-          const prepared = await prepareMaterials(b.materials);
-          const r = await s.proposeObjectivesFromMaterials({ worker: planWorker, materials: prepared.materials });
+          // M1: `useMap: true` adds the anchor's (and connected topic's) Marble description and evidence lines as a
+          // credited, TRANSIENT source. The client sends only the intent; the host reads the snapshot itself.
+          const course = s.view().course;
+          const mapIds = b.useMap === true && marble ? [course.marbleAnchor, course.marbleConnected].filter(Boolean) : [];
+          const mapMaterials = [];
+          for (const id of mapIds) {
+            const t = await marble.get(id);
+            if (t) mapMaterials.push({ id, name: `Skill map: ${t.name}`, text: mapSourceText(t) });
+          }
+          const files = Array.isArray(b.materials) && b.materials.length > 0;
+          const prepared = files || mapMaterials.length === 0 ? await prepareMaterials(b.materials) : { materials: [], skipped: [] };
+          const r = await s.proposeObjectivesFromMaterials({ worker: planWorker, materials: prepared.materials, mapMaterials });
           if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
           return { status: 200, json: {
             proposals: r.proposals,

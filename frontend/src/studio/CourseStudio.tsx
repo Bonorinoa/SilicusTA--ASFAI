@@ -39,6 +39,12 @@ export function decisionCount(activity: readonly ActivityItem[]): number {
   return n;
 }
 
+/** The step before this one in the Brief → Objectives → Plan → Publish order, or null on the Brief. */
+export function previousStep(id: StepId): { id: StepId; label: string } | null {
+  const i = STEP_LIST.findIndex((x) => x.id === id);
+  return i > 0 ? STEP_LIST[i - 1] : null;
+}
+
 export function decisionPillLabel(count: number): string {
   return count > 0 ? `${plural(count, "decision")} recorded` : "No decisions yet";
 }
@@ -154,6 +160,9 @@ export function CourseStudio({ courseId }: { courseId: string }) {
     </nav>
   );
 
+  // Back is the step before the one on screen, never a jump to the Brief (K1, owner walk 17 Nov).
+  const prev = previousStep(shown);
+
   const common = { c, worker, view, looking: looking !== null && looking !== step, onLook: setLooking };
 
   return (
@@ -189,6 +198,11 @@ export function CourseStudio({ courseId }: { courseId: string }) {
           <StepStatus view={view} waiting={c.waiting} worker={worker} transition={transition} />
           {c.problem ? <div className={s.noticeRow}><Refusal problem={c.problem} onClose={() => c.setNotice(null)} /></div>
             : c.notice ? <div className={s.noticeRow}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
+          {prev ? (
+            <div className={s.backRow}>
+              <Button variant="quiet" size="small" onClick={() => setLooking(prev.id === step ? null : prev.id)}>← Back to {prev.label}</Button>
+            </div>
+          ) : null}
           {shown === "brief" ? <BriefStep {...common} /> : null}
           {shown === "objectives" ? <ObjectivesStep {...common} links={links} /> : null}
           {shown === "plan" ? <PlanStep {...common} /> : null}

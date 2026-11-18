@@ -103,7 +103,12 @@ export function NewCourseWizard() {
   const index = STEPS.findIndex((x) => x.id === step);
   const go = (id: StepId) => { setProblem(null); setStep(id); };
   const next = () => go(STEPS[index + 1]?.id ?? "review");
-  const back = () => go(index <= 0 ? "welcome" : STEPS[index - 1].id);
+  // Back is always the previous step. The welcome is a previous step only if this visit showed it (first run);
+  // otherwise Back on the first step has nowhere to go and is disabled, never a jump to some other screen.
+  const [sawWelcome, setSawWelcome] = useState(false);
+  useEffect(() => { if (step === "welcome") setSawWelcome(true); }, [step]);
+  const firstStep = index <= 0;
+  const back = () => { if (!firstStep) go(STEPS[index - 1].id); else if (sawWelcome) go("welcome"); };
 
   const courseOk = a.title.trim() !== "" && a.owner.trim() !== "" && a.topic.trim() !== "" && aud.ages !== null;
   const wrote = a.outcomes.split("\n").some((l) => l.trim() !== "");
@@ -192,7 +197,7 @@ export function NewCourseWizard() {
     <div className={w.foot}>
       {note ? <p className={w.footNote}>{note}</p> : null}
       <div className={w.footButtons}>
-        <Button variant="quiet" onClick={back} disabled={busy}>Back</Button>
+        <Button variant="quiet" onClick={back} disabled={busy || (firstStep && !sawWelcome)}>Back</Button>
         {primary}
       </div>
     </div>

@@ -148,6 +148,8 @@ a.crumb:hover { color: var(--fn-ink); }
 .work:has(> .tray) { grid-template-columns: minmax(0, 1fr) 320px; }
 .work > :not(.doc):not(.tray) { grid-column: 1 / -1; }
 .noticeRow { padding-top: 14px; max-width: var(--fn-measure); }
+/* K1: Back is the previous step, a quiet link-weight button above the step. */
+.backRow { padding-top: 12px; margin-bottom: -12px; max-width: var(--fn-measure); }
 .doc {
   min-width: 0; max-width: var(--fn-measure); box-sizing: border-box; padding: 24px 0 0; align-self: start;
   display: flex; flex-direction: column; gap: 24px;

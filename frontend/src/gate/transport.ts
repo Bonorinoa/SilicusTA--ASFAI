@@ -49,6 +49,8 @@ export interface HostCourseMeta {
   stage?: number;
   /** The skill-map anchor (an mt_* pointer to the node this lesson is about). Never an objective id. */
   marbleAnchor?: string;
+  /** K2: the lesson length the teacher set, whole minutes 10-180; absent on courses created without one. */
+  lessonMinutes?: number;
 }
 
 /** One topic in an anchor's neighbourhood (G2a/G2c). Read-only skill-map data, never an objective. */
@@ -232,7 +234,7 @@ const enc = encodeURIComponent;
 export const host = {
   health: () => call<{ ok: boolean; courses: number }>("GET", "/health"),
   listCourses: () => call<{ courses: CourseSummary[] }>("GET", "/courses"),
-  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit"; ages?: { min: number; max: number }; marbleAnchor?: string }) =>
+  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit"; ages?: { min: number; max: number }; marbleAnchor?: string; lessonMinutes?: number }) =>
     call<{ ok: true; courseId: string; view: HostView }>("POST", "/courses", b),
   /** Marble skill map (read-only, G1/G2a). Topics per age for the wizard's strip. */
   marbleCoverage: (min: number, max: number) =>

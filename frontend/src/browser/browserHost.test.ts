@@ -129,6 +129,25 @@ describe("parity: one API, two hosts", () => {
     expect(legacy.json.view.course).not.toHaveProperty("ages");
     expect(legacy.json.view.course).not.toHaveProperty("marbleAnchor");
   });
+
+  // K2: the browser record store once dropped new course fields. lessonMinutes must be accepted, refused
+  // identically to the Node host, PERSISTED (a fresh host over the same IndexedDB replays it) and absent on a legacy course.
+  it("K2 parity: the browser host carries lessonMinutes through create, reload and refusal, like the Node host", async () => {
+    const r = await rig();
+    const post = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "Plants", lessonMinutes: 45 });
+    expect(post.status).toBe(201);
+    expect(post.json.view.course.lessonMinutes).toBe(45);
+    const c = `/api/courses/${encodeURIComponent(post.json.courseId)}`;
+    await r.reload();
+    expect((await r.call("GET", c)).json.course.lessonMinutes).toBe(45);
+    for (const bad of [9, 181, 45.5, "45"]) {
+      const refused = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "T", lessonMinutes: bad });
+      expect(refused.status).toBe(400);
+      expect(refused.json.code).toBe("BAD_LESSON_MINUTES");
+    }
+    const legacy = await r.call("POST", "/api/courses", { owner: "teacher:t", title: "Old" });
+    expect(legacy.json.view.course).not.toHaveProperty("lessonMinutes");
+  });
 });
 
 describe("the record survives a reload, and a tampered record is flagged, never served", () => {

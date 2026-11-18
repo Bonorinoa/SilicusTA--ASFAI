@@ -113,7 +113,7 @@ describe("NewCourseWizard", () => {
     expect(mocks.createCourse).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: /^Confirm and/ }));
     await waitFor(() => expect(mocks.confirmCheckpoint).toHaveBeenCalledTimes(2), { timeout: 10_000 });
-    expect(mocks.createCourse).toHaveBeenCalledWith({ title: "How plants eat", owner: "Ada Lovelace", materials: [], objectivesConfirm: "explicit", ages: { min: 8, max: 12 } });
+    expect(mocks.createCourse).toHaveBeenCalledWith({ title: "How plants eat", owner: "Ada Lovelace", materials: [], objectivesConfirm: "explicit", ages: { min: 8, max: 12 }, lessonMinutes: 45 });
     const answers = mocks.answerIntake.mock.calls[0][1];
     expect(answers.answers).toEqual({ topic: "Photosynthesis", course: "Upper primary, ages 8–12. Grade 4", learning_outcomes: "Explain how a plant makes food", outcomes_from: "materials" });
     expect(answers.text).toBe("Propose the outcomes from my materials.");
@@ -223,7 +223,7 @@ describe("NewCourseWizard step 1 (G2b): learners, skill map, consequences", () =
     expect(screen.getByText(/AI in daily life/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Confirm and create the course" }));
     await waitFor(() => expect(mocks.createCourse).toHaveBeenCalledWith({
-      title: "AI around us", owner: "Ada", materials: [], objectivesConfirm: "explicit", ages: { min: 8, max: 12 }, marbleAnchor: "mt_AzTrT5ySCx",
+      title: "AI around us", owner: "Ada", materials: [], objectivesConfirm: "explicit", ages: { min: 8, max: 12 }, marbleAnchor: "mt_AzTrT5ySCx", lessonMinutes: 45,
     }));
   });
 
@@ -238,5 +238,34 @@ describe("NewCourseWizard step 1 (G2b): learners, skill map, consequences", () =
     expect(screen.queryByLabelText("Search the skill map")).toBeNull();
     expect(screen.getByLabelText("Your topic")).toBeInTheDocument();
     expect(mocks.marbleSearch).not.toHaveBeenCalled();
+  });
+});
+
+// K2 (owner, 17 Nov): the teacher sets the lesson length on step 1 ("Course and learners"); the plan fits it.
+describe("NewCourseWizard step 1 (K2): How long is the lesson?", () => {
+  it("five chips, 45 by default; picking 60 shows on the review and is sent as lessonMinutes", async () => {
+    const user = userEvent.setup();
+    render(<NewCourseWizard />);
+    await user.click(await screen.findByRole("button", { name: "Begin" }));
+    const group = await screen.findByRole("radiogroup", { name: "Lesson length" });
+    const chips = Array.from(group.querySelectorAll("input[type=radio]")) as HTMLInputElement[];
+    expect(chips.map((c) => Number(c.value))).toEqual([20, 30, 45, 60, 90]);
+    expect(screen.getByRole("radio", { name: "45 min" })).toBeChecked();
+    expect(screen.getByText("How long is the lesson?")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "60 min" }));
+    expect(screen.getByRole("radio", { name: "60 min" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "45 min" })).not.toBeChecked();
+    await user.type(screen.getByLabelText("Course title"), "How plants eat");
+    await user.type(screen.getByLabelText("Your name"), "Ada Lovelace");
+    await user.click(screen.getByRole("radio", { name: /Upper primary/ }));
+    await user.type(await screen.findByLabelText("Topic, in your words"), "Photosynthesis");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ })); // sources: continue without
+    await user.type(screen.getByLabelText(/Write a few/), "Explain how a plant makes food");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" })); // AI check
+    expect(screen.getByText("60 min lesson")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Confirm and/ }));
+    await waitFor(() => expect(mocks.createCourse).toHaveBeenCalledWith(expect.objectContaining({ lessonMinutes: 60 })));
   });
 });

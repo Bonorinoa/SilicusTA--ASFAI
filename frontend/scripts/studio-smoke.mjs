@@ -212,7 +212,7 @@ try {
   await page.type(`${step1}[placeholder="How plants make food from sunlight"]`, "How plants make food from sunlight");
   check("step 1 waits for the learners' ages before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
   // ---- G2b: who the learners are. Early primary (4–8), then the steppers refine to 5–12.
-  check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]').length) === 7);
+  check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]:not([name="lesson-minutes"])').length) === 7);
   await clickLabel("Early primary");
   await clickLabel("Youngest age: one year older");
   for (let i = 0; i < 4; i++) await clickLabel("Oldest age: one year older");
@@ -261,6 +261,7 @@ try {
   await waitText("Review and confirm", 5000);
   t = await body();
   { const rc = await creditOn('section[aria-label="Review and confirm"]'); check("G1bV the review's anchor row shows the Marble credit with both licence links", creditOk(rc), JSON.stringify(rc)); }
+  check("K2 the review shows the lesson length (the default chip, 45)", /Lesson length\s*45 min lesson/.test(t), (t.match(/Lesson length[^\n]*\n?[^\n]*/) ?? [""])[0].slice(0, 80));
   check("G2b the review shows ages, stage and the anchor", /Ages 5–12 · Early primary · AI stage 1 of 4/.test(t) && /AI in Daily Life/.test(t) && /Marble Skill Taxonomy/.test(t));
   check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
   check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
@@ -273,6 +274,7 @@ try {
   check("one confirm leaves the brief's intents in the brief's order: create, answers, files, outline", JSON.stringify(trail) === JSON.stringify(["course.created", "intake.answered", "checkpoint.confirmed:files", "checkpoint.confirmed:outline"]), JSON.stringify(trail));
   const created = ev.find((e) => e.kind === "course.created");
   check("G2b the course is created with ages 5–12 and the anchor mt_AzTrT5ySCx", JSON.stringify(created?.ages) === JSON.stringify({ min: 5, max: 12 }) && created?.marbleAnchor === "mt_AzTrT5ySCx", JSON.stringify({ ages: created?.ages, anchor: created?.marbleAnchor }));
+  check("K2 the course is created with lessonMinutes 45 on the chained course.created event", created?.lessonMinutes === 45, JSON.stringify(created?.lessonMinutes));
   check("the course is created with no names-only material rows", Array.isArray(created?.materials ?? []) && (created?.materials ?? []).length === 0, JSON.stringify(created?.materials));
 
   // ---- brief, looked back at (a wizard-made course never stops on it)
@@ -475,6 +477,8 @@ try {
   check("H2b the scripted v2 plan fits the course: 'Learners first' on all three activities, nothing under 'Silicus adjusted', no plants in the plan's title or activities (this smoke course's own title and objectives stay the plants ones)",
     d2.first >= 3 && d2.adjusted.length === 0 && /Spotting AI in daily life/.test(d2.plan) && /Smart Versus Not-Smart Devices/.test(d2.plan) && !/How plants eat|Look at a leaf|Ask what it needs/.test(d2.plan.split("\n")[0] + d2.activities),
     JSON.stringify({ first: d2.first, adjusted: d2.adjusted, head: d2.plan.slice(0, 120) }).slice(0, 300));
+  check("K2 the plan header reads '45 min lesson · activities 45 min' (the scripted minutes add up), with no length note",
+    /45 min lesson · activities 45 min/i.test(await body()) && !/Activities add up to/.test(await body()));
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
@@ -483,6 +487,7 @@ try {
   await clickBy("Publish version 1…");
   check("publishing asks for a second, explicit confirm", await waitText("Publish version 1?", 5000));
   await clickBy("Publish version 1");
+  check("K2 the published moment names the lesson length", /A 45 min lesson\./.test(await body()));
   check("the published moment renders with the student and Rehearse links", await waitText("Version 1 is published", 10000) && /Open the student space/.test(await body()) && /Rehearse student questions/.test(await body()));
   await sleep(500);
   const published = await body();

@@ -38,7 +38,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
     );
   } else if (plan.status === "draft") {
     bar = (
-      <ActionBar text={<><strong>Draft</strong> · {plural(plan.activities.length, "activity", "activities")}, {minutes} min. It’s a draft until you confirm it.</>}>
+      <ActionBar text={<><strong>Draft</strong> · {plural(plan.activities.length, "activity", "activities")}, {minutes} min{view.course.lessonMinutes !== undefined ? ` of a ${view.course.lessonMinutes} min lesson` : ""}. It’s a draft until you confirm it.</>}>
         <Button onClick={() => onLook("objectives")}>Edit objectives</Button>
         <Button disabled={c.busy || noWorker} onClick={() => void c.actions.draftPlan()}>Draft again</Button>
         <Button variant="primary" data-primary="true" disabled={c.busy} onClick={() => void c.actions.confirmPlan()}>Confirm the lesson plan</Button>
@@ -75,6 +75,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
           <div data-rise>
             <PlanCard
               plan={shownPlan}
+              lessonMinutes={view.course.lessonMinutes}
               objectives={view.objectives}
               teacher={{ name: view.course.owner, confirmedAt: shownPlan.status === "confirmed" && published ? new Date(published.publishedAt) : undefined }}
               onPrint={() => window.print()}

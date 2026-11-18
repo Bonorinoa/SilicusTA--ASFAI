@@ -216,3 +216,13 @@
   .consequences { grid-template-columns: minmax(0, 1fr); }
   .tile + .tile { border-left: 0; border-top: 1px solid var(--fn-line); }
 }
+
+/* K2: the lesson-length chips ("How long is the lesson?") — one row of pills, the checked one in the accent. */
+.lengthField { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lengthChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lengthChip {
+  display: inline-flex; align-items: center; padding: 7px 14px; border: 1px solid var(--fn-line); border-radius: 999px;
+  background: #fffdf8; font-size: 0.9375rem; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.lengthChip:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); font-weight: 600; }
+.lengthChip:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }

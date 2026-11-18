@@ -637,8 +637,9 @@ function validateSpec(spec, objectives, context = [], { ages = null, lessonMinut
   // itself (view.course.stage), so a v1 plan is never widened with host-authored content.
 
   // K2: the host sums the activity minutes against the teacher's length. It never rescales: the plan stays as
-  // the model wrote it, and a sum outside ±10% (or an activity with no minutes) is a note under "Silicus adjusted".
-  notes.push(...lengthNotes(normalized.map((a, i) => ({
+  // the model wrote it, and a sum outside ±10% (or an activity with no minutes) is a note under "Silicus adjusted",
+  // put FIRST so the teacher's own number is never hidden behind the clamp notes.
+  notes.unshift(...lengthNotes(normalized.map((a, i) => ({
     title: a.title, minutes: a.minutes, minutesMissing: !Number.isFinite(activities[i]?.minutes),
   })), lessonMinutes));
 

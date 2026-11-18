@@ -47,6 +47,9 @@ const STEPS: { id: Exclude<StepId, "welcome">; label: string }[] = [
   { id: "review", label: "Review and confirm" },
 ];
 const MAX_SOURCES = 8;
+/** K2 (owner, 17 Nov): the teacher sets the lesson length; the plan fits it. One course is one lesson. */
+export const LESSON_MINUTES = [20, 30, 45, 60, 90] as const;
+export const DEFAULT_LESSON_MINUTES = 45;
 const KIND_LABEL: Record<string, string> = { pdf: "PDF", docx: "DOC", pptx: "PPT", text: "TXT" };
 /** The brief questions this wizard asks itself; any other set means the brief step must ask them. */
 const KNOWN = new Set(["topic", "course", "learning_outcomes"]);
@@ -75,6 +78,7 @@ export function NewCourseWizard() {
   const [touchedChoice, setTouchedChoice] = useState(false);
   const [aud, setAud] = useState<Audience>(EMPTY_AUDIENCE);
   const [notes, setNotes] = useState("");
+  const [lessonMinutes, setLessonMinutes] = useState<number>(DEFAULT_LESSON_MINUTES);
   const coverage = useCoverage(aud.ages);
   const stage = stageOf(aud);
   const audience = audienceAnswer(aud, notes);
@@ -122,6 +126,7 @@ export function NewCourseWizard() {
       const r = await host.createCourse({
         title: a.title.trim(), owner: a.owner.trim(), materials: [], objectivesConfirm: "explicit",
         ...(aud.ages ? { ages: aud.ages } : {}), ...(aud.anchor ? { marbleAnchor: aud.anchor.id } : {}),
+        lessonMinutes,
       });
       courseId = r.courseId;
       // Text stays in this tab, held for the course exactly as the Sources panel holds it.
@@ -243,6 +248,19 @@ export function NewCourseWizard() {
             onGroup={(g) => setAud((x) => selectGroup(x, g))} onStep={(k, d) => setAud((x) => stepAge(x, k, d))} />
           <TopicField aud={aud} coverage={coverage} topic={a.topic} onTopic={(v) => set("topic")(v)}
             onAnchor={(t) => setAud((x) => pickAnchor(x, t))} onClear={() => setAud((x) => clearAnchor(x))} />
+          <fieldset className={w.lengthField}>
+            <legend className={ui.label}>How long is the lesson?</legend>
+            <div className={w.lengthChips} role="radiogroup" aria-label="Lesson length">
+              {LESSON_MINUTES.map((m) => (
+                <label key={m} className={w.lengthChip}>
+                  <input type="radio" name="lesson-minutes" className={w.visuallyHidden} value={m}
+                    checked={lessonMinutes === m} onChange={() => setLessonMinutes(m)} />
+                  <span>{m} min</span>
+                </label>
+              ))}
+            </div>
+            <span className={ui.hint}>Silicus fits the activities to this length. One course is one lesson.</span>
+          </fieldset>
           <div className={ui.field}>
             <label className={ui.label} htmlFor={ids.notes}>Anything else about the class? <span style={{ fontWeight: 400 }}>(optional)</span></label>
             <textarea id={ids.notes} className={ui.textarea} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
@@ -342,6 +360,7 @@ export function NewCourseWizard() {
           {row("Course", a.title.trim(), "course")}
           {row("Your name", a.owner.trim(), "course")}
           {row("Learners", <>{agesText(aud.ages)} · {groupName(aud)}{stage ? ` · AI stage ${stage} of 4` : ""}</>, "course")}
+          {row("Lesson length", `${lessonMinutes} min lesson`, "course")}
           {row("Topic", a.topic.trim(), "course")}
           {row("Skill-map anchor", aud.anchor ? (
             <>

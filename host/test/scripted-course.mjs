@@ -33,8 +33,10 @@ export function modelReply(prompt) {
   if (p.startsWith("Draft one lesson plan")) {
     const ids = [...p.matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
     const refs = [...p.matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
+    // K2: the v1 activities share 45 minutes (the wizard's default lesson), so a 45-minute course gets no length note.
+    const share45 = (i) => Math.floor(45 / ids.length) + (i < 45 % ids.length ? 1 : 0);
     return { title: "How plants eat", audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
+      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: share45(i), objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
         ...(refs[i] ? { citations: [refs[i]] } : {}) })) };
   }
   if (p.startsWith("You are a study helper")) {

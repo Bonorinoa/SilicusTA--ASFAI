@@ -61,7 +61,7 @@ export function Learn({ courseId }: { courseId: string }) {
                   <span style={{ opacity: 0.85, fontSize: "0.875rem" }}>{version.owner}</span>
                   <h1>{version.title}</h1>
                   <span style={{ opacity: 0.85, fontSize: "0.875rem" }}>
-                    {version.lessonPlan ? `${version.lessonPlan.activities.reduce((n, a) => n + a.minutes, 0)} minutes · ${version.lessonPlan.activities.length} activities` : null}
+                    {version.lessonPlan ? `${v?.course.lessonMinutes !== undefined ? `${v.course.lessonMinutes} min lesson · ` : ""}${version.lessonPlan.activities.reduce((n, a) => n + a.minutes, 0)} minutes · ${version.lessonPlan.activities.length} activities` : null}
                   </span>
                 </>
               ) : <><Skeleton width="30%" height={12} /><Skeleton width="70%" height={34} /></>}

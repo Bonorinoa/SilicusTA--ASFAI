@@ -27,7 +27,7 @@ export function PublishStep({ c, view, onLook }: StepProps) {
           <section className={s.published} data-rise aria-label="Published">
             <p className={s.kicker} style={{ color: "#b9c4cf" }}>Step 4 of 4 · Published</p>
             <h1>Version {published.version} is published</h1>
-            <p className={s.publishedMeta}>Published {new Date(published.publishedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })} by {published.owner}. It can’t change; your next edits become version {published.version + 1}.</p>
+            <p className={s.publishedMeta}>{view.course.lessonMinutes !== undefined ? `A ${view.course.lessonMinutes} min lesson. ` : ""}Published {new Date(published.publishedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })} by {published.owner}. It can’t change; your next edits become version {published.version + 1}.</p>
             <div className={s.publishedActions}>
               <LinkButton variant="secondary" href={href.learn(id)}>Open the student space</LinkButton>
               <LinkButton variant="secondary" href={href.rehearse(id)}>Rehearse student questions</LinkButton>
@@ -91,6 +91,7 @@ export function PublishStep({ c, view, onLook }: StepProps) {
         {plan ? (
           <PlanCard
             plan={plan}
+            lessonMinutes={view.course.lessonMinutes}
             objectives={view.objectives}
             teacher={{ name: view.course.owner }}
             onPrint={() => window.print()}
@@ -107,7 +108,7 @@ export function PublishStep({ c, view, onLook }: StepProps) {
           </ActionBar>
         ) : (
           <ActionBar text={view.publish.canPublish
-            ? <><strong>Ready.</strong> {plural(view.objectives.length, "objective")}, {plural(plan?.activities.length ?? 0, "activity", "activities")}, {minutes} min.</>
+            ? <><strong>Ready.</strong> {plural(view.objectives.length, "objective")}, {plural(plan?.activities.length ?? 0, "activity", "activities")}, {minutes} min{view.course.lessonMinutes !== undefined ? ` of a ${view.course.lessonMinutes} min lesson` : ""}.</>
             : "Resolve the points above to publish."}>
             {view.planWording?.stale ? (
               <>

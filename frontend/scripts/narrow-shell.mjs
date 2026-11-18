@@ -236,7 +236,6 @@ const setValue = (selector, text) => page.evaluate((sel, text) => {
   Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }, selector, text);
-const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
 /** Everything this origin holds in IndexedDB. Read IN the page. (Only after a course exists: opening
  *  the store early would create an empty database whose "courses" store does not exist yet.) */
 const stored = () => page.evaluate(async () => {
@@ -275,125 +274,21 @@ const print = (m) => {
 };
 
 try {
-  // ---- first impression: the BARE url lands on the live course (landing + onboarding)
+  // ---- first impression (K1): the classic #/live view is deleted. An old #/live link lands on the landing page,
+  // and the landing is checked at every width. The studio's own surfaces are walked below.
   await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
-  check("the bare URL lands on the live course", await bodyHas("Build a course, one decision at a time"));
+  check("an old #/live link lands on the landing page", await page.evaluate(() => !!document.getElementById("landing-title")));
   for (const w of WIDTHS) print(await at(w, "landing + onboarding"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-landing`, ["shell-header", "hero-steps", "onboarding-card", "record-band"]); }
-
-  // ---- name the course, confirm the materials, answer the intake
-  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
-  await reply("Photosynthesis for the very young — a course whose title is long enough to need wrapping in a narrow window", "Record the course title");
-  // Renamed by the intake-clarity round: the label step is now "What name should this course show for you?".
-  await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
-  await reply("Ada Lovelace", "Record this name");
-  await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
-  await reply("Lesson notes", "Record these names");
-  await poll(() => bodyHas("Confirm the material list"));
-  await poll(async () => (await stored()).metas.length === 1);
-  await clickText("Confirm the material list");
-
-  await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
-  // The intake question state of the onboarding card, at every width.
-  for (const w of WIDTHS) print(await at(w, "onboarding: intake question"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: 1440, height: 1000 }); }
-  await setValue("#intake-topic", "Photosynthesis"); await clickText("Record this answer");
-  await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
-  await setValue("#intake-course", "Science, ages 8-10"); await clickText("Record this answer");
-  await poll(() => bodyHas("Propose these from my materials instead"));
-  await clickText("Propose these from my materials instead");
-  await poll(() => bodyHas("Confirm the brief"));
-  await clickText("Confirm the brief");
-
-  // ---- the material panel, at every width (with one item already added, so the rows are set)
-  await poll(() => bodyHas("Add your material here")); // the intake-clarity round reworded this prompt
-  await page.evaluate(() => {
-    const label = [...document.querySelectorAll("label")].find((l) => /Or paste text/.test(l.textContent ?? ""));
-    const input = document.getElementById(label.htmlFor);
-    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(input, "Lesson notes");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await setValue('textarea[aria-label="Pasted text"]', MATERIAL_TEXT);
-  await clickText("Add this text");
-  await poll(() => bodyHas("Lesson notes ·"));
-  for (const w of WIDTHS) print(await at(w, "materials panel"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-materials`, ["materials-panel", "shell-header"]); }
-  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
-  await clickText("Propose objectives from my materials");
-  await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
-  await page.type('[role="dialog"] input[type="password"]', PASSCODE);
-  await clickText("Continue");
-  await poll(recorded("objectives.proposed"), 20000);
-  await poll(async () => {
-    if ((await stored()).events.filter((e) => JSON.parse(e.line).event.kind === "objectives.decided").length >= 3) return true;
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll("button")].find((x) => (x.getAttribute("aria-label") ?? "").trim().startsWith("Accept objective"));
-      if (b && !b.disabled) b.click();
-    });
-    await sleep(150);
-    return null;
-  }, 25000);
-  // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
-  await poll(() => bodyHas("build the plan"));
-  await clickText("Confirm 3 objectives · build the plan");
-  await poll(recorded("plan.proposed"), 20000);
-  await poll(() => bodyHas("Confirm the lesson plan"));
-  await clickText("Confirm the lesson plan");
-  await poll(recorded("plan.confirmed"));
-  await poll(async () => {
-    const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
-    if (opened) return true;
-    await page.evaluate(() => {
-      const sec = document.querySelector('section[aria-label*="Preview and publish"]');
-      const armed = !!sec && /ready to publish/i.test(sec.innerText);
-      const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
-      if (btn && armed) btn.click();
-    });
-    await sleep(200);
-    return null;
-  }, 12000);
-  await clickText("Publish version 1");
-  await poll(recorded("package.published"));
-  // The host records the publish before the page re-renders the published view: wait for the button, then click
-  // (clicking on the record alone raced the render, about 1 run in 5).
-  await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((x) => (x.textContent ?? "").trim() === "Check a student question")));
-  await clickText("Check a student question"); // the helper is collapsed until opened
-  await page.waitForSelector('section[aria-label="Check a student question"] input');
-  await page.type('section[aria-label="Check a student question"] input', "What do plants need to make food?");
-  await clickText("Ask");
-  await poll(() => bodyHas("A plant uses light"), 20000);
-
-  // ---- the whole app at every width
-  check("the published course is on the page with a student answer", await bodyHas("From Objective 1 \u00b7 Activity 1"));
-  for (const w of WIDTHS) print(await at(w, "full live course"));
-  // C-a (workspace): at 380 the stage navigator is the stepper again: a row of labels, no summaries, nothing sticky.
-  await page.setViewport({ width: 380, height: 900, deviceScaleFactor: 1 });
-  const stepper = await page.evaluate(() => {
-    const ol = document.querySelector('ol[aria-label="Steps"]');
-    if (!ol) return null;
-    let sticky = false;
-    for (let e = ol; e && e !== document.body; e = e.parentElement) if (getComputedStyle(e).position === "sticky") sticky = true;
-    return { dir: getComputedStyle(ol).flexDirection, text: ol.innerText.replace(/\s+/g, " "), sticky, right: Math.round(ol.getBoundingClientRect().right), vw: innerWidth };
-  });
-  check("380px: the stage navigator collapses to the stepper (a row of labels, no summaries, nothing sticky)",
-    !!stepper && stepper.dir === "row" && /Material.*Brief.*Objectives.*Plan.*Publish/.test(stepper.text) && !/Version \d|confirmed|min\b/.test(stepper.text) && !stepper.sticky && stepper.right <= stepper.vw,
-    JSON.stringify(stepper));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-course`, ["shell-header", "student-chat", "pinned-copies", "record-band"]); }
-
-  // ---- the data controls in their confirm state (nothing is deleted: "Keep them" is pressed after)
-  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
-  await clickText("Delete all data from this browser");
-  await poll(() => bodyHas("This cannot be undone"));
-  for (const w of WIDTHS) print(await at(w, "record band: delete confirm"));
-  await clickText("Keep them");
-  await poll(() => bodyHas("Export all courses"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-confirm`, ["record-band"]); }
+  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-landing`, ["shell-header", "hero-steps"]); }
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
   // ---- G2b: the new-course wizard's step 1 (learner cards, steppers, skill-map strip, anchor, consequences).
   // Checked at every width: the page never scrolls sideways and nothing in the step crosses the viewport.
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  // K1: with the classic view gone no course exists yet, so the wizard opens on its first-run welcome: Begin.
+  await poll(() => page.evaluate(() => /Who are your learners\?|Let’s set up your course/.test(document.body.innerText)));
+  if (await bodyHas("Let’s set up your course")) await clickText("Begin");
   await poll(() => bodyHas("Who are your learners?"));
   const g2bClick = (t) => page.evaluate((x) => { const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(x)); el?.click(); return !!el; }, t);
   await g2bClick("Early primary");

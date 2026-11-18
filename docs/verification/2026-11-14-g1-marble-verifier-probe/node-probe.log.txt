@@ -1,0 +1,76 @@
+== status
+{"status":200,"json":{"sources":[{"id":"asfai-graph","label":"ASFAI's skill map","enabled":false,"canVerify":true},{"id":"local-ontology","label":"your ontology file","enabled":false,"canVerify":true},{"id":"marble","label":"Marble skill taxonomy","enabled":true,"canVerify":true}]}}
+course 201
+files before [
+  '/urn_uuid_816d5425-8c00-4cc5-b21b-b3c11dbbce1c/events.ndjson',
+  '/urn_uuid_816d5425-8c00-4cc5-b21b-b3c11dbbce1c/meta.json'
+]
+== demo edges (Node host routes)
+mt_WRRv1ABECC 200 Smart Versus Not-Smart Devices ages 5-8 hard-prereq: mt_XbGfVhfiUz soft-prereq: - dependents: mt_AzTrT5ySCx/hard,mt_SZrMv3YAky/soft,mt_u6SYiVx7FX/hard
+mt_AzTrT5ySCx 200 AI in Daily Life ages 5-12 hard-prereq: mt_WRRv1ABECC soft-prereq: mt_u6SYiVx7FX dependents: mt_kH1DzOPsXG/soft
+mt_u6SYiVx7FX 200 Voice Assistants and How They Work ages 5-8 hard-prereq: mt_WRRv1ABECC soft-prereq: mt__p5n8z5soJ dependents: mt_AzTrT5ySCx/soft
+mt_kH1DzOPsXG 200 Data and Information for Computers ages 5-10 hard-prereq: mt__p5n8z5soJ soft-prereq: mt_AzTrT5ySCx dependents: mt_EedcpioR0v/hard,mt_gNDkyx19tk/hard,mt_HopZomN12L/hard,mt_K6qtan847r/hard,mt_ofOGCQ7FWj/hard,mt_sHMpam8zcd/hard
+== search AI in daily life ages 5-12
+200 [
+  'mt_AzTrT5ySCx:AI in Daily Life:5-12:14',
+  'mt_6nqVnVdexe:Daily Life in a Roman Town:7-9:8',
+  'mt_PThM5P7Umd:Village Life:5-7:7',
+  'mt_xE_b3JiDZU:Rainforest Products in Daily Life:9-12:7',
+  'mt_P0HBNfp46z:Everyday Life in Ancient Egypt:5-10:6'
+]
+== age filter: ages 3-4 only, 'AI in daily life'
+200 [
+  'Connecting maths to real life:3-13',
+  'Vowel Digraphs:4-11',
+  'Time comparison words:4-8',
+  'Ordering Events in Time:4-8',
+  'Reading and writing numbers to 100:3-13'
+] every hit overlaps 3-4: true
+== maximum likelihood, route, ages 19-25
+200 hits: 0
+same, default 3-15 ages: [
+  'Ordering Likelihoods 8-12',
+  'Likelihood Language 6-10',
+  'Box plots 11-14',
+  'Dot plots 11-12',
+  'Risk, Uncertainty, and Cognitive Bias 11-12'
+]
+== edge cases
+/api/knowledge/marble/topics/% -> 500 {"ok":false,"code":"INTERNAL","message":"URI malformed"}
+/api/knowledge/marble/topics/%E0%A4%A -> 500 {"ok":false,"code":"INTERNAL","message":"URI malformed"}
+/api/knowledge/marble/topics/ -> 404 {"ok":false,"code":"NOT_FOUND","message":"no such marble route"}
+/api/knowledge/marble/search?q=x&ageMin=abc&ageMax=&limit=-5 -> 200 {"query":{"q":"x","ageMin":3,"ageMax":15,"limit":1},"hits":[]}
+/api/knowledge/marble/search?q=x&ageMin=12&ageMax=5 -> 200 {"query":{"q":"x","ageMin":12,"ageMax":5,"limit":10},"hits":[]}
+/api/knowledge/marble/nope -> 404 {"ok":false,"code":"NOT_FOUND","message":"no such marble route"}
+/api/knowledge/marble/topics/__proto__ -> 404 {"ok":false,"code":"UNKNOWN_TOPIC","message":"no such Marble topic: __proto__"}
+/api/knowledge/marble/topics/constructor -> 404 {"ok":false,"code":"UNKNOWN_TOPIC","message":"no such Marble topic: constructor"}
+POST search -> 404 {"ok":false,"code":"NOT_FOUND","message":"not found"}
+== course dir unchanged by all the route calls: true
+== MarbleSource retrieve at the audience boundary (real snapshot, network blocked)
+egress null canVerify true enabled true id marble namespace marble
+"University econometrics, ages 19 and up"            band {"min":19,"max":null} -> 0 
+"a 19-year-old course"                               band {"min":19,"max":19} -> 0 
+"aged 19"                                            band {"min":19,"max":19} -> 0 
+"ages 19-22"                                         band {"min":19,"max":22} -> 0 
+"ages 8-10"                                          band {"min":8,"max":10} -> 5 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"How machines notice things"                         band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"University econometrics"                            band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"undergraduate econometrics, college sophomores"     band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"Year 13 students"                                   band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"grade 12, 17 and 18 year olds"                      band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"16 to 18 year olds"                                 band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"adult learners"                                     band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+""                                                   band null -> 8 Ordering Likelihoods (ages 8–12) | Likelihood Language (ages 6–10) | Independent and dependent events (ages 9–13)
+"12 to 17 year olds"                                 band null -> 8 AI in Daily Life (ages 5–12) | Smart Versus Not-Smart Devices (ages 5–8) | Voice Assistants and How They Work (ages 5–8)
+"3 to 5 year olds"                                   band null -> 8 AI in Daily Life (ages 5–12) | Smart Versus Not-Smart Devices (ages 5–8) | Voice Assistants and How They Work (ages 5–8)
+"ages 16-18"                                         band {"min":16,"max":18} -> 0 
+== an AI-in-daily-life course ages 8-10: all retrieved refs, in order
+   marble:mt_AzTrT5ySCx AI in Daily Life (ages 5–12)
+   marble:mt_WRRv1ABECC Smart Versus Not-Smart Devices (ages 5–8)
+   marble:mt_u6SYiVx7FX Voice Assistants and How They Work (ages 5–8)
+   marble:mt_kH1DzOPsXG Data and Information for Computers (ages 5–10)
+   marble:mt_XbGfVhfiUz Computers in Everyday Life (ages 5–8)
+   marble:mt_SZrMv3YAky Hardware and software (ages 3–11)
+   marble:mt_6nqVnVdexe Daily Life in a Roman Town (ages 7–9)
+   marble:mt_MlD0gwLSw9 Roman Army and Conquest of Britain (ages 7–9)
+== network attempts so far: []

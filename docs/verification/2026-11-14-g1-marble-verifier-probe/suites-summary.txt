@@ -1,0 +1,10 @@
+npm-ci EXIT=0
+confirm-gate EXIT=0
+api EXIT=0
+host EXIT=0
+e2e EXIT=0
+fe-test EXIT=0
+fe-build EXIT=0
+studio EXIT=0
+browser-mode EXIT=0
+DONE

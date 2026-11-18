@@ -103,3 +103,19 @@ describe("the site's deadline starts when the request leaves, not when the teach
     expect((err as Error).message).not.toMatch(/signal/i);
   });
 });
+
+describe("K1: the browser host passes the page's own status through", () => {
+  const reply = (status: number, body: unknown) => async () => new Response(JSON.stringify(body), { status });
+  const keeper: PasscodeKeeper = { get: () => "p", set: () => {}, clear: () => {}, ask: async () => "p" };
+  it("a 403 page (422 from /api/fetch) keeps 'answered 403'; the function's own 504 deadline reads as too long", async () => {
+    const seen: { url: string; signalAborted: boolean; passcode: string | null }[] = [];
+    const blocked = createSite({ origin: ORIGIN, fetchImpl: siteFetch(reply(422, { error: { code: "URL_UNREACHABLE", message: "that link answered 403" } }), seen), passcode: keeper });
+    const e1 = await blocked.resolveUrl("https://example.org/page").then(() => null, (e) => e);
+    expect((e1 as { code?: string }).code).toBe("URL_UNREACHABLE");
+    expect((e1 as Error).message).toBe("that link answered 403");
+    const slow = createSite({ origin: ORIGIN, fetchImpl: siteFetch(reply(504, { error: { code: "UPSTREAM_TIMEOUT" } }), seen), passcode: keeper });
+    const e2 = await slow.resolveUrl("https://example.org/page").then(() => null, (e) => e);
+    expect((e2 as Error).message).toMatch(/took too long/);
+  });
+});
+

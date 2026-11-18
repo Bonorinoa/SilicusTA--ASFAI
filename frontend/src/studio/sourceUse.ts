@@ -5,6 +5,7 @@
  * "(several)" names none), and "Skipped" is the list the host returned for the last round. The UI only counts.
  */
 import { plural } from "../lib/plural";
+import { plainFetchFailure } from "../lib/fetchFailure";
 import { REFUSALS } from "../lib/refusals";
 
 const PREFIX = "from material: ";
@@ -49,7 +50,19 @@ export interface Skipped { name: string; code?: string; reason?: string }
 
 export function skippedLine(name: string, skipped: readonly Skipped[]): string | null {
   const hit = skipped.find((x) => x.name === name);
-  return hit ? `Skipped: ${skipReason(hit.code)}` : null;
+  if (!hit) return null;
+  // K1: a page that could not be read says why in plain words; the raw status waits in skippedDetail.
+  const plain = hit.code === "URL_UNREACHABLE" ? plainFetchFailure(hit.reason) : null;
+  return plain ? `Skipped: ${plain.line}` : `Skipped: ${skipReason(hit.code)}`;
+}
+
+/**
+ * The host's own sentence for a web page that could not be read (the raw status, K1), for a collapsed "Details".
+ * Only for URL_UNREACHABLE: for every other skip the host's sentence still never reaches the screen (R6).
+ */
+export function skippedDetail(name: string, skipped: readonly Skipped[]): string | null {
+  const hit = skipped.find((x) => x.name === name);
+  return hit?.code === "URL_UNREACHABLE" && hit.reason ? hit.reason : null;
 }
 
 /** A name compared without case or extension: "Lesson Notes.PDF" and "lesson notes.docx" are the same source. */

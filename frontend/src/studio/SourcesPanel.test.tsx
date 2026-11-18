@@ -24,6 +24,16 @@ describe("SourcesPanel states (R6)", () => {
     expect(screen.getByText("Skipped: it has no text Silicus can read")).toBeTruthy();
     expect(screen.queryByText(/material has no text/)).toBeNull();
   });
+  it("K1: a page that blocks reading says so in plain words, with the raw status only in a closed Details", () => {
+    const url = "https://example.org/grass";
+    panel({ links: [url], skipped: [{ name: url, code: "URL_UNREACHABLE", reason: "that link answered 403" }] });
+    expect(screen.getByText("Skipped: This site blocks automatic reading. Paste the text, or save the page as a PDF and add that.")).toBeTruthy();
+    const details = screen.getByText("Details").closest("details");
+    expect(details).toBeTruthy();
+    expect(details?.open).toBe(false);
+    expect(details?.textContent).toMatch(/answered 403/);
+    expect(screen.queryByText(/couldn/i)).toBeNull();
+  });
   it("a names-only row offers to attach the file, and disappears once a file matches it ignoring case and extension", () => {
     const { rerender } = panel({ names: ["Lesson Notes.pdf"] });
     expect(screen.getByRole("button", { name: "Attach the file for Lesson Notes.pdf" })).toBeTruthy();

@@ -11,6 +11,7 @@
  * An unknown code falls back to a generic entry that still names what to try. Display only: nothing here
  * decides; the host did, and this only says so.
  */
+import { plainFetchFailure } from "./fetchFailure";
 
 /** What the teacher was doing when the host refused. Picks the generic wording; the code picks the rest. */
 export type Act = "propose" | "suggest" | "plan" | "decide" | "confirm" | "brief" | "publish" | "ask" | "create" | "check" | "other";
@@ -251,6 +252,10 @@ export function explainRefusal(e: unknown, act: Act = "other", opts: ExplainOpti
     code === "ALREADY_PROPOSED" && opts.alreadyProposedWaiting === false
       ? "This kind of round has already run here, and nothing is waiting. Write one of your own, or move on."
       : entry.nextFor?.[act] ?? entry.next;
+  // K1: a web page that could not be read says why in plain words (blocked, not found, too slow); the host's
+  // own sentence, with the raw status, stays in Details.
+  const plain = code === "URL_UNREACHABLE" ? plainFetchFailure(message) : null;
+  if (plain) return { what: plain.what, saved: entry.saved, next: plain.next, code, details: sentence(message) };
   return { what: entry.what, saved: entry.saved, next, code: code || "UNKNOWN", details: sentence(message) };
 }
 

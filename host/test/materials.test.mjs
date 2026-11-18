@@ -229,3 +229,13 @@ test("yt-dlp is told to actually WRITE the captions: --print implies a dry run u
   await ytdlpTranscript("dQw4w9WgXcQ", { cmd: "y", runImpl: f.runImpl });
   assert.ok(f.seen[0].args.includes("--no-simulate"));
 });
+
+test("K1: a failed page keeps its status in the sentence, and a timeout says it took too long", async () => {
+  const w = web({ "https://example.org/locked": { status: 403 }, "https://example.org/gone": { status: 404 } });
+  await assert.rejects(fetchPublic("https://example.org/locked", w.deps), (e) => e.code === "URL_UNREACHABLE" && /answered 403/.test(e.message));
+  await assert.rejects(fetchPublic("https://example.org/gone", w.deps), (e) => e.code === "URL_UNREACHABLE" && /answered 404/.test(e.message));
+  const slow = async () => { throw new DOMException("The operation was aborted due to timeout", "TimeoutError"); };
+  await assert.rejects(fetchPublic("https://example.org/slow", { fetchImpl: slow, lookupImpl: PUBLIC }), (e) => e.code === "URL_UNREACHABLE" && /took too long/.test(e.message));
+  const down = async () => { throw new TypeError("fetch failed"); };
+  await assert.rejects(fetchPublic("https://example.org/down", { fetchImpl: down, lookupImpl: PUBLIC }), (e) => e.code === "URL_UNREACHABLE" && /could not be reached/.test(e.message));
+});

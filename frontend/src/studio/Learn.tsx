@@ -24,10 +24,11 @@ export function Learn({ courseId }: { courseId: string }) {
   const v = view && view !== "missing" ? view : null;
   const version = v?.versions.at(-1) ?? null;
 
-  const ask = async () => {
-    const question = q.trim();
+  /** `text` = a lesson item the helper offered (K3 clarify or redirect); otherwise the typed question. */
+  const ask = async (text?: string) => {
+    const question = (text ?? q).trim();
     if (!question || asking) return;
-    setQ("");
+    if (text === undefined) setQ("");
     const i = turns.length;
     setTurns((t) => [...t, { q: question }]);
     setAsking(true);
@@ -98,6 +99,13 @@ export function Learn({ courseId }: { courseId: string }) {
                       <span className={s.learnSource}>
                         <span>From the lesson: {t.a.cites.map((c) => c.label).join(" · ")}</span>
                         {t.a.basis === "explanation" ? <span>Silicus is explaining an idea your lesson names.</span> : null}
+                      </span>
+                    ) : null}
+                    {!t.a.grounded && t.a.offers?.length ? (
+                      <span className={s.learnOffers} role="group" aria-label="Ask about">
+                        {t.a.offers.map((o) => (
+                          <button key={o.id} type="button" className={s.learnOffer} disabled={asking} onClick={() => void ask(o.topic)}>{o.topic}</button>
+                        ))}
                       </span>
                     ) : null}
                   </div>

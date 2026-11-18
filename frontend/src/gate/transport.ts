@@ -115,7 +115,18 @@ export interface StudentAnswer {
    * The `answer` text is the fixed sentence for that refusal (docs/design/glossary.md). Absent = legacy host.
    */
   refusal?: "off_topic" | "assessment";
+  /**
+   * K3 (owner, 17 Nov): which kind of reply this is. Only "answer" carries the model's words; the host composes
+   * "clarify", "about_helper" and the "off_topic" redirect from fixed text and the lesson's own words.
+   * Absent = a host older than K3 (read it from `grounded` and `refusal`).
+   */
+  kind?: StudentReplyKind;
+  /** K3: lesson items a clarify or off_topic reply offers, in the lesson's own words (objective statement or activity title). */
+  offers?: { id: string; topic: string }[];
 }
+
+export type StudentReplyKind = "answer" | "clarify" | "about_helper" | "off_topic" | "assessment";
+
 
 /**
  * Where a published course stands against its last sealed version, as the HOST reads the record.

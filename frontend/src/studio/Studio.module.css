@@ -279,6 +279,12 @@ a.crumb:hover { color: var(--fn-ink); }
 .learnA { align-self: flex-start; max-width: 88%; background: #fff; border-radius: 18px 18px 18px 6px; padding: 12px 14px; box-shadow: 0 2px 0 #ecdcc4; line-height: 1.5; }
 .learnSource { display: block; margin-top: 8px; font-size: 0.8125rem; line-height: 1.45; color: #8a7b68; }
 .learnSource span { display: block; }
+/* K3: lesson items a clarify or redirect reply offers; tapping one asks about it. */
+.learnOffers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.learnOffer { font: inherit; font-size: 0.875rem; line-height: 1.3; text-align: left; color: #5a3d24; background: #fbf3e6; border: 1px solid #ecdcc4; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.learnOffer:hover:not(:disabled) { background: #f5e6cf; }
+.learnOffer:focus-visible { outline: 2px solid #b5651d; outline-offset: 2px; }
+.learnOffer:disabled { opacity: 0.6; cursor: default; }
 
 /* ---------- middle widths: the tray goes under the document ---------- */
 @media (max-width: 1180px) {

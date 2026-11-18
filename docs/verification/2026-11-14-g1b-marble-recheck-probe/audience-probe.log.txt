@@ -1,0 +1,40 @@
+# Part A: topic 'maximum likelihood' (grain risk), expect 0 citations each
+-- old H1
+ok   "ages 19 and up"                                 band {"min":19,"max":null}    ->  0 citations 
+ok   "a 19-year-old course"                           band {"min":19,"max":19}      ->  0 citations 
+ok   "aged 19"                                        band {"min":19,"max":19}      ->  0 citations 
+ok   "19 year olds"                                   band {"min":19,"max":19}      ->  0 citations 
+ok   "19 year old students"                           band {"min":19,"max":19}      ->  0 citations 
+ok   "16 to 18 year olds"                             band {"min":16,"max":18}      ->  0 citations 
+ok   "17 and 18 year olds"                            band {"min":17,"max":18}      ->  0 citations 
+ok   "Econometrics for 2nd-year undergraduates"       band null                     ->  0 citations 
+-- card extras
+ok   "University econometrics"                        band null                     ->  0 citations 
+ok   "adult learners"                                 band null                     ->  0 citations 
+ok   ""                                               band null                     ->  0 citations 
+-- verifier extras
+ok   "16–18 year olds"                                band {"min":16,"max":18}      ->  0 citations 
+ok   "ages 16-18"                                     band {"min":16,"max":18}      ->  0 citations 
+ok   "ages 19-22"                                     band {"min":19,"max":22}      ->  0 citations 
+ok   "18+"                                            band null                     ->  0 citations 
+ok   "college freshmen"                               band null                     ->  0 citations 
+ok   "PhD students"                                   band null                     ->  0 citations 
+ok   "graduate students"                              band null                     ->  0 citations 
+ok   "undergrads"                                     band null                     ->  0 citations 
+ok   "high school seniors"                            band null                     ->  0 citations 
+ok   "grade 12"                                       band null                     ->  0 citations 
+ok   "19yo"                                           band null                     ->  0 citations 
+ok   "nineteen year olds"                             band null                     ->  0 citations 
+ok   "ages 30 to 40"                                  band {"min":30,"max":40}      ->  0 citations 
+ok   "adults aged 25-34"                              band {"min":25,"max":34}      ->  0 citations 
+ok   "  "                                             band null                     ->  0 citations 
+ok   "ages 99"                                        band null                     ->  0 citations 
+ok   "Econometrics 101, ages 19 to 22"                band {"min":19,"max":22}      ->  0 citations 
+# Part B: ages 9-10 must still return topics
+ok   "ages 9–10"                                      band {"min":9,"max":10}       ->  8 citations AI in Daily Life (ages 5–12)
+ok   "Grade 4 science, ages 9–10"                     band {"min":9,"max":10}       ->  8 citations AI in Daily Life (ages 5–12)
+ok   "ages 9-10"                                      band {"min":9,"max":10}       ->  8 citations AI in Daily Life (ages 5–12)
+ok   "9 to 10 year olds"                              band {"min":9,"max":10}       ->  8 citations AI in Daily Life (ages 5–12)
+ok   "8-10 year olds"                                 band {"min":8,"max":10}       ->  8 citations AI in Daily Life (ages 5–12)
+ok   "a 10-year-old course"                           band {"min":10,"max":10}      ->  8 citations Building an energy-converting device (ages 9–12)
+ALL EXPECTATIONS MET

@@ -1,0 +1,11 @@
+confirm-gate: # tests 50 # pass 50 # fail 0 # skipped 0 
+api: # tests 57 # pass 57 # fail 0 # skipped 0 
+host: # tests 363 # pass 363 # fail 0 # skipped 0 
+e2e: 53 pass lines; tail: |53/53 acceptance checks passed  (data: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-e2e-zAUPBl)|
+fe-test:  Test Files  64 passed (64)       Tests  682 passed (682) 
+fe-build: ✓ built in 1.99s 
+marble-snapshot-B9Cjl5Qs.json
+assets
+index.html
+studio: PASS lines 48, FAIL lines 0; 48/48 studio checks passed
+browser-mode: PASS lines 339, FAIL lines 0; 339/339 browser-mode checks passed

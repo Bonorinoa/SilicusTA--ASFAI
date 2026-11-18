@@ -49,10 +49,12 @@ describe("G2c pre-fill: a suggestion fills the teacher's own field and sends not
     expect(c.actions.decide).toHaveBeenCalledTimes(1);
     expect(c.actions.decide).toHaveBeenCalledWith({ verb: "add", statement: "Students can identify at least five examples of AI in their daily life. Name two at home." });
     expect(JSON.stringify((c.actions.decide as ReturnType<typeof vi.fn>).mock.calls)).not.toContain("mt_");
-    // H2a: one credit per surface — none under the suggestions; the one credit sits under the neighbourhood view.
+    // H2a: one credit per surface — none under the suggestions. M1: the map is shown once (wizard step 2); here the
+    // one credit sits on the "On the map" context line, and the neighbourhood view is gone.
     expect(panel.querySelector("[data-marble-credit]")).toBeNull();
     expect(document.querySelectorAll("[data-marble-credit]")).toHaveLength(1);
-    expect(document.querySelector("[data-neighbourhood] [data-marble-credit]")).not.toBeNull();
+    expect(document.querySelector("[data-map-context] [data-marble-credit]")).not.toBeNull();
+    expect(document.querySelector("[data-neighbourhood]")).toBeNull();
   });
 
   it("a course without an anchor looks exactly as before: no fetch, no skill-map surfaces", () => {

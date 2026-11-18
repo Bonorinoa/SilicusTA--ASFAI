@@ -137,7 +137,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
         </div>
       ) : null}
       {/* One credit per surface (H2a): an anchored course already credits Marble under the neighbourhood view. */}
-      {map || waitingRows.some((r) => r.alignment || r.source === "marble") ? <MarbleCredit className={g.credit} /> : null}
+      {!map && waitingRows.some((r) => r.alignment || r.source === "marble") ? <MarbleCredit className={g.credit} /> : null}
       {!drafting && waitingRows.length === 0 ? <p className={s.trayEmpty}>Nothing waiting. Everything proposed has a decision.</p> : null}
       {suggest.show && !drafting ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -206,6 +206,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
               On the map: <strong>{map.anchor.name}</strong>
               {map.prerequisites[0] ? ` (after ${map.prerequisites[0].name})` : ""}
               {view.course.marbleConnected ? " + a connected topic" : ""}
+              <MarbleCredit className={g.credit} />
             </p>
           ) : null}
 

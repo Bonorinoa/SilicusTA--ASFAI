@@ -40,7 +40,7 @@ test("validateRanking: unknown / out-of-age ids, long threads, a 4th thread and 
     { id: "mt_nope", thread: "Light", why: "unknown" },
     { id: "mt_qzGADV-NGe", thread: "Light", why: "ages 11-12: outside 4-10" },
     { id: "mt_gLy3ZgZWiN", thread: "Light", why: "repeat" },
-    { id: "mt_lutxvMlkwS", thread: "y".repeat(41), why: "thread too long" },
+    { id: "mt__p5n8z5soJ", thread: "y".repeat(41), why: "thread too long (its own id, so only the cap drops it)" },
     { id: "mt_lutxvMlkwS", thread: "Plants", why: "ok" },
     { id: "mt_nwSWPTENmv", thread: "Senses", why: "ok" },
     { id: "mt_3v0VNkwquK", thread: "Fourth", why: "a fourth thread" },
@@ -48,6 +48,8 @@ test("validateRanking: unknown / out-of-age ids, long threads, a 4th thread and 
   ] };
   const out = validateRanking(raw, g, AGES);
   assert.deepEqual(out.map((s) => s.id), ["mt_gLy3ZgZWiN", "mt_lutxvMlkwS", "mt_nwSWPTENmv"]);
+  assert.ok(rankInput(g, AGES).some((t) => t.id === "mt__p5n8z5soJ"), "the long-thread row is an in-age topic, so only the thread cap can drop it");
+  assert.ok(!out.some((s) => s.id === "mt__p5n8z5soJ"), "a 41-character thread is dropped");
   assert.equal(out[0].why.length, MAX_WHY_CHARS);
   assert.doesNotMatch(out[0].why, /\n/);
   assert.deepEqual(validateRanking({ nonsense: true }, g, AGES), []);

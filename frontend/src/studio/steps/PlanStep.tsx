@@ -6,6 +6,8 @@ import type { StepProps } from "../CourseStudio";
 import { Button, Skeleton } from "../ui";
 import { ActionBar } from "./ActionBar";
 import { NeighbourhoodView, PrereqStrip, useNeighbourhood } from "../graph/SkillMap";
+import { WaitLines } from "../../components/WaitLines/WaitLines";
+import { PLAN_LATE, PLAN_SUB, planLines } from "../mapLines";
 import s from "../Studio.module.css";
 
 export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
@@ -15,6 +17,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
   const drafting = c.waiting?.kind === "plan";
   const noWorker = worker?.configured === false;
   const { data: map } = useNeighbourhood(view.course.marbleAnchor);
+  const { data: connected } = useNeighbourhood(view.course.marbleConnected);
   const minutes = shownPlan ? shownPlan.activities.reduce((n, a) => n + a.minutes, 0) : 0;
 
   let bar: React.ReactNode = null;
@@ -59,6 +62,14 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
 
         {drafting ? (
           <section className={s.card} aria-busy="true" aria-label="Drafting the plan">
+            {/* M1 (Q6): the plan wait lives here, on the course's plan page. Lines follow DECISIONS §5. */}
+            <WaitLines label="Drafting the plan" every={4500} lateAfter={45000} late={PLAN_LATE} sub={PLAN_SUB}
+              lines={planLines({
+                anchor: map?.anchor.name ?? null, before: map?.prerequisites[0]?.name ?? null, connected: connected?.anchor.name ?? null,
+                sources: [...c.sources.map((h) => h.name), ...(view.course.marbleAnchor ? ["the skill-map text"] : [])],
+                minutes: view.course.lessonMinutes ?? null, ages: view.course.ages ?? null, stage: view.course.stage ?? null,
+                objectives: view.objectives.length,
+              })} />
             <Skeleton width="55%" height={26} />
             <Skeleton width="35%" height={10} />
             {[0, 1, 2].map((i) => (

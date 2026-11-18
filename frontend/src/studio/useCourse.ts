@@ -5,6 +5,7 @@
  * parts from the one table (lib/refusals.ts, R5) with the host's own words kept for a closed Details. Nothing
  * here decides anything; every verb still leaves as an intent and the gate still decides.
  */
+import { mapSourceFor, markMapSourceRead } from "./links";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeIntent } from "../gate/harness";
 import { listPins, pinVersion } from "../gate/pin";
@@ -161,7 +162,9 @@ export function useCourse(courseId: string) {
     proposeFromAnswers: () => run(() => host.proposeObjectives(courseId), "propose"),
     proposeFromSources: (materials: MaterialInput[]) =>
       runAi("objectives", async () => {
-        const r = await host.proposeFromMaterials(courseId, { materials });
+        const useMap = mapSourceFor(courseId);
+        const r = await host.proposeFromMaterials(courseId, { materials, ...(useMap ? { useMap: true } : {}) });
+        if (useMap) markMapSourceRead(courseId);
         setSkipped(r.skipped);
         // Merged, not replaced: a round of only the new source must not forget what the earlier rounds read.
         const named = recordedNames(materials as { name?: string; url?: string }[], r.skipped, r.materials ?? []);

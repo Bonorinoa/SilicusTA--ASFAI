@@ -227,3 +227,10 @@
 }
 .lengthChip:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); font-weight: 600; }
 .lengthChip:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
+
+/* ---- M1: the condensed flow ---- */
+.sheetWide { max-width: none; }
+.addNote { align-self: flex-start; background: none; border: 0; padding: 0; min-height: 32px; font: inherit; font-size: 0.875rem; color: var(--fn-accent); cursor: pointer; }
+.addNote:hover { color: var(--fn-accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+.consequenceLine { margin: 0; font-size: 0.8125rem; color: var(--fn-ink-soft); padding: 10px 12px; background: var(--fn-desk); border-radius: 8px; line-height: 1.5; }
+.itemIcon input { width: 18px; height: 18px; margin: 0; accent-color: var(--fn-accent); }

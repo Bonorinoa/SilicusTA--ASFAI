@@ -19,6 +19,12 @@ export function keepLinksForCourse(courseId: string, urls: readonly string[]): v
  * The wizard's last click can ask the studio to start "propose from sources" as soon as it lands on
  * Objectives (R7). One flag per course, taken once: a reload or a second visit never re-sends it.
  */
+/** M1: "Use the skill-map topics as a source", held for the course in this tab. "read" once a round used it. */
+const mapSource = new Map<string, "on" | "off" | "read">();
+export function keepMapSourceForCourse(courseId: string, on: boolean): void { mapSource.set(courseId, on ? "on" : "off"); }
+export function mapSourceFor(courseId: string): boolean { return mapSource.get(courseId) === "on"; }
+export function markMapSourceRead(courseId: string): void { if (mapSource.get(courseId) === "on") mapSource.set(courseId, "read"); }
+
 const proposeOnArrival = new Set<string>();
 
 export function askToProposeOnArrival(courseId: string): void {

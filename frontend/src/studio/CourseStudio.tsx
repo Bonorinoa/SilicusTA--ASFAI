@@ -8,7 +8,7 @@ import { plural } from "../lib/plural";
 import type { ActivityItem } from "../gate/types";
 import { AiCheck } from "./AiCheck";
 import { useAiStatus } from "./aiStatus";
-import { keepLinksForCourse, linksFor, takeProposeOnArrival } from "./links";
+import { keepLinksForCourse, linksFor, takeProposeOnArrival, mapSourceFor } from "./links";
 import { explainRefusal } from "../lib/refusals";
 import { Refusal } from "./Refusal";
 import { SourcesPanel } from "./SourcesPanel";
@@ -100,7 +100,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
     if (!view || step !== "objectives" || view.proposals.length > 0 || c.busy) return;
     if (!takeProposeOnArrival(courseId)) return;
     const materials = [...c.sources.map((h) => ({ name: h.name, text: h.text })), ...links.map((url) => ({ url }))];
-    if (materials.length > 0) void c.actions.proposeFromSources(materials);
+    if (materials.length > 0 || mapSourceFor(courseId)) void c.actions.proposeFromSources(materials);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [view, step]);
   // The transition sentence has said its piece; the next work begins from a plain turn line.

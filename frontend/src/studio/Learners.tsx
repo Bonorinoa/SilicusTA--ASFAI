@@ -14,7 +14,7 @@ import { MarbleCredit } from "../components/MarbleCredit/MarbleCredit";
 import { ui } from "./ui";
 import w from "./Wizard.module.css";
 
-export interface Coverage { overlapping: number; perAge: { age: number; count: number }[] }
+export interface Coverage { total?: number; overlapping: number; perAge: { age: number; count: number }[] }
 /**
  * `null` = nothing yet; "unavailable" = this host has no skill map; `overlapping: -1` = bars drawn,
  * count for the chosen ages still on its way. Read the count through countOf.
@@ -37,7 +37,7 @@ export function useCoverage(ages: Audience["ages"]): CoverageState {
     let live = true;
     const t = setTimeout(() => {
       host.marbleCoverage(lo, hi)
-        .then((r) => { if (live) { setGot({ key, cov: { overlapping: r.overlapping, perAge: r.perAge } }); setBars(r.perAge); } })
+        .then((r) => { if (live) { setGot({ key, cov: { overlapping: r.overlapping, perAge: r.perAge, total: (r as { total?: number }).total } }); setBars(r.perAge); } })
         .catch(() => { if (live) setGot({ key, cov: "unavailable" }); });
     }, 120);
     return () => { live = false; clearTimeout(t); };
@@ -50,7 +50,7 @@ export function useCoverage(ages: Audience["ages"]): CoverageState {
 export const StudioMarbleCredit = () => <MarbleCredit className={w.credit} />;
 
 // ------------------------------------------------------------------ who are your learners?
-export function LearnersField({ aud, coverage, onGroup, onStep }: {
+export function LearnersField({ aud, onGroup, onStep }: {
   aud: Audience; coverage: CoverageState;
   onGroup: (id: GroupId) => void; onStep: (which: "min" | "max", delta: number) => void;
 }) {
@@ -90,12 +90,11 @@ export function LearnersField({ aud, coverage, onGroup, onStep }: {
       </div>
       {ages ? <span className={w.rangeLabel} data-range-label aria-live="polite">{rangeLabel(ages)}</span> : null}
       <span id={hint} className={ui.hint}>Mixed ages are fine. The youngest sets the AI rules.</span>
-      <AgeStrip ages={ages} coverage={coverage} />
     </fieldset>
   );
 }
 
-function AgeStrip({ ages, coverage }: { ages: Audience["ages"]; coverage: CoverageState }) {
+export function AgeStrip({ ages, coverage }: { ages: Audience["ages"]; coverage: CoverageState }) {
   const bars = coverage && coverage !== "unavailable" ? coverage.perAge : [];
   const top = Math.max(1, ...bars.map((b) => b.count));
   const inRange = (age: number) => !!ages && age >= ages.min && (age <= ages.max || (ages.max > 25 && age === 25));

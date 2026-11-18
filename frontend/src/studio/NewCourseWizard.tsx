@@ -70,6 +70,14 @@ export function briefAnswers(a: WizardAnswers): Record<string, string> {
   return out;
 }
 
+
+/** K4 (C6): a separator that never starts or ends a line: non-breaking spaces on both sides. */
+const SEP = "\u00a0·\u00a0";
+/** Keep a short part on one line (its spaces become non-breaking). */
+const glue = (s: string) => s.replace(/ /g, "\u00a0").replace(/–/g, "\u2060–\u2060");
+/** Join parts with SEP, dropping empty ones. */
+const keepJoin = (parts: string[]) => parts.filter(Boolean).join(SEP);
+
 export function NewCourseWizard() {
   const ai = useAiStatus();
   const [step, setStep] = useState<StepId | null>(null);
@@ -197,10 +205,12 @@ export function NewCourseWizard() {
     </nav>
   );
   function noteFor(id: StepId): string {
-    if (id === "course") return [a.title.trim(), aud.ages ? `Ages ${agesText(aud.ages).replace(/^ages /i, "")}` : "", `${lessonMinutes} min`].filter(Boolean).join(" · ");
+    // K4 (C6): no separator is left alone at a line break. The title is its own line; ages and length are one
+    // unbreakable line under it (non-breaking joins; .spineNote keeps the "\n").
+    if (id === "course") return [a.title.trim(), keepJoin([aud.ages ? glue(`Ages ${agesText(aud.ages).replace(/^ages /i, "")}`) : "", glue(`${lessonMinutes} min`)])].filter(Boolean).join("\n");
     if (id === "map") return mapChoice.skipped ? "Skipped" : anchor ? `${anchor.name}${mapChoice.connected ? ` + ${mapChoice.connected.name}` : ""}` : "";
     if (id === "sources") return count ? plural(count, "source") : "None yet";
-    if (id === "objectives") return [wrote ? plural(a.outcomes.split("\n").filter((l) => l.trim()).length, "of yours", "of yours") : null, a.fromSources && sourcesIn ? "Silicus proposes" : null].filter(Boolean).join(" · ");
+    if (id === "objectives") return [wrote ? plural(a.outcomes.split("\n").filter((l) => l.trim()).length, "of yours", "of yours") : null, a.fromSources && sourcesIn ? "Silicus proposes" : null].filter((x): x is string => !!x).map(glue).join(SEP);
     if (id === "ai") return ai.diagnosis.label;
     return "";
   }
@@ -306,7 +316,7 @@ export function NewCourseWizard() {
       </form>
     );
   } else if (step === "map" && aud.ages) {
-    const note = anchor ? <>Anchor <strong>{anchor.name}</strong>{mapChoice.connected ? <> · connected <strong>{mapChoice.connected.name}</strong></> : null}</> : "Anchor a topic, or skip the map.";
+    const note = anchor ? <>Anchor <strong>{anchor.name}</strong>{mapChoice.connected ? <>{SEP}connected <strong>{mapChoice.connected.name}</strong></> : null}</> : "Anchor a topic, or skip the map.";
     body = (
       <section className={`${w.sheet} ${w.sheetWide}`} aria-label="On the skill map">
         {head(kicker("map"), "On the skill map", "Where your lesson sits among topics children learn. Silicus suggests; you anchor one.")}
@@ -457,7 +467,7 @@ export function NewCourseWizard() {
   return (
     <>
       <TopBar crumbs={[{ label: "Courses", href: href.home }, { label: "New course" }]} />
-      <main className={w.page} data-welcome={step === "welcome" || step === null ? "true" : undefined}>
+      <main className={w.page} data-welcome={step === "welcome" || step === null ? "true" : undefined} data-map={step === "map" ? "true" : undefined}>
         {step && step !== "welcome" ? spine : null}
         {mobileStep}
         {body}

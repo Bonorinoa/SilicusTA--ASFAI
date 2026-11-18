@@ -38,7 +38,7 @@
 .cell[data-in]::before { content: ""; position: absolute; left: -14px; top: 50%; width: 14px; border-top: 1.5px solid var(--fn-line-dash); }
 .chain { position: relative; z-index: 0; }
 
-.node { position: relative; width: 100%; min-height: 68px; display: flex; flex-direction: column; justify-content: center; gap: 2px; text-align: left; padding: 8px 10px; border: 1px solid var(--fn-line); border-radius: 8px; background: var(--fn-sheet); color: var(--fn-ink); font: inherit; cursor: pointer; }
+.node { position: relative; width: 100%; min-height: 68px; display: flex; flex-direction: column; justify-content: center; gap: 2px; text-align: left; padding: 8px 8px; border: 1px solid var(--fn-line); border-radius: 8px; background: var(--fn-sheet); color: var(--fn-ink); font: inherit; cursor: pointer; }
 .node:hover { border-color: var(--fn-ink-muted); }
 .node:focus-visible { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
 .node[data-sel] { border-color: var(--fn-accent); box-shadow: 0 0 0 3px var(--fn-accent-wash); }
@@ -47,6 +47,10 @@
 .node[data-out] { border-style: dashed; color: var(--fn-ink-muted); background: transparent; }
 .nodeName { font-size: 0.8125rem; font-weight: 600; line-height: 1.25; text-wrap: balance; overflow-wrap: break-word; hyphens: manual; }
 .nodeAges { font-size: 0.6875rem; color: var(--fn-ink-muted); }
+/* K4 (C6): the anchor / connected state on its own line (no "·" left at a line break). */
+.nodeState { font-size: 0.6875rem; font-weight: 600; color: var(--fn-ink-soft); }
+.legendArc { width: 28px; height: 10px; margin-right: 6px; vertical-align: -1px; overflow: visible; }
+.legendArc path { fill: none; stroke: var(--fn-line-dash); stroke-width: 1.25; }
 .badge { position: absolute; top: -8px; left: -8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--fn-accent); color: var(--fn-sheet); font-size: 0.6875rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 
 .also { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 0.8125rem; color: var(--fn-ink-soft); padding-top: 4px; }

@@ -530,6 +530,22 @@ try {
   await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
   await sleep(300);
   check("M1 at 390 px the lanes are a list (no column header, no arcs)", await page.evaluate(() => !document.querySelector('section[aria-label="On the skill map"] svg') && /Top to bottom: each topic comes before the next/.test(document.body.innerText)));
+  // K4 (C6): at 1440 px two-word topic names stay on one line, the node state is its own line, no " · " can break,
+  // and the skip arc has a key.
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  const c6 = await page.evaluate(() => {
+    const sec = document.querySelector('section[aria-label="On the skill map"]');
+    const two = [...sec.querySelectorAll("li[data-col] button")].map((b) => [...b.children].find((s) => !s.hasAttribute("aria-label")))
+      .filter((s) => s.textContent.trim().split(/\s+/).length === 2)
+      .map((s) => ({ name: s.textContent.trim(), lines: Math.round(s.getBoundingClientRect().height / parseFloat(getComputedStyle(s).lineHeight)) }));
+    const breakable = [...sec.querySelectorAll("li[data-col] button span"), ...document.querySelectorAll("nav li span")]
+      .map((s) => s.textContent).filter((x) => / ·|· /.test(x));
+    return { two, wrapped: two.filter((x) => x.lines > 1), breakable, states: sec.querySelectorAll("[data-node-state]").length, legend: sec.querySelector("[data-arc-legend]")?.textContent.trim() ?? null, arcs: sec.querySelectorAll("svg path").length - sec.querySelectorAll("[data-arc-legend] path").length };
+  });
+  check("K4 C6 at 1440 px every two-word topic name in the map columns sits on one line", c6.two.length > 0 && c6.wrapped.length === 0, JSON.stringify(c6.wrapped.length ? c6.wrapped : c6.two));
+  check("K4 C6 no ' · ' in a map node or the step spine can break (non-breaking joins; the state word is its own line)", c6.breakable.length === 0 && c6.states >= 1, JSON.stringify({ breakable: c6.breakable, states: c6.states }));
+  check("K4 C6 the skip arc has a key when an arc is drawn", c6.arcs === 0 || /must come first \(skips a step\)/.test(c6.legend ?? ""), JSON.stringify({ arcs: c6.arcs, legend: c6.legend }));
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
     await tall(1440, 1, "2026-11-17-step2-map-desktop.png");
     await tall(390, 2, "2026-11-17-step2-map-390.png");

@@ -157,6 +157,13 @@ export function MapStep({ title, goal, ages, choice, onChoice }: {
           {narrow ? <p className={m.legend}>Top to bottom: each topic comes before the next. Numbers are Silicus’s suggestions, best first.</p> : (
             <div className={m.cols} aria-hidden="true">{COLUMNS.map((c, i) => <span key={c} data-best={i === 2 ? "true" : undefined}>{c}</span>)}</div>
           )}
+          {/* K4 (C6): the skip arc gets a key, so the thin line above a row is not a mystery. */}
+          {!narrow && shown.threads.some((th) => th.edges.some((e) => e.to - e.from > 1)) ? (
+            <p className={m.legend} data-arc-legend>
+              <svg className={m.legendArc} viewBox="0 0 28 10" aria-hidden="true"><path d="M 1 10 C 1 1 27 1 27 10" /></svg>
+              Arc over a row: must come first (skips a step)
+            </p>
+          ) : null}
           {shown.threads.map((th, ti) => (
             <section key={th.name} className={m.lane} aria-label={`Thread: ${th.name}`}>
               <h3 className={m.laneHead}><span className={m.laneNum}>{pick ? "" : `Thread ${ti + 1}`}</span>{th.name}</h3>
@@ -203,7 +210,9 @@ function Node({ t, r, sel, anchor, connected, onSelect }: { t: MarbleMapTopic; r
       data-sel={sel ? "true" : undefined} data-anchor={anchor ? "true" : undefined} data-connected={connected ? "true" : undefined} data-out={t.fits ? undefined : "true"}>
       {r ? <span className={m.badge} aria-label={`Suggestion ${r}`}>{r}</span> : null}
       <span className={m.nodeName}>{t.name}</span>
-      <span className={m.nodeAges}>ages {t.ageRangeStart}–{t.ageRangeEnd}{t.fits ? "" : " · later"}{anchor ? " · anchor" : connected ? " · connected" : ""}</span>
+      {/* K4 (C6): the state word sits on its own line, so no separator is left at a line break. */}
+      <span className={m.nodeAges}>{`ages\u00a0${t.ageRangeStart}\u2060–\u2060${t.ageRangeEnd}${t.fits ? "" : "\u00a0·\u00a0later"}`}</span>
+      {anchor || connected ? <span className={m.nodeState} data-node-state>{anchor ? "anchor" : "connected"}</span> : null}
     </button>
   );
 }

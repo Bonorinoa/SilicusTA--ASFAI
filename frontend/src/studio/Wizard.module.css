@@ -5,6 +5,8 @@
   display: grid; grid-template-columns: 220px minmax(0, 1fr); column-gap: 56px; align-items: start;
 }
 
+/* K4 (C6): the map step takes a little more width so two-word topic names fit on one line in the five columns. */
+.page[data-map="true"] { max-width: 1120px; }
 .page[data-welcome="true"] { grid-template-columns: minmax(0, 1fr); justify-items: center; padding-top: 56px; }
 
 /* ---- the spine: the steps as a short table of contents ---- */
@@ -23,7 +25,7 @@
 .spineItem[aria-current="step"] { color: var(--fn-ink); font-weight: 600; }
 .spineItem[aria-current="step"]::before { background: var(--fn-accent); border-color: var(--fn-accent); }
 .spineNum { font-variant-numeric: tabular-nums; margin-right: 6px; }
-.spineNote { font-weight: 400; font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; }
+.spineNote { font-weight: 400; font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; white-space: pre-line; }
 .spinePromise { font-size: 0.75rem; color: var(--fn-ink-muted); line-height: 1.5; }
 .mobileStep { display: none; }
 

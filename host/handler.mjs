@@ -19,6 +19,7 @@
  */
 import { CourseSession } from "./course.mjs";
 import { agesError } from "./ages.mjs";
+import { lessonMinutesError } from "./lesson-length.mjs";
 import { askStudent, packageOf } from "./student.mjs";
 import { DEFAULT_TYPICAL_SECONDS } from "./worker-config.mjs";
 import { overlaps } from "./marble/marble-graph.mjs";
@@ -257,6 +258,9 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           // so no caller can persist a bad block even by calling the session directly.
           const agesMsg = agesError(b.ages);
           if (agesMsg !== null) throw new HttpError(400, "BAD_AGES", agesMsg);
+          // K2: the lesson length, whole minutes 10-180; absent is a course without one. Checked again in create.
+          const minutesMsg = lessonMinutesError(b.lessonMinutes);
+          if (minutesMsg !== null) throw new HttpError(400, "BAD_LESSON_MINUTES", minutesMsg);
           // The skill-map anchor (G2a): an mt_* id that EXISTS in the pinned snapshot. It is a
           // pointer (the node this lesson is about), never an objective id, never confirmed. When
           // the graph is not wired the anchor cannot be checked and is refused (fail closed);
@@ -285,6 +289,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
             objectivesConfirm: b.objectivesConfirm,
             ages: b.ages ?? null,
             marbleAnchor: anchor,
+            lessonMinutes: b.lessonMinutes ?? null,
           });
           return { status: 201, json: { ok: true, courseId: s.courseId, view: s.view() } };
         }

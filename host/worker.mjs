@@ -17,6 +17,7 @@
 import { EVIDENCE_KINDS } from "../confirm-gate/confirm-gate.mjs";
 import { unknownRefs } from "./knowledge.mjs";
 import { normalizeReasoning, reasoningBody } from "./worker-config.mjs";
+import { lengthNotes, lengthPromptLines, MAX_ACTIVITIES, TEXT_LIMITS } from "./lesson-length.mjs";
 import { stageForAges } from "./ages.mjs";
 
 export const DEFAULT_WORKER_TIMEOUT_MS = 120_000;
@@ -135,9 +136,10 @@ export class PlanWorker {
    * @param {{objectives: {id: string, statement: string}[], topic?: string, materials?: string[], course?: string,
    *          context?: {ref: string, label: string, text: string, source: string}[],
    *          ages?: {min: number, max: number} | null,
-   *          anchorPrereqs?: {id: string, name: string, evidence: string[]}[]}} input
+   *          anchorPrereqs?: {id: string, name: string, evidence: string[]}[],
+   *          lessonMinutes?: number | null}} input
    */
-  async draft({ objectives = [], topic = "", materials = [], course = "", context = [], ages = null, anchorPrereqs = [] } = {}) {
+  async draft({ objectives = [], topic = "", materials = [], course = "", context = [], ages = null, anchorPrereqs = [], lessonMinutes = null } = {}) {
     if (!this.enabled) {
       throw new WorkerError(
         "WORKER_NOT_CONFIGURED",
@@ -148,8 +150,8 @@ export class PlanWorker {
       throw new WorkerError("NO_CONFIRMED_OBJECTIVES", "there are no confirmed objectives to draft from");
     }
 
-    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context, ages, anchorPrereqs }));
-    return validateSpec(spec, objectives, context, { ages });
+    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context, ages, anchorPrereqs, lessonMinutes }));
+    return validateSpec(spec, objectives, context, { ages, lessonMinutes });
   }
 
   /**
@@ -329,7 +331,7 @@ function anchorBlock(prereqs) {
   ];
 }
 
-function buildPrompt({ objectives, topic, materials, course = "", context = [], ages = null, anchorPrereqs = [] }) {
+function buildPrompt({ objectives, topic, materials, course = "", context = [], ages = null, anchorPrereqs = [], lessonMinutes = null }) {
   // The teacher's own answer to "which course is this?" ("Grade 3 math, one 45-minute lesson") carries the length and
   // audience they want. Rendered ONLY when there is one, so without it the prompt is byte-identical to before.
   const courseLine = oneLine(course, 300);
@@ -351,6 +353,8 @@ function buildPrompt({ objectives, topic, materials, course = "", context = [], 
     '  "decisionAfterHelp": string, "channels": ["speaking"|"drawing"|"writing"|"handling"|"discussion"|"diagram"|"enactment"], "session": number}]}',
     `evidenceIfAny must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
     "Student chat is never evidence of learning.",
+    // K2 item 5: a bound in the schema, not a bigger output cap. The host enforces the same limits.
+    `At most ${MAX_ACTIVITIES} activities. Keep every text field short: a title under ${TEXT_LIMITS.activityTitle} characters, learnerDoes and teacherDoes under ${TEXT_LIMITS.does} each, every other text under 300. Write each field once; never repeat text.`,
     "",
     "Learning design notes (every field is optional; give each one you can):",
     "- Who does the work: name the skill the objective asks for (targetOperation) and who performs it (operationDoneBy: learner, peer, teacher or ai). The learner must be the one performing that skill.",
@@ -368,6 +372,8 @@ function buildPrompt({ objectives, topic, materials, course = "", context = [], 
     "Objectives:",
     ...objectives.map((o) => `- ${o.id}: ${o.statement}`),
     ...(courseLine ? ["Fit the plan to any length or audience the teacher states above."] : []),
+    // K2: the teacher's own lesson length (the course record's lessonMinutes). Absent: nothing, prompt unchanged.
+    ...lengthPromptLines(lessonMinutes),
     ...(stage ? ["", STAGE_RULES[stage]] : []),
     ...anchorBlock(anchorPrereqs),
     ...contextBlock(context),
@@ -413,21 +419,26 @@ function intField(value, minInclusive, maxInclusive, what, notes, { absent } = {
  * plan-level `notes` list the teacher can see. A course with no structured ages
  * gets no aiStatus or aiPolicy claims at all.
  */
-function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
+function validateSpec(spec, objectives, context = [], { ages = null, lessonMinutes = null } = {}) {
   if (!spec || typeof spec !== "object") throw new WorkerError("WORKER_BAD_OUTPUT", "the worker returned no plan object");
-  const title = typeof spec.title === "string" ? spec.title.trim() : "";
+  const title = typeof spec.title === "string" ? clean(spec.title, TEXT_LIMITS.planTitle) : "";
   if (!title) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's plan has no title");
 
-  const activities = Array.isArray(spec.activities) ? spec.activities : [];
-  if (activities.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's plan has no activities");
+  const proposedActivities = Array.isArray(spec.activities) ? spec.activities : [];
+  if (proposedActivities.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's plan has no activities");
 
   const stage = stageForAges(ages);
   const notes = [];
+  // K2 item 5: a plan holds at most MAX_ACTIVITIES. More is kept as the first ones, and the teacher is told.
+  const activities = proposedActivities.slice(0, MAX_ACTIVITIES);
+  if (proposedActivities.length > MAX_ACTIVITIES) {
+    notes.push(`Kept the first ${MAX_ACTIVITIES} of ${proposedActivities.length} activities; a lesson plan holds at most ${MAX_ACTIVITIES}.`);
+  }
   const known = new Set(objectives.map((o) => o.id));
   const normalized = activities.map((a, i) => {
     if (!a || typeof a !== "object") throw new WorkerError("WORKER_BAD_OUTPUT", "an activity is not an object");
     const ids = Array.isArray(a.objectiveIds) ? a.objectiveIds.map(String) : [];
-    const title = String(a.title ?? "").trim() || "Untitled activity";
+    const title = clean(a.title, TEXT_LIMITS.activityTitle) || "Untitled activity";
     if (ids.length === 0) throw new WorkerError("WORKER_BAD_OUTPUT", `activity "${title}" cites no objective`);
     for (const id of ids) {
       if (!known.has(id)) {
@@ -438,8 +449,8 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
     if (!EVIDENCE_KINDS.includes(evidenceIfAny)) {
       throw new WorkerError("WORKER_BAD_OUTPUT", `evidenceIfAny must be one of ${EVIDENCE_KINDS.join("|")}, got: ${String(evidenceIfAny)}`);
     }
-    const learnerDoes = typeof a.learnerDoes === "string" ? a.learnerDoes.trim() : "";
-    const teacherDoes = typeof a.teacherDoes === "string" ? a.teacherDoes.trim() : "";
+    const learnerDoes = typeof a.learnerDoes === "string" ? clean(a.learnerDoes, TEXT_LIMITS.does) : "";
+    const teacherDoes = typeof a.teacherDoes === "string" ? clean(a.teacherDoes, TEXT_LIMITS.does) : "";
     if (!learnerDoes) throw new WorkerError("WORKER_BAD_OUTPUT", `activity "${String(a.title)}" says nothing the learner does`);
     if (!teacherDoes) throw new WorkerError("WORKER_BAD_OUTPUT", `activity "${String(a.title)}" says nothing the teacher does`);
     // A citation is a reference, not a claim, and it must be one we actually supplied. Optional:
@@ -624,6 +635,12 @@ function validateSpec(spec, objectives, context = [], { ages = null } = {}) {
   }
   // Absent stays absent: the line is optional in the data, and the UI renders the stage rule
   // itself (view.course.stage), so a v1 plan is never widened with host-authored content.
+
+  // K2: the host sums the activity minutes against the teacher's length. It never rescales: the plan stays as
+  // the model wrote it, and a sum outside ±10% (or an activity with no minutes) is a note under "Silicus adjusted".
+  notes.push(...lengthNotes(normalized.map((a, i) => ({
+    title: a.title, minutes: a.minutes, minutesMissing: !Number.isFinite(activities[i]?.minutes),
+  })), lessonMinutes));
 
   const audience = spec.audience && typeof spec.audience === "object" ? { ...spec.audience } : undefined;
   const dedupedNotes = notes.length > 0 ? [...new Set(notes)] : [];

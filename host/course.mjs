@@ -31,6 +31,7 @@ import { reasonsOf } from "./reasons.mjs";
 import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
 import { agesError, stageForAges } from "./ages.mjs";
+import { lessonMinutesError } from "./lesson-length.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -54,11 +55,19 @@ export class CourseSession {
    * snapshot; it is a POINTER, never an identity — it is stored on the record, never proposed,
    * never confirmed, never part of a sealed objective list.
    */
-  static create(store, { owner, title, description = "", materials = [], objectivesConfirm, ages = null, marbleAnchor = null } = {}) {
+  static create(store, { owner, title, description = "", materials = [], objectivesConfirm, ages = null, marbleAnchor = null, lessonMinutes = null } = {}) {
     const agesMsg = agesError(ages);
     if (agesMsg !== null) {
       const e = new Error(agesMsg);
       e.code = "BAD_AGES";
+      throw e;
+    }
+    // K2: the teacher's lesson length, a whole number of minutes 10-180, checked HERE like the ages so no caller
+    // can persist a bad one. Absent stays absent (a legacy course: no length, no check).
+    const minutesMsg = lessonMinutesError(lessonMinutes);
+    if (minutesMsg !== null) {
+      const e = new Error(minutesMsg);
+      e.code = "BAD_LESSON_MINUTES";
       throw e;
     }
     const courseId = `urn:uuid:${randomUUID()}`;
@@ -70,7 +79,7 @@ export class CourseSession {
     // course's record is byte-identical to one written before the mode existed and replays as "auto".
     const objectivesMode = objectivesConfirm === "explicit" ? "explicit" : undefined;
     const anchor = typeof marbleAnchor === "string" && marbleAnchor.length > 0 ? marbleAnchor : undefined;
-    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, ages, marbleAnchor: anchor, at: Date.now() });
+    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, ages, marbleAnchor: anchor, lessonMinutes: Number.isInteger(lessonMinutes) ? lessonMinutes : undefined, at: Date.now() });
     return CourseSession.load(store, courseId);
   }
 
@@ -110,6 +119,8 @@ export class CourseSession {
     const storedAges = (created?.ages && typeof created.ages === "object") ? { min: created.ages.min, max: created.ages.max } : null;
     this.#ages = agesError(storedAges) === null ? storedAges : null;
     this.#anchor = typeof created?.marbleAnchor === "string" && created.marbleAnchor.length > 0 ? created.marbleAnchor : null;
+    // K2: the lesson length, from the same chained event. Absent or out of range reads as unset (behaves as before).
+    this.#lessonMinutes = Number.isInteger(created?.lessonMinutes) && lessonMinutesError(created.lessonMinutes) === null ? created.lessonMinutes : null;
     this.#ledger = new TurnLedger({ clock: () => this.#now });
     // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.
     this.#intake = new LessonIntake({ ledger: this.#ledger, courseId: meta.courseId });
@@ -140,6 +151,8 @@ export class CourseSession {
   #ages;
   /** @type {string | null} The skill-map anchor (an mt_* id in the snapshot), or null (G2a). */
   #anchor;
+  /** K2: the teacher's lesson length in minutes, or null for a course created without one. */
+  #lessonMinutes = null;
   #validations = [];
   #planAt = null;
   /** @type {Map<string, object>} schema-v2 learning-design per plan id (host metadata, never gate state) */
@@ -653,7 +666,7 @@ export class CourseSession {
 
     let drafted;
     try {
-      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs });
+      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs, lessonMinutes: this.#lessonMinutes });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }
@@ -938,6 +951,8 @@ export class CourseSession {
         // objective id, never confirmed, never part of a sealed objective list.
         ...(this.#ages ? { ages: { min: this.#ages.min, max: this.#ages.max }, stage: stageForAges(this.#ages) } : {}),
         ...(this.#anchor ? { marbleAnchor: this.#anchor } : {}),
+        // K2: the lesson length the teacher set (absent on courses created without one).
+        ...(this.#lessonMinutes !== null ? { lessonMinutes: this.#lessonMinutes } : {}),
       },
       checkpoints: this.#gate.checkpoints(),
       objectivesMode: this.#objectivesMode,

@@ -49,7 +49,7 @@ export class RecordStore {
   }
 
   /** Create the course record (meta) and open its log. Throws if it exists. */
-  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm, ages, marbleAnchor }) {
+  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm, ages, marbleAnchor, lessonMinutes }) {
     if (this.#metas.has(courseId)) throw new Error(`course already exists: ${courseId}`);
     // Only the exact checkpoint-3 mode "explicit" is recorded (R4). Anything else writes NO field, so an auto
     // course's meta document and course.created event are byte-identical to a record written before the mode existed.
@@ -61,6 +61,8 @@ export class RecordStore {
     const demographics = {
       ...(ages && typeof ages === "object" ? { ages } : {}),
       ...(marbleAnchor ? { marbleAnchor } : {}),
+      // K2: the teacher's lesson length; absent is never written (a legacy record stays byte-identical).
+      ...(Number.isInteger(lessonMinutes) ? { lessonMinutes } : {}),
     };
     const meta = Object.freeze({
       courseId, owner, title, description, materials,

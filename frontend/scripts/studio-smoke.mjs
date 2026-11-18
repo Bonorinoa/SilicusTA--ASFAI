@@ -60,7 +60,10 @@ const server = createServer(async (req, res) => {
       if (prompt.startsWith("SUGGEST")) reply = { objectives: [{ statement: "Students can label the parts of a leaf." }] };
       else if (prompt.startsWith("You are a study helper")) {
         const q = (prompt.trim().split("\n").at(-1) ?? "").replace(/^Student:\s*/, "").toLowerCase();
-        if (/game|ignore|instructions|address|my name/.test(q)) reply = { inScope: false, basis: "plan", refusal: "off_topic", answer: "", cites: [] };
+        // K3: the model only picks a kind; the host writes the words.
+        if (/your name|who are you/.test(q)) reply = { kind: "about_helper", basis: null, answer: "", cites: [] };
+        else if (q === "plants") reply = { kind: "clarify", basis: null, answer: "", cites: ["[objective:1]", "activity:1"] };
+        else if (/game|ignore|instructions|address|my name/.test(q)) reply = { inScope: false, basis: "plan", refusal: "off_topic", answer: "", cites: [] };
         else if (/grade|pass|how am i doing|score|mark/.test(q)) reply = { inScope: false, basis: "plan", refusal: "assessment", answer: "", cites: [] };
         else reply = modelReply(prompt);
       } else if (prompt.startsWith("Draft one lesson plan")) {
@@ -537,6 +540,22 @@ try {
   await clickBy("Ask");
   await enterPasscode();
   check("the student helper answers from the published package", await waitText("A plant uses light, water and air", 8000));
+  // ---- K3: a vague one-word question gets the host's clarify, with the lesson's items to tap; a name question gets the fixed introduction.
+  await page.type('input[placeholder="Ask about today’s lesson"]', "plants");
+  await clickBy("Ask");
+  check("K3 a one-word question gets the host's clarify listing the lesson's items", await waitText("What would you like to know? I can help with:", 8000));
+  const offers = await page.evaluate(() => [...document.querySelectorAll('[role="group"][aria-label="Ask about"] button')].map((b) => (b.textContent ?? "").trim()));
+  check("K3 the clarify offers the lesson's items as buttons (1 to 3)", offers.length >= 1 && offers.length <= 3, JSON.stringify(offers));
+  await page.type('input[placeholder="Ask about today’s lesson"]', "what is your name");
+  await clickBy("Ask");
+  check("K3 'what is your name' gets the fixed introduction naming the lesson", await waitText("I'm Silicus, a helper for today's lesson: How plants eat. Ask me about it.", 8000));
+  if (process.env.K3_SHOTS) {
+    await sleep(400);
+    await page.screenshot({ path: `${process.env.K3_SHOTS}/k3-learn-clarify-desktop.png`, fullPage: true });
+  }
+  const answersBefore = await page.evaluate(() => (document.body.innerText.match(/A plant uses light, water and air/g) ?? []).length);
+  await page.evaluate((label) => [...document.querySelectorAll('[role="group"][aria-label="Ask about"] button')].find((b) => (b.textContent ?? "").trim() === label)?.click(), offers[offers.length - 1]);
+  check("K3 tapping an offered item asks about it", await page.waitForFunction((n) => (document.body.innerText.match(/A plant uses light, water and air/g) ?? []).length > n, { timeout: 8000 }, answersBefore).then(() => true, () => false));
 
   // ---- lane C · R7: a second course through the wizard, proposing from a pasted source on arrival
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });

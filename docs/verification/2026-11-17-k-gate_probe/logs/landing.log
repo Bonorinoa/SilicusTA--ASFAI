@@ -1,0 +1,15 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+COURSE #/studio/urn%3Auuid%3Ad69404bd-8f5a-4bf2-905f-9162732d5f6e
+TAB Brief | Silicus→#/studio ; Courses→#/studio
+FAIL  landing link (#/) present on course tab Brief — Silicus→#/studio ; Courses→#/studio
+TAB Objectives | Silicus→#/studio ; Courses→#/studio
+FAIL  landing link (#/) present on course tab Objectives — Silicus→#/studio ; Courses→#/studio
+TAB Plan | Silicus→#/studio ; Courses→#/studio
+FAIL  landing link (#/) present on course tab Plan — Silicus→#/studio ; Courses→#/studio
+TAB Publish | Silicus→#/studio ; Courses→#/studio
+FAIL  landing link (#/) present on course tab Publish — Silicus→#/studio ; Courses→#/studio
+REHEARSE Silicus→#/studio ; Courses→#/studio ; How plants eat→#/studio/urn%3Auuid%3Ad69404bd-8f5a-4bf2-905f-9162732d5f6e ; Back to the course→#/studio/urn%3Auuid%3Ad69404bd-8f5a-4bf2-905f-9162732d5f6e
+FAIL  landing link on Rehearse — Silicus→#/studio ; Courses→#/studio ; How plants eat→#/studio/urn%3Auuid%3Ad69404bd-8f5a-4bf2-905f-9162732d5f6e ; Back t
+LEARN About Silicus→#/ ; Back to the studio→#/studio/urn%3Auuid%3Ad69404bd-8f5a-4bf2-905f-9162732d5f6e
+PASS  landing link on Learn — About Silicus→#/ ; Back to the studio→#/studio/urn%3Auuid%3Ad69404bd-8f5a-4bf2-905f-9162732d5f6e
+2 pass 5 fail

@@ -86,7 +86,7 @@ a.crumb:hover { color: var(--fn-ink); }
 }
 .newCard:hover { background: var(--fn-sheet); }
 .newPlus { width: 36px; height: 36px; border-radius: 999px; background: var(--fn-accent); color: #fbf8f1; display: grid; place-items: center; font-size: 1.25rem; }
-.trust { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding-top: 24px; border-top: 1px solid var(--fn-line); }
+.trust { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 24px; border-top: 1px solid var(--fn-line); }
 .trustItem { display: flex; flex-direction: column; gap: 6px; }
 .trustTitle { font-family: var(--fn-serif); font-size: 1.0625rem; font-weight: 600; }
 .trustText { font-size: 0.875rem; color: var(--fn-ink-soft); }
@@ -303,4 +303,9 @@ a.crumb:hover { color: var(--fn-ink); }
   .sources:not([data-open="true"]) .sourcesBody { display: none; }
   .doc { padding-top: 16px; min-height: 0; }
   .tray { padding: 18px 14px; }
+}
+
+/* ---------- phone: the trust cards on the courses page sit in one column ---------- */
+@media (max-width: 390px) {
+  .trust { grid-template-columns: minmax(0, 1fr); }
 }

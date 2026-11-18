@@ -46,6 +46,7 @@ export function Learn({ courseId }: { courseId: string }) {
     <div className={s.learn}>
       <div className={s.learnRibbon}>
         <span>Preview on this device. Students can’t open this link yet.</span>
+        <a href="#/" style={{ color: "inherit" }}>About Silicus</a>
         <a href={href.course(courseId)} style={{ color: "inherit" }}>Back to the studio</a>
       </div>
 

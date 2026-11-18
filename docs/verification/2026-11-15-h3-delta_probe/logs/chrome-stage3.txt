@@ -1,0 +1,5 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+MODE stage3 SCREEN {"markerCount":1,"markers":[{"text":"AI removed by Silicus: reword this step","vis":{"display":"block","visibility":"visible","h":30,"w":522},"inItemIndex":2,"itemTitle":"3"}],"activityCount":3,"notes":["AI use \"permitted\" clamped to \"forbidden\" in activity 3 \"Explain it in your own words\": at this stage AI may follow only an attempt the teacher has watched."],"bodyHasMarkerText":true}
+MODE stage3 PRINT {"markerCount":1,"markers":[{"text":"AI removed by Silicus: reword this step","vis":{"display":"block","visibility":"visible","h":30,"w":576},"inItemIndex":2,"itemTitle":"3"}],"activityCount":3,"notes":["AI use \"permitted\" clamped to \"forbidden\" in activity 3 \"Explain it in your own words\": at this stage AI may follow only an attempt the teacher has watched."],"bodyHasMarkerText":true}
+MODE stage3 RELOAD {"hash":"#/studio/urn%3Auuid%3A00ab8816-a8f6-480f-a303-5ac0383e17f7","markerCount":1,"bodyHasMarkerText":true,"activityCount":3}
+CONSOLE_ERRORS []

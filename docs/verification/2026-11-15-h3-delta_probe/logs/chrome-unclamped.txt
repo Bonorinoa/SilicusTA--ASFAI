@@ -1,0 +1,5 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+MODE unclamped SCREEN {"markerCount":0,"markers":[],"activityCount":3,"notes":[],"bodyHasMarkerText":false}
+MODE unclamped PRINT {"markerCount":0,"markers":[],"activityCount":3,"notes":[],"bodyHasMarkerText":false}
+MODE unclamped RELOAD {"hash":"#/studio/urn%3Auuid%3A0deda436-1127-44ea-a49a-c68b62d4fefb","markerCount":0,"bodyHasMarkerText":false,"activityCount":3}
+CONSOLE_ERRORS []

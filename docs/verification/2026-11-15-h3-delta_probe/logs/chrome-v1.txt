@@ -1,0 +1,5 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+MODE v1 SCREEN {"markerCount":0,"markers":[],"activityCount":0,"notes":[],"bodyHasMarkerText":false}
+MODE v1 PRINT {"markerCount":0,"markers":[],"activityCount":0,"notes":[],"bodyHasMarkerText":false}
+MODE v1 RELOAD {"hash":"#/studio/urn%3Auuid%3A26401398-131b-4c97-ad8a-409ac8286ca0","markerCount":0,"bodyHasMarkerText":false,"activityCount":0}
+CONSOLE_ERRORS []

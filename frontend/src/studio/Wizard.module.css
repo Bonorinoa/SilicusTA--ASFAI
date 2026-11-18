@@ -219,6 +219,7 @@
 
 /* K2: the lesson-length chips ("How long is the lesson?") — one row of pills, the checked one in the accent. */
 .lengthField { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lengthField > legend { padding: 0; margin-bottom: 6px; }
 .lengthChips { display: flex; flex-wrap: wrap; gap: 8px; }
 .lengthChip {
   display: inline-flex; align-items: center; padding: 7px 14px; border: 1px solid var(--fn-line); border-radius: 999px;

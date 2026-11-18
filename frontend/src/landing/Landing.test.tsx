@@ -35,12 +35,11 @@ describe("the page", () => {
     expect(screen.getAllByText(/prototype/i).length).toBeGreaterThanOrEqual(3);
   });
 
-  it("leads into the studio, keeps the classic page one quiet link away, and offers nothing like sign-in", () => {
+  it("leads into the studio and offers nothing like sign-in", () => {
     render(<Landing />);
     const open = screen.getAllByRole("link", { name: "Open the studio" });
     expect(open.length).toBe(2); // the header and the hero
     for (const a of open) expect(a).toHaveAttribute("href", "#/studio");
-    expect(within(screen.getByRole("contentinfo")).getByRole("link", { name: "Classic view" })).toHaveAttribute("href", "#/live");
     expect(screen.queryByRole("link", { name: /try it/i })).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
     expect(document.body.textContent).not.toMatch(/sign[ -]?in|log[ -]?in|sign up|create an account/i);
@@ -134,7 +133,7 @@ describe("copy contract (docs/design/glossary.md)", () => {
 });
 
 describe("routing (Workbench.tsx)", () => {
-  it("the bare URL, '#' and '#/' show the landing; #/decision does not (#/live: Workbench.test.tsx)", () => {
+  it("the bare URL, '#' and '#/' show the landing; #/decision does not; the removed #/live lands here too (Workbench.test.tsx)", () => {
     for (const hash of ["", "#", "#/"]) {
       window.location.hash = hash;
       const { unmount } = render(<Workbench />);

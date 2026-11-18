@@ -11,7 +11,7 @@ import Workbench from "./Workbench";
 const ok = (o: unknown) => ({ ok: true, status: 200, json: async () => o }) as unknown as Response;
 afterEach(() => { vi.unstubAllGlobals(); window.localStorage.clear(); window.location.hash = ""; });
 
-describe("the bare URL and #/live", () => {
+describe("the bare URL, '#' and the removed #/live", () => {
   beforeEach(() => {
     window.localStorage.setItem("silicus.tour.seen", "1");
     vi.stubGlobal("fetch", vi.fn(async (input: unknown) => {
@@ -28,17 +28,16 @@ describe("the bare URL and #/live", () => {
       window.location.hash = hash;
       const { unmount } = render(<Workbench />);
       expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Plan a lesson/);
-      expect(screen.queryByRole("heading", { name: "Learning objectives" })).toBeNull();
+      expect(screen.queryByRole("navigation", { name: "Workbench sections" })).toBeNull();
       unmount();
     }
   });
 
-  it("#/live still opens the app (the course), with the wordmark linking back to the landing", async () => {
+  it("#/live (the classic page is gone, K1) lands on the landing", () => {
     window.location.hash = "#/live";
     render(<Workbench />);
-    await screen.findByLabelText("What should we call this course?");
-    expect(screen.queryByText(/^Plan a lesson/)).toBeNull();
-    expect(screen.getByRole("link", { name: "Silicus TA, home" })).toHaveAttribute("href", "#/");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Plan a lesson/);
+    expect(screen.queryByRole("navigation", { name: "Workbench sections" })).toBeNull();
   });
 
   it("an unknown hash does not show the landing", () => {

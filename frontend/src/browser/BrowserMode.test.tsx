@@ -3,13 +3,14 @@
  *
  * Built (here: imported) with VITE_SILICUS_MODE=browser, the app talks to the in-page host, never to /api over
  * the network; it never shows the developer "host is not reachable" text; it says this browser keeps the record
- * and offers export / import / delete-all (delete confirmed first); ASFAI and YouTube say they need the local
- * app and offer no dead button; and the passcode dialog keeps the code in sessionStorage only.
+ * and offers export / import / delete-all (delete confirmed first); YouTube says it needs the local app and
+ * offers no dead button; and the passcode dialog keeps the code in sessionStorage only.
+ *
+ * The classic #/live app is gone (K1); the browser-mode truths are read off the studio's Home and Sources.
  */
 import { IDBFactory } from "fake-indexeddb";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MaterialsPanel } from "../live/MaterialsPanel";
 import { PASSCODE_KEY, passcodeKeeper } from "./passcode";
 import { PasscodeDialog } from "./PasscodeDialog";
 
@@ -21,23 +22,21 @@ const siteFetch = vi.fn(async (input: RequestInfo | URL) => {
   return new Response(JSON.stringify({ error: { code: "NOT_FOUND" } }), { status: 404 });
 });
 
-async function browserApp() {
+async function browserMode() {
   vi.resetModules();
   vi.stubEnv("VITE_SILICUS_MODE", "browser");
   vi.stubGlobal("indexedDB", new IDBFactory());
   vi.stubGlobal("BroadcastChannel", undefined);
   vi.stubGlobal("fetch", siteFetch);
-  const transport = await import("../gate/transport");
-  const { LiveCourse } = await import("../live/LiveCourse");
-  return { ...transport, LiveCourse };
+  return import("../gate/transport");
 }
 
-beforeEach(() => { siteFetch.mockClear(); sessionStorage.clear(); localStorage.clear(); });
+beforeEach(() => { siteFetch.mockClear(); sessionStorage.clear(); localStorage.clear(); window.location.hash = ""; });
 afterEach(() => { cleanup(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); });
 
 describe("browser mode", () => {
   it("intents go to the in-page host: no request to /api/courses ever leaves the page", async () => {
-    const { host, BROWSER_MODE } = await browserApp();
+    const { host, BROWSER_MODE } = await browserMode();
     expect(BROWSER_MODE).toBe(true);
     const created = await host.createCourse({ owner: "Ada", title: "Plants" });
     expect(created.courseId).toMatch(/^urn:uuid:/);
@@ -46,9 +45,11 @@ describe("browser mode", () => {
     await expect(host.getCourse("urn:uuid:nope")).rejects.toMatchObject({ code: "UNKNOWN_COURSE" });
   });
 
-  it("says this browser keeps the record, never the developer host text; delete-all asks first", async () => {
-    const { LiveCourse } = await browserApp();
-    render(<LiveCourse />);
+  it("the studio home says this browser keeps the record, never the developer host text; delete-all asks first", async () => {
+    await browserMode();
+    const { StudioApp } = await import("../studio/StudioApp");
+    window.location.hash = "#/studio";
+    render(<StudioApp />);
     expect(await screen.findByText(/This browser keeps the record/i)).toBeInTheDocument();
     expect(screen.getByText(/stored in this browser only, not on a server/)).toBeInTheDocument();
     expect(screen.queryByText(/host is not reachable/i)).not.toBeInTheDocument();
@@ -61,37 +62,18 @@ describe("browser mode", () => {
     expect(screen.queryByText(/This cannot be undone/)).not.toBeInTheDocument();
   });
 
-  it("at the intake step, ASFAI says it needs the local app and offers no Connect button", async () => {
-    const { host, LiveCourse } = await browserApp();
-    const { courseId } = await host.createCourse({ owner: "Ada", title: "Plants" });
-    await host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the material list." });
-    render(<LiveCourse />);
-    expect(await screen.findByText(/needs the local Silicus app/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Connect ASFAI/ })).not.toBeInTheDocument();
-    // the byline keeps "kept in this browser" in its own nowrap span, so match the paragraph's whole text
-    expect(screen.getByText((_, el) => el?.tagName === "P" && /kept in this browser/.test(el.textContent ?? ""))).toBeInTheDocument();
-  });
-});
+  it("YouTube says it needs the local app and offers no dead button", async () => {
+    await browserMode();
+    const { SourcesPanel } = await import("../studio/SourcesPanel");
+    const { SourceDrop } = await import("../studio/SourceDrop");
+    render(<SourcesPanel names={["a.pdf"]} held={[]} links={[]} onHeld={vi.fn()} onLinks={vi.fn()} confirmed={false} />);
+    expect(screen.getByText(/YouTube/)).toBeInTheDocument();
+    expect(screen.getByText("Local app only")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add youtube/i })).not.toBeInTheDocument();
 
-describe("the material panel without YouTube", () => {
-  it("refuses a YouTube link before anything is sent, and says why", () => {
-    const onPropose = vi.fn();
-    render(<MaterialsPanel busy={false} zdr={false} youtube={false} onPropose={onPropose} />);
-    expect(screen.getByText(/YouTube captions need the local Silicus app/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("A public link"), { target: { value: "https://youtu.be/dQw4w9WgXcQ" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add this link" }));
-    expect(screen.getByRole("status")).toHaveTextContent(/only be read by the local Silicus app/);
-    expect(screen.getByRole("button", { name: /Propose objectives/ })).toBeDisabled();
-  });
-
-  it("counts a material's characters in words: '1 character', never '1 characters'", () => {
-    render(<MaterialsPanel busy={false} zdr={true} youtube={false} onPropose={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/Or paste text/), { target: { value: "Lesson notes" } });
-    fireEvent.change(screen.getByLabelText("Pasted text"), { target: { value: "a" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add this text" }));
-
-    expect(screen.getByText("Lesson notes · 1 character")).toBeInTheDocument();
-    expect(screen.queryByText(/1 characters/)).not.toBeInTheDocument();
+    render(<SourceDrop taken={[]} full={false} onFile={vi.fn()} onLink={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Or paste text, or a web page address/), { target: { value: "https://youtu.be/dQw4w9WgXcQ" } });
+    expect(screen.getByText(/YouTube needs the local app\. Paste the transcript here instead\./)).toBeInTheDocument();
   });
 });
 

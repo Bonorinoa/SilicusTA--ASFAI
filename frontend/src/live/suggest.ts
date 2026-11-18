@@ -26,7 +26,7 @@ export const SUGGEST_HELD = "Decide the suggestions you already have first. Sili
 /**
  * A suggest refusal as one line: the same three parts the studio shows. The classic view that called this was
  * deleted in K1; no app code calls it now. Its test still pins that every host code has a plain sentence.
- * The module stays because the studio's Objectives step uses suggestOffer and SUGGEST_HELD.
+ * The module stays because the studio's Objectives step uses suggestOffer (which holds with SUGGEST_HELD).
  */
 export function suggestRefusalText(e: unknown): string {
   return refusalLine(explainRefusal(e, "suggest"));

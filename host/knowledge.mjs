@@ -91,11 +91,12 @@ function withTimeout(promise, ms) {
  * anywhere, failing, hung, or returning junk contributes nothing.
  *
  * @param {KnowledgeSource[]} sources
- * @param {{topic?: string, objectives?: {id: string, statement: string}[], limit?: number,
- *          allowEgress?: string[], timeoutMs?: number}} query
+ * @param {{topic?: string, objectives?: {id: string, statement: string}[], course?: string,
+ *          ages?: {min: number, max: number} | null, anchor?: string | null,
+ *          limit?: number, allowEgress?: string[], timeoutMs?: number}} query
  * @returns {Promise<Readonly<Citation>[]>}
  */
-export async function retrieveAll(sources, { topic = "", objectives = [], limit = 8, allowEgress = [], timeoutMs = 4000 } = {}) {
+export async function retrieveAll(sources, { topic = "", objectives = [], course = "", ages = null, anchor = null, limit = 8, allowEgress = [], timeoutMs = 4000 } = {}) {
   const usable = (sources ?? []).filter((s) => {
     try {
       if (!s?.enabled) return false;
@@ -105,7 +106,7 @@ export async function retrieveAll(sources, { topic = "", objectives = [], limit 
   const settled = await Promise.all(
     usable.map(async (s) => {
       try {
-        const hits = await withTimeout(Promise.resolve(s.retrieve({ topic, objectives, limit })), timeoutMs);
+        const hits = await withTimeout(Promise.resolve(s.retrieve({ topic, objectives, course, ages, anchor, limit })), timeoutMs);
         return Array.isArray(hits) ? { s, hits } : { s, hits: [] };
       } catch {
         return { s, hits: [] };
@@ -131,6 +132,29 @@ export async function retrieveAll(sources, { topic = "", objectives = [], limit 
     }
   }
   return out;
+}
+
+/**
+ * The hard prerequisites of the course's skill-map anchor, for the drafting prompt: learners
+ * recall or bet on them in the opening activity (P2). First source that returns rows wins; a
+ * source without the capability, or a failure, degrades to no context (never a course failure).
+ *
+ * @param {KnowledgeSource[]} sources
+ * @param {string | null} anchor  an mt_* course anchor, or nothing
+ * @returns {Promise<{id: string, name: string, evidence: string[]}[]>}
+ */
+export async function anchorPrerequisites(sources, anchor) {
+  if (typeof anchor !== "string" || anchor === "" || !Array.isArray(sources)) return [];
+  for (const s of sources) {
+    if (typeof s?.anchorPrerequisites !== "function") continue;
+    try {
+      const rows = await s.anchorPrerequisites(anchor);
+      if (Array.isArray(rows) && rows.length > 0) return rows;
+    } catch {
+      // a broken source is a state (no material), never a draft failure
+    }
+  }
+  return [];
 }
 
 /**

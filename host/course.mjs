@@ -25,10 +25,12 @@ import { TurnLedger } from "../confirm-gate/host-guard.mjs";
 import { LessonIntake } from "./intake.mjs";
 import { objectivesFromAnswers, SOURCE_FROM_ANSWERS, SOURCE_FROM_LOCAL_ANSWERS, SOURCE_SUGGESTED, teacherStatement } from "./proposer.mjs";
 import { digestOf } from "./digest.mjs";
-import { retrieveAll, verifyCitations } from "./knowledge.mjs";
+import { retrieveAll, verifyCitations, anchorPrerequisites } from "./knowledge.mjs";
+import { planDesignOf } from "./worker.mjs";
 import { reasonsOf } from "./reasons.mjs";
 import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
+import { agesError, stageForAges } from "./ages.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -44,8 +46,21 @@ export class CourseIntegrityError extends Error {
 }
 
 export class CourseSession {
-  /** Register a NEW course (a fresh per-course id seed) and return its session. */
-  static create(store, { owner, title, description = "", materials = [], objectivesConfirm } = {}) {
+  /**
+   * Register a NEW course (a fresh per-course id seed) and return its session.
+   * `ages` (G2a, owner 14 Nov) is the structured `{min, max}` band, validated HERE so no caller
+   * (the HTTP handler, the browser host, a test) can persist a bad one; absent stays absent
+   * (a legacy course). `marbleAnchor` is an mt_* id the handler has already checked against the
+   * snapshot; it is a POINTER, never an identity — it is stored on the record, never proposed,
+   * never confirmed, never part of a sealed objective list.
+   */
+  static create(store, { owner, title, description = "", materials = [], objectivesConfirm, ages = null, marbleAnchor = null } = {}) {
+    const agesMsg = agesError(ages);
+    if (agesMsg !== null) {
+      const e = new Error(agesMsg);
+      e.code = "BAD_AGES";
+      throw e;
+    }
     const courseId = `urn:uuid:${randomUUID()}`;
     const seed = `urn:uuid:${randomUUID()}`;
     // The record keeps NAMES only: whatever the client sent is reduced to `{name}` here, before meta.json,
@@ -54,7 +69,8 @@ export class CourseSession {
     // "explicit" is stored; a missing field, "auto", "banana" or anything else stores NOTHING, so an auto
     // course's record is byte-identical to one written before the mode existed and replays as "auto".
     const objectivesMode = objectivesConfirm === "explicit" ? "explicit" : undefined;
-    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, at: Date.now() });
+    const anchor = typeof marbleAnchor === "string" && marbleAnchor.length > 0 ? marbleAnchor : undefined;
+    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, ages, marbleAnchor: anchor, at: Date.now() });
     return CourseSession.load(store, courseId);
   }
 
@@ -87,6 +103,13 @@ export class CourseSession {
     // replay while chain verification still passes.
     const storedMode = created?.objectivesConfirm;
     this.#objectivesMode = storedMode === "explicit" ? "explicit" : "auto";
+    // Structured ages and the skill-map anchor (G2a) are read from the SAME hash-chained event,
+    // never from meta.json: an unchained edit must not be able to move the course's ages or
+    // anchor while chain verification still passes. Absent is a legacy course: null, no stage,
+    // no anchor, and (from G1b) no Marble suggestions.
+    const storedAges = (created?.ages && typeof created.ages === "object") ? { min: created.ages.min, max: created.ages.max } : null;
+    this.#ages = agesError(storedAges) === null ? storedAges : null;
+    this.#anchor = typeof created?.marbleAnchor === "string" && created.marbleAnchor.length > 0 ? created.marbleAnchor : null;
     this.#ledger = new TurnLedger({ clock: () => this.#now });
     // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.
     this.#intake = new LessonIntake({ ledger: this.#ledger, courseId: meta.courseId });
@@ -113,8 +136,14 @@ export class CourseSession {
   #intake;
   /** @type {"auto"|"explicit"} Checkpoint-3 confirmation mode, read from the course record at construction. */
   #objectivesMode;
+  /** @type {{min: number, max: number} | null} Structured ages from the course record (G2a); null = legacy. */
+  #ages;
+  /** @type {string | null} The skill-map anchor (an mt_* id in the snapshot), or null (G2a). */
+  #anchor;
   #validations = [];
   #planAt = null;
+  /** @type {Map<string, object>} schema-v2 learning-design per plan id (host metadata, never gate state) */
+  #planDesign = new Map();
   /** @type {string[]} proposal ids in the order the AI proposed them */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
@@ -246,6 +275,8 @@ export class CourseSession {
         }
         const planRecord = this.#gate.proposeLessonPlan(event.spec);
         if (Array.isArray(event.citations) && event.citations.length > 0) this.#citations.set(planRecord.id, event.citations);
+        const design = planDesignOf(event.spec);
+        if (design) this.#planDesign.set(planRecord.id, design);
         this.#planAt = event.at;
         return;
       }
@@ -610,13 +641,19 @@ export class CourseSession {
     // Retrieval is per request and is NOT written to the log. A source that sends the teacher's
     // words to ASFAI is consulted only for a course whose answers the teacher has already sent
     // there: no new egress without the teacher's own act. Every failure degrades to no context.
+    // The structured ages and the skill-map anchor (G2a) ride along: the Marble source uses them
+    // instead of parsing the free-text answer, so a course with an anchor never needs its answer
+    // re-read for age or domain.
     const context = await retrieveAll(sources, {
-      topic, objectives, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
+      topic, objectives, course, ages: this.#ages ?? null, anchor: this.#anchor, allowEgress: this.#intake.sentToAsfai() ? ["asfai"] : [],
     });
+    // The anchor's HARD prerequisites become opening-activity material in the prompt (P2):
+    // learners recall or bet on the prerequisite first. Not a context citation, never stored.
+    const anchorPrereqs = await anchorPrerequisites(sources, this.#anchor);
 
     let drafted;
     try {
-      drafted = await worker.draft({ objectives, topic, materials, course, context });
+      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }
@@ -815,8 +852,44 @@ export class CourseSession {
   #planView() {
     const plan = this.#gate.currentPlan();
     if (!plan) return plan;
+    const out = this.#withDesign(plan);
     const citations = this.#citations.get(plan.id);
-    return citations ? { ...plan, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : plan;
+    return citations ? { ...out, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : out;
+  }
+
+  /**
+   * A plan record with its schema-v2 learning design laid over it, for the teacher's view only.
+   * The gate keeps the v1 record (it drops unknown fields silently). The v2 slice rides as host
+   * metadata, like citations, so the teacher's view can read it without widening the gate. A plan
+   * with no design (v1) comes back as the same object.
+   */
+  #withDesign(plan) {
+    const design = plan ? this.#planDesign.get(plan.id) : undefined;
+    if (!design) return plan;
+    const activities = plan.activities.map((a, i) => {
+      const d = design.activities?.[i];
+      return d ? { ...a, ...d } : a;
+    });
+    return {
+      ...plan,
+      activities,
+      ...(design.sessions ? { sessions: design.sessions } : {}),
+      ...(design.spacedReviews ? { spacedReviews: design.spacedReviews } : {}),
+      ...(design.aiPolicy ? { aiPolicy: design.aiPolicy } : {}),
+      ...(design.notes ? { notes: design.notes } : {}),
+    };
+  }
+
+  /**
+   * Published versions for the teacher's view: each sealed lessonPlan gains the same design
+   * overlay as the draft it was confirmed from (P2ui), so the published plan page shows it. The
+   * sealed versions themselves, and export(), are untouched.
+   */
+  #versionsView() {
+    return this.#gate.versions().map((v) => {
+      const lp = v?.lessonPlan ? this.#withDesign(v.lessonPlan) : v?.lessonPlan;
+      return lp === v?.lessonPlan ? v : { ...v, lessonPlan: lp };
+    });
   }
 
   #objectiveView() {
@@ -859,6 +932,12 @@ export class CourseSession {
       course: {
         courseId: this.meta.courseId, owner: this.meta.owner, title: this.meta.title,
         description: this.meta.description, materials: this.meta.materials ?? [], createdAt: this.meta.createdAt,
+        // Structured demographics (G2a; absent on legacy courses). `stage` derives from the
+        // youngest age (1 under 8, 2 at 8-11, 3 at 12-14, 4 at 15+); P2 uses it. `marbleAnchor`
+        // is the skill-map anchor — a pointer (the node this lesson is about), never an
+        // objective id, never confirmed, never part of a sealed objective list.
+        ...(this.#ages ? { ages: { min: this.#ages.min, max: this.#ages.max }, stage: stageForAges(this.#ages) } : {}),
+        ...(this.#anchor ? { marbleAnchor: this.#anchor } : {}),
       },
       checkpoints: this.#gate.checkpoints(),
       objectivesMode: this.#objectivesMode,
@@ -873,7 +952,7 @@ export class CourseSession {
       invalidation: this.planInvalidation(),
       publish: (() => { const s = this.#gate.publishStatus(); return { ...s, reasons: reasonsOf(s.blockers) }; })(),
       revision: this.#revision(),
-      versions: this.#gate.versions(),
+      versions: this.#versionsView(),
       timeline: this.#timeline(),
       activity: activityOf(this.#log.read()),
       ledger: this.#ledger.list(),

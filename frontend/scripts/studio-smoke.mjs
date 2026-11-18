@@ -20,7 +20,8 @@ import { join, normalize, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import puppeteer from "puppeteer-core";
-import { modelReply } from "../../host/test/scripted-course.mjs";
+import { modelReply, scriptedPlanV2 } from "../../host/test/scripted-course.mjs";
+let planDrafts = 0;   // P2ui: the first plan draft is a v1 reply, every later one carries the v2 learning design
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
 const REPO = join(HERE, "..");
@@ -62,6 +63,9 @@ const server = createServer(async (req, res) => {
         if (/game|ignore|instructions|address|my name/.test(q)) reply = { inScope: false, basis: "plan", refusal: "off_topic", answer: "", cites: [] };
         else if (/grade|pass|how am i doing|score|mark/.test(q)) reply = { inScope: false, basis: "plan", refusal: "assessment", answer: "", cites: [] };
         else reply = modelReply(prompt);
+      } else if (prompt.startsWith("Draft one lesson plan")) {
+        planDrafts += 1;
+        reply = planDrafts === 1 ? modelReply(prompt) : scriptedPlanV2(prompt); // v1 first, then the scripted v2 plan (H2b)
       } else reply = modelReply(prompt);
       await sleep(prompt.startsWith("Draft one lesson plan") ? 800 : 200);
       if (reply?.error) return sendJson(502, { error: { code: "UPSTREAM_ERROR" } });
@@ -105,6 +109,12 @@ const clickBy = async (label) => {
   await sleep(300);
   return hit;
 };
+/** G2b: click a step-1 control by its accessible text (radio cards are labels, steppers are aria-labelled). */
+const clickLabel = (text) => page.evaluate((t) => {
+  const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(t));
+  if (el) el.click();
+  return !!el;
+}, text);
 const setVal = async (selector, value) => page.evaluate((sel, v) => {
   const el = document.querySelector(sel); if (!el) return false;
   const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -200,8 +210,41 @@ try {
   await page.type(`${step1}[placeholder="How plants eat"]`, "How plants eat");
   await page.type(`${step1}[placeholder="Ms. Lovelace"]`, "Ada Lovelace");
   await page.type(`${step1}[placeholder="How plants make food from sunlight"]`, "How plants make food from sunlight");
-  check("step 1 waits for all four answers before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
-  await page.type(`${step1}[placeholder="Grade 4 science, ages 9–10"]`, "Grade 4 science, ages 9-10");
+  check("step 1 waits for the learners' ages before it can continue", await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.disabled && b.textContent.trim() === "Continue")));
+  // ---- G2b: who the learners are. Early primary (4–8), then the steppers refine to 5–12.
+  check("G2b five learner groups are one radio group", await page.evaluate(() => document.querySelectorAll('form[aria-label="Course and learners"] fieldset input[type="radio"]').length) === 7);
+  await clickLabel("Early primary");
+  await clickLabel("Youngest age: one year older");
+  for (let i = 0; i < 4; i++) await clickLabel("Oldest age: one year older");
+  check("G2b the strip names the chosen ages and counts skill-map topics from the coverage route", await page.waitForFunction(() => /Ages 5–12 · [\d,]+ skill-map topics/.test(document.body.innerText), { timeout: 20000 }).then(() => true, () => false) && /Ages 5–12 · [\d,]+ skill-map topics/.test(await body()) && await page.evaluate(() => document.querySelectorAll('[role="img"][aria-label^="Skill-map topics at each age"] > span[data-on="true"]').length === 8));
+  t = await body();
+  check("G2b the consequence strip shows stage 1 (the youngest sets it), the topic count and the plan voice", /Stage 1 of 4/.test(t) && /skill-map topics fit these ages/.test(t) && /Plan voice/i.test(t));
+  // Topic from the skill map: search, pick the anchor, then edit the pre-filled topic.
+  await page.type('form[aria-label="Course and learners"] input[type="search"]', "AI in Daily Life");
+  await page.waitForFunction(() => document.querySelector('ul[aria-label="Skill-map topics"] button'), { timeout: 15000 }).catch(() => null);
+  await clickBy("AI in Daily Life");
+  check("G2b picking a skill-map topic sets the anchor, pre-fills the topic and shows the Marble credit", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false)
+    && await page.evaluate(() => [...document.querySelectorAll('form[aria-label="Course and learners"] input')].some((i) => i.value === "AI in Daily Life")) && /Marble Skill Taxonomy \(v1\)/.test(await body()));
+  // G1bV gap (PM 14 Nov): ONE credit component on every Marble surface, with both licence texts and the attribution notice reachable.
+  const creditOn = (scope) => page.evaluate((sel) => {
+    const root = sel === "picker" ? document.querySelector('button[aria-label^="Clear the skill-map anchor"]')?.closest("div")?.parentElement : document.querySelector(sel);
+    const c = root?.querySelector('[data-marble-credit="true"]');
+    if (!c || !/Marble Skill Taxonomy \(v1\) · © Generative Spark, Inc\. \(Marble\)/.test(c.textContent ?? "")) return null;
+    const href = (k) => c.querySelector(`a[data-licence="${k}"]`)?.getAttribute("href") ?? null;
+    return { odbl: href("odbl"), cc: href("cc-by-sa"), attribution: href("attribution") };
+  }, scope);
+  const creditOk = (c) => !!c && /opendatacommons\.org\/licenses\/odbl\/1-0/.test(c.odbl ?? "") && /creativecommons\.org\/licenses\/by-sa\/4\.0/.test(c.cc ?? "") && /MARBLE-ATTRIBUTION.*\.md$/.test(c.attribution ?? "");
+  const pickerCredit = await creditOn("picker");
+  check("G1bV the skill-map anchor picker shows the Marble credit with ODbL, CC BY-SA and attribution links", creditOk(pickerCredit), JSON.stringify(pickerCredit));
+  // H2a: one credit per surface — step 1 keeps the credit under the anchor card; the consequence strip carries no copy.
+  const step1Credits = await page.evaluate(() => ({ total: document.querySelectorAll('form[aria-label="Course and learners"] [data-marble-credit], section[aria-label="What your choices change"] [data-marble-credit]').length,
+    strip: document.querySelectorAll('section[aria-label="What your choices change"] [data-marble-credit]').length }));
+  check("H2a wizard step 1 shows exactly one Marble credit (under the anchor card), none in the consequence strip", step1Credits.total === 1 && step1Credits.strip === 0, JSON.stringify(step1Credits));
+  const notice = await page.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, text: (await r.text()).slice(0, 2000) }; }, pickerCredit?.attribution ?? "/missing");
+  check("G1bV the attribution notice ships with the app and names the pinned upstream", notice.status === 200 && /Marble Skill Taxonomy/.test(notice.text) && /d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63/.test(notice.text), `${notice.status}`);
+  await setVal('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "How plants make food from sunlight");
+  await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
+  await sleep(200);
   await clickBy("Continue");
   await waitText("Drop files here", 5000);
   t = await body();
@@ -217,6 +260,8 @@ try {
   await clickPrimary("Continue");
   await waitText("Review and confirm", 5000);
   t = await body();
+  { const rc = await creditOn('section[aria-label="Review and confirm"]'); check("G1bV the review's anchor row shows the Marble credit with both licence links", creditOk(rc), JSON.stringify(rc)); }
+  check("G2b the review shows ages, stage and the anchor", /Ages 5–12 · Early primary · AI stage 1 of 4/.test(t) && /AI in Daily Life/.test(t) && /Marble Skill Taxonomy/.test(t));
   check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
   check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
   await clickPrimary("Confirm and create the course");
@@ -227,6 +272,7 @@ try {
   const trail = ev.filter((e) => ["course.created", "intake.answered", "checkpoint.confirmed"].includes(e.kind)).map((e) => e.kind === "checkpoint.confirmed" ? `${e.kind}:${e.id}` : e.kind);
   check("one confirm leaves the brief's intents in the brief's order: create, answers, files, outline", JSON.stringify(trail) === JSON.stringify(["course.created", "intake.answered", "checkpoint.confirmed:files", "checkpoint.confirmed:outline"]), JSON.stringify(trail));
   const created = ev.find((e) => e.kind === "course.created");
+  check("G2b the course is created with ages 5–12 and the anchor mt_AzTrT5ySCx", JSON.stringify(created?.ages) === JSON.stringify({ min: 5, max: 12 }) && created?.marbleAnchor === "mt_AzTrT5ySCx", JSON.stringify({ ages: created?.ages, anchor: created?.marbleAnchor }));
   check("the course is created with no names-only material rows", Array.isArray(created?.materials ?? []) && (created?.materials ?? []).length === 0, JSON.stringify(created?.materials));
 
   // ---- brief, looked back at (a wizard-made course never stops on it)
@@ -235,7 +281,7 @@ try {
   t = await body();
   check("the Brief step renders (Step 1 of 4), looked back at", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
   const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
-  check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value === "Grade 4 science, ages 9-10")), `found ${nFields}`);
+  check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value.includes("Grade 4 science, ages 9-10"))), `found ${nFields}`);
   // ---- lane C · F5: the header's AI status opens the same diagnosis as the wizard's AI check
   await clickBy("AI needs passcode");
   check("the studio's AI status opens the wizard's diagnosis", await waitText("AI drafting on this site needs the demo passcode", 4000) && await page.evaluate(() => !!document.querySelector('dialog[aria-label="AI status"][open]')));
@@ -254,6 +300,55 @@ try {
   await sleep(900);
   check("D adding your own objective before any proposal lands it in the document, and nothing confirms by itself",
     /where a plant gets its water/.test(await body()) && /Your own objective/i.test(await body()) && /Step 2 of 4/i.test(await body()));
+
+  // ---- G2c: the skill map on the objectives step (anchored 5–12 course only)
+  const g2cReady = await page.waitForSelector("[data-evidence-suggestions]", { timeout: 15000 }).then(() => true, () => false);
+  check("G2c objectives: the anchor's evidence lines are offered as wording", g2cReady
+    && await page.evaluate(() => document.querySelectorAll("[data-evidence-suggestions] button").length >= 1));
+  { // H2a: one credit per surface — the objectives step credits Marble once, under the neighbourhood view.
+    const oc = await page.evaluate(() => ({ total: document.querySelectorAll("main [data-marble-credit]").length || document.querySelectorAll("[data-marble-credit]").length,
+      suggest: document.querySelectorAll("[data-evidence-suggestions] [data-marble-credit]").length, nb: document.querySelectorAll("[data-neighbourhood] [data-marble-credit]").length }));
+    check("H2a objectives step shows exactly one Marble credit, under the neighbourhood view, none under the suggestions", oc.total === 1 && oc.suggest === 0 && oc.nb === 1, JSON.stringify(oc));
+  }
+  const nb = await page.evaluate(() => {
+    const root = document.querySelector("[data-neighbourhood]");
+    const soft = root?.querySelector('path[data-edge="mt_AzTrT5ySCx>mt_kH1DzOPsXG"]');
+    const hard = root?.querySelector('path[data-edge="mt_WRRv1ABECC>mt_AzTrT5ySCx"]');
+    return { open: root?.open, nodes: root?.querySelectorAll("g[role=button][tabindex='0']").length ?? 0, soft: soft ? { s: soft.getAttribute("data-strength"), d: soft.getAttribute("stroke-dasharray") } : null,
+      hard: hard ? { s: hard.getAttribute("data-strength"), d: hard.getAttribute("stroke-dasharray") } : null, credit: !!root?.querySelector("[data-marble-credit]") };
+  });
+  check("G2c the neighbourhood view shows the soft (dashed) edge to mt_kH1DzOPsXG and the hard (solid) one from mt_WRRv1ABECC, focusable boxes, credit",
+    nb.open === true && nb.nodes >= 3 && nb.soft?.s === "soft" && nb.soft?.d === "5 4" && nb.hard?.s === "hard" && nb.hard?.d === null && nb.credit, JSON.stringify(nb));
+  // Keyboard: focusing a box shows its evidence lines without hover.
+  await page.evaluate((sel) => document.querySelector(sel)?.focus(), '[data-neighbourhood] g[data-node-id="mt_kH1DzOPsXG"]');
+  await sleep(200);
+  check("G2c focusing a box (no hover) shows its evidence lines", await page.evaluate(() => document.querySelector("[data-neighbourhood] [data-evidence-for]")?.getAttribute("data-evidence-for") === "mt_kH1DzOPsXG"
+    && /Data and Information for Computers/.test(document.querySelector("[data-neighbourhood] [data-evidence-for]")?.textContent ?? "")));
+  if (process.env.G2C_SHOTS) {
+    await page.evaluate((sel) => document.querySelector(sel)?.focus(), '[data-neighbourhood] g[data-node-id="mt_WRRv1ABECC"]');
+    await sleep(200);
+    const el = await page.$("[data-neighbourhood]");
+    await el.scrollIntoView();
+    await el.screenshot({ path: `${process.env.G2C_SHOTS}/2026-11-14-graph-neighbourhood-desktop.png` });
+    const sg = await page.$("[data-evidence-suggestions]");
+    await sg.screenshot({ path: `${process.env.G2C_SHOTS}/2026-11-14-graph-suggestions-desktop.png` });
+  }
+  const before = (await stored()).events.length;
+  await clickReal("Use as my objective");
+  const filled = await page.evaluate(() => document.querySelector('form[aria-label="Write your own objective"] input')?.value ?? "");
+  await sleep(500);
+  check("G2c 'Use as my objective' pre-fills the teacher's own field and records nothing",
+    /^Students can identify at least five examples of AI/.test(filled) && (await stored()).events.length === before, `filled=${JSON.stringify(filled)} events ${before}->${(await stored()).events.length}`);
+  await setVal('input[placeholder="Students can…"]', `${filled} Name two you use at home.`);
+  await sleep(300);
+  await clickBy("Add");
+  await sleep(900);
+  const g2cEv = (await stored()).events.map((e) => JSON.parse(e.line).event).filter((e) => JSON.stringify(e).includes("Name two you use at home."));
+  const g2cJson = JSON.stringify(g2cEv);
+  const g2cRow = await page.evaluate(() => { const li = [...document.querySelectorAll("li[data-objective-id]")].find((n) => /Name two you use at home\./.test(n.textContent)); return li ? { id: li.getAttribute("data-objective-id"), by: li.getAttribute("data-by"), own: /Your own/.test(li.textContent) } : null; });
+  check("G2c submitting it is the ordinary teacher add: one add intent with no Marble id; the objective is teacher-origin with a local URN",
+    g2cEv.length === 1 && g2cEv[0].kind === "objectives.decided" && g2cEv[0].decisions?.length === 1 && g2cEv[0].decisions[0].verb === "add" && !/mt_/.test(g2cJson)
+      && /^urn:uuid:[0-9a-f-]{36}$/.test(g2cRow?.id ?? "") && g2cRow?.by === "teacher" && g2cRow?.own === true, `${JSON.stringify(g2cRow)} ${g2cJson.slice(0, 300)}`);
   await clickBy("Use my answers");
   await waitText("Proposals", 8000);
   await sleep(500);
@@ -292,6 +387,23 @@ try {
   await clickPrimary("Confirm objectives");
   check("D confirming the objectives explicitly moves to the plan", await waitText("Objectives confirmed. On to the plan.", 6000) || await waitText("Step 3 of 4", 2000));
 
+  // ---- G2c: the confirmed objective from the skill map is the teacher's own, and the plan opens on the strip
+  await waitText("Step 3 of 4", 6000);
+  const strip = await page.waitForSelector("[data-prereq-strip]", { timeout: 10000 }).then(() => page.evaluate(() => {
+    const r = document.querySelector("[data-prereq-strip]");
+    return { text: r.textContent, hard: r.querySelector('[data-marble-id="mt_WRRv1ABECC"]')?.getAttribute("data-strength"), soft: r.querySelector('[data-marble-id="mt_u6SYiVx7FX"]')?.textContent ?? null, credit: !!r.querySelector("[data-marble-credit]") };
+  }), () => null);
+  check("G2c plan: the strip names mt_WRRv1ABECC as the hard prerequisite, the soft one as optional, with the credit",
+    !!strip && strip.hard === "hard" && /Before this, learners need: Smart Versus Not-Smart Devices \(hard prerequisite\)/.test(strip.text) && (strip.soft === null || /\(optional\)/.test(strip.soft)) && strip.credit, JSON.stringify(strip));
+  check("G2c plan: the neighbourhood view is there, collapsed", await page.evaluate(() => { const d = document.querySelector("[data-neighbourhood]"); return !!d && d.open === false && !!d.querySelector("[data-marble-credit]"); }));
+  await clickBy("Objectives");
+  await waitText("Objectives confirmed", 6000);
+  check("G2c after confirming, the skill-map objective is in the confirmed list as the teacher's own",
+    await page.evaluate(() => [...document.querySelectorAll("li[data-objective-id]")].some((li) => /Name two you use at home\./.test(li.textContent) && /Your own/.test(li.textContent) && li.getAttribute("data-by") === "teacher" && /^urn:uuid:/.test(li.getAttribute("data-objective-id"))))
+      && (await stored()).events.map((e) => JSON.parse(e.line).event).some((e) => e.kind === "checkpoint.confirmed" && e.id === "objectives"));
+  await clickBy("Back to the current step");
+  await waitText("Step 3 of 4", 6000);
+
   // ---- B5: cancelling the passcode gives focus back to the step's primary action, every time
   // (a real mouse click opens it, so the invoking control — not <body> — is what the dialog stores)
   let b5 = 0;
@@ -312,6 +424,58 @@ try {
   await clickPrimary("Draft the lesson plan");
   await enterPasscode();
   check("drafting the plan completes and shows a draft", await waitText("Confirm the lesson plan", 15000));
+  const align = await page.evaluate(() => {
+    const el = document.querySelector('section[aria-label="Suggested alignment"]');
+    return el ? el.textContent ?? "" : "";
+  });
+  check("one draft plan shows a Marble suggested alignment (the mock worker cited the local snapshot)", /Marble/.test(align), align.slice(0, 120));
+  // H2a: the Marble credit lives inside "Suggested alignment", once; the section is never an empty area (collapsed: heading + count).
+  {
+    const sa = await page.evaluate(() => {
+      const el = document.querySelector('section[aria-label="Suggested alignment"]');
+      const d = el?.querySelector("details");
+      return { credits: el ? el.querySelectorAll("[data-marble-credit]").length : -1, inside: !!d?.querySelector("[data-marble-credit]"),
+        summary: d?.querySelector("summary")?.textContent ?? "", rows: d ? d.querySelectorAll("li").length : 0 };
+    });
+    const saCredit = await creditOn('section[aria-label="Suggested alignment"]');
+    check("H2a Suggested alignment holds exactly one Marble credit, inside the fold, with ODbL, CC BY-SA and attribution links; collapsed it shows its count",
+      sa.credits === 1 && sa.inside && creditOk(saCredit) && /Suggested alignment\s*\d+ references?/.test(sa.summary) && sa.rows >= 1, JSON.stringify(sa));
+  }
+
+  // ---- P2ui: a v1 plan shows none of the learning design; "Draft again" brings the v2 plan, which does.
+  const designOf = () => page.evaluate(() => ({
+    policy: [...document.querySelectorAll("[data-ai-policy]")].map((e) => e.textContent),
+    evidence: [...document.querySelectorAll("[data-session-evidence]")].map((e) => e.textContent),
+    phases: [...document.querySelectorAll("[data-phase]")].map((e) => e.textContent),
+    later: [...document.querySelectorAll("[data-later] li")].map((e) => e.textContent),
+    adjusted: [...document.querySelectorAll("[data-adjusted] li")].map((e) => e.textContent),
+    first: document.querySelectorAll("[data-learner-first]").length,
+    tags: document.querySelectorAll("[data-ai-status]").length,
+    text: document.body.innerText,
+    plan: document.querySelector('article[aria-label^="Lesson plan"]')?.innerText ?? "",
+    activities: [...document.querySelectorAll('article[aria-label^="Lesson plan"] h2')].map((h) => h.parentElement?.innerText ?? "").join("\n"),
+  }));
+  const d1 = await designOf();
+  check("P2ui a v1 plan shows no policy line, phase chip, evidence line, Later section or adjusted list",
+    d1.policy.length + d1.evidence.length + d1.phases.length + d1.later.length + d1.adjusted.length + d1.first + d1.tags === 0, JSON.stringify({ ...d1, text: undefined }));
+  const planIdBefore = await page.evaluate(() => document.querySelector("[data-session-evidence]") ? "v2" : (document.querySelector('article[aria-label^="Lesson plan"]')?.textContent ?? "").length);
+  await clickBy("Draft again");
+  await enterPasscode();
+  const gotV2 = await page.waitForFunction(() => !!document.querySelector("[data-session-evidence]"), { timeout: 15000 }).then(() => true, () => false);
+  const d2 = await designOf();
+  check("P2ui the v2 plan shows the stage-1 policy line once, in plain words",
+    gotV2 && d2.policy.length === 1 && /Children don’t use AI in this lesson\. You may use it to prepare\./.test(d2.policy[0]), JSON.stringify(d2.policy));
+  check("P2ui stage 1-2: no per-activity AI tag beside the policy line", d2.tags === 0, `tags=${d2.tags}`);
+  check("P2ui phase chips on the activities", d2.phases.length >= 2 && d2.phases[0] === "1 Notice and guess" && /^2 Try and fix/.test(d2.phases[1]), JSON.stringify(d2.phases));
+  check("P2ui exactly one 'Evidence for this session' line", d2.evidence.length === 1 && /sorted card strip/.test(d2.evidence[0]), JSON.stringify(d2.evidence));
+  check("P2ui the Later section lists each review with its offset", d2.later.length === 2 && d2.later[0].startsWith("In 2 days") && d2.later[1].startsWith("Next week"), JSON.stringify(d2.later).slice(0, 200));
+  // H2b: the scripted v2 plan matches the course (AI in Daily Life, 5–12), so the host has nothing to adjust.
+  // The "replaced the AI line" quote (H2a item 6) is unit-tested in PlanCard.design.test.tsx; the stage-3
+  // clamp note is shown and checked by narrow-shell.mjs on its own stage-3 course.
+  check("H2b the scripted v2 plan fits the course: 'Learners first' on all three activities, nothing under 'Silicus adjusted', no plants in the plan's title or activities (this smoke course's own title and objectives stay the plants ones)",
+    d2.first >= 3 && d2.adjusted.length === 0 && /Spotting AI in daily life/.test(d2.plan) && /Smart Versus Not-Smart Devices/.test(d2.plan) && !/How plants eat|Look at a leaf|Ask what it needs/.test(d2.plan.split("\n")[0] + d2.activities),
+    JSON.stringify({ first: d2.first, adjusted: d2.adjusted, head: d2.plan.slice(0, 120) }).slice(0, 300));
+  check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
 
@@ -374,8 +538,20 @@ try {
   check("a returning teacher's wizard opens on step 1, without the welcome", await waitText("Your course and learners", 6000) && !/Let’s set up your course/.test(await body()));
   await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Leaves and light");
   await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  // ---- G2b: ages 19–22 have no skill-map topics: it says so, the teacher writes their own, no anchor.
+  await clickLabel("University / adult");
+  await clickLabel("Youngest age: one year older");
+  for (let i = 0; i < 3; i++) await clickLabel("Oldest age: one year younger");
+  check("G2b ages 19–22: the consequence strip says there are no suggestions", await waitText("No suggestions at these ages: you write your own objectives.", 15000) && /Ages 19–22 · 0 skill-map topics/.test(await body()));
+  check("G2b ages 19–22: the skill-map option is off and says why; writing your own is chosen", await page.evaluate(() => {
+    const r = [...document.querySelectorAll('form[aria-label="Course and learners"] label')];
+    const map = r.find((l) => /Start from the skill map/.test(l.textContent ?? ""))?.querySelector("input");
+    const own = r.find((l) => /^Write your own/.test((l.textContent ?? "").trim()))?.querySelector("input");
+    return !!map?.disabled && !!own?.checked && !document.querySelector('form[aria-label="Course and learners"] input[type="search"]');
+  }) && /No skill-map topics at these ages\. Write your own\./.test(await body()));
   await page.type('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]', "Why leaves are green");
-  await page.type('form[aria-label="Course and learners"] input[placeholder="Grade 4 science, ages 9–10"]', "Grade 4 science");
+  await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science");
+  await sleep(200);
   await clickBy("Continue");
   await waitText("Drop files here", 5000);
   // The source is named by its own first line: a 200-character unbroken one must wrap, never widen the page.
@@ -401,6 +577,14 @@ try {
   await enterPasscode().catch(() => false);
   check("R7 the confirm lands on Objectives and starts proposing from the sources there", await waitText("Not yours until you accept", 15000) && /From material:/.test(await body()));
   check("R7 one live region on the step after the wizard", (await liveRegions()).length === 1, JSON.stringify(await liveRegions()));
+  {
+    const all = (await stored()).events.map((e) => JSON.parse(e.line).event).filter((e) => e.kind === "course.created");
+    const leaves = all.find((e) => e.title === "Leaves and light");
+    check("G2b the second course is created with ages 19–22 and no anchor", JSON.stringify(leaves?.ages) === JSON.stringify({ min: 19, max: 22 }) && leaves?.marbleAnchor === undefined, JSON.stringify(leaves ? { ages: leaves.ages, anchor: leaves.marbleAnchor } : all.map((e) => e.title)));
+  }
+  check("H2a ages 19–22: the objectives step says once, quietly, that there are no skill-map topics",
+    await waitText("No skill-map topics for these ages. Write your own objectives.", 8000)
+      && await page.evaluate(() => document.querySelectorAll("[data-no-skill-map-topics]").length === 1 && !document.querySelector("[data-neighbourhood]")));
   // ---- F1 (verifier): a long unbroken source name in the proposals' provenance must wrap, never widen the page.
   await page.setViewport({ width: 390, height: 844 });
   await sleep(500);

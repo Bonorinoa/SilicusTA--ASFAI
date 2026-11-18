@@ -26,7 +26,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
-import { modelReply } from "../../host/test/scripted-course.mjs";
+import { modelReply, scriptedPlanV2 } from "../../host/test/scripted-course.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
 const REPO = join(HERE, "..");
@@ -82,7 +82,7 @@ const server = createServer(async (req, res) => {
       if (req.headers["x-silicus-passcode"] !== PASSCODE) return sendJson(res, 401, { error: { code: "BAD_PASSCODE" } });
       if (url.pathname === "/api/fetch") return sendJson(res, 422, { error: { code: "URL_REFUSED" } });
       const parsed = JSON.parse(body || "{}");
-      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(modelReply(parsed?.messages?.[0]?.content ?? "")) } }] });
+      return sendJson(res, 200, { id: "mock", choices: [{ message: { role: "assistant", content: JSON.stringify(((p) => p.startsWith("Draft one lesson plan") ? scriptedPlanV2(p) : modelReply(p))(parsed?.messages?.[0]?.content ?? "")) } }] });
     }
     return sendJson(res, 404, { error: { code: "NOT_FOUND" } });
   }
@@ -389,6 +389,216 @@ try {
   await clickText("Keep them");
   await poll(() => bodyHas("Export all courses"));
   if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-confirm`, ["record-band"]); }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- G2b: the new-course wizard's step 1 (learner cards, steppers, skill-map strip, anchor, consequences).
+  // Checked at every width: the page never scrolls sideways and nothing in the step crosses the viewport.
+  await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  await poll(() => bodyHas("Who are your learners?"));
+  const g2bClick = (t) => page.evaluate((x) => { const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(x)); el?.click(); return !!el; }, t);
+  await g2bClick("Early primary");
+  await g2bClick("Youngest age: one year older");
+  for (let i = 0; i < 4; i++) await g2bClick("Oldest age: one year older");
+  await page.waitForFunction(() => /Ages 5–12 · [\d,]+ skill-map topics/.test(document.body.innerText), { timeout: 20000 }).catch(() => null);
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "AI around us");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.type('form[aria-label="Course and learners"] input[type="search"]', "AI in Daily Life");
+  await page.waitForFunction(() => document.querySelector('ul[aria-label="Skill-map topics"] button'), { timeout: 15000 }).catch(() => null);
+  await page.evaluate(() => document.querySelector('ul[aria-label="Skill-map topics"] button')?.click());
+  await page.type('form[aria-label="Course and learners"] textarea', "Mixed class; two learners are new to English.");
+  check("G2b the wizard's step 1 reached the anchored state", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false));
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(250);
+    const m = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth;
+      const past = [...document.querySelectorAll('form[aria-label="Course and learners"] *')]
+        .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+        .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 30)}`);
+      return { sw: document.documentElement.scrollWidth, vw, past };
+    });
+    check(`G2b wizard step 1 does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+  }
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
+    const dir = process.env.NARROW_SHELL_WIZARD_SHOTS;
+    // A viewport as tall as the page (no fullPage stitching), so the sticky bar and footer sit where a reader expects them.
+    const tall = async (width, scale, file) => {
+      await page.setViewport({ width, height: 900, deviceScaleFactor: scale });
+      await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
+      await sleep(300);
+      const h = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewport({ width, height: h, deviceScaleFactor: scale });
+      await sleep(300);
+      await page.screenshot({ path: join(dir, file) });
+    };
+    await tall(1440, 1, "2026-11-14-wizard-step1-desktop.png");
+    await tall(390, 2, "2026-11-14-wizard-step1-390.png");
+  }
+
+  // ---- G2c: the skill map on the objectives and plan steps of the anchored course (5–12, AI in Daily Life).
+  const g2cBtn = (label) => page.evaluate((x) => { const b = [...document.querySelectorAll("button")].find((e) => !e.disabled && (e.textContent ?? "").trim() === x); b?.click(); return !!b; }, label);
+  const g2cWait = (fn, ms = 10000, arg) => page.waitForFunction(fn, { timeout: ms }, arg).then(() => true, () => false);
+  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "AI in daily life"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
+  // Each move retries its click until the next screen is there (a click can land while the step still settles).
+  const g2cMove = async (label, ready, ms = 12000) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      if (await page.evaluate(ready)) return true;
+      await g2cBtn(label);
+      await sleep(500);
+    }
+    return page.evaluate(ready);
+  };
+  await sleep(500);
+  const g2cWalk = [
+    await g2cMove("Continue", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
+    await g2cMove("Continue without sources", () => !!document.querySelector('section[aria-label="Your objectives"] textarea')),
+  ];
+  await setValue('section[aria-label="Your objectives"] textarea', "Spot AI at home and at school");
+  g2cWalk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
+  g2cWalk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
+  if (g2cWalk.includes(false)) console.log(`G2c walk stalled: ${JSON.stringify(g2cWalk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
+  const g2cIn = await g2cWait(() => !!document.querySelector("[data-evidence-suggestions]") && !!document.querySelector("[data-neighbourhood][open]"), 20000);
+  check("G2c the anchored course opens on objectives with the suggestions and the open neighbourhood view", g2cIn);
+  const g2cOverflow = async (label) => {
+    for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+      await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+      await sleep(300);
+      const m = await page.evaluate(() => {
+        const vw = document.documentElement.clientWidth;
+        const past = [...document.querySelectorAll("[data-neighbourhood] *, [data-evidence-suggestions] *, [data-prereq-strip] *")]
+          .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+          .map((e) => `${e.tagName.toLowerCase()}.${String(e.className?.baseVal ?? e.className).slice(0, 30)}`);
+        const svg = document.querySelector("[data-neighbourhood] svg");
+        return { sw: document.documentElement.scrollWidth, vw, past, orient: svg?.getAttribute("data-orientation") ?? null };
+      });
+      check(`G2c ${label} does not overflow at ${w}px (view: ${m.orient})`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+    }
+  };
+  const g2cTall = async (width, scale, file) => {
+    await page.setViewport({ width, height: 900, deviceScaleFactor: scale });
+    await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
+    await sleep(400);
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewport({ width, height: h, deviceScaleFactor: scale });
+    await sleep(400);
+    await page.screenshot({ path: join(process.env.NARROW_SHELL_WIZARD_SHOTS, file) });
+  };
+  await g2cOverflow("objectives step (suggestions + neighbourhood)");
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  check("G2c at 390 px the view stacks into bands (narrow layout)", await page.evaluate(() => document.querySelector("[data-neighbourhood] svg")?.getAttribute("data-orientation") === "narrow"));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-objectives-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-objectives-desktop.png"); }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+  // Use a suggestion, add it, confirm the objectives: the plan step opens on the prerequisite strip.
+  // H2b: use all three suggestions, so the scripted plan cites three of the course's own objectives.
+  for (let k = 0; k < 3; k++) {
+    await page.evaluate((i) => { const b = [...document.querySelectorAll("button")].filter((e) => (e.textContent ?? "").trim() === "Use as my objective")[i]; b?.click(); }, k);
+    await sleep(200);
+    await g2cBtn("Add");
+    await g2cWait((n) => document.querySelectorAll("li[data-objective-id]").length >= n, 8000, k + 1);
+  }
+  await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
+  await g2cBtn("Confirm objectives");
+  const g2cPlan = await g2cWait(() => !!document.querySelector("[data-prereq-strip]") && /Step 3 of 4/i.test(document.body.innerText), 12000);
+  check("G2c confirming reaches the plan step, which opens on the prerequisite strip", g2cPlan);
+  await page.evaluate(() => { const d = document.querySelector("[data-neighbourhood]"); if (d) d.open = true; });
+  await sleep(300);
+  await g2cOverflow("plan step (strip + neighbourhood open)");
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-plan-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-plan-desktop.png"); }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- P2ui: the anchored course drafts a v2 plan (learning design on the page); nothing overflows, 390 px included.
+  await g2cMove("Draft the lesson plan", () => !!document.querySelector('[role="dialog"] input[type="password"]') || !!document.querySelector("[data-session-evidence]"));
+  if (await page.evaluate(() => !!document.querySelector('[role="dialog"] input[type="password"]'))) {
+    await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+    await g2cBtn("Continue");
+  }
+  const p2Plan = await g2cWait(() => !!document.querySelector("[data-session-evidence]") && !!document.querySelector("[data-later]"), 20000);
+  check("P2ui the anchored course's v2 plan shows the evidence line and the Later section", p2Plan);
+  const p2Sel = "[data-session-evidence] *, [data-ai-policy] *, [data-adjusted] *, [data-design-row] *, [data-learner-first] *, [data-then-decide] *, [data-later] *";
+  const p2Past = [];
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(300);
+    const past = await page.evaluate((sel) => {
+      const vw = document.documentElement.clientWidth;
+      return [...document.querySelectorAll(sel)].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+        .map((e) => `${e.tagName.toLowerCase()}.${(e.className || "").toString().slice(0, 30)}`);
+    }, p2Sel);
+    if (past.length) p2Past.push(`${w}px: ${past.slice(0, 3).join(", ")}`);
+  }
+  check("P2ui no learning-design element crosses the edge at 320–1440 px and at 390 px", p2Past.length === 0, p2Past.join("; "));
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  check("P2ui at 390 px the Later rows stack (offset above the prompt)", await page.evaluate(() => {
+    const li = document.querySelector("[data-later] li"); if (!li) return false;
+    const [a, b] = li.children; return !!a && !!b && b.getBoundingClientRect().top >= a.getBoundingClientRect().bottom - 1;
+  }));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
+    await g2cTall(390, 2, "2026-11-14-plan-v2-390.png");
+    await g2cTall(1440, 1, "2026-11-14-plan-v2-desktop.png");
+    await page.emulateMediaType("print");
+    // Print preview: the plan sheet alone, under print media, at A4's CSS width (210 mm ≈ 794 px).
+    await page.setViewport({ width: 794, height: 1200, deviceScaleFactor: 2 });
+    await sleep(300);
+    // A viewport as tall as the page, so no sticky chrome sits over the sheet in the capture.
+    await page.setViewport({ width: 794, height: await page.evaluate(() => document.documentElement.scrollHeight), deviceScaleFactor: 2 });
+    await sleep(400);
+    const sheet = await page.$('article[aria-label^="Lesson plan"]');
+    if (sheet) await sheet.screenshot({ path: join(process.env.NARROW_SHELL_WIZARD_SHOTS, "2026-11-14-plan-v2-print.png") });
+    await page.emulateMediaType(null);
+  }
+  await page.emulateMediaType("print");
+  check("P2ui print media keeps the learning design (policy line, evidence line, phase chips, Later)", await page.evaluate(() => {
+    const vis = (sel) => [...document.querySelectorAll(sel)].some((e) => getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0);
+    return vis("[data-session-evidence]") && vis("[data-later]") && vis("[data-ai-policy]") && vis("[data-phase]");
+  }));
+  check("H2b the 5–12 scripted plan fits its course: no 'Silicus adjusted', no plants story",
+    await page.evaluate(() => !document.querySelector("[data-adjusted]") && /Spotting AI in daily life/.test(document.body.innerText) && !/How plants eat/.test(document.body.innerText)));
+  await page.emulateMediaType(null);
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- H2b: a stage-3 course (ages 12–14, Computing, no anchor). The scripted plan's third activity asks for AI
+  // with no first try; the host clamps it and the plan shows the note under "Silicus adjusted".
+  await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  await poll(() => bodyHas("Who are your learners?"));
+  await g2bClick("Lower secondary");
+  await g2bClick("Oldest age: one year younger");
+  await g2bClick("Write your own");
+  await page.waitForFunction(() => /Ages 12–14/.test(document.body.innerText), { timeout: 10000 }).catch(() => null);
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Searching and sorting");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "How a computer searches and sorts"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
+  await sleep(400);
+  const s3Walk = [
+    await g2cMove("Continue", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
+    await g2cMove("Continue without sources", () => !!document.querySelector('section[aria-label="Your objectives"] textarea')),
+  ];
+  await setValue('section[aria-label="Your objectives"] textarea', "Explain why binary search needs a sorted list\nCarry out a bubble sort and count its swaps");
+  s3Walk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
+  s3Walk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
+  if (s3Walk.includes(false)) console.log(`H2b stage-3 walk stalled: ${JSON.stringify(s3Walk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
+  // No anchor, so no suggestions: the brief's outcomes come back as proposals ("Use my answers"); accept each.
+  await g2cMove("Use my answers", () => document.querySelectorAll('aside[aria-label="Proposals"] article').length > 0, 8000);
+  for (let i = 0; i < 10 && await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length) > 0; i++) {
+    await g2cBtn("Accept");
+    await sleep(400);
+  }
+  await g2cWait(() => !!document.querySelector("li[data-objective-id]"), 10000);
+  await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
+  await g2cMove("Confirm objectives", () => /Step 3 of 4/i.test(document.body.innerText), 12000);
+  await g2cMove("Draft the lesson plan", () => !!document.querySelector('[role="dialog"] input[type="password"]') || !!document.querySelector("[data-session-evidence]"));
+  if (await page.evaluate(() => !!document.querySelector('[role="dialog"] input[type="password"]'))) {
+    await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+    await g2cBtn("Continue");
+  }
+  const s3 = await g2cWait(() => !!document.querySelector("[data-adjusted]"), 20000);
+  const s3Notes = await page.evaluate(() => [...document.querySelectorAll("[data-adjusted] li")].map((e) => e.textContent));
+  if (!s3) console.log(`H2b stage-3 plan missing at: ${(await page.evaluate(() => location.hash + " " + document.body.innerText)).slice(0, 900).replace(/\s+/g, " ")}`);
+  check("H2b the stage-3 plan shows the host's clamp under 'Silicus adjusted'",
+    s3 && s3Notes.length === 1 && /clamped to .?forbidden/i.test(s3Notes[0]) && /How a computer finds things fast/.test(await page.evaluate(() => document.body.innerText)), JSON.stringify({ s3Walk, s3Notes }));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) await g2cTall(1440, 1, "2026-11-14-plan-v2-stage3.png");
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));

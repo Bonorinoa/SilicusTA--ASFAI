@@ -73,11 +73,11 @@ export interface Rig {
 }
 
 /** A browser host on fake IndexedDB; the passcode prompt answers from `answers` in order. */
-export async function rig({ site = fakeSite(), answers = ["letmein"] as (string | null)[], idb = new IDBFactory(), session = new MemoryStorage(), local = new MemoryStorage() } = {}): Promise<Rig> {
+export async function rig({ site = fakeSite(), answers = ["letmein"] as (string | null)[], idb = new IDBFactory(), session = new MemoryStorage(), local = new MemoryStorage(), marbleLoad }: { site?: ReturnType<typeof fakeSite>; answers?: (string | null)[]; idb?: IDBFactory; session?: MemoryStorage; local?: MemoryStorage; marbleLoad?: () => Promise<string> } = {}): Promise<Rig> {
   const asked: PasscodeReason[] = [];
   const queue = [...answers];
   setPasscodePrompt(async (reason) => { asked.push(reason); return queue.length ? queue.shift()! : null; });
-  const make = () => createBrowserHost({ indexedDB: idb, fetchImpl: site.fetchImpl, origin: ORIGIN, passcode: passcodeKeeper(() => session), localStore: () => local, channel: null });
+  const make = () => createBrowserHost({ indexedDB: idb, fetchImpl: site.fetchImpl, origin: ORIGIN, passcode: passcodeKeeper(() => session), localStore: () => local, channel: null, ...(marbleLoad ? { marbleLoad } : {}) });
   const r: Rig = {
     host: await make(), idb, session, local, site, asked,
     async reload() { r.host = await make(); return r.host; },

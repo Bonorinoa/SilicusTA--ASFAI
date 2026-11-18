@@ -222,6 +222,33 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
       expect(screen.queryByText("A node")).not.toBeInTheDocument();
     });
 
+    // H2a: the Marble credit sits inside the folded section with the rows it credits. PlanCard has no
+    // anchor input, so a course with or without an anchor gets the same answer: the credit follows the
+    // citations. The section is never an empty area: collapsed it shows its heading and count.
+    const marbleRow = { ref: "marble:mt_AzTrT5ySCx", label: "AI in Daily Life", source: "marble", activityIndexes: [0], verified: true };
+    it.each([
+      ["an anchored course (Marble rows)", [marbleRow]],
+      ["a course without an anchor (Marble row mixed with others)", [{ ref: "local:a", label: "A node", source: "local-ontology", activityIndexes: [1], verified: true }, marbleRow]],
+    ])("shows exactly one Marble credit inside Suggested alignment for %s", (_label, citations) => {
+      render(<PlanCard plan={withCitations(citations as NonNullable<typeof scenario.plan.citations>)} objectives={scenario.objectives} />);
+      const region = screen.getByRole("region", { name: "Suggested alignment" });
+      const details = region.querySelector("details")!;
+      expect(details.open).toBe(false);
+      expect(details.querySelector("summary")!.textContent).toMatch(new RegExp(`Suggested alignment${citations.length} references?`));
+      const credits = region.querySelectorAll('[data-marble-credit="true"]');
+      expect(credits).toHaveLength(1);
+      expect(details.contains(credits[0])).toBe(true);
+      expect(credits[0].textContent).toMatch(/Marble Skill Taxonomy \(v1\)/);
+      expect(credits[0].querySelector('[data-licence="odbl"]')).not.toBeNull();
+    });
+
+    it("shows no Marble credit when no citation comes from Marble", () => {
+      render(<PlanCard plan={withCitations([{ ref: "local:a", label: "A node", source: "local-ontology", activityIndexes: [0], verified: true }])} objectives={scenario.objectives} />);
+      const region = screen.getByRole("region", { name: "Suggested alignment" });
+      expect(region.querySelector("[data-marble-credit]")).toBeNull();
+      expect(region.querySelector("summary")!.textContent).toMatch(/1 reference/);
+    });
+
     it("renders a plan with no citations exactly as before: no alignment section at all", () => {
       const { container, rerender } = render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
       expect(screen.queryByRole("region", { name: "Suggested alignment" })).not.toBeInTheDocument();

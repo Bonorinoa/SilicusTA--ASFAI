@@ -32,8 +32,10 @@ export function modelReply(prompt) {
   }
   if (p.startsWith("Draft one lesson plan")) {
     const ids = [...p.matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+    const refs = [...p.matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
     return { title: "How plants eat", audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation" })) };
+      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
+        ...(refs[i] ? { citations: [refs[i]] } : {}) })) };
   }
   if (p.startsWith("You are a study helper")) {
     return { inScope: true, answer: "A plant uses light, water and air to make sugar.", cites: ["[objective:1]", "activity:1"] };
@@ -89,4 +91,119 @@ export async function runScriptedCourse(call) {
   await step("GET", "/api/courses/urn%3Auuid%3Anope");
   await step("POST", `${c}/nope`, {});
   return { courseId: id, transcript };
+}
+
+/* ============================================================================================================
+ * SCRIPTED v2 PLANS: test-fixture content for the smokes and the screenshot scripts (H2b). Not a product claim,
+ * not model output, and not a recommended lesson: a fixed reply the stand-in model gives so the browser shows
+ * a schema-v2 plan that matches the course on screen. A v1 reply stays modelReply's own (the v1 tests use it).
+ *
+ * scriptedPlanV2(prompt) reads the plan prompt the host sends and picks one of two scripted plans:
+ *   - stage 3 (ages 12-14): "How a computer finds things fast", whose third activity asks for AI with no first
+ *     try, so the host clamps it to "forbidden" and the teacher sees the note under "Silicus adjusted";
+ *   - otherwise: "Spotting AI in daily life" for the anchored smoke course (AI in Daily Life, ages 5-12),
+ *     which needs no adjustment: AI forbidden everywhere and the stage's own AI line.
+ * Both cite the course's own objectives (the urn:uuid ids in the prompt) and nothing else.
+ * ============================================================================================================ */
+
+/** The host's stage 1-2 AI lines (host/worker.mjs STAGE_AI_POLICY), copied: a plan that uses them verbatim
+ *  needs no "Silicus adjusted" note. If the host's wording changes, the smoke's "no adjustment" check fails. */
+const STAGE_POLICY = {
+  1: "AI in this course: learners do not use AI at all; nothing a child produces enters a tool. The teacher may use AI to prepare.",
+  2: "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone.",
+};
+
+/** Each objective is cited at least once: activity i takes the ids at i, i+3, ...; an empty share reuses one. */
+const share = (ids, i, n) => {
+  const mine = ids.filter((_, k) => k % n === i);
+  return mine.length ? mine : ids.length ? [ids[i % ids.length]] : [];
+};
+
+const DAILY_LIFE = [
+  { title: "Smart or not? Place your bet", minutes: 10, phase: 1, session: 1,
+    learnerDoes: "Opening bet on the hard prerequisite, Smart Versus Not-Smart Devices. Each child looks at four picture cards (a lamp, a toaster, a talking speaker, a tablet) and bets for each: does it decide something by itself, or only do what a switch tells it?",
+    teacherDoes: "Writes the bets on the board without saying who is right, then shows what each device really does.",
+    evidenceIfAny: "observation", targetOperation: "tell a device that decides from one that only follows a switch", operationDoneBy: "learner",
+    learnerFirst: "Each child bets smart or not-smart for every card and gives one reason.", helpAfter: "teacher", aiStatus: "forbidden",
+    decisionAfterHelp: "Each child keeps or changes each bet after the demonstration and says why.", channels: ["speaking", "handling"] },
+  { title: "Sort the AI around us", minutes: 15, phase: 2, session: 1,
+    learnerDoes: "Pairs sort twelve picture cards of things at home and at school into 'uses AI' and 'does not', then sort a second set in which one detail on each card has changed.",
+    teacherDoes: "Walks a worked example of one card aloud, then asks each pair which card was hardest.",
+    evidenceIfAny: "work-product", targetOperation: "sort everyday things by whether they use AI", operationDoneBy: "learner",
+    learnerFirst: "Each pair sorts the first set alone before the worked example.", helpAfter: "worked-example", aiStatus: "forbidden",
+    decisionAfterHelp: "Each pair keeps or moves each card after the class check and says why.", channels: ["handling", "writing", "discussion"] },
+  { title: "Patterns, not magic", minutes: 10, phase: 3, supportingPhase: 4, session: 1,
+    learnerDoes: "Each child explains to a partner how one AI they found learns from patterns in data, then draws that example for the class wall with a one-line caption.",
+    teacherDoes: "Listens to three pairs and asks each 'how could it get this wrong?'",
+    evidenceIfAny: "work-product", targetOperation: "explain that AI uses patterns and data, not magic", operationDoneBy: "learner",
+    learnerFirst: "Each child draws or writes their own explanation before hearing a partner's.", helpAfter: "peer", aiStatus: "forbidden",
+    decisionAfterHelp: "Each child keeps or improves the explanation after the partner's question and says what changed.", channels: ["speaking", "drawing"] },
+];
+
+const STAGE3_COMPUTING = [
+  { title: "Guess the faster search", minutes: 10, phase: 1, session: 1,
+    learnerDoes: "Each learner predicts which finds a name sooner in a sorted list of 64: checking from the top, or opening the middle and halving each time. They write the number of checks they expect.",
+    teacherDoes: "Collects the predictions on the board, then runs both searches with a volunteer and a deck of name cards.",
+    evidenceIfAny: "observation", targetOperation: "compare linear and binary search by the number of checks", operationDoneBy: "learner",
+    learnerFirst: "Each learner writes a prediction and the number of checks before the demonstration.", helpAfter: "teacher", aiStatus: "forbidden",
+    decisionAfterHelp: "Each learner keeps or changes the prediction after the demonstration and says why.", channels: ["writing", "enactment"] },
+  { title: "Sort the deck, then check", minutes: 15, phase: 2, session: 1,
+    learnerDoes: "Pairs sort a shuffled deck of 16 number cards by repeatedly swapping neighbours, counting the swaps, then try the same with the deck in reverse order.",
+    teacherDoes: "Watches each pair's first pass before anyone opens a tool, then allows a chatbot to check the swap count.",
+    evidenceIfAny: "work-product", targetOperation: "carry out a bubble sort and count its swaps", operationDoneBy: "learner",
+    learnerFirst: "Each pair completes one full pass by hand while the teacher watches.", helpAfter: "ai", aiStatus: "permitted",
+    noAiAlternative: "The pair checks its count against a printed worked trace.",
+    decisionAfterHelp: "Each pair keeps or corrects its count after the check and says where it went wrong.", channels: ["handling", "discussion"] },
+  { title: "Explain it in your own words", minutes: 15, phase: 3, supportingPhase: 4, session: 1,
+    learnerDoes: "Each learner explains, from the halving trace on the board, why the middle-check search finds a name faster, then writes a short explanation of binary search for a younger student.",
+    teacherDoes: "Reads two explanations aloud and asks the class what each one leaves out.",
+    evidenceIfAny: "work-product", targetOperation: "explain why binary search needs a sorted list", operationDoneBy: "learner",
+    helpAfter: "ai", aiStatus: "permitted", noAiAlternative: "The learner uses the class's demonstration notes instead.",
+    decisionAfterHelp: "Each learner keeps or rewrites one sentence after the class discussion.", channels: ["writing", "speaking"] },
+];
+
+/** The scripted v2 plan for a "Draft one lesson plan" prompt. Test fixture content; see the block comment above. */
+export function scriptedPlanV2(prompt) {
+  const p = String(prompt ?? "");
+  const ids = [...p.matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
+  const refs = [...p.matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);
+  const stage = Number(/stage (\d) \(/.exec(p)?.[1] ?? 0) || null;
+  const build = (acts) => acts.map((a, i) => ({ ...a, objectiveIds: share(ids, i, acts.length), ...(refs[i] ? { citations: [refs[i]] } : {}) }));
+  if (stage === 3) {
+    return { title: "How a computer finds things fast", audience: { ageRangeStart: 12, ageRangeEnd: 14 },
+      sessions: [{ session: 1, evidence: { kind: "work-product", whatLearnerProduces: "Each learner's written explanation of binary search for a younger student." } }],
+      spacedReviews: [
+        { afterDays: 3, form: "recall-without-support", whatChanges: "no cards and no notes", prompt: "How many checks does binary search need for a list of 32? Show your halving." },
+        { afterDays: 14, form: "near-transfer", whatChanges: "a phone's contact list instead of number cards", prompt: "Explain how your phone could find a contact quickly, and what must be true of the list." },
+      ],
+      activities: build(STAGE3_COMPUTING) };
+  }
+  return { title: "Spotting AI in daily life", audience: { ageRangeStart: 5, ageRangeEnd: 12 },
+    sessions: [{ session: 1, evidence: { kind: "work-product", whatLearnerProduces: "Each pair's sorted card strip, with one written or drawn reason for the hardest card." } }],
+    spacedReviews: [
+      { afterDays: 2, form: "recall-without-support", whatChanges: "no cards on the table this time", prompt: "Name two things at home that decide something by themselves, and one that only follows a switch." },
+      { afterDays: 7, form: "far-transfer", whatChanges: "a picture of a shop instead of the lesson's cards", prompt: "Spot the AI in this shop picture and say how you know." },
+    ],
+    ...(stage === 1 || stage === 2 ? { aiPolicy: STAGE_POLICY[stage] } : {}),
+    activities: build(DAILY_LIFE) };
+}
+
+/**
+ * H3 C2 — UNIT-TEST-ONLY fixture: the same stage-3 plan, but the third activity's prose still
+ * tells learners to ask a chatbot, as a real model reply might before anyone reworded it. The
+ * host clamps the aiStatus and never rewrites the prose; the test proves the clamped marker
+ * shows on the activity even though its text still mentions AI. The smokes and the screenshots
+ * use `scriptedPlanV2`'s reworded text instead.
+ */
+export function staleStage3PlanV2(prompt) {
+  const p = String(prompt ?? "");
+  const stage = Number(/stage (\d) \(/.exec(p)?.[1] ?? 0) || null;
+  if (stage !== 3) throw new Error("staleStage3PlanV2 is only defined for a stage-3 prompt");
+  const plan = scriptedPlanV2(prompt);
+  return {
+    ...plan,
+    activities: plan.activities.map((a, i) => i === 2
+      ? { ...a, learnerDoes: "Each learner asks a chatbot why halving is faster, then writes a short explanation of binary search for a younger student." }
+      : a),
+  };
 }

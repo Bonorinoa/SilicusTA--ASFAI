@@ -671,9 +671,9 @@ async function story(label, narrow) {
   const live = () => page.evaluate(() => [...document.querySelectorAll('section[data-variant="card"] [aria-live="polite"]')].map((n) => n.textContent));
   check("the waiting experience says in plain words what is happening, with the real count",
     /Drafting a lesson plan from your 3 confirmed objectives/.test(await running()));
-  check("it states the typical range the documented defaults give: usually 8–30 seconds", /usually 8\u201330 seconds/.test(await running()));
+  check("it states the typical range the documented defaults give: usually 10–60 seconds", /usually 10\u201360 seconds/.test(await running()));
   const liveAtStart = await live();
-  check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 8 to 30 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
+  check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 10 to 60 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
   check("there is no progress bar and no percentage", !(await page.evaluate(() => !!document.querySelector('section[data-phase="running"] progress, section[data-phase="running"] [role="progressbar"]') || /%/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? ""))));
   await shot("10-waiting-plan", 'section[data-phase="running"][data-variant="card"]');
   await stageShot("08-plan-drafting");

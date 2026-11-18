@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import { BROWSER_MODE } from "../gate/mode";
 import "../studio/studio.css";
+import { MarbleCredit } from "../components/MarbleCredit/MarbleCredit";
 import styles from "./Landing.module.css";
 
 /**
@@ -184,8 +185,8 @@ export function Landing() {
               </p>
               <p className={styles.body}>
                 ASFAI is a protocol that checks a plan against its shared lesson format; Silicus works without it, and the
-                version on your computer can send a plan to ASFAI. Objectives can be aligned to Marble’s skill map (about
-                ages 4–15); a miss is normal.
+                version on your computer can send a plan to ASFAI. Objectives can be aligned to Marble’s skill map (ages
+                3–15); a miss is normal. <MarbleCredit as="span" />
               </p>
               <p className={styles.body}>
                 On a set of 44 student questions the helper answered every definition question, refused every off-topic,

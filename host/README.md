@@ -104,7 +104,7 @@ the hash diverge).
 | Route | Body | Notes |
 |---|---|---|
 | `GET /api/health` | — | liveness |
-| `GET/POST /api/courses` | POST: owner, title, description?, materials? | create / list |
+| `GET/POST /api/courses` | POST: owner, title, description?, materials?, ages?, marbleAnchor? | create / list. `ages` is `{min, max}` whole years 3–99 (min ≤ max); `marbleAnchor` is an `mt_*` id that exists in the snapshot. Bad values are a 400 with a plain message; both are recorded on the `course.created` event, exactly like `objectivesConfirm`. Absent = a legacy course (works as always; no Marble suggestions). |
 | `GET /api/courses/:id` | — | the full view |
 | `GET /api/courses/:id/export` | — | tamper-evident JSON export |
 | `GET /api/courses/:id/verify` | — | recompute the event-log chain |
@@ -333,6 +333,57 @@ Retrieved text is untrusted context and is never recorded; the plan event keeps 
 source, activities and whether a source actually checked it. ASFAI's graph is only queried for a
 course whose answers the teacher already sent to ASFAI. Citations are suggestions: not objectives,
 not in the sealed package, never required.
+
+### The Marble graph: read-only routes (G1)
+
+Marble (`withmarbleapp/os-taxonomy`; database ODbL 1.0, Marble-authored text CC BY-SA 4.0) is open data we read ourselves, from a pinned and
+trimmed snapshot (`host/data/marble/marble-snapshot.json`, built by `host/scripts/marble-snapshot.mjs`
+from commit `d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63`; the raw files' sha256 are recorded inside the
+file). Both hosts serve the same two read-only routes; they take no course id, write nothing and never
+touch the course log. The studio alignment picker (card G2) builds on them, so the shapes are stable:
+
+- `GET /api/knowledge/marble/search?q=<query>&ageMin=<n>&ageMax=<n>&limit=<n>`
+  → `{ "query": { "q", "ageMin", "ageMax", "limit" }, "hits": [{ "id", "name", "subject", "domain",
+  "ageRangeStart", "ageRangeEnd", "score" }] }`. Plain lexical scoring over name, description and
+  evidence — no embeddings, no model call. A topic is served only if its age band overlaps
+  `[ageMin, ageMax]` (defaults 3–15); `limit` is clamped to 1–50. `400 BAD_INPUT` without `q`.
+- `GET /api/knowledge/marble/topics/<id>` → the trimmed topic plus its edges:
+  `{ "id", "name", "subject", "domain", "description", "evidence", "ageRangeStart", "ageRangeEnd",
+  "prerequisites": { "hard": [{ "topicId", "name", "strength", "reason" }], "soft": [...] },
+  "dependents": [{ "topicId", "name", "strength", "reason" }] }`. `404 UNKNOWN_TOPIC` for an id not
+  in the snapshot. A Marble id (`mt_*`) is never an objective's identity and is never bound
+  automatically.
+- `GET /api/knowledge/marble/coverage?min=<n>&max=<n>` (G2a) → the wizard's histogram strip:
+  `{ "query": { "min", "max" }, "overlapping": <count of topics whose age band overlaps [min,max]>,
+  "perAge": [{ "age": 3, "count": 112 }, … { "age": 25, "count": 0 }] }`. `perAge` is always the
+  full 3–25 strip. `min`/`max` default to 3/15; integers 3 ≤ min ≤ max ≤ 99 required, else
+  `400 BAD_INPUT`. Pinned: 9–10 → 1,320 overlapping topics; 19–22 → 0.
+- `GET /api/knowledge/marble/neighbourhood/<id>` (G2a) → the anchor's neighbourhood, for the
+  prerequisite strip and the two-hop studio view: `{ "anchor": { id, name, subject, domain,
+  ageRangeStart, ageRangeEnd }, "prerequisites": [ rows … ], "dependents": [ rows … ] }`.
+  Prerequisites climb TWO hops (each row's edge, strength, reason and `hops` 1|2); dependents go
+  ONE hop down. Every row carries `id, name, subject, domain, ageRangeStart, ageRangeEnd,
+  strength, reason, hops, evidence`. Deduplicated by id (first edge wins); `404 UNKNOWN_TOPIC`
+  for an id not in the snapshot.
+
+**A course's skill-map anchor (G2a).** A course may name one Marble topic as its anchor — the node
+this lesson is "about" — with `marbleAnchor` at creation (mt_* ids only; must exist in the pinned
+snapshot; `400 BAD_ANCHOR` / `UNKNOWN_ANCHOR`, `501 MARBLE_NOT_CONFIGURED` when the graph is not
+wired). The anchor is a POINTER, NOT an identity: it never becomes an objective id, never confirms
+anything, and never appears in a sealed package's objective list. The course view carries it as
+`course.marbleAnchor`, next to `course.ages` and the derived `course.stage` (the youngest age sets
+the stage: 1 under 8, 2 at 8–11, 3 at 12–14, 4 at 15+; P2 uses it for the plan's voice). A viewer
+that wants `skillMap: { anchor, label }` resolves the label from the topics route; the sealed
+package itself is not widened (confirm-gate is untouched by this card). Changing the anchor after
+creation is out of scope. Free-text "who it's for" stays the teacher's answer and still reaches the
+drafting prompt — it is never parsed for ages when `ages` exists, and legacy courses without
+`ages` get no Marble suggestions (fail closed, G1b). With an anchor, suggestions prefer its subject
+and domain and the dependent-walk stops crossing into unrelated domains: "AI in daily life" for
+ages 8–10 no longer suggests "Daily Life in a Roman Town".
+
+`/api/knowledge/status` lists `marble` among the sources (`SILICUS_SOURCE_MARBLE=0` turns the Node-host
+source off; egress is null — nothing leaves the device — and `canVerify` is true, membership in the
+snapshot).
 
 ## The drafting worker (config only)
 

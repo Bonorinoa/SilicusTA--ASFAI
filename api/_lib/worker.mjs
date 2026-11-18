@@ -8,8 +8,8 @@
  *   - only messages / response_format / temperature are read from the body (every other key, including
  *     `max_tokens`, `reasoning`, `provider`, `tools`, `stream`, `n`, is dropped), messages are rebuilt as
  *     {role, content} strings;
- *   - max_tokens = SILICUS_WORKER_MAX_TOKENS, 4000 by default: the server decides it, because a client
- *     value could only shrink the reply and turn a normal call into a truncation refusal;
+ *   - max_tokens = SILICUS_WORKER_MAX_TOKENS, 16000 by default (hard ceiling 32000): the server decides it,
+ *     because a client value could only shrink the reply and turn a normal call into a truncation refusal;
  *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it;
  *   - zero-data-retention routing `provider: {zdr: true, data_collection: "deny"}` is sent unless
  *     SILICUS_WORKER_ZDR === "0", and it fails CLOSED: one upstream attempt, never a retry elsewhere;
@@ -24,7 +24,9 @@ import { normalizeReasoning, reasoningBody, typicalSecondsFromJson } from "../..
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const MAX_BODY_BYTES = 512 * 1024;
 export const UPSTREAM_TIMEOUT_MS = 115_000;
-export const DEFAULT_MAX_TOKENS = 4000;
+export const DEFAULT_MAX_TOKENS = 16_000;
+/** H: an override may raise the cap but never past this ceiling (the evaluation branch's 65,536 stays there). */
+export const MAX_TOKENS_CEILING = 32_000;
 const MAX_UPSTREAM_BYTES = 4 * 1024 * 1024;
 const ROLES = new Set(["system", "user", "assistant"]);
 const MAX_MESSAGES = 200;
@@ -42,7 +44,7 @@ export function workerSettings(env = {}) {
     // Fail closed: anything but the exact string "0" keeps zero-data-retention routing on.
     zdr: env.SILICUS_WORKER_ZDR !== "0",
     reasoning: normalizeReasoning(env.SILICUS_WORKER_REASONING, "low"),
-    maxTokensCap: Number.isInteger(cap) && cap > 0 ? Math.min(cap, DEFAULT_MAX_TOKENS) : DEFAULT_MAX_TOKENS,
+    maxTokensCap: Number.isInteger(cap) && cap > 0 ? Math.min(cap, MAX_TOKENS_CEILING) : DEFAULT_MAX_TOKENS,
     dailyCap: dailyCap(env),
   };
 }

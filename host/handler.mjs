@@ -18,8 +18,10 @@
  * fields it uses before anything is logged. See server.mjs for the route list.
  */
 import { CourseSession } from "./course.mjs";
+import { agesError } from "./ages.mjs";
 import { askStudent, packageOf } from "./student.mjs";
 import { DEFAULT_TYPICAL_SECONDS } from "./worker-config.mjs";
+import { overlaps } from "./marble/marble-graph.mjs";
 
 export const MAX_BODY = 1 << 20;
 
@@ -49,6 +51,19 @@ function answerText(b) {
   return b.text;
 }
 
+/**
+ * A percent-encoded path segment the CLIENT sent. A malformed `%` makes decodeURIComponent
+ * throw, and that is the client's fault: 400, never a 500 (verifier L1; the same house pattern
+ * now holds on the marble topic route, the course id route and the archive ref route).
+ */
+function decodeSegment(part) {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    throw new HttpError(400, "BAD_URI", "malformed percent-encoding in the uri");
+  }
+}
+
 /** Every refusal, as a status and a JSON body. Shared, so both hosts answer a failure identically. */
 export function errorResponse(err) {
   const send = (status, json) => ({ status, json });
@@ -74,6 +89,7 @@ export function errorResponse(err) {
  *   workerStatus     what /worker/status reports (default: the worker's own config)
  *   typicalSeconds   expected wait ranges for objectives, plans and answers
  *   sources          knowledge sources (config, never a request field)
+ *   marble           the Marble service ({search, topic}), or null where none is wired
  *   archives         a LocalArchive, or null where there is no archive folder
  *   prepareMaterials how the teacher's material items become named plain text
  *   guard            transport checks run right after the /api match (Node: loopback host + origin + JSON)
@@ -85,13 +101,14 @@ export function errorResponse(err) {
  * @property {(() => any) | null} [workerStatus]
  * @property {any} [typicalSeconds]
  * @property {any[]} [sources]
+ * @property {any} [marble]               the read-only Marble graph service, or absent/null when not wired
  * @property {any} [archives]
  * @property {(items: any) => Promise<{materials: any[], skipped: any[]}>} prepareMaterials
  * @property {((raw: any, pathname: string) => void) | null} [guard]
  */
 
 /** @param {HandlerDeps} deps */
-export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, typicalSeconds = DEFAULT_TYPICAL_SECONDS, sources: knowledgeSources = [], archives = null, prepareMaterials, guard = null }) {
+export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, workerStatus = null, typicalSeconds = DEFAULT_TYPICAL_SECONDS, sources: knowledgeSources = [], marble = null, archives = null, prepareMaterials, guard = null }) {
   const reportWorker = workerStatus ?? (() => ({ configured: planWorker.enabled, zdr: planWorker.zdr, provider: planWorker.provider, model: planWorker.model, typicalSeconds }));
 
   /**
@@ -149,6 +166,50 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
     if (parts[1] === "knowledge" && parts[2] === "status" && method === "GET") {
       return { status: 200, json: { sources: knowledgeSources.map((k) => ({ id: k.id, label: k.label, enabled: k.enabled, canVerify: k.canVerify })) } };
     }
+    // Marble, read-only. Same routes on BOTH hosts (handler.mjs is shared): a studio card (G2)
+    // builds the alignment picker on these. They write nothing, take no course id and never touch
+    // the course log. The shapes are documented in host/README.md.
+    if (parts[1] === "knowledge" && parts[2] === "marble" && method === "GET") {
+      if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host");
+      if (parts[3] === "search") {
+        const q = String(url.searchParams.get("q") ?? "").trim().slice(0, 300);
+        if (!q) throw new HttpError(400, "BAD_INPUT", "search needs a q");
+        const num = (v, d) => { const raw = url.searchParams.get(v); if (raw === null || raw === "") return d; const n = Number(raw); return Number.isFinite(n) ? n : d; };
+        const ageMin = num("ageMin", 3);
+        const ageMax = num("ageMax", 15);
+        const limit = Math.max(1, Math.min(50, Math.trunc(num("limit", 10))));
+        const { hits } = await marble.search(q, { ageMin, ageMax, limit });
+        return { status: 200, json: { query: { q, ageMin, ageMax, limit }, hits } };
+      }
+      if (parts[3] === "topics" && parts[4]) {
+        const id = decodeSegment(parts[4]);
+        const topic = await marble.topic(id);
+        if (!topic) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
+        return { status: 200, json: topic };
+      }
+      // The wizard's histogram strip (G2a): how many topics overlap a course age range, and how
+      // many topics are live at each single age 3..25. Read-only, no log write, same host both
+      // sides. `perAge` is always the full 3..25 strip so the UI can draw it without a second call.
+      if (parts[3] === "coverage" && method === "GET") {
+        const num = (v, d) => { const raw = url.searchParams.get(v); if (raw === null || raw === "") return d; const n = Number(raw); return Number.isInteger(n) ? n : NaN; };
+        const min = num("min", 3);
+        const max = num("max", 15);
+        if (!Number.isInteger(min) || !Number.isInteger(max) || min < 3 || max > 99 || min > max) {
+          throw new HttpError(400, "BAD_INPUT", "coverage needs integer min and max with 3 <= min <= max <= 99");
+        }
+        return { status: 200, json: { query: { min, max }, ...(await marble.coverage({ min, max })) } };
+      }
+      // The anchor's neighbourhood (G2a): prerequisites two hops up, dependents one hop down,
+      // each row with id, name, ages, subject, domain, strength, reason, evidence and hop count.
+      // Read-only, no log write. Extends the topics route instead of duplicating it.
+      if (parts[3] === "neighbourhood" && parts[4]) {
+        const id = decodeSegment(parts[4]);
+        const neighbourhood = await marble.neighbourhood(id);
+        if (!neighbourhood) throw new HttpError(404, "UNKNOWN_TOPIC", `no such Marble topic: ${id}`);
+        return { status: 200, json: neighbourhood };
+      }
+      throw new HttpError(404, "NOT_FOUND", "no such marble route");
+    }
     if (parts[1] === "asfai") {
       if (parts[2] === "status" && method === "GET") return { status: 200, json: asfaiSvc.status() };
       if (parts[2] === "connect" && method === "POST") return { status: 200, json: await asfaiSvc.oauth.beginAuthorization() };
@@ -191,6 +252,30 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           // A JSON null, an array or a scalar is a clean refusal, not a 500 from reading `.owner` off it (E3).
           if (!b || typeof b !== "object" || Array.isArray(b)) throw new HttpError(400, "BAD_INPUT", "a course needs an owner and a title");
           if (!b.owner || !b.title) throw new HttpError(400, "BAD_INPUT", "owner and title are required");
+          // Structured ages (G2a): whole years 3..99, min <= max, plain-message refusals. Absent is
+          // a legacy course and stays absent. The same rule runs again inside CourseSession.create,
+          // so no caller can persist a bad block even by calling the session directly.
+          const agesMsg = agesError(b.ages);
+          if (agesMsg !== null) throw new HttpError(400, "BAD_AGES", agesMsg);
+          // The skill-map anchor (G2a): an mt_* id that EXISTS in the pinned snapshot. It is a
+          // pointer (the node this lesson is about), never an objective id, never confirmed. When
+          // the graph is not wired the anchor cannot be checked and is refused (fail closed);
+          // changing it after creation is out of scope. A non-string value is a 400 (G2V L2), not
+          // silently dropped; an anchor whose ages do not overlap the course's is refused (G2V L1).
+          if (b.marbleAnchor !== undefined && b.marbleAnchor !== null && typeof b.marbleAnchor !== "string") {
+            throw new HttpError(400, "BAD_ANCHOR", "a marbleAnchor must be an mt_* topic id string from the snapshot");
+          }
+          const anchor = typeof b.marbleAnchor === "string" && b.marbleAnchor ? b.marbleAnchor : null;
+          if (anchor) {
+            if (!/^mt_[A-Za-z0-9_-]+$/.test(anchor)) throw new HttpError(400, "BAD_ANCHOR", "a marbleAnchor must be an mt_* topic id from the snapshot");
+            if (!marble) throw new HttpError(501, "MARBLE_NOT_CONFIGURED", "the Marble graph is not wired on this host, so an anchor cannot be checked");
+            const t = await marble.get(anchor);
+            if (!t) throw new HttpError(400, "UNKNOWN_ANCHOR", `no such Marble topic in the snapshot: ${anchor}`);
+            const anchorAges = { min: Number(t?.ageRangeStart), max: Number(t?.ageRangeEnd) };
+            if (b.ages && Number.isFinite(anchorAges.min) && Number.isFinite(anchorAges.max) && !overlaps(anchorAges, b.ages)) {
+              throw new HttpError(400, "BAD_ANCHOR", `the anchor's ages (${anchorAges.min}–${anchorAges.max}) do not overlap the course ages (${b.ages.min}–${b.ages.max})`);
+            }
+          }
           const s = CourseSession.create(store, {
             owner: String(b.owner), title: String(b.title),
             description: b.description ? String(b.description) : "",
@@ -198,13 +283,15 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
             // Checkpoint 3's mode (R4). Only the exact value "explicit" is stored; anything else (missing,
             // "auto", a typo) is a normal auto course. CourseSession.create is the one place that decides it.
             objectivesConfirm: b.objectivesConfirm,
+            ages: b.ages ?? null,
+            marbleAnchor: anchor,
           });
           return { status: 201, json: { ok: true, courseId: s.courseId, view: s.view() } };
         }
         throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
       }
 
-      const courseId = decodeURIComponent(parts[2]);
+      const courseId = decodeSegment(parts[2]);
 
       // A student asks about the PUBLISHED course. Read-only and outside the course lock: it writes
       // nothing, and a slow model call must not hold up the teacher. Only {question, history} are read.
@@ -234,7 +321,7 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
         return { status: 200, json: { anchor: s.publishAnchor(version) } };
       }
       if (tail.startsWith("archive/") && method === "GET") {
-        const ref = decodeURIComponent(tail.slice("archive/".length));
+        const ref = decodeSegment(tail.slice("archive/".length));
         const record = requireArchives().load(ref);
         const ver = archives.verify(ref, record.digest);
         return { status: 200, json: { verified: ver.verified, ref, digest: record.digest, archivedAt: record.archivedAt, export: record.payload } };

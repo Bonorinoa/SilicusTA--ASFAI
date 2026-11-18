@@ -16,6 +16,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  */
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // The Marble attribution notice (MarbleCredit) must ship as a real file a reader can open:
+    // an inlined data: URL is blocked by the site's CSP and is not a reachable licence text.
+    assetsInlineLimit: (file: string) => (file.endsWith(".md") ? false : undefined),
+  },
   resolve: {
     alias: [{ find: /^node:crypto$/, replacement: path.resolve(here, "src/gate/crypto-shim.mjs") }],
   },

@@ -199,6 +199,21 @@ test("unknown course is a 404, not a crash", async () => {
   await h.stop();
 });
 
+test("a malformed percent-encoded course id or archive ref is a 400, not a 500 (L1)", async () => {
+  const h = await start(mkdtempSync(join(tmpdir(), "silicus-http-")));
+  // The course id segment: an unreadable % must be refused as the client's fault, not crash the host.
+  const badCourse = await h.get("/api/courses/%");
+  assert.equal(badCourse.status, 400);
+  assert.equal(badCourse.json.code, "BAD_URI");
+  // The archive ref segment reaches the same decode on the older routes (handler.mjs:232, :262).
+  const created = await h.post("/api/courses", { owner: OWNER, title: "T" });
+  const courseId = created.json.courseId;
+  const badArchive = await h.get(`/api/courses/${courseId}/archive/%`);
+  assert.equal(badArchive.status, 400);
+  assert.equal(badArchive.json.code, "BAD_URI");
+  await h.stop();
+});
+
 test("checkpoint 2 is refused over HTTP until the intake is authorized", async () => {
   const h = await start(mkdtempSync(join(tmpdir(), "silicus-http-")));
   const created = await h.post("/api/courses", { owner: OWNER, title: "T" });

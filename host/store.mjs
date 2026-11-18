@@ -67,20 +67,27 @@ export class CourseStore {
   }
 
   /** Create the course record (meta.json) and open its log. Throws if it exists. */
-  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm }) {
+  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm, ages, marbleAnchor }) {
     const dir = this.#dir(courseId);
     if (existsSync(join(dir, "meta.json"))) throw new Error(`course already exists: ${courseId}`);
     mkdirSync(dir, { recursive: true });
     // Only the exact checkpoint-3 mode "explicit" is recorded (R4). Anything else writes NO field, so an auto
     // course's meta.json and course.created event are byte-identical to a record written before the mode existed.
     const mode = objectivesConfirm === "explicit" ? { objectivesConfirm } : {};
+    // Structured ages and the skill-map anchor (G2a, owner 14 Nov) ride the record the same way: absent means
+    // "never written", so a legacy course's record is byte-identical to one written before the fields existed,
+    // and a course without ages keeps working (and gets no Marble suggestions, fail closed from G1b).
+    const demographics = {
+      ...(ages && typeof ages === "object" ? { ages } : {}),
+      ...(marbleAnchor ? { marbleAnchor } : {}),
+    };
     const meta = Object.freeze({
       courseId, owner, title, description, materials,
-      seed, ...mode, createdAt: at ?? Date.now(),
+      seed, ...mode, ...demographics, createdAt: at ?? Date.now(),
     });
     writeFileSync(join(dir, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
     const log = this.log(courseId);
-    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, ...mode, at: meta.createdAt });
+    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, ...mode, ...demographics, at: meta.createdAt });
     return meta;
   }
 

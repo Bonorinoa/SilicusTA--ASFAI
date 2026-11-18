@@ -5,6 +5,7 @@ import { plural } from "../../lib/plural";
 import type { StepProps } from "../CourseStudio";
 import { Button, Skeleton } from "../ui";
 import { ActionBar } from "./ActionBar";
+import { NeighbourhoodView, PrereqStrip, useNeighbourhood } from "../graph/SkillMap";
 import s from "../Studio.module.css";
 
 export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
@@ -13,6 +14,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
   const shownPlan = plan ?? (looking ? published?.lessonPlan ?? null : null);
   const drafting = c.waiting?.kind === "plan";
   const noWorker = worker?.configured === false;
+  const { data: map } = useNeighbourhood(view.course.marbleAnchor);
   const minutes = shownPlan ? shownPlan.activities.reduce((n, a) => n + a.minutes, 0) : 0;
 
   let bar: React.ReactNode = null;
@@ -53,6 +55,8 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
           <p className={s.docLede}>Activities with minutes, each pointing to an objective you confirmed. One lesson per course for now.</p>
         </header>
 
+        {map ? <PrereqStrip data={map} /> : null}
+
         {drafting ? (
           <section className={s.card} aria-busy="true" aria-label="Drafting the plan">
             <Skeleton width="55%" height={26} />
@@ -87,6 +91,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
             </ol>
           </section>
         )}
+        {map ? <NeighbourhoodView data={map} /> : null}
         {bar}
       </div>
     </div>

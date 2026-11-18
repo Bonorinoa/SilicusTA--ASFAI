@@ -227,20 +227,24 @@ test("ZDR fails closed: one upstream attempt, never a retry, when the ZDR route 
 
 /* --------------------------------- max_tokens --------------------------------- */
 
-test("max_tokens is server-decided: the env cap (4000 by default) and nothing the client sends", async () => {
+test("max_tokens is server-decided: the env cap (16,000 by default, 32,000 ceiling) and nothing the client sends", async () => {
   // The browser never sends max_tokens, so a client value can only be an attack: max_tokens: 1 would turn a
   // normal call into a truncation refusal. The server decides, exactly like model, provider and reasoning.
+  // H (14 Nov): the plan cap went 4000 -> 16000 by default; an override may raise it but never past 32000.
   const cases = [
-    [{}, undefined, 4000],
-    [{}, 1, 4000],
-    [{}, 100, 4000],
-    [{}, 99999, 4000],
-    [{}, -5, 4000],
-    [{}, "50", 4000],
+    [{}, undefined, 16000],
+    [{}, 1, 16000],
+    [{}, 100, 16000],
+    [{}, 99999, 16000],
+    [{}, -5, 16000],
+    [{}, "50", 16000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, undefined, 1000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 1, 1000],
     [{ SILICUS_WORKER_MAX_TOKENS: "1000" }, 5000, 1000],
-    [{ SILICUS_WORKER_MAX_TOKENS: "junk" }, undefined, 4000],
+    [{ SILICUS_WORKER_MAX_TOKENS: "25000" }, undefined, 25000],
+    [{ SILICUS_WORKER_MAX_TOKENS: "50000" }, undefined, 32000],
+    [{ SILICUS_WORKER_MAX_TOKENS: "65536" }, undefined, 32000],
+    [{ SILICUS_WORKER_MAX_TOKENS: "junk" }, undefined, 16000],
   ];
   for (const [over, client, want] of cases) {
     const { POST, calls } = handler({ env: baseEnv(over) });
@@ -365,7 +369,7 @@ test("the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr pr
   assert.deepEqual(got, [{ statement: "Students can explain what an algorithm is.", from: ["Notes"] }]);
   assert.equal(calls[0].body.model, MODEL);
   assert.deepEqual(calls[0].body.provider, { zdr: true, data_collection: "deny" });
-  assert.equal(calls[0].body.max_tokens, 4000);
+  assert.equal(calls[0].body.max_tokens, 16000);
 });
 
 test("the route file exports a Web-standard POST bound to real globals (503 with no env)", async () => {

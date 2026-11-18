@@ -3,6 +3,12 @@
  *
  *   welcome (first run only) → course and learners → sources → your objectives → AI check → review
  *
+ * Step 1 (G2b) asks who the learners are as structured ages (five group cards, exact-age steppers),
+ * shows the skill-map topics at those ages, lets the topic start from a Marble topic (the course's
+ * anchor: a pointer, never an objective's identity) or the teacher's own words, and shows what the
+ * choice changes. The free-text "who it's for" answer the brief records is built from those choices
+ * plus the teacher's optional class notes; the host never parses it when structured ages exist.
+ *
  * Nothing is written while the teacher moves through the steps: file text is read into this tab, and the
  * rest is form state. The review shows everything that will be recorded, and its one confirm sends the
  * SAME intents the brief sends (useCourse confirmTheBrief), in the same order: create the course (materials
@@ -26,6 +32,11 @@ import { TopBar, href } from "./StudioApp";
 import { Button, Notice, ui } from "./ui";
 import { intakeText } from "./useCourse";
 import w from "./Wizard.module.css";
+import {
+  EMPTY_AUDIENCE, agesText, audienceAnswer, clearAnchor, groupName, pickAnchor, selectGroup, stageOf, stepAge,
+  type Audience,
+} from "./audience";
+import { Consequences, LearnersField, StudioMarbleCredit, TopicField, useCoverage } from "./Learners";
 
 type StepId = "welcome" | "course" | "sources" | "objectives" | "ai" | "review";
 const STEPS: { id: Exclude<StepId, "welcome">; label: string }[] = [
@@ -62,8 +73,13 @@ export function NewCourseWizard() {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ReactNode>(null);
   const [touchedChoice, setTouchedChoice] = useState(false);
+  const [aud, setAud] = useState<Audience>(EMPTY_AUDIENCE);
+  const [notes, setNotes] = useState("");
+  const coverage = useCoverage(aud.ages);
+  const stage = stageOf(aud);
+  const audience = audienceAnswer(aud, notes);
   const headRef = useRef<HTMLHeadingElement>(null);
-  const ids = { title: useId(), owner: useId(), topic: useId(), audience: useId(), outcomes: useId() };
+  const ids = { title: useId(), owner: useId(), notes: useId(), outcomes: useId() };
 
   // First run (no courses yet) opens on the welcome; otherwise straight to the first question.
   useEffect(() => {
@@ -89,7 +105,7 @@ export function NewCourseWizard() {
   const next = () => go(STEPS[index + 1]?.id ?? "review");
   const back = () => go(index <= 0 ? "welcome" : STEPS[index - 1].id);
 
-  const courseOk = a.title.trim() !== "" && a.owner.trim() !== "" && a.topic.trim() !== "" && a.audience.trim() !== "";
+  const courseOk = a.title.trim() !== "" && a.owner.trim() !== "" && a.topic.trim() !== "" && aud.ages !== null;
   const wrote = a.outcomes.split("\n").some((l) => l.trim() !== "");
   const objectivesOk = wrote || (a.fromSources && count > 0);
 
@@ -98,14 +114,17 @@ export function NewCourseWizard() {
     setBusy(true); setProblem(null);
     let courseId: string | null = null;
     try {
-      const r = await host.createCourse({ title: a.title.trim(), owner: a.owner.trim(), materials: [], objectivesConfirm: "explicit" });
+      const r = await host.createCourse({
+        title: a.title.trim(), owner: a.owner.trim(), materials: [], objectivesConfirm: "explicit",
+        ...(aud.ages ? { ages: aud.ages } : {}), ...(aud.anchor ? { marbleAnchor: aud.anchor.id } : {}),
+      });
       courseId = r.courseId;
       // Text stays in this tab, held for the course exactly as the Sources panel holds it.
       keepForCourse(courseId, files);
       keepLinksForCourse(courseId, links);
       const view = await host.getCourse(courseId);
       const asked = (view.intake.questions ?? []).map((q) => q.id);
-      const all = briefAnswers(a);
+      const all = briefAnswers({ ...a, audience });
       const answers: Record<string, string> = {};
       for (const [k, v] of Object.entries(all)) if (asked.includes(k) || (k === "outcomes_from" && asked.includes("learning_outcomes"))) answers[k] = v;
       if (asked.length === 0 || !asked.every((q) => KNOWN.has(q))) {
@@ -215,19 +234,20 @@ export function NewCourseWizard() {
               <input id={ids.owner} className={ui.input} value={a.owner} onChange={(e) => set("owner")(e.target.value)} placeholder="Ms. Lovelace" maxLength={200} />
             </div>
           </div>
+          <LearnersField aud={aud} coverage={coverage}
+            onGroup={(g) => setAud((x) => selectGroup(x, g))} onStep={(k, d) => setAud((x) => stepAge(x, k, d))} />
+          <TopicField aud={aud} coverage={coverage} topic={a.topic} onTopic={(v) => set("topic")(v)}
+            onAnchor={(t) => setAud((x) => pickAnchor(x, t))} onClear={() => setAud((x) => clearAnchor(x))} />
           <div className={ui.field}>
-            <label className={ui.label} htmlFor={ids.topic}>Topic</label>
-            <input id={ids.topic} className={ui.input} value={a.topic} onChange={(e) => set("topic")(e.target.value)} placeholder="How plants make food from sunlight" />
-            <span className={ui.hint}>What this lesson is about.</span>
+            <label className={ui.label} htmlFor={ids.notes}>Anything else about the class? <span style={{ fontWeight: 400 }}>(optional)</span></label>
+            <textarea id={ids.notes} className={ui.textarea} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="Grade 4 science; two learners are new to English" maxLength={600} />
+            <span className={ui.hint}>Context for the AI, in your words. Silicus never reads ages or rules from it.</span>
           </div>
-          <div className={ui.field}>
-            <label className={ui.label} htmlFor={ids.audience}>Who it’s for</label>
-            <input id={ids.audience} className={ui.input} value={a.audience} onChange={(e) => set("audience")(e.target.value)} placeholder="Grade 4 science, ages 9–10" />
-            <span className={ui.hint}>The class, and the learners’ age.</span>
-          </div>
+          <Consequences stage={stage} coverage={coverage} />
         </div>
         {foot(<Button variant="primary" data-primary="true" type="submit" disabled={!courseOk}>Continue</Button>,
-          courseOk ? null : "All four are needed to brief Silicus.")}
+          courseOk ? null : "A title, your name, your learners and a topic are needed to brief Silicus.")}
       </form>
     );
   } else if (step === "sources") {
@@ -316,8 +336,15 @@ export function NewCourseWizard() {
         <dl className={w.summary}>
           {row("Course", a.title.trim(), "course")}
           {row("Your name", a.owner.trim(), "course")}
+          {row("Learners", <>{agesText(aud.ages)} · {groupName(aud)}{stage ? ` · AI stage ${stage} of 4` : ""}</>, "course")}
           {row("Topic", a.topic.trim(), "course")}
-          {row("Who it’s for", a.audience.trim(), "course")}
+          {row("Skill-map anchor", aud.anchor ? (
+            <>
+              {aud.anchor.name} <span className={ui.hint}>· ages {aud.anchor.ageRangeStart}–{aud.anchor.ageRangeEnd} · {aud.anchor.subject}</span>
+              <StudioMarbleCredit />
+            </>
+          ) : "None. You write your own objectives.", "course")}
+          {row("About the class", notes.trim() || "Nothing added.", "course")}
           {row("Sources", count ? (
             <ul className={w.summaryList}>
               {files.map((f) => <li key={f.name}>{f.name} <span className={ui.hint}>· read in this tab, {plural(f.chars, "character")}</span></li>)}

@@ -3,6 +3,7 @@ import { BROWSER_MODE } from "../../gate/mode";
 import type { DecisionIntent, ProposalView } from "../../gate/types";
 import { plural } from "../../lib/plural";
 import { PlusIcon, StateIcon } from "../icons";
+import { MarbleCredit } from "../MarbleCredit/MarbleCredit";
 import styles from "./DecisionCard.module.css";
 
 /**
@@ -258,6 +259,12 @@ export function DecisionCard({
           </button>
         </div>
       </footer>}
+
+      {/* G1b C2: wherever a Marble suggestion is on screen the studio credits it with the
+          upstream line verbatim; present only when an alignment row is actually shown. */}
+      {rows.some((r) => r.alignment) ? (
+        <MarbleCredit className={styles.marbleCredit} />
+      ) : null}
 
     </section>
   );

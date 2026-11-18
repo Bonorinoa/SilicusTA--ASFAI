@@ -49,20 +49,28 @@ export class RecordStore {
   }
 
   /** Create the course record (meta) and open its log. Throws if it exists. */
-  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm }) {
+  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm, ages, marbleAnchor }) {
     if (this.#metas.has(courseId)) throw new Error(`course already exists: ${courseId}`);
     // Only the exact checkpoint-3 mode "explicit" is recorded (R4). Anything else writes NO field, so an auto
     // course's meta document and course.created event are byte-identical to a record written before the mode existed.
     const mode = objectivesConfirm === "explicit" ? { objectivesConfirm } : {};
+    // Structured ages and the skill-map anchor (G2a, owner 14 Nov) ride the record the same way as on the disk
+    // host (store.mjs): absent means "never written", so a legacy record stays byte-identical to one written
+    // before the fields existed, and a course without ages keeps working (fail closed, from G1b). The browser
+    // host's record must say exactly what the disk host's does — parity is a test.
+    const demographics = {
+      ...(ages && typeof ages === "object" ? { ages } : {}),
+      ...(marbleAnchor ? { marbleAnchor } : {}),
+    };
     const meta = Object.freeze({
       courseId, owner, title, description, materials,
-      seed, ...mode, createdAt: at ?? Date.now(),
+      seed, ...mode, ...demographics, createdAt: at ?? Date.now(),
     });
     const text = metaText(meta);
     this.#metas.set(courseId, text);
     this.#onWrite({ type: "meta", courseId, text });
     const log = this.log(courseId);
-    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, ...mode, at: meta.createdAt });
+    log.append({ kind: "course.created", courseId, owner, title, description, materials, seed, ...mode, ...demographics, at: meta.createdAt });
     return meta;
   }
 

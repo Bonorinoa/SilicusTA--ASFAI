@@ -1,0 +1,47 @@
+PASS host cap input=undefined -> 16000 :: got 16000
+PASS host cap input=20000 -> 20000 :: got 20000
+PASS host cap input=32000 -> 32000 :: got 32000
+PASS host cap input=32001 -> 32000 :: got 32000
+PASS host cap input=65536 -> 32000 :: got 32000
+PASS host cap input=0 -> 16000 :: got 16000
+PASS host cap input=-5 -> 16000 :: got 16000
+PASS host cap input=1.5 -> 16000 :: got 16000
+PASS host cap input=9 -> 16000 :: got 16000
+PASS host constants
+PASS api cap env={} (client sends 99999) -> 16000 :: status 200 got 16000
+PASS api cap env={"SILICUS_WORKER_MAX_TOKENS":"20000"} (client sends 99999) -> 20000 :: status 200 got 20000
+PASS api cap env={"SILICUS_WORKER_MAX_TOKENS":"32000"} (client sends 99999) -> 32000 :: status 200 got 32000
+PASS api cap env={"SILICUS_WORKER_MAX_TOKENS":"65536"} (client sends 99999) -> 32000 :: status 200 got 32000
+PASS api cap env={"SILICUS_WORKER_MAX_TOKENS":"junk"} (client sends 99999) -> 16000 :: status 200 got 16000
+PASS api cap env={"SILICUS_WORKER_MAX_TOKENS":"500"} (client sends 99999) -> 500 :: status 200 got 500
+PASS api constants
+PASS stage map
+PASS S3 permitted + no first try -> forbidden + note :: ["aiStatus \"permitted\" clamped to \"forbidden\": at this stage AI may follow only an attempt the teacher has watched."]
+PASS S3 permitted + first try -> stays permitted, no clamp note
+PASS S3 required + first try -> permitted :: ["aiStatus \"required\" clamped to \"permitted\": at this stage AI may follow only an attempt the teacher has watched; it is never required."]
+PASS S3 required + no first try -> forbidden (two notes) :: ["aiStatus \"required\" clamped to \"permitted\": at this stage AI may follow only an attempt the teacher has watched; it is never required.","aiStatus \"permitted\" clamped to \"forbidden\": at this stage AI may follow only an attempt the teacher has watched."]
+PASS S4 permitted + no first try -> NOT clamped (rule is stage 3 only)
+PASS S1 permitted -> forbidden
+PASS S2 required -> permitted
+PASS helpAfter "ai" at S1: dropped + note :: ["dropped helpAfter \"ai\": at this stage children never get help from the AI; help comes from a person, a book or a worked example."]
+PASS helpAfter "ai" at S2: dropped + note :: ["dropped helpAfter \"ai\": at this stage children never get help from the AI; help comes from a person, a book or a worked example."]
+PASS helpAfter "ai" at S3: kept
+PASS helpAfter "ai" at S4: kept
+PASS helpAfter "ai" at no-ages: kept
+PASS operationDoneBy "ai" noted at S1 :: ["operationDoneBy \"ai\": the AI would do the learner's target operation; the learner must keep doing it."]
+PASS operationDoneBy "ai" noted at S2 :: ["operationDoneBy \"ai\": the AI would do the learner's target operation; the learner must keep doing it."]
+PASS operationDoneBy "ai" noted at S3 :: ["operationDoneBy \"ai\": the AI would do the learner's target operation; the learner must keep doing it."]
+PASS operationDoneBy "ai" noted at S4 :: ["operationDoneBy \"ai\": the AI would do the learner's target operation; the learner must keep doing it."]
+PASS operationDoneBy "ai" noted at no-ages :: ["operationDoneBy \"ai\": the AI would do the learner's target operation; the learner must keep doing it."]
+PASS notes bounded: longest note <= 400 chars with 5,000-char model strings :: notes=8 longest=170
+PASS S1 note length small
+PASS anchor + overlapping ages -> 201 :: {"ok":true,"courseId":"urn:uuid:96dbfb1f-f5f2-48b5-b285-a9494d75d44d","view":{"course":{"courseId":"urn:uuid:96dbfb1f-f5
+PASS anchor + non-overlapping ages (19-22) -> 400 BAD_ANCHOR :: 400 BAD_ANCHOR the anchor's ages (5–12) do not overlap the course ages (19–22)
+PASS non-string marbleAnchor 123 -> 400 BAD_ANCHOR :: 400 BAD_ANCHOR
+PASS non-string marbleAnchor {"a":1} -> 400 BAD_ANCHOR :: 400 BAD_ANCHOR
+PASS non-string marbleAnchor ["mt_AzTrT5ySCx"] -> 400 BAD_ANCHOR :: 400 BAD_ANCHOR
+PASS non-string marbleAnchor true -> 400 BAD_ANCHOR :: 400 BAD_ANCHOR
+PASS null marbleAnchor stays absent -> 201 :: 201
+PASS ghost anchor -> 400 UNKNOWN_ANCHOR
+
+FAILS=0 of 45

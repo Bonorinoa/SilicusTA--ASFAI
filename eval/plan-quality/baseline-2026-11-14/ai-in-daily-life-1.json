@@ -1,0 +1,87 @@
+{
+  "course": "ai-in-daily-life",
+  "run": 1,
+  "courseId": "urn:uuid:9accee69-7971-4ef6-9a1d-e8a234919cb2",
+  "title": "AI in Daily Life",
+  "courseLabel": "AI in Daily Life, ages 5-12",
+  "modelId": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openai",
+  "zdr": true,
+  "draftLatencyMs": 3985,
+  "planSha256": "3300e3fe0f0b45c19dbc4eaeb8c04e01245196839f14f2ee45b5cd12d08ff091",
+  "chainHead": "525f576656521af03d2f07bc443b5ff624728b02a9c91e470f6f738f4589ff6c",
+  "chainVerify": {
+    "ok": true,
+    "events": 8
+  },
+  "intake": {
+    "questionsFrom": "local",
+    "outlineAuthorizedBefore": false,
+    "outlineAuthorizedAfter": true
+  },
+  "objectives": [
+    {
+      "id": "urn:uuid:daf3e216-aef7-a9a7-8452-dd92eca4cf18",
+      "statement": "Give at least five everyday examples of AI such as face recognition, recommendations, predictive text, speech recognition and translation"
+    },
+    {
+      "id": "urn:uuid:605a002e-7af9-8f29-eddf-9f382d7bdd6b",
+      "statement": "Explain that these everyday tools use patterns and data, not magic"
+    },
+    {
+      "id": "urn:uuid:d503c203-2b28-6f0b-0131-0ad7c045da65",
+      "statement": "Describe one way AI helps and one time it fails"
+    }
+  ],
+  "plan": {
+    "id": "urn:uuid:01d86021-7cc4-0f76-2f46-5b6171deace1",
+    "courseId": "urn:uuid:9accee69-7971-4ef6-9a1d-e8a234919cb2",
+    "courseVersion": 1,
+    "title": "AI in Everyday Life",
+    "audience": {
+      "ageRangeStart": 5,
+      "ageRangeEnd": 12
+    },
+    "status": "draft",
+    "activities": [
+      {
+        "id": "urn:uuid:dc042a75-76df-b2e5-10b3-06a853e6f5bd",
+        "title": "AI Hunt: Finding Everyday Examples",
+        "minutes": 15,
+        "objectiveIds": [
+          "urn:uuid:daf3e216-aef7-a9a7-8452-dd92eca4cf18"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Search the classroom and personal experience for examples of AI (e.g., face unlock on a tablet, voice assistant, video recommendations). Draw or list at least 5 examples.",
+        "teacherDoes": "Guide learners to identify AI tools in their environment. Provide picture cards of common AI (e.g., smart speakers, facial recognition, translation apps). Prompt them to find at least 5 distinct examples.",
+        "evidenceIfAny": "work-product"
+      },
+      {
+        "id": "urn:uuid:9a8a4f3d-4c16-ae4b-63af-46e8bae95bc1",
+        "title": "Patterns, Not Magic",
+        "minutes": 20,
+        "objectiveIds": [
+          "urn:uuid:605a002e-7af9-8f29-eddf-9f382d7bdd6b"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Sort AI examples into 'data' and 'patterns' buckets. For each example, say what data it uses and what pattern it learns (e.g., face ID uses many photos of a face).",
+        "teacherDoes": "Lead a discussion asking 'How does that know?' for each example. Show a simple pattern (like sorting shapes) and connect to AI. Emphasize that AI learns from examples, not magic.",
+        "evidenceIfAny": "observation"
+      },
+      {
+        "id": "urn:uuid:19527182-a72c-f424-eac6-73ce08aec41c",
+        "title": "AI Helps and AI Missteps",
+        "minutes": 15,
+        "objectiveIds": [
+          "urn:uuid:d503c203-2b28-6f0b-0131-0ad7c045da65"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Choose one AI example from earlier. Draw or write one way it helps and one way it might fail (e.g., face recognition fails with poor lighting, recommendations show wrong item).",
+        "teacherDoes": "Present a scenario of an AI success and an AI failure (e.g., translation misinterpreting a phrase). Ask learners to share their own experiences. Guide them to describe one help and one failure.",
+        "evidenceIfAny": "work-product"
+      }
+    ],
+    "proposedBy": "ai",
+    "proposedAt": 1794689582305
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "course": "smart-versus-not-smart-devices",
+  "run": 1,
+  "courseId": "urn:uuid:6f9b7a8c-a1fc-4631-9be2-25f73207e6cf",
+  "title": "Smart Versus Not-Smart Devices",
+  "courseLabel": "Smart Versus Not-Smart Devices, ages 5-8",
+  "modelId": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openai",
+  "zdr": true,
+  "draftLatencyMs": 4496,
+  "planSha256": "b6a0bb63eec6e74422108ec0e22226bd667faf097e56f34e05557188a12b9240",
+  "chainHead": "55e3940c129e90f07714908d0159ec332b4e456a744d2cdb111c5392475543e2",
+  "chainVerify": {
+    "ok": true,
+    "events": 8
+  },
+  "intake": {
+    "questionsFrom": "local",
+    "outlineAuthorizedBefore": false,
+    "outlineAuthorizedAfter": true
+  },
+  "objectives": [
+    {
+      "id": "urn:uuid:2acf51ce-8ad7-fcc0-0666-0fa8e98876dc",
+      "statement": "Sort objects into 'responds to input' and 'does the same thing every time'"
+    },
+    {
+      "id": "urn:uuid:e4fdbc9b-23cc-31e0-f6ac-455d369851bd",
+      "statement": "Know that a smart speaker is not a radio"
+    },
+    {
+      "id": "urn:uuid:65de69c2-5ea2-cfe6-b57f-969d08f1ba98",
+      "statement": "Know that an automatic door senses and responds"
+    }
+  ],
+  "plan": {
+    "id": "urn:uuid:6e5e7140-0668-6069-be76-e8b562dcc16c",
+    "courseId": "urn:uuid:6f9b7a8c-a1fc-4631-9be2-25f73207e6cf",
+    "courseVersion": 1,
+    "title": "Smart Versus Not-Smart Devices: How Devices Respond to Input",
+    "audience": {
+      "ageRangeStart": 5,
+      "ageRangeEnd": 8
+    },
+    "status": "draft",
+    "activities": [
+      {
+        "id": "urn:uuid:c8423129-56e9-4e74-2a8f-c84f6d9c7c24",
+        "title": "Sort the Objects: Responds or Same Way",
+        "minutes": 10,
+        "objectiveIds": [
+          "urn:uuid:2acf51ce-8ad7-fcc0-0666-0fa8e98876dc"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Pick up each object card (e.g., toaster, light switch, smart speaker, automatic door, toy piano) and place it into one of two hoops labeled 'responds to input' or 'does the same thing every time'. Discuss with a partner why they chose each placement.",
+        "teacherDoes": "Set up two labeled hoops. Show one object at a time, ask 'What does this do when you interact with it?' Ask learners to justify their sort. After sorting, guide a group discussion about any disagreements, reinforcing the difference between responding to input and performing a fixed action.",
+        "evidenceIfAny": "observation"
+      },
+      {
+        "id": "urn:uuid:81f57cf1-8ad2-5819-69b4-a518ea0fa6f2",
+        "title": "Smart Speaker Versus Radio: What Is Different?",
+        "minutes": 12,
+        "objectiveIds": [
+          "urn:uuid:e4fdbc9b-23cc-31e0-f6ac-455d369851bd"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Watch a brief teacher-led demo: press a button on a radio and it plays the same station every time; give a voice command to a smart speaker (or play a simulated clip) and it plays different music, answers questions, or changes volume. Then draw or point to the main difference on a response card: the smart speaker 'listens and changes', the radio 'just plays'.",
+        "teacherDoes": "Show examples of a radio and a smart speaker (or pictures/videos). Ask learners to predict what each does when you give the same input (e.g., say 'play a song'). Demonstrate or simulate that the radio always does the same thing, while the smart speaker responds to the specific input by changing its action. Emphasize that a smart speaker is not a radio because it senses and responds to input.",
+        "evidenceIfAny": "work-product"
+      },
+      {
+        "id": "urn:uuid:1d278c10-d116-1f4a-7896-8421904c7fe9",
+        "title": "Automatic Door: Sensing and Responding",
+        "minutes": 8,
+        "objectiveIds": [
+          "urn:uuid:65de69c2-5ea2-cfe6-b57f-969d08f1ba98"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Act out being an automatic door: when someone 'approaches' (teacher waves a hand), the learner opens (arms wide); when no one is there, the learner stays closed. Then state in one sentence what the door senses and how it responds.",
+        "teacherDoes": "Ask 'What makes an automatic door open?' Guide learners to notice the sensor. Have them role-play the door and the person. After role-play, ask questions like 'What is the door sensing?' and 'What does it do when it senses someone?' Confirm the idea that the door senses and responds to input.",
+        "evidenceIfAny": "observation"
+      }
+    ],
+    "proposedBy": "ai",
+    "proposedAt": 1794689574071
+  }
+}

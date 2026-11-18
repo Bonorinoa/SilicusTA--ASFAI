@@ -1,0 +1,572 @@
+{
+  "generatedAt": "2026-11-14T20:53:18.736Z",
+  "gitHead": "466485d4d49152030d7b0fe7625d98ed7559d635",
+  "nodeVersion": "v22.22.3",
+  "script": "eval/plan-quality/run-baseline.mjs",
+  "worker": {
+    "modelId": "deepseek/deepseek-v4-flash-0731",
+    "provider": "openai",
+    "zdr": true,
+    "typicalSeconds": {
+      "objectives": [
+        2,
+        10
+      ],
+      "plan": [
+        8,
+        30
+      ],
+      "answer": [
+        2,
+        15
+      ]
+    }
+  },
+  "knowledgeSources": [
+    {
+      "id": "asfai-graph",
+      "enabled": false
+    },
+    {
+      "id": "local-ontology",
+      "enabled": false
+    }
+  ],
+  "modelCalls": 6,
+  "runs": [
+    {
+      "course": "smart-versus-not-smart-devices",
+      "run": 1,
+      "courseId": "urn:uuid:6f9b7a8c-a1fc-4631-9be2-25f73207e6cf",
+      "title": "Smart Versus Not-Smart Devices",
+      "courseLabel": "Smart Versus Not-Smart Devices, ages 5-8",
+      "modelId": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openai",
+      "zdr": true,
+      "draftLatencyMs": 4496,
+      "planSha256": "b6a0bb63eec6e74422108ec0e22226bd667faf097e56f34e05557188a12b9240",
+      "chainHead": "55e3940c129e90f07714908d0159ec332b4e456a744d2cdb111c5392475543e2",
+      "chainVerify": {
+        "ok": true,
+        "events": 8
+      },
+      "intake": {
+        "questionsFrom": "local",
+        "outlineAuthorizedBefore": false,
+        "outlineAuthorizedAfter": true
+      },
+      "objectives": [
+        {
+          "id": "urn:uuid:2acf51ce-8ad7-fcc0-0666-0fa8e98876dc",
+          "statement": "Sort objects into 'responds to input' and 'does the same thing every time'"
+        },
+        {
+          "id": "urn:uuid:e4fdbc9b-23cc-31e0-f6ac-455d369851bd",
+          "statement": "Know that a smart speaker is not a radio"
+        },
+        {
+          "id": "urn:uuid:65de69c2-5ea2-cfe6-b57f-969d08f1ba98",
+          "statement": "Know that an automatic door senses and responds"
+        }
+      ],
+      "plan": {
+        "id": "urn:uuid:6e5e7140-0668-6069-be76-e8b562dcc16c",
+        "courseId": "urn:uuid:6f9b7a8c-a1fc-4631-9be2-25f73207e6cf",
+        "courseVersion": 1,
+        "title": "Smart Versus Not-Smart Devices: How Devices Respond to Input",
+        "audience": {
+          "ageRangeStart": 5,
+          "ageRangeEnd": 8
+        },
+        "status": "draft",
+        "activities": [
+          {
+            "id": "urn:uuid:c8423129-56e9-4e74-2a8f-c84f6d9c7c24",
+            "title": "Sort the Objects: Responds or Same Way",
+            "minutes": 10,
+            "objectiveIds": [
+              "urn:uuid:2acf51ce-8ad7-fcc0-0666-0fa8e98876dc"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Pick up each object card (e.g., toaster, light switch, smart speaker, automatic door, toy piano) and place it into one of two hoops labeled 'responds to input' or 'does the same thing every time'. Discuss with a partner why they chose each placement.",
+            "teacherDoes": "Set up two labeled hoops. Show one object at a time, ask 'What does this do when you interact with it?' Ask learners to justify their sort. After sorting, guide a group discussion about any disagreements, reinforcing the difference between responding to input and performing a fixed action.",
+            "evidenceIfAny": "observation"
+          },
+          {
+            "id": "urn:uuid:81f57cf1-8ad2-5819-69b4-a518ea0fa6f2",
+            "title": "Smart Speaker Versus Radio: What Is Different?",
+            "minutes": 12,
+            "objectiveIds": [
+              "urn:uuid:e4fdbc9b-23cc-31e0-f6ac-455d369851bd"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Watch a brief teacher-led demo: press a button on a radio and it plays the same station every time; give a voice command to a smart speaker (or play a simulated clip) and it plays different music, answers questions, or changes volume. Then draw or point to the main difference on a response card: the smart speaker 'listens and changes', the radio 'just plays'.",
+            "teacherDoes": "Show examples of a radio and a smart speaker (or pictures/videos). Ask learners to predict what each does when you give the same input (e.g., say 'play a song'). Demonstrate or simulate that the radio always does the same thing, while the smart speaker responds to the specific input by changing its action. Emphasize that a smart speaker is not a radio because it senses and responds to input.",
+            "evidenceIfAny": "work-product"
+          },
+          {
+            "id": "urn:uuid:1d278c10-d116-1f4a-7896-8421904c7fe9",
+            "title": "Automatic Door: Sensing and Responding",
+            "minutes": 8,
+            "objectiveIds": [
+              "urn:uuid:65de69c2-5ea2-cfe6-b57f-969d08f1ba98"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Act out being an automatic door: when someone 'approaches' (teacher waves a hand), the learner opens (arms wide); when no one is there, the learner stays closed. Then state in one sentence what the door senses and how it responds.",
+            "teacherDoes": "Ask 'What makes an automatic door open?' Guide learners to notice the sensor. Have them role-play the door and the person. After role-play, ask questions like 'What is the door sensing?' and 'What does it do when it senses someone?' Confirm the idea that the door senses and responds to input.",
+            "evidenceIfAny": "observation"
+          }
+        ],
+        "proposedBy": "ai",
+        "proposedAt": 1794689574071
+      },
+      "file": "/Users/bonorinoa/Hermes/Projects/silicus-wt/B1/eval/plan-quality/baseline-2026-11-14/smart-versus-not-smart-devices-1.json",
+      "fileSha256": "2e862b760e6d46cbae878d76e480310916930291a1e33d746f8d47be72e75fb8"
+    },
+    {
+      "course": "smart-versus-not-smart-devices",
+      "run": 2,
+      "courseId": "urn:uuid:15bee629-60a8-40a5-94e9-12374b470ea3",
+      "title": "Smart Versus Not-Smart Devices",
+      "courseLabel": "Smart Versus Not-Smart Devices, ages 5-8",
+      "modelId": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openai",
+      "zdr": true,
+      "draftLatencyMs": 4211,
+      "planSha256": "8487bafc50090b934846e189a7eb2d4b72a652beebdd70fabf39033ee9814dde",
+      "chainHead": "838e48cbe77f75fdbde77306154afbb62b835dd1d8aedb5504475371c940d994",
+      "chainVerify": {
+        "ok": true,
+        "events": 8
+      },
+      "intake": {
+        "questionsFrom": "local",
+        "outlineAuthorizedBefore": false,
+        "outlineAuthorizedAfter": true
+      },
+      "objectives": [
+        {
+          "id": "urn:uuid:4774da98-b221-41d0-e0f2-752145ff8743",
+          "statement": "Sort objects into 'responds to input' and 'does the same thing every time'"
+        },
+        {
+          "id": "urn:uuid:9864cae8-aed6-33ed-0f44-fcb76ebe9908",
+          "statement": "Know that a smart speaker is not a radio"
+        },
+        {
+          "id": "urn:uuid:45512bd3-67f1-7f8a-9502-8d622ae7203e",
+          "statement": "Know that an automatic door senses and responds"
+        }
+      ],
+      "plan": {
+        "id": "urn:uuid:a0644a57-dbe7-5da9-c2d6-20394125329b",
+        "courseId": "urn:uuid:15bee629-60a8-40a5-94e9-12374b470ea3",
+        "courseVersion": 1,
+        "title": "Smart Devices: How They Respond to Input",
+        "audience": {
+          "ageRangeStart": 5,
+          "ageRangeEnd": 8
+        },
+        "status": "draft",
+        "activities": [
+          {
+            "id": "urn:uuid:7065d368-6818-d7c8-f609-93459a47f320",
+            "title": "Sort It Out: React or Repeat?",
+            "minutes": 8,
+            "objectiveIds": [
+              "urn:uuid:4774da98-b221-41d0-e0f2-752145ff8743"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Sort picture cards of objects (e.g., a light switch, a motion-sensor light, a toaster, a smart speaker) into two groups: 'responds to input' and 'does the same thing every time'.",
+            "teacherDoes": "Lay out the cards and a two-column sorting mat. Guide learners to discuss what 'input' means and then sort each card, asking 'Does this change based on what you do or what happens around it?'",
+            "evidenceIfAny": "work-product"
+          },
+          {
+            "id": "urn:uuid:b21a0c34-9a01-8b18-3888-d3e85f66e4e5",
+            "title": "Smart Speaker vs. Radio",
+            "minutes": 5,
+            "objectiveIds": [
+              "urn:uuid:9864cae8-aed6-33ed-0f44-fcb76ebe9908"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Compare a smart speaker and a radio by pointing out that the radio always plays the same station, while a smart speaker listens for your voice and chooses music or answers questions.",
+            "teacherDoes": "Show a picture of a radio and a smart speaker. Ask learners to describe how each works, prompting them to notice that the smart speaker changes based on what you say, while a radio just plays what it's set to.",
+            "evidenceIfAny": "observation"
+          },
+          {
+            "id": "urn:uuid:de7472b6-8e62-28f6-3950-06bede51da29",
+            "title": "The Automatic Door Senses You",
+            "minutes": 7,
+            "objectiveIds": [
+              "urn:uuid:45512bd3-67f1-7f8a-9502-8d622ae7203e"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Act out being a person walking toward an automatic door, then describe how the door 'senses' movement and 'responds' by opening. Draw or say what the door notices and what it does.",
+            "teacherDoes": "Use a simple prop (like a toy door or your hands) to model the automatic door. Ask learners to show what happens when someone approaches and when nobody is there, guiding them to connect sensing and responding.",
+            "evidenceIfAny": "observation"
+          }
+        ],
+        "proposedBy": "ai",
+        "proposedAt": 1794689578300
+      },
+      "file": "/Users/bonorinoa/Hermes/Projects/silicus-wt/B1/eval/plan-quality/baseline-2026-11-14/smart-versus-not-smart-devices-2.json",
+      "fileSha256": "17de1905e2a364399fbafe8622a82963c14479fb6f49d047f9dd559be0ec63c7"
+    },
+    {
+      "course": "ai-in-daily-life",
+      "run": 1,
+      "courseId": "urn:uuid:9accee69-7971-4ef6-9a1d-e8a234919cb2",
+      "title": "AI in Daily Life",
+      "courseLabel": "AI in Daily Life, ages 5-12",
+      "modelId": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openai",
+      "zdr": true,
+      "draftLatencyMs": 3985,
+      "planSha256": "3300e3fe0f0b45c19dbc4eaeb8c04e01245196839f14f2ee45b5cd12d08ff091",
+      "chainHead": "525f576656521af03d2f07bc443b5ff624728b02a9c91e470f6f738f4589ff6c",
+      "chainVerify": {
+        "ok": true,
+        "events": 8
+      },
+      "intake": {
+        "questionsFrom": "local",
+        "outlineAuthorizedBefore": false,
+        "outlineAuthorizedAfter": true
+      },
+      "objectives": [
+        {
+          "id": "urn:uuid:daf3e216-aef7-a9a7-8452-dd92eca4cf18",
+          "statement": "Give at least five everyday examples of AI such as face recognition, recommendations, predictive text, speech recognition and translation"
+        },
+        {
+          "id": "urn:uuid:605a002e-7af9-8f29-eddf-9f382d7bdd6b",
+          "statement": "Explain that these everyday tools use patterns and data, not magic"
+        },
+        {
+          "id": "urn:uuid:d503c203-2b28-6f0b-0131-0ad7c045da65",
+          "statement": "Describe one way AI helps and one time it fails"
+        }
+      ],
+      "plan": {
+        "id": "urn:uuid:01d86021-7cc4-0f76-2f46-5b6171deace1",
+        "courseId": "urn:uuid:9accee69-7971-4ef6-9a1d-e8a234919cb2",
+        "courseVersion": 1,
+        "title": "AI in Everyday Life",
+        "audience": {
+          "ageRangeStart": 5,
+          "ageRangeEnd": 12
+        },
+        "status": "draft",
+        "activities": [
+          {
+            "id": "urn:uuid:dc042a75-76df-b2e5-10b3-06a853e6f5bd",
+            "title": "AI Hunt: Finding Everyday Examples",
+            "minutes": 15,
+            "objectiveIds": [
+              "urn:uuid:daf3e216-aef7-a9a7-8452-dd92eca4cf18"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Search the classroom and personal experience for examples of AI (e.g., face unlock on a tablet, voice assistant, video recommendations). Draw or list at least 5 examples.",
+            "teacherDoes": "Guide learners to identify AI tools in their environment. Provide picture cards of common AI (e.g., smart speakers, facial recognition, translation apps). Prompt them to find at least 5 distinct examples.",
+            "evidenceIfAny": "work-product"
+          },
+          {
+            "id": "urn:uuid:9a8a4f3d-4c16-ae4b-63af-46e8bae95bc1",
+            "title": "Patterns, Not Magic",
+            "minutes": 20,
+            "objectiveIds": [
+              "urn:uuid:605a002e-7af9-8f29-eddf-9f382d7bdd6b"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Sort AI examples into 'data' and 'patterns' buckets. For each example, say what data it uses and what pattern it learns (e.g., face ID uses many photos of a face).",
+            "teacherDoes": "Lead a discussion asking 'How does that know?' for each example. Show a simple pattern (like sorting shapes) and connect to AI. Emphasize that AI learns from examples, not magic.",
+            "evidenceIfAny": "observation"
+          },
+          {
+            "id": "urn:uuid:19527182-a72c-f424-eac6-73ce08aec41c",
+            "title": "AI Helps and AI Missteps",
+            "minutes": 15,
+            "objectiveIds": [
+              "urn:uuid:d503c203-2b28-6f0b-0131-0ad7c045da65"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Choose one AI example from earlier. Draw or write one way it helps and one way it might fail (e.g., face recognition fails with poor lighting, recommendations show wrong item).",
+            "teacherDoes": "Present a scenario of an AI success and an AI failure (e.g., translation misinterpreting a phrase). Ask learners to share their own experiences. Guide them to describe one help and one failure.",
+            "evidenceIfAny": "work-product"
+          }
+        ],
+        "proposedBy": "ai",
+        "proposedAt": 1794689582305
+      },
+      "file": "/Users/bonorinoa/Hermes/Projects/silicus-wt/B1/eval/plan-quality/baseline-2026-11-14/ai-in-daily-life-1.json",
+      "fileSha256": "5f8bbc429f3aa73d7bda58c9b73057eb72c049a1450995d5fdf22e6610a5e37f"
+    },
+    {
+      "course": "ai-in-daily-life",
+      "run": 2,
+      "courseId": "urn:uuid:6549b88e-127c-4056-adc9-3f38ad6b6389",
+      "title": "AI in Daily Life",
+      "courseLabel": "AI in Daily Life, ages 5-12",
+      "modelId": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openai",
+      "zdr": true,
+      "draftLatencyMs": 5111,
+      "planSha256": "86b058f11d0cd65d5f35775272153e058967c5d7811fd83d9d47c60e5a824682",
+      "chainHead": "8ac0e6db7b7f6e0dc6d2d9e7d3846e920f9bb8f4bf220ccd2c45068cef57540f",
+      "chainVerify": {
+        "ok": true,
+        "events": 8
+      },
+      "intake": {
+        "questionsFrom": "local",
+        "outlineAuthorizedBefore": false,
+        "outlineAuthorizedAfter": true
+      },
+      "objectives": [
+        {
+          "id": "urn:uuid:2a3a2418-b073-f80e-8f87-d0cf77bf7510",
+          "statement": "Give at least five everyday examples of AI such as face recognition, recommendations, predictive text, speech recognition and translation"
+        },
+        {
+          "id": "urn:uuid:9564b0a2-f1b2-cff3-c840-58eece486f97",
+          "statement": "Explain that these everyday tools use patterns and data, not magic"
+        },
+        {
+          "id": "urn:uuid:2b2f07d2-456c-480f-3c0f-e868a1397405",
+          "statement": "Describe one way AI helps and one time it fails"
+        }
+      ],
+      "plan": {
+        "id": "urn:uuid:04598910-340f-c978-e159-17f57f714372",
+        "courseId": "urn:uuid:6549b88e-127c-4056-adc9-3f38ad6b6389",
+        "courseVersion": 1,
+        "title": "AI in Everyday Life: Patterns, Help, and Hiccups",
+        "audience": {
+          "ageRangeStart": 5,
+          "ageRangeEnd": 12
+        },
+        "status": "draft",
+        "activities": [
+          {
+            "id": "urn:uuid:51bc773c-be18-9c4b-18b2-64bc1a31e0d2",
+            "title": "AI Hunt",
+            "minutes": 10,
+            "objectiveIds": [
+              "urn:uuid:2a3a2418-b073-f80e-8f87-d0cf77bf7510"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Look at pictures of everyday technology (e.g., phone with face unlock, video streaming suggestions, keyboard with predictive text, voice assistant, translation app) and name at least five examples of AI they see.",
+            "teacherDoes": "Show a slide or printed images of everyday AI tools, ask 'Where is AI here?', and prompt students to share examples, writing them on the board.",
+            "evidenceIfAny": "observation"
+          },
+          {
+            "id": "urn:uuid:d064269a-87b3-e613-d618-7c1e69eab564",
+            "title": "Patterns, Not Magic",
+            "minutes": 10,
+            "objectiveIds": [
+              "urn:uuid:9564b0a2-f1b2-cff3-c840-58eece486f97"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Discuss how AI tools like face recognition work by noticing patterns (e.g., the shape of eyes and nose) and using data from many examples—not magic. Then explain in their own words to a partner.",
+            "teacherDoes": "Use a simple hands-on demonstration (e.g., sorting colorful blocks by size and shape) to illustrate patterns, then connect it to how AI uses data to learn from patterns, stressing that it's not magic.",
+            "evidenceIfAny": "observation"
+          },
+          {
+            "id": "urn:uuid:d3b8acec-0a6e-4f3a-25df-70fbd63318e1",
+            "title": "AI Rescue and Oops",
+            "minutes": 10,
+            "objectiveIds": [
+              "urn:uuid:2b2f07d2-456c-480f-3c0f-e868a1397405"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Think of and share one helpful thing AI does (e.g., recommending a fun game) and one time AI makes a mistake (e.g., voice assistant misunderstanding a word).",
+            "teacherDoes": "Facilitate a class brainstorm, asking 'How does AI help us?' and 'Have you ever seen AI mess up?', and offer personal examples to spark responses.",
+            "evidenceIfAny": "observation"
+          }
+        ],
+        "proposedBy": "ai",
+        "proposedAt": 1794689587427
+      },
+      "file": "/Users/bonorinoa/Hermes/Projects/silicus-wt/B1/eval/plan-quality/baseline-2026-11-14/ai-in-daily-life-2.json",
+      "fileSha256": "4fe5b648e3ae686395647dea1712812bac3a46313e48f450ead62fc6e143f64a"
+    },
+    {
+      "course": "ecom-57-introductory-statistics",
+      "run": 1,
+      "courseId": "urn:uuid:0229d1d8-d778-4531-b069-27e1cd2f53cb",
+      "title": "Ecom 57, introductory statistics",
+      "courseLabel": "Ecom 57, introductory statistics, ages 19",
+      "modelId": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openai",
+      "zdr": true,
+      "draftLatencyMs": 3049,
+      "planSha256": "fd8cbe6b82ac046fe223297426e55864234e270d9798ad8cafe2050f018b27af",
+      "chainHead": "f6691ea84687706338ef7722190a3e0d849fffffb1a6106f6dce4211b0ef9145",
+      "chainVerify": {
+        "ok": true,
+        "events": 8
+      },
+      "intake": {
+        "questionsFrom": "local",
+        "outlineAuthorizedBefore": false,
+        "outlineAuthorizedAfter": true
+      },
+      "objectives": [
+        {
+          "id": "urn:uuid:9d28afc3-ecf9-c7fd-3f87-b487d99db2ae",
+          "statement": "Interpret a regression coefficient in plain language"
+        },
+        {
+          "id": "urn:uuid:381d79d6-d0d4-8a74-867c-4b12374d0626",
+          "statement": "Explain why correlation does not imply causation"
+        },
+        {
+          "id": "urn:uuid:719bf5eb-769a-6e36-4da5-cfe6e033bc5c",
+          "statement": "Read a scatter plot and describe the direction and strength of the association"
+        }
+      ],
+      "plan": {
+        "id": "urn:uuid:6d720d2d-b6d5-30ed-0ad1-75a15b1d89a7",
+        "courseId": "urn:uuid:0229d1d8-d778-4531-b069-27e1cd2f53cb",
+        "courseVersion": 1,
+        "title": "Introductory Statistics: Scatterplots, Regression Coefficients, and Causation",
+        "audience": {
+          "ageRangeStart": 19,
+          "ageRangeEnd": 19
+        },
+        "status": "draft",
+        "activities": [
+          {
+            "id": "urn:uuid:719a3573-9d0c-1666-761a-2b6952addd92",
+            "title": "Reading Scatter Plots",
+            "minutes": 15,
+            "objectiveIds": [
+              "urn:uuid:719bf5eb-769a-6e36-4da5-cfe6e033bc5c"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Students examine several scatter plots from the course notes and verbally describe each association's direction (positive, negative, or none) and strength (weak, moderate, strong). They also sketch a rough line of best fit on paper.",
+            "teacherDoes": "The teacher projects example scatter plots, models descriptive language ('moderate positive association'), and prompts students to justify their answers. The teacher circulates to observe student sketches and verbal descriptions.",
+            "evidenceIfAny": "observation"
+          },
+          {
+            "id": "urn:uuid:330df575-f0d4-e4ca-1563-9169d06655c0",
+            "title": "Interpreting a Regression Coefficient",
+            "minutes": 20,
+            "objectiveIds": [
+              "urn:uuid:9d28afc3-ecf9-c7fd-3f87-b487d99db2ae"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Students work individually on a worksheet containing a regression output (e.g., y = 5 + 2x). They write a plain-language interpretation of the coefficient for x, including units and direction of effect.",
+            "teacherDoes": "The teacher reviews the formula and provides one worked example. Then the teacher monitors and offers feedback as students write their interpretations, clarifying common errors like confusing units or causal language.",
+            "evidenceIfAny": "work-product"
+          },
+          {
+            "id": "urn:uuid:ed213882-b412-5867-f73d-b6c5be72f689",
+            "title": "Why Correlation Does Not Imply Causation",
+            "minutes": 15,
+            "objectiveIds": [
+              "urn:uuid:381d79d6-d0d4-8a74-867c-4b12374d0626"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Students discuss in pairs a set of real-world examples (e.g., ice cream sales and drowning) and explain why a strong correlation does not necessarily mean one variable causes the other. They also identify potential confounding variables.",
+            "teacherDoes": "The teacher facilitates a whole-class discussion, prompting students to articulate causal pitfalls. The teacher provides counterexamples and emphasizes the role of random assignment in establishing causation.",
+            "evidenceIfAny": "observation"
+          }
+        ],
+        "proposedBy": "ai",
+        "proposedAt": 1794689590493
+      },
+      "file": "/Users/bonorinoa/Hermes/Projects/silicus-wt/B1/eval/plan-quality/baseline-2026-11-14/ecom-57-introductory-statistics-1.json",
+      "fileSha256": "4faa64407d0d1b2b7bf863a1139f29231908c1f12c1211ede67d2d79d9f09440"
+    },
+    {
+      "course": "ecom-57-introductory-statistics",
+      "run": 2,
+      "courseId": "urn:uuid:316e2a0e-1286-419a-9ed5-3363fd0079d3",
+      "title": "Ecom 57, introductory statistics",
+      "courseLabel": "Ecom 57, introductory statistics, ages 19",
+      "modelId": "deepseek/deepseek-v4-flash-0731",
+      "provider": "openai",
+      "zdr": true,
+      "draftLatencyMs": 8209,
+      "planSha256": "087d13b84f3734c54a37d258fb8b4332bafb602d9be0ed9e178888ebc48e1619",
+      "chainHead": "c1427e0a46f9761ab8c280398400c8574fee0b2f11c966bbb67b8919afac2724",
+      "chainVerify": {
+        "ok": true,
+        "events": 8
+      },
+      "intake": {
+        "questionsFrom": "local",
+        "outlineAuthorizedBefore": false,
+        "outlineAuthorizedAfter": true
+      },
+      "objectives": [
+        {
+          "id": "urn:uuid:23599043-34fb-9d7a-4ef4-15319881b644",
+          "statement": "Interpret a regression coefficient in plain language"
+        },
+        {
+          "id": "urn:uuid:83a285c7-d8c6-ba4d-2365-c6a113c78ca5",
+          "statement": "Explain why correlation does not imply causation"
+        },
+        {
+          "id": "urn:uuid:c41fec94-2f00-75b4-7ab2-d4fde2d5ded4",
+          "statement": "Read a scatter plot and describe the direction and strength of the association"
+        }
+      ],
+      "plan": {
+        "id": "urn:uuid:f99a5885-e26b-7b14-b061-c713e61e160c",
+        "courseId": "urn:uuid:316e2a0e-1286-419a-9ed5-3363fd0079d3",
+        "courseVersion": 1,
+        "title": "Introductory Statistics: Scatterplots, Regression, and Correlation",
+        "audience": {
+          "ageRangeStart": 19,
+          "ageRangeEnd": 19
+        },
+        "status": "draft",
+        "activities": [
+          {
+            "id": "urn:uuid:c132ae0e-23d7-109c-4476-d7321dc060b7",
+            "title": "Reading Scatterplots",
+            "minutes": 15,
+            "objectiveIds": [
+              "urn:uuid:c41fec94-2f00-75b4-7ab2-d4fde2d5ded4"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Examine several scatter plots and write a description of the direction (positive, negative, or no association) and strength (weak, moderate, strong) for each.",
+            "teacherDoes": "Display scatter plots, model how to assess direction and strength, and provide guided practice with feedback.",
+            "evidenceIfAny": "work-product"
+          },
+          {
+            "id": "urn:uuid:be52847f-347f-dca0-5325-4d0f99e86693",
+            "title": "Interpreting Regression Coefficients",
+            "minutes": 20,
+            "objectiveIds": [
+              "urn:uuid:23599043-34fb-9d7a-4ef4-15319881b644"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Given regression output for a real-world scenario, write a plain-language interpretation of the slope coefficient (e.g., \"for each additional unit of X, Y changes by b units on average\").",
+            "teacherDoes": "Explain the meaning of the regression coefficient with concrete examples, then distribute practice problems and circulate to assist.",
+            "evidenceIfAny": "work-product"
+          },
+          {
+            "id": "urn:uuid:1d71435c-a8a3-2517-8924-ca65134ce563",
+            "title": "Correlation vs Causation",
+            "minutes": 20,
+            "objectiveIds": [
+              "urn:uuid:83a285c7-d8c6-ba4d-2365-c6a113c78ca5"
+            ],
+            "materialVersionIds": [],
+            "learnerDoes": "Analyze paired examples of correlated variables and write a short explanation of why a causal conclusion is not justified, referencing potential confounders or alternative explanations.",
+            "teacherDoes": "Present classic examples (e.g., ice cream sales and drowning), lead a discussion, and clarify that correlation does not imply causation.",
+            "evidenceIfAny": "work-product"
+          }
+        ],
+        "proposedBy": "ai",
+        "proposedAt": 1794689598713
+      },
+      "file": "/Users/bonorinoa/Hermes/Projects/silicus-wt/B1/eval/plan-quality/baseline-2026-11-14/ecom-57-introductory-statistics-2.json",
+      "fileSha256": "702eef93e79529785ef8ce143ea0d5ca30e9a475c8cf4891b393b01ce1c730bd"
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "course": "ai-in-daily-life",
+  "run": 2,
+  "courseId": "urn:uuid:6549b88e-127c-4056-adc9-3f38ad6b6389",
+  "title": "AI in Daily Life",
+  "courseLabel": "AI in Daily Life, ages 5-12",
+  "modelId": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openai",
+  "zdr": true,
+  "draftLatencyMs": 5111,
+  "planSha256": "86b058f11d0cd65d5f35775272153e058967c5d7811fd83d9d47c60e5a824682",
+  "chainHead": "8ac0e6db7b7f6e0dc6d2d9e7d3846e920f9bb8f4bf220ccd2c45068cef57540f",
+  "chainVerify": {
+    "ok": true,
+    "events": 8
+  },
+  "intake": {
+    "questionsFrom": "local",
+    "outlineAuthorizedBefore": false,
+    "outlineAuthorizedAfter": true
+  },
+  "objectives": [
+    {
+      "id": "urn:uuid:2a3a2418-b073-f80e-8f87-d0cf77bf7510",
+      "statement": "Give at least five everyday examples of AI such as face recognition, recommendations, predictive text, speech recognition and translation"
+    },
+    {
+      "id": "urn:uuid:9564b0a2-f1b2-cff3-c840-58eece486f97",
+      "statement": "Explain that these everyday tools use patterns and data, not magic"
+    },
+    {
+      "id": "urn:uuid:2b2f07d2-456c-480f-3c0f-e868a1397405",
+      "statement": "Describe one way AI helps and one time it fails"
+    }
+  ],
+  "plan": {
+    "id": "urn:uuid:04598910-340f-c978-e159-17f57f714372",
+    "courseId": "urn:uuid:6549b88e-127c-4056-adc9-3f38ad6b6389",
+    "courseVersion": 1,
+    "title": "AI in Everyday Life: Patterns, Help, and Hiccups",
+    "audience": {
+      "ageRangeStart": 5,
+      "ageRangeEnd": 12
+    },
+    "status": "draft",
+    "activities": [
+      {
+        "id": "urn:uuid:51bc773c-be18-9c4b-18b2-64bc1a31e0d2",
+        "title": "AI Hunt",
+        "minutes": 10,
+        "objectiveIds": [
+          "urn:uuid:2a3a2418-b073-f80e-8f87-d0cf77bf7510"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Look at pictures of everyday technology (e.g., phone with face unlock, video streaming suggestions, keyboard with predictive text, voice assistant, translation app) and name at least five examples of AI they see.",
+        "teacherDoes": "Show a slide or printed images of everyday AI tools, ask 'Where is AI here?', and prompt students to share examples, writing them on the board.",
+        "evidenceIfAny": "observation"
+      },
+      {
+        "id": "urn:uuid:d064269a-87b3-e613-d618-7c1e69eab564",
+        "title": "Patterns, Not Magic",
+        "minutes": 10,
+        "objectiveIds": [
+          "urn:uuid:9564b0a2-f1b2-cff3-c840-58eece486f97"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Discuss how AI tools like face recognition work by noticing patterns (e.g., the shape of eyes and nose) and using data from many examples—not magic. Then explain in their own words to a partner.",
+        "teacherDoes": "Use a simple hands-on demonstration (e.g., sorting colorful blocks by size and shape) to illustrate patterns, then connect it to how AI uses data to learn from patterns, stressing that it's not magic.",
+        "evidenceIfAny": "observation"
+      },
+      {
+        "id": "urn:uuid:d3b8acec-0a6e-4f3a-25df-70fbd63318e1",
+        "title": "AI Rescue and Oops",
+        "minutes": 10,
+        "objectiveIds": [
+          "urn:uuid:2b2f07d2-456c-480f-3c0f-e868a1397405"
+        ],
+        "materialVersionIds": [],
+        "learnerDoes": "Think of and share one helpful thing AI does (e.g., recommending a fun game) and one time AI makes a mistake (e.g., voice assistant misunderstanding a word).",
+        "teacherDoes": "Facilitate a class brainstorm, asking 'How does AI help us?' and 'Have you ever seen AI mess up?', and offer personal examples to spark responses.",
+        "evidenceIfAny": "observation"
+      }
+    ],
+    "proposedBy": "ai",
+    "proposedAt": 1794689587427
+  }
+}

@@ -76,6 +76,27 @@ describe("NewCourseWizard", () => {
     expect(await screen.findByRole("heading", { name: "Your course and learners" })).toBeInTheDocument();
   });
 
+  it("Back at the first step is disabled: it goes to the previous step, never jumps to the welcome", async () => {
+    mocks.listCourses.mockResolvedValue({ courses: [{ courseId: "x" }] });
+    const user = userEvent.setup();
+    render(<NewCourseWizard />);
+    await screen.findByRole("heading", { name: "Your course and learners" });
+    const back = screen.getByRole("button", { name: "Back" });
+    expect(back).toBeDisabled();
+    await user.click(back).catch(() => {});
+    expect(screen.queryByRole("heading", { name: "Let’s set up your course" })).toBeNull();
+    // … and from a later step, Back returns to the previous step, not the brief/welcome.
+    await user.type(screen.getByLabelText("Course title"), "How plants eat");
+    await user.type(screen.getByLabelText("Your name"), "Ada Lovelace");
+    await user.click(screen.getByRole("radio", { name: /Upper primary/ }));
+    await user.type(await screen.findByLabelText("Topic, in your words"), "Photosynthesis");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { name: "Your sources" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByRole("heading", { name: "Your course and learners" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Let’s set up your course" })).toBeNull();
+  });
+
   it("the review's confirm sends create (no materials), answers, files, outline — in that order — and lands on the course", async () => {
     const user = userEvent.setup();
     render(<NewCourseWizard />);

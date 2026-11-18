@@ -8,13 +8,18 @@
  *     citation is replaced by a fixed refusal. We would rather say nothing than guess.
  *   - Two bases: "plan" restates a cited item; "explanation" explains a word or idea a cited item NAMES (the
  *     model's words, so the UI labels it). Two refusals, each a fixed sentence: "off_topic" and "assessment".
+ *   - K3 (owner, 17 Nov): the model also picks a reply KIND: answer | clarify | about_helper | off_topic | assessment.
+ *     Only "answer" carries model words. clarify, about_helper and the off_topic redirect are COMPOSED HERE from fixed
+ *     text plus the lesson's own words (objective statements as the student preview shows them, activity titles).
+ *     An unknown kind is off_topic. The assessment refusal and its regex net are unchanged and win over every kind.
  *   - NOTHING is recorded: no log event, no ledger turn, no file. A student chat is not evidence of
  *     learning and must never be mistaken for it, so it leaves no trace to mistake.
  *   - No student identity is accepted. The request has a question and optional recent turns; any
  *     other field is ignored.
  */
 
-export const OFF_TOPIC = "That isn't part of this lesson. Ask your teacher.";
+/** The plain off_topic sentence, used only when the lesson has no objective to point back to. */
+export const OFF_TOPIC = "That isn't part of today's lesson. Ask your teacher.";
 export const ASSESSMENT = "I can't tell you how you're doing. Your teacher decides that.";
 export const NOT_EVIDENCE = "Asking questions here is not evidence of learning.";
 
@@ -50,6 +55,53 @@ export function packageOf(version) {
   const a = version.lessonPlan?.audience;
   const ages = Number.isFinite(a?.ageRangeStart) && Number.isFinite(a?.ageRangeEnd) ? `${a.ageRangeStart} to ${a.ageRangeEnd}` : "";
   return { title: String(version.title ?? ""), version: version.version, ages, items: [...objectives, ...activities].filter((i) => i.text) };
+}
+
+/* ------------------------------ K3: host-composed replies ------------------------------ */
+
+const MAX_OFFERS = 3;
+const MAX_TOPIC = 80;
+
+/**
+ * An item in the lesson's own words, as a child reads them on the student preview: an objective without its
+ * "Students can" lead (capitalised, no full stop, the same rule as Learn.tsx `kid`), an activity by its title.
+ */
+export function topicOf(item) {
+  const id = String(item?.id ?? "");
+  let t = id.startsWith("activity:")
+    ? String(item?.label ?? "").replace(/^Activity \d+:\s*/, "")
+    : String(item?.text ?? "").replace(/^(students|learners)\s+(can|will)\s+/i, "").replace(/\.$/, "");
+  t = t.replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
+  if (t.length > MAX_TOPIC) t = `${t.slice(0, MAX_TOPIC).replace(/\s+\S*$/, "")}…`;
+  return t;
+}
+
+const offersOf = (items) => items.slice(0, MAX_OFFERS).map((i) => ({ id: i.id, topic: topicOf(i) })).filter((o) => o.topic);
+const listOf = (offers) => offers.map((o) => o.topic).join(" · ");
+const endSentence = (t) => (/[.?!…]$/.test(t) ? t : `${t}.`);
+
+/** clarify: "What would you like to know? I can help with: {label} · {label}." (at most 3 items). */
+export function clarifyReply(items) {
+  return `What would you like to know? I can help with: ${endSentence(listOf(offersOf(items)))}`;
+}
+
+/** about_helper: fixed text and the lesson title. No model words. */
+export function aboutHelperReply(pkg) {
+  const title = String(pkg?.title ?? "").replace(/\s+/g, " ").trim();
+  return title ? `I'm Silicus, a helper for today's lesson: ${endSentence(title)} Ask me about it.` : "I'm Silicus, a helper for today's lesson. Ask me about it.";
+}
+
+const objectivesOf = (pkg) => (pkg?.items ?? []).filter((i) => String(i.id).startsWith("objective:"));
+
+/** off_topic: a redirect to up to 3 objectives in the lesson's words, then the teacher. */
+export function offTopicReply(pkg) {
+  const offers = offersOf(objectivesOf(pkg));
+  return offers.length ? `That isn't part of today's lesson. I can help with: ${endSentence(listOf(offers))} Or ask your teacher.` : OFF_TOPIC;
+}
+
+function offTopic(pkg) {
+  const offers = offersOf(objectivesOf(pkg));
+  return { answer: offTopicReply(pkg), grounded: false, cites: [], note: NOT_EVIDENCE, refusal: "off_topic", kind: "off_topic", ...(offers.length ? { offers } : {}) };
 }
 
 /** Only a question and a few recent turns are accepted; everything else is ignored, never forwarded. */
@@ -342,9 +394,21 @@ function looksLikeAssessment(question) {
   return false;
 }
 
+const KINDS = new Set(["answer", "clarify", "about_helper", "off_topic", "assessment"]);
+
+/** The reply kind: the model's own when it sent the key (unknown = off_topic); otherwise read the legacy shape. */
+function kindOf(out) {
+  if (out && Object.prototype.hasOwnProperty.call(out, "kind")) return KINDS.has(out.kind) ? out.kind : "off_topic";
+  if (out?.refusal === "assessment") return "assessment";
+  if (out?.refusal) return "off_topic";
+  return "answer";
+}
+
 /**
  * @param {{pkg: ReturnType<typeof packageOf>, worker: {enabled: boolean, answerStudent: Function}, body: unknown}} input
- * @returns {Promise<{answer: string, grounded: boolean, cites: {id: string, label: string}[], note: string, basis?: "plan"|"explanation", refusal?: "off_topic"|"assessment"}>}
+ * @returns {Promise<{answer: string, grounded: boolean, cites: {id: string, label: string}[], note: string,
+ *   kind: "answer"|"clarify"|"about_helper"|"off_topic"|"assessment", basis?: "plan"|"explanation",
+ *   refusal?: "off_topic"|"assessment", offers?: {id: string, topic: string}[]}>}
  */
 export async function askStudent({ pkg, worker, body }) {
   const { question, history } = cleanQuestion(body);
@@ -355,13 +419,26 @@ export async function askStudent({ pkg, worker, body }) {
   } catch (e) {
     throw Object.assign(new StudentError(e?.code ?? "WORKER_FAILED", e instanceof Error ? e.message : String(e)), { upstream: true });
   }
-  // Safety net: the model may miss an assessment request; catch it here before the grounded path.
-  if (looksLikeAssessment(question)) {
-    return { answer: ASSESSMENT, grounded: false, cites: [], note: NOT_EVIDENCE, refusal: "assessment" };
-  }
+  const assessment = { answer: ASSESSMENT, grounded: false, cites: [], note: NOT_EVIDENCE, refusal: "assessment", kind: "assessment" };
+  // Safety net: the model may miss an assessment request; catch it here before any other kind.
+  if (looksLikeAssessment(question)) return assessment;
+  if (out?.refusal === "assessment") return assessment;
+  const kind = kindOf(out);
+  if (kind === "assessment") return assessment;
+  if (kind === "about_helper") return { answer: aboutHelperReply(pkg), grounded: false, cites: [], note: NOT_EVIDENCE, kind };
   const byId = new Map(pkg.items.map((i) => [i.id, i]));
-  const cites = out.cites.filter((id) => byId.has(id)).map((id) => ({ id, label: byId.get(id).label }));
-  if (out.refusal === "assessment") return { answer: ASSESSMENT, grounded: false, cites: [], note: NOT_EVIDENCE, refusal: "assessment" };
-  if (cites.length === 0) return { answer: OFF_TOPIC, grounded: false, cites: [], note: NOT_EVIDENCE, refusal: "off_topic" };
-  return { answer: out.answer, grounded: true, cites, note: NOT_EVIDENCE, basis: out.basis === "explanation" ? "explanation" : "plan" };
+  const unbracket = (c) => String(c).trim().replace(/^\[([^\[\]]+)\]$/, "$1").trim();
+  const raw = Array.isArray(out?.cites) ? out.cites : [];
+  if (kind === "clarify") {
+    // clarify carries no model words, only a choice of items; the worker's one bracket tolerance applies.
+    const ids = [...new Set(raw.map(unbracket))].filter((id) => byId.has(id));
+    const chosen = ids.slice(0, MAX_OFFERS).map((id) => byId.get(id));
+    if (chosen.length === 0) return offTopic(pkg);
+    return { answer: clarifyReply(chosen), grounded: false, cites: chosen.map((i) => ({ id: i.id, label: i.label })), note: NOT_EVIDENCE, kind, offers: offersOf(chosen) };
+  }
+  // The cite check for an answer is unchanged: exact ids the host handed out, or the redirect.
+  const ids = [...new Set(raw)].filter((id) => byId.has(id));
+  if (kind !== "answer" || ids.length === 0) return offTopic(pkg);
+  const cites = ids.map((id) => ({ id, label: byId.get(id).label }));
+  return { answer: out.answer, grounded: true, cites, note: NOT_EVIDENCE, basis: out.basis === "explanation" ? "explanation" : "plan", kind };
 }

@@ -1,6 +1,6 @@
 /**
  * ObjectivesStep.test.tsx — lane D (R3 UI, R4 UI): writing your own is always there while the objectives are
- * open, before any proposal too; "Propose from my sources" sits next to it; an explicit course ends on the
+ * open, before any proposal too; "Propose objectives from sources" sits next to it; an explicit course ends on the
  * teacher's own "Confirm objectives", held while a proposal waits. The host still decides every one of these.
  */
 import { render, screen, within } from "@testing-library/react";
@@ -56,11 +56,11 @@ describe("R3 UI: writing your own objective is always available while they are o
     expect(screen.getByLabelText("Write your own")).toBeInTheDocument();
   });
 
-  it("offers 'Propose from my sources' next to it when the tab holds a source, and says it matches your style", () => {
+  it("offers 'Propose objectives from sources' next to it when the tab holds a source, and says it matches your style", () => {
     const c = makeC([NOTES]);
     renderStep(view([row("added", "your own objective", "teacher")]), c);
     expect(screen.getByLabelText("Add one of your own")).toBeInTheDocument();
-    const btn = screen.getByRole("button", { name: "Propose from my sources" });
+    const btn = screen.getByRole("button", { name: "Propose objectives from sources" });
     expect(btn).toBeEnabled();
     expect(screen.getByText(/matches the style of the 1 objective you already have/)).toBeInTheDocument();
   });
@@ -134,6 +134,36 @@ describe("objectivesOffer (display only; the host still refuses)", () => {
 it("the propose button is held with its reason while an answer-derived proposal waits", () => {
   renderStep(view([row("proposed", "from your answer")]), makeC([NOTES]));
   const card = screen.getByRole("heading", { name: "From your sources" }).parentElement!;
-  expect(within(card).getByRole("button", { name: "Propose from my sources" })).toBeDisabled();
+  expect(within(card).getByRole("button", { name: "Propose objectives from sources" })).toBeDisabled();
   expect(within(card).getByText("Decide the 1 proposal waiting first.")).toBeInTheDocument();
 });
+
+describe("K1: propose again after adding a source", () => {
+  const MORE: HeldFile = { name: "Chlorophyll page", kind: "text", text: "Chlorophyll reflects green light.", chars: 33 };
+  it("after a source is added, a visible 'Propose objectives from sources' re-runs the proposal for the new source only", async () => {
+    // A first round read Leaf notes: one proposal accepted, one dropped. The teacher then adds a second source.
+    const rows = [row("accepted", "from material: Leaf notes"), row("dropped", "from material: Leaf notes")];
+    const c = { ...makeC([NOTES, MORE]), readKeys: new Set(["Leaf notes"]), recordedAs: {} } as unknown as StepProps["c"];
+    renderStep(view(rows), c);
+    expect(screen.getByText(/1 new source since Silicus last read/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Propose objectives from sources" }));
+    expect(c.actions.proposeFromSources).toHaveBeenCalledTimes(1);
+    expect(c.actions.proposeFromSources).toHaveBeenCalledWith([{ name: "Chlorophyll page", text: "Chlorophyll reflects green light." }]);
+  });
+
+  it("with nothing new to read, the button is not offered again (no duplicate of the accepted or dropped ones)", () => {
+    const rows = [row("accepted", "from material: Leaf notes"), row("dropped", "from material: Leaf notes")];
+    // Known read by its proposal label even when the tab never recorded the round (a fresh tab with the file re-attached).
+    renderStep(view(rows), makeC([NOTES]));
+    expect(screen.queryByRole("button", { name: "Propose objectives from sources" })).toBeNull();
+  });
+
+  it("a new web page counts as new; the page read before (by its address) does not", async () => {
+    const rows = [row("accepted", "from material: Grass - Wikipedia")];
+    const c = { ...makeC([]), readKeys: new Set(["https://en.wikipedia.org/wiki/Grass"]), recordedAs: { "https://en.wikipedia.org/wiki/Grass": "Grass - Wikipedia" } } as unknown as StepProps["c"];
+    renderStep(view(rows), c, ["https://en.wikipedia.org/wiki/Grass", "https://example.org/leaves"]);
+    await userEvent.click(screen.getByRole("button", { name: "Propose objectives from sources" }));
+    expect(c.actions.proposeFromSources).toHaveBeenCalledWith([{ url: "https://example.org/leaves" }]);
+  });
+});
+

@@ -17,7 +17,7 @@ import { ActionBar } from "./ActionBar";
 import { MarbleCredit } from "../../components/MarbleCredit/MarbleCredit";
 import { EvidenceSuggestions, NeighbourhoodView, NO_TOPICS_LINE, useNeighbourhood, useNoSkillMapTopics } from "../graph/SkillMap";
 import g from "../graph/Graph.module.css";
-import { DECIDED, objectivesOffer } from "./objectivesOffer";
+import { DECIDED, newSources, objectivesOffer } from "./objectivesOffer";
 import s from "../Studio.module.css";
 
 const provenance = (r: ProposalView): string => {
@@ -49,7 +49,11 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   const answers = view.intake.answers ?? {};
   const typedOutcomes = answerText(answers.learning_outcomes).trim() !== "" || Array.isArray(answers.learning_outcomes);
   const materials: MaterialInput[] = [...c.sources.map((h) => ({ name: h.name, text: h.text })), ...links.map((url) => ({ url }))];
-  const offer = objectivesOffer({ rows, mode: view.objectivesMode, confirmed, sourceCount: materials.length, hasOutcomes: typedOutcomes, workerConfigured: worker?.configured });
+  // K1: after the teacher adds a source, the round reads only the new ones; proposals already accepted or
+  // dropped came from the sources read before, so they are not proposed again.
+  const fresh = newSources(materials, rows, c.readKeys ?? new Set(), c.recordedAs ?? {});
+  const again = fresh.length > 0 && fresh.length < materials.length;
+  const offer = objectivesOffer({ rows, mode: view.objectivesMode, confirmed, sourceCount: fresh.length, hasOutcomes: typedOutcomes, workerConfigured: worker?.configured });
   const explicit = offer.mode === "explicit";
   const nothingYet = rows.length === 0 && !drafting;
 
@@ -61,6 +65,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   // primary is "Confirm objectives", so these stay secondary.
   const sourcesHint = materials.length === 0
     ? "Add a file, some text or a web page under Sources, and Silicus can propose objectives from it."
+    : again
+      ? `${plural(fresh.length, "new source")} since Silicus last read. It reads only ${fresh.length === 1 ? "that one" : "those"}; what you accepted or dropped stays as it is.`
     : written
       ? `Silicus reads ${plural(materials.length, "source")} and matches the style of the ${plural(mine.length, "objective")} you already have.`
       : `Silicus reads ${plural(materials.length, "source")} and proposes objectives. Once you have written some, it matches their style.`;
@@ -76,8 +82,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
                 variant={explicit || written ? "secondary" : "primary"}
                 data-primary={explicit || written ? undefined : "true"}
                 disabled={c.busy || offer.sources.heldBy !== null}
-                onClick={() => void c.actions.proposeFromSources(materials)}
-              >Propose from my sources</Button>
+                onClick={() => void c.actions.proposeFromSources(fresh)}
+              >Propose objectives from sources</Button>
               {offer.sources.heldBy ? <p className={s.provenance}>{offer.sources.heldBy}</p> : null}
             </div>
           ) : null}

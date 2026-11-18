@@ -28,3 +28,23 @@ export function askToProposeOnArrival(courseId: string): void {
 export function takeProposeOnArrival(courseId: string): boolean {
   return proposeOnArrival.delete(courseId);
 }
+
+/**
+ * K1: which of this tab's sources Silicus has already read for a course (a file's name, a link's address), so
+ * "Propose objectives from sources" after adding one sends only the new one, and the proposals already
+ * accepted or dropped are not proposed again. Held in the tab like the sources themselves; a reload forgets it.
+ */
+const readByCourse = new Map<string, Set<string>>();
+
+export function sourcesReadFor(courseId: string): ReadonlySet<string> {
+  return new Set(readByCourse.get(courseId) ?? []);
+}
+
+export function markSourcesRead(courseId: string, keys: readonly string[]): ReadonlySet<string> {
+  const next = new Set([...(readByCourse.get(courseId) ?? []), ...keys]);
+  readByCourse.set(courseId, next);
+  return new Set(next);
+}
+
+/** The tab's key for a source: a file's name or a link's address. */
+export const sourceKeyOf = (m: { name?: string; url?: string }): string => m.name ?? m.url ?? "";

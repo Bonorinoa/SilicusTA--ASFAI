@@ -516,6 +516,8 @@ export class CourseSession {
         course: String(answers?.course ?? this.meta.title ?? ""),
         outcomes,
         existing,
+        // N2 (L1): what the teacher dropped goes to the model as "do not propose these or close variants".
+        dropped: this.#droppedStatements(),
       });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
@@ -579,7 +581,7 @@ export class CourseSession {
     }
     if (!worker) return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };
     // Everything already on the table, in the teacher's latest wording, so nothing is offered twice (a dropped one too).
-    const existing = rows.flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean);
+    const existing = rows.filter((r) => r.status !== "dropped").flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean);
     let statements;
     try {
       statements = await worker.suggestObjectives({
@@ -587,6 +589,8 @@ export class CourseSession {
         course: String(answers?.course ?? this.meta.title ?? ""),
         outcomes,
         existing,
+        // N2 (L1): dropped ones are named as dropped, so the model avoids close variants too, not only repeats.
+        dropped: this.#droppedStatements(),
       });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
@@ -782,6 +786,11 @@ export class CourseSession {
   /** Ids the current plan's activities cite (any plan status): host metadata for the row, never gate state. */
   #citedByPlan() {
     return new Set((this.#gate.currentPlan()?.activities ?? []).flatMap((a) => a.objectiveIds));
+  }
+
+  /** N2: the statements of the proposals the teacher dropped, in the wording they were dropped in. */
+  #droppedStatements() {
+    return [...new Set(this.#rows().filter((r) => r.status === "dropped").flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean))];
   }
 
   #rows() {

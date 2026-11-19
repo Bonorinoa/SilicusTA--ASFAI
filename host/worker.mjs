@@ -734,6 +734,9 @@ function validateSpec(spec, objectives, context = [], { ages = null, lessonMinut
 const PLAN_DESIGN_ACTIVITY_KEYS = [
   "phase", "supportingPhase", "targetOperation", "operationDoneBy", "learnerFirst", "helpAfter",
   "aiStatus", "clamped", "noAiAlternative", "decisionAfterHelp", "channels", "session",
+  // N3: set only by a teacher's plan edit (plan-edit.mjs), never by validateSpec: who set the AI status, and
+  // the visible mark when the teacher's status goes against the stage rule. Model output never carries them.
+  "aiStatusBy", "teacherOverride",
 ];
 export function planDesignOf(spec) {
   if (!spec || typeof spec !== "object") return null;

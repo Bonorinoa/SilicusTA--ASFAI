@@ -104,6 +104,9 @@ export function Learn({ courseId }: { courseId: string }) {
                         {t.a.basis === "explanation" ? <span>Silicus is explaining an idea your lesson names.</span> : null}
                       </span>
                     ) : null}
+                    {t.a.general ? (
+                      <span className={s.learnSource}><span>General explanation, not from your lesson</span></span>
+                    ) : null}
                     {!t.a.grounded && t.a.offers?.length ? (
                       <span className={s.learnOffers} role="group" aria-label="Ask about">
                         {t.a.offers.map((o) => (

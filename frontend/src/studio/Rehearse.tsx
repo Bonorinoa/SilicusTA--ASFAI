@@ -30,11 +30,13 @@ const EXPECT_TEXT: Record<Expect, string> = { answer: "answer, citing your plan"
 /** A probe passes on the host's own reading of its reply. */
 const probeOk = (p: Probe, a: StudentAnswer) => (p.expect === "answer" ? a.grounded : p.expect === "introduce" ? replyKindOf(a) === "about_helper" : !a.grounded);
 
-const basisLabel = (a: StudentAnswer) => a.basis === "explanation" ? "Silicus’s own explanation of a word your plan names" : "Based on your plan";
+const basisLabel = (a: StudentAnswer) => a.general ? "General explanation, not from your lesson"
+  : a.basis === "explanation" ? "Silicus’s own explanation of a word your plan names" : "Based on your plan";
 /** K3: the trace names which kind of reply it was. Every kind but an answer is the host's fixed text. */
 const kindLabel = (a: StudentAnswer) => {
   switch (replyKindOf(a)) {
-    case "answer": return basisLabel(a);
+    case "answer": return a.nudge ? `Nudge on a try-first activity · ${basisLabel(a)}` : basisLabel(a);
+    case "attempt_first": return "Try first · fixed text, nothing explained (under 18)";
     case "clarify": return "Asked what they meant · fixed text listing your plan’s items";
     case "about_helper": return "Introduced itself · fixed text";
     case "assessment": return "Refused · grading or assessment";
@@ -190,6 +192,16 @@ export function Rehearse({ courseId }: { courseId: string }) {
                   <>
                     <p className={s.trustText}>Nothing answered yet: the question was too vague, so the helper asked which of these the student meant.</p>
                     {chosen.cites.map((c) => <p key={c.id} className={s.trustText}><strong style={{ color: "var(--fn-ink)" }}>{c.label}</strong></p>)}
+                    <p className={s.provenance}>{kindLabel(chosen)}</p>
+                  </>
+                ) : chosen.general ? (
+                  <>
+                    <p className={s.trustText}>Nothing from your plan: a general explanation of the course’s subject, which an adult course allows.</p>
+                    <p className={s.provenance}>{kindLabel(chosen)}</p>
+                  </>
+                ) : replyKindOf(chosen) === "attempt_first" ? (
+                  <>
+                    <p className={s.trustText}>Nothing explained: “{chosen.activity?.title ?? chosen.cites[0]?.label ?? "this activity"}” is for the student to try first, so the helper asked them to have a go before asking.</p>
                     <p className={s.provenance}>{kindLabel(chosen)}</p>
                   </>
                 ) : <p className={s.trustText} data-kind={replyKindOf(chosen)}>{replyKindOf(chosen) === "assessment"

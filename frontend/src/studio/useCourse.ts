@@ -188,6 +188,11 @@ export function useCourse(courseId: string) {
     decide: (intent: DecisionIntent) =>
       run(() => host.decide(courseId, { decisions: [intent], text: describeIntent(intent) }), "decide"),
     draftPlan: () => runAi("plan", () => host.proposePlan(courseId), "plan"),
+    /** N3: one Save of the plan editor. Resolves true when the host recorded it (the editor closes then). */
+    editPlan: (planId: string, edits: { path: string; value: unknown }[], text: string) => {
+      let ok = false;
+      return run(async () => { await host.editPlan(courseId, { planId, edits, text }); ok = true; }).then(() => ok);
+    },
     confirmPlan: () => run(() => host.confirmPlan(courseId, { text: "Confirm this lesson plan." }), "confirm"),
     publish: () => run(async () => {
       const r = await host.publish(courseId, { text: "Publish the course package." });

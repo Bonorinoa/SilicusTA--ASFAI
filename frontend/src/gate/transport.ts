@@ -327,6 +327,9 @@ export const host = {
   /** A student asks about the PUBLISHED package. Read-only: nothing is recorded. */
   askStudent: (id: string, b: { question: string; history?: { role: "student" | "assistant"; text: string }[] }) =>
     call<StudentAnswer>("POST", `/courses/${enc(id)}/student/ask`, b),
+  /** N3: the teacher edits the plan in place. Intents only: field paths and values; the host bounds and records them. */
+  editPlan: (id: string, b: { planId?: string; edits: { path: string; value: unknown }[]; text: string }) =>
+    call<{ plan: unknown; unchanged: boolean }>("POST", `/courses/${enc(id)}/plan/edit`, b),
   confirmPlan: (id: string, b: { text: string; planId?: string }) =>
     call("POST", `/courses/${enc(id)}/plan/confirm`, b),
   publish: (id: string, b: { text: string; note?: string }) =>

@@ -19,6 +19,9 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
   const { data: map } = useNeighbourhood(view.course.marbleAnchor);
   const { data: connected } = useNeighbourhood(view.course.marbleConnected);
   const minutes = shownPlan ? shownPlan.activities.reduce((n, a) => n + a.minutes, 0) : 0;
+  // N3: the plan is the teacher's to edit in place (not while looking back, drafting, or on an invalidated plan).
+  const editable = !looking && !drafting && !!plan && plan.status !== "invalidated" && shownPlan === plan;
+  const planEdits = (view.timeline ?? []).filter((e) => e.kind === "plan-edit");
 
   let bar: React.ReactNode = null;
   if (looking) {
@@ -93,6 +96,9 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
               invalidation={view.invalidation}
               rewordedSince={view.planWording?.objectives}
               ids="record"
+              onEdit={editable && plan ? (edits, text) => c.actions.editPlan(plan.id, edits, text) : undefined}
+              editBusy={c.busy}
+              aiEditable={!!view.course.ages}
             />
           </div>
         ) : (
@@ -103,6 +109,20 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
             </ol>
           </section>
         )}
+        {planEdits.length > 0 && !drafting ? (
+          <section className={s.card} aria-label="Your edits to the plan" data-plan-edits>
+            <h2 className={s.cardTitle}>Your edits</h2>
+            <ul className={s.editTrace}>
+              {planEdits.map((e) => (
+                <li key={e.id} data-plan-edit-line>
+                  {e.label}
+                  {e.detail ? <span className={s.editTraceNow}> · now “{e.detail}”</span> : null}
+                </li>
+              ))}
+            </ul>
+            <p className={s.provenance}>Silicus drafted the plan. Each change you saved is on the course record; a published version never changes.</p>
+          </section>
+        ) : null}
         {map ? <NeighbourhoodView data={map} /> : null}
         {bar}
       </div>

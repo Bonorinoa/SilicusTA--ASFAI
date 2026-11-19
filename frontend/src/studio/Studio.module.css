@@ -327,3 +327,7 @@ a.crumb:hover { color: var(--fn-ink); }
 @media (max-width: 390px) {
   .trust { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* N3: the plan's edit trace, one line per saved field. */
+.editTrace { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; font-size: var(--fn-text-sm, 0.875rem); }
+.editTraceNow { color: var(--fn-ink-soft); }

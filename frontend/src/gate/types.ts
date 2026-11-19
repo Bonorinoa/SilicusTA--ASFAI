@@ -100,6 +100,10 @@ export interface ActivityView {
   aiStatus?: "forbidden" | "permitted" | "required";
   /** H3 C2: the host clamped this activity's AI status; the UI shows the marker instead of matching note text. */
   clamped?: { from: "forbidden" | "permitted" | "required"; to: "forbidden" | "permitted" | "required"; reason: string };
+  /** N3: "teacher" when the teacher set this AI status by editing the plan. The host never re-clamps it. */
+  aiStatusBy?: "teacher";
+  /** N3: the teacher's AI status goes against the stage rule; the page says so. `rule` is what the rule allows. */
+  teacherOverride?: { aiStatus: "forbidden" | "permitted" | "required"; rule: "forbidden" | "permitted" | "required"; ages?: { min: number; max: number } };
   noAiAlternative?: string;
   decisionAfterHelp?: string;
   channels?: readonly ("speaking" | "drawing" | "writing" | "handling" | "discussion" | "diagram" | "enactment")[];
@@ -148,6 +152,8 @@ export interface LessonPlanView {
   proposedAt: number;
   /** Alignment suggestions the worker cited (host metadata; absent when it cited none). */
   citations?: readonly PlanCitationView[];
+  /** N3: this draft is the teacher's edit of a plan Silicus drafted. */
+  editedByTeacher?: boolean;
   /* ---- plan schema v2 (host metadata; absent on a v1 plan) ---- */
   sessions?: readonly PlanSessionView[];
   spacedReviews?: readonly SpacedReviewView[];
@@ -252,7 +258,7 @@ export interface PackageVersionView {
 
 /* --------------------------- Audit trail views ---------------------------- */
 
-export type TimelineEventKind = "checkpoint" | "decision" | "publish";
+export type TimelineEventKind = "checkpoint" | "decision" | "publish" | "plan-edit";
 
 /* --------------------- Invalidation & re-confirm views (D) ---------------- */
 

@@ -58,11 +58,12 @@ export function skippedLine(name: string, skipped: readonly Skipped[]): string |
 
 /**
  * The host's own sentence for a web page that could not be read (the raw status, K1), for a collapsed "Details".
- * Only for URL_UNREACHABLE: for every other skip the host's sentence still never reaches the screen (R6).
+ * Only for URL_UNREACHABLE and URL_REFUSED (N1): for every other skip the host's sentence still never reaches the screen (R6).
  */
 export function skippedDetail(name: string, skipped: readonly Skipped[]): string | null {
   const hit = skipped.find((x) => x.name === name);
-  return hit?.code === "URL_UNREACHABLE" && hit.reason ? hit.reason : null;
+  // N1: a refused address gets the same closed Details (the host names the address it would not open).
+  return (hit?.code === "URL_UNREACHABLE" || hit?.code === "URL_REFUSED") && hit.reason ? hit.reason : null;
 }
 
 /** A name compared without case or extension: "Lesson Notes.PDF" and "lesson notes.docx" are the same source. */

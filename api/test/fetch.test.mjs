@@ -240,3 +240,17 @@ test("the route file exports a Web-standard POST bound to real globals (503 with
     if (saved !== undefined) process.env.SILICUS_DEMO_PASSCODE = saved;
   }
 });
+
+/* --------------------------- N1: the shared address check --------------------------- */
+
+test("N1: /api/fetch shares the host's address check: 192.0.66.161 (science.nasa.gov) is read, 169.254.169.254 is refused", async () => {
+  const NASA = "https://science.nasa.gov/moon/moon-phases/";
+  const META = "https://meta.example/latest";
+  const { POST, asked } = handler({ table: { [NASA]: { body: PAGE } }, dns: { "science.nasa.gov": "192.0.66.161", "meta.example": "169.254.169.254" } });
+  const ok = await read(await POST(post(FETCH_URL, { url: NASA })));
+  assert.equal(ok.status, 200, ok.text);
+  const no = await read(await POST(post(FETCH_URL, { url: META })));
+  assert.equal(no.status, 422, no.text);
+  assert.equal(no.json.error.code, "URL_REFUSED");
+  assert.deepEqual(asked, [NASA], "the refused address was never requested");
+});

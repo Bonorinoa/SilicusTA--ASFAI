@@ -30,16 +30,35 @@ export { MaterialError, LIMITS, digestText, normalizeText, htmlToText, youtubeVi
 
 /* ------------------------------ address policy ------------------------------ */
 
+/**
+ * N1 (L1 finding 2): the IPv4 ranges a public fetch refuses, exactly as the IANA IPv4 Special-Purpose Address
+ * Registry (RFC 6890 and updates) lists them as not globally reachable, plus multicast and limited broadcast.
+ * Whole /16s are NOT closed: science.nasa.gov is 192.0.66.161, public, inside 192.0.0.0/16 but in no special range.
+ * (AS112 192.31.196.0/24, 192.175.48.0/24 and AMT 192.52.193.0/24 are globally reachable in the registry: allowed.)
+ */
+const V4_REFUSED = [
+  ["0.0.0.0", 8], // "this network"
+  ["10.0.0.0", 8], // private
+  ["100.64.0.0", 10], // shared address space (CGNAT)
+  ["127.0.0.0", 8], // loopback
+  ["169.254.0.0", 16], // link-local (cloud metadata lives here)
+  ["172.16.0.0", 12], // private
+  ["192.0.0.0", 24], // IETF protocol assignments
+  ["192.0.2.0", 24], // documentation TEST-NET-1
+  ["192.88.99.0", 24], // deprecated 6to4 relay anycast
+  ["192.168.0.0", 16], // private
+  ["198.18.0.0", 15], // benchmarking
+  ["198.51.100.0", 24], // documentation TEST-NET-2
+  ["203.0.113.0", 24], // documentation TEST-NET-3
+  ["224.0.0.0", 4], // multicast
+  ["240.0.0.0", 4], // reserved, and 255.255.255.255 limited broadcast
+];
+const v4Int = (ip) => ip.split(".").reduce((n, o) => n * 256 + Number(o), 0);
+const V4_MASKS = V4_REFUSED.map(([base, bits]) => [v4Int(base), 2 ** (32 - bits)]);
+
 function v4Private(ip) {
-  const [a, b] = ip.split(".").map(Number);
-  return (
-    a === 0 || a === 10 || a === 127 || a >= 224 ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 192 && b === 0)
-  );
+  const n = v4Int(ip);
+  return V4_MASKS.some(([base, size]) => n >= base && n < base + size);
 }
 
 /** The eight 16-bit groups of an IPv6 address, or null if it does not parse. Handles :: and a dotted tail. */
@@ -76,7 +95,10 @@ export function isPrivateAddress(ip) {
     const g = parseV6(ip);
     if (!g) return true;
     const inGlobal = g[0] >= 0x2000 && g[0] <= 0x3fff;
-    const transition = g[0] === 0x2002 || (g[0] === 0x2001 && (g[1] === 0 || g[1] === 0x0db8));
+    // Inside 2000::/3, the IANA IPv6 special-purpose ranges that are not globally reachable or are not a real
+    // host: 2001::/23 (IETF protocol assignments: Teredo, benchmarking, ORCHID), 2001:db8::/32 and 3fff::/20
+    // (documentation), 2002::/16 (6to4).
+    const transition = g[0] === 0x2002 || (g[0] === 0x2001 && (g[1] < 0x0200 || g[1] === 0x0db8)) || (g[0] === 0x3fff && g[1] < 0x1000);
     return !inGlobal || transition;
   }
   return true;
@@ -108,9 +130,10 @@ export async function assertPublicUrl(raw, { lookupImpl = dnsLookup } = {}) {
     throw new MaterialError("URL_UNREACHABLE", "that address could not be found");
   }
   const list = Array.isArray(addrs) ? addrs : [addrs];
-  if (list.length === 0 || list.some((a) => isPrivateAddress(a.address))) {
-    throw new MaterialError("URL_REFUSED", "that address is not a public one");
-  }
+  if (list.length === 0) throw new MaterialError("URL_REFUSED", "that address is not a public one");
+  // N1: the reason names the address, for the closed "Details" under the skipped row.
+  const bad = list.find((a) => isPrivateAddress(a.address));
+  if (bad) throw new MaterialError("URL_REFUSED", `${host} resolves to ${bad.address}, which is not a public address`);
   return u;
 }
 

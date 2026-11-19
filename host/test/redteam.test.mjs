@@ -160,7 +160,8 @@ test("worker: a model that never answers is a refusal within the timeout, not a 
   const url = await hangingServer();
   const w = new PlanWorker({ url, model: "m", timeoutMs: 150 });
   const t0 = Date.now();
-  await assert.rejects(w.draft({ objectives: [{ id: "urn:uuid:a", statement: "s" }] }), { code: "WORKER_UNREACHABLE" });
+  // N1: a passed deadline is its own code, WORKER_TIMEOUT (the studio words it "That took too long."), not "unreachable".
+  await assert.rejects(w.draft({ objectives: [{ id: "urn:uuid:a", statement: "s" }] }), { code: "WORKER_TIMEOUT" });
   assert.ok(Date.now() - t0 < 3000);
 });
 

@@ -11,6 +11,7 @@ import { TopBar, href } from "./StudioApp";
 import { Badge, Button, Skeleton, ui } from "./ui";
 import { useWorker } from "./useCourse";
 import s from "./Studio.module.css";
+import { Elapsed } from "../components/WaitLines/Elapsed";
 
 interface Turn { q: string; a: StudentAnswer | null; error?: Explained }
 type Expect = "answer" | "refuse" | "introduce";
@@ -134,7 +135,7 @@ export function Rehearse({ courseId }: { courseId: string }) {
                   ) : null}
                 </div>
               ))}
-              {asking ? <div className={s.typing} aria-label="Silicus is answering"><span /><span /><span /></div> : null}
+              {asking ? <div className={s.typing} aria-label="Silicus is answering"><span /><span /><span /><Elapsed /></div> : null}
               <div ref={end} />
             </div>
             <form className={s.composer} onSubmit={(e) => { e.preventDefault(); void send(); }}>

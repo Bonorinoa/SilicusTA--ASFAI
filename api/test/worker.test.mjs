@@ -384,3 +384,19 @@ test("the route file exports a Web-standard POST bound to real globals (503 with
     if (saved !== undefined) process.env.SILICUS_DEMO_PASSCODE = saved;
   }
 });
+
+/* ------------------------------ N1: per-task reasoning ------------------------------ */
+
+test("N1: the server sets reasoning per task NAME (rank, answer: off; others: the configured default); a client reasoning is still dropped", async () => {
+  const { buildUpstreamBody, workerSettings } = await import("../_lib/worker.mjs");
+  const settings = workerSettings({ OPENROUTER_API_KEY: "k", SILICUS_WORKER_MODEL: "m", SILICUS_DEMO_PASSCODE: "p" });
+  const msg = [{ role: "user", content: "x" }];
+  const of = (extra) => buildUpstreamBody({ messages: msg, ...extra }, settings).body;
+  assert.deepEqual(of({ task: "rank" }).reasoning, { enabled: false });
+  assert.deepEqual(of({ task: "answer" }).reasoning, { enabled: false });
+  assert.deepEqual(of({ task: "plan" }).reasoning, { effort: "low" });
+  assert.deepEqual(of({ task: "objectives" }).reasoning, { effort: "low" });
+  assert.deepEqual(of({ task: "bogus" }).reasoning, { effort: "low" });
+  assert.deepEqual(of({ task: "plan", reasoning: { effort: "high" } }).reasoning, { effort: "low" }, "the client cannot set reasoning");
+  assert.equal(of({ task: "rank" }).task, undefined, "the task name is not forwarded upstream");
+});

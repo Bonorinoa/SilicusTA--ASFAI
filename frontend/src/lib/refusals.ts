@@ -53,6 +53,13 @@ export const REFUSALS: Readonly<Record<string, RefusalText>> = {
     saved: NOTHING_ADDED,
     next: "Try again in a minute. If it keeps happening, open AI status at the top.",
   },
+  // N1: a task's own deadline passed (the helper's 20 s, the map's 25 s, or the configured one).
+  WORKER_TIMEOUT: {
+    what: "That took too long.",
+    saved: NOTHING_ADDED,
+    next: "Try again. If it keeps happening, open AI status at the top.",
+    nextFor: { ask: "Ask again." },
+  },
   WORKER_BAD_OUTPUT: {
     what: "The model answered, but its answer couldn’t be used.",
     saved: NOTHING_ADDED,

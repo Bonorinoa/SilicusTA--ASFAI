@@ -16,7 +16,7 @@
  */
 import { EVIDENCE_KINDS } from "../confirm-gate/confirm-gate.mjs";
 import { unknownRefs } from "./knowledge.mjs";
-import { normalizeReasoning, reasoningBody } from "./worker-config.mjs";
+import { normalizeReasoning, reasoningBody, taskReasoning, taskTimeoutMs, TASKS } from "./worker-config.mjs";
 import { lengthNotes, lengthPromptLines, MAX_ACTIVITIES, TEXT_LIMITS } from "./lesson-length.mjs";
 import { stageForAges } from "./ages.mjs";
 
@@ -68,6 +68,7 @@ export class PlanWorker {
   #provider;
   #configHint;
   #reasoning;
+  #sendTask;
 
   /**
    * `zdr` asks the router to use ONLY zero-data-retention endpoints (OpenRouter's
@@ -77,13 +78,14 @@ export class PlanWorker {
    *
    * @param {{url?: string|null, model?: string|null, apiKey?: string|null, fetchImpl?: typeof fetch,
    *          zdr?: boolean, maxTokens?: number, timeoutMs?: number, provider?: "openai"|"anthropic",
-   *          reasoning?: "low"|"medium"|"high"|"off"|"model-default"}} [config]
+   *          reasoning?: "low"|"medium"|"high"|"off"|"model-default", sendTask?: boolean,
+   *          configHint?: string, log?: (line: string) => void}} [config]
    *
    * `provider` is the wire format: "openai" (chat completions: OpenRouter, vLLM, Ollama, ...) or
    * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
    * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", configHint = "", log = (line) => console.info(line) } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", sendTask = false, configHint = "", log = (line) => console.info(line) } = {}) {
     this.#log = typeof log === "function" ? log : () => {};
     // How to configure this worker is the TRANSPORT's business (the Node host passes its env-variable hint); this module
     // is shared with the browser bundle, so it names no server setting itself.
@@ -101,6 +103,8 @@ export class PlanWorker {
     this.#fetch = fetchImpl ?? fetch;
     this.#zdr = zdr === true;
     this.#reasoning = normalizeReasoning(reasoning);
+    // N1: true only for the site proxy (/api/worker), which reads the task NAME and decides reasoning itself.
+    this.#sendTask = sendTask === true;
     this.#maxTokens = Math.min(Number.isInteger(maxTokens) && maxTokens > 0 ? maxTokens : DEFAULT_MAX_TOKENS, MAX_TOKENS_CEILING);
     // A model that never answers must not hold a course hostage: every request to a course runs behind
     // one lock, so an unbounded wait here would freeze the whole course. The deadline covers the body too.
@@ -158,7 +162,7 @@ export class PlanWorker {
       throw new WorkerError("NO_CONFIRMED_OBJECTIVES", "there are no confirmed objectives to draft from");
     }
 
-    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context, ages, anchorPrereqs, lessonMinutes }));
+    const spec = await this.#json(buildPrompt({ objectives, topic, materials, course, context, ages, anchorPrereqs, lessonMinutes }), null, "plan");
     return validateSpec(spec, objectives, context, { ages, lessonMinutes });
   }
 
@@ -166,16 +170,19 @@ export class PlanWorker {
    * One model call: a single user prompt in, one parsed JSON value out. Every failure is a
    * WorkerError with a code. What comes back is UNTRUSTED and the caller validates it.
    */
-  async #json(prompt, meta = null) {
+  async #json(prompt, meta = null, task = null) {
     const anthropic = this.#provider === "anthropic";
+    const known = TASKS.includes(task) ? task : null;
     const body = {
       model: this.#model,
       messages: [{ role: "user", content: prompt }],
       max_tokens: this.#maxTokens,
       ...(this.#zdr ? { provider: { zdr: true, data_collection: "deny" } } : {}),
     };
-    const reasoning = anthropic ? undefined : reasoningBody(this.#reasoning);
+    // N1: per-task reasoning (rank and answer: off). On the site the server applies the same rule from `task`.
+    const reasoning = anthropic ? undefined : reasoningBody(taskReasoning(known, this.#reasoning));
     if (reasoning) body.reasoning = reasoning;
+    if (this.#sendTask && known) body.task = known;
     const headers = { "content-type": "application/json" };
     if (anthropic) {
       headers["anthropic-version"] = "2023-06-01";
@@ -184,11 +191,15 @@ export class PlanWorker {
       headers.authorization = `Bearer ${this.#apiKey}`;
     }
 
-    const signal = AbortSignal.timeout(this.#timeoutMs);
+    // N1: a task's own deadline (rank 25 s, answer 20 s). The browser's site fetch starts its clock only after the
+    // passcode is in hand, so it is told the deadline too (silicusDeadlineMs; an unknown init key elsewhere).
+    const deadlineMs = taskTimeoutMs(known, this.#timeoutMs);
+    const signal = AbortSignal.timeout(deadlineMs);
     let res;
     try {
-      res = await this.#fetch(this.#url, { method: "POST", headers, body: JSON.stringify(body), signal });
+      res = await this.#fetch(this.#url, { method: "POST", headers, body: JSON.stringify(body), signal, ...(this.#sendTask ? { silicusDeadlineMs: deadlineMs } : {}) });
     } catch (e) {
+      if (signal.aborted && !(e instanceof WorkerError)) throw new WorkerError("WORKER_TIMEOUT", "the drafting worker did not answer in time");
       // A fetchImpl that refuses with its own WorkerError (the browser host's passcode-carrying fetch maps the
       // site function's "no credits" / "busy" / "not set up" to one) keeps its code and words.
       if (e instanceof WorkerError) throw e;
@@ -200,7 +211,7 @@ export class PlanWorker {
     try {
       payload = await res.json();
     } catch (e) {
-      if (signal.aborted) throw new WorkerError("WORKER_UNREACHABLE", "the drafting worker did not answer in time");
+      if (signal.aborted) throw new WorkerError("WORKER_TIMEOUT", "the drafting worker did not answer in time");
       throw new WorkerError("WORKER_BAD_OUTPUT", "the worker's response was not JSON");
     }
     // OpenAI wire: choices[0].message.content. Anthropic wire: content is a list of typed blocks.
@@ -268,7 +279,7 @@ export class PlanWorker {
     this.#requireEnabled();
     if (materials.length === 0) throw new WorkerError("NO_MATERIALS", "there is no material to propose objectives from");
     const onCourse = (Array.isArray(existing) ? existing : []).map((o) => ({ statement: o?.statement, by: o?.by }));
-    const raw = await this.#json(buildObjectivesPrompt({ materials, topic, course, outcomes, existing: onCourse }));
+    const raw = await this.#json(buildObjectivesPrompt({ materials, topic, course, outcomes, existing: onCourse }), null, "objectives");
     return validateObjectives(raw, materials, [...outcomes, ...onCourse.map((o) => o.statement)]);
   }
 
@@ -283,7 +294,7 @@ export class PlanWorker {
   async suggestObjectives({ topic = "", course = "", outcomes = [], existing = [] } = {}) {
     this.#requireEnabled();
     const all = [...outcomes, ...existing];
-    const raw = await this.#json(buildSuggestPrompt({ topic, course, outcomes, existing: all }));
+    const raw = await this.#json(buildSuggestPrompt({ topic, course, outcomes, existing: all }), null, "suggest");
     return validateSuggestions(raw, all);
   }
 
@@ -298,7 +309,7 @@ export class PlanWorker {
   async rankMap({ title = "", goal = "", ages, topics = [] } = {}) {
     this.#requireEnabled();
     const meta = {};
-    const raw = await this.#json(buildRankPrompt({ title, goal, ages, topics }), meta);
+    const raw = await this.#json(buildRankPrompt({ title, goal, ages, topics }), meta, "rank");
     return { raw, usage: meta.usage ?? null };
   }
 
@@ -313,7 +324,7 @@ export class PlanWorker {
    */
   async answerStudent({ question = "", history = [], title = "", items = [], ages = "" } = {}) {
     this.#requireEnabled();
-    const raw = await this.#json(buildStudentPrompt({ question, history, title, items, ages }));
+    const raw = await this.#json(buildStudentPrompt({ question, history, title, items, ages }), null, "answer");
     return validateAnswer(raw, items);
   }
 }

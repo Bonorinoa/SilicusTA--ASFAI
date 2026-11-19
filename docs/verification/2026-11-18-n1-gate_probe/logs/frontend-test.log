@@ -1,0 +1,144 @@
+
+> silicus-ta-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 /private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend
+
+ ✓ src/studio/versionDiff.test.ts (32 tests) 5ms
+ ✓ src/components/PlanCard/PlanCard.design.test.tsx (10 tests) 239ms
+ ✓ src/components/AiWaiting/AiWaiting.test.tsx (51 tests) 431ms
+ ✓ src/materials/extract.test.ts (13 tests) 597ms
+   ✓ PDF > reads the text layer of the hand-written fixture  468ms
+ ✓ src/components/PlanCard/PlanCard.test.tsx (30 tests) 463ms
+stderr | src/studio/graph/SkillMap.test.tsx > G2c pre-fill: a suggestion fills the teacher's own field and sends nothing > a click changes the field; the record gains nothing until the teacher submits; then it is an ordinary add
+In HTML, <p> cannot be a descendant of <p>.
+This will cause a hydration error.
+
+  <ObjectivesStep c={{view:null, ...}} view={{courseId:"...", ...}} worker={{...}} looking={false} onLook={function spy} ...>
+    <div className="_doc_12a83a">
+      <div className="_docInner_...">
+        <header>
+        <form>
+        <EvidenceSuggestions>
+        <section>
+>       <p className="_provenance_12a83a" data-map-context={true}>
+          <strong>
+          <MarbleCredit className="_credit_b7...">
+>           <p className="_credit_b79af1" data-marble-credit="true">
+        ...
+
+<p> cannot contain a nested <p>.
+See this log for the ancestor stack trace.
+
+ ✓ src/components/ActivityRail/ActivityRail.test.tsx (36 tests) 591ms
+ ✓ src/studio/steps/ObjectivesStep.test.tsx (20 tests) 459ms
+ ✓ src/studio/graph/SkillMap.test.tsx (8 tests) 294ms
+stdout | src/browser/browserHost.test.ts > the site's refusals become words a teacher can act on > an OpenAI length finish is a 502 WORKER_TRUNCATED refusal in the browser host
+worker reply: truncated finish=length output_chars=15 completion_tokens=not reported reasoning_tokens=not reported max_tokens=16000
+
+ ✓ src/browser/browserHost.test.ts (28 tests) 848ms
+ ✓ src/studio/graph/layout.test.ts (12 tests) 20ms
+ ✓ src/studio/VersionCompare.test.tsx (16 tests) 310ms
+ ✓ src/landing/Landing.test.tsx (27 tests) 382ms
+ ✓ src/components/DecisionCard/DecisionCard.test.tsx (21 tests) 1373ms
+   ✓ DecisionCard, bound to a real ConfirmGate > the CONFIRM bar mirrors the gate's objectives auto-confirmation  315ms
+ ✓ src/studio/useCourse.waiting.test.tsx (3 tests) 265ms
+ ✓ src/components/FirstRunTour/FirstRunTour.test.tsx (13 tests) 465ms
+ ✓ src/components/PublishCard/PublishCard.test.tsx (8 tests) 285ms
+ ✓ src/components/DecisionCard/DecisionCard.reword.test.tsx (7 tests) 695ms
+ ✓ src/gate/publish-flow.test.ts (7 tests) 9ms
+ ✓ src/gate/harness.test.ts (8 tests) 8ms
+ ✓ src/studio/StepStatus.test.tsx (10 tests) 70ms
+ ✓ src/browser/site.deadline.test.ts (6 tests) 514ms
+ ✓ src/components/PlanCard/PlanCard.edit.test.tsx (7 tests) 356ms
+ ✓ src/studio/CourseStudio.live-region.test.tsx (2 tests) 912ms
+   ✓ D1: the step status line is the only polite live region > has exactly one polite live region at every step, with no notice up  605ms
+   ✓ D2: the transition sentence is spoken once and cleared by the next act > shows the transition after the brief is confirmed, then clears it on the next act, never to return  307ms
+ ✓ src/studio/steps/BriefStep.test.tsx (11 tests) 2337ms
+   ✓ A1: the brief is one decision, not three > with complete unsaved answers the single primary is 'Confirm the brief', wired to confirmTheBrief  399ms
+   ✓ E1: the brief chain holds the form while it is in flight > disables the topic field while the chain is held open, so no typed text is lost  363ms
+   ✓ E1: the brief chain holds the form while it is in flight > freezes the other controls too while busy: the checkbox and the primary are disabled  353ms
+stderr | src/browser/BrowserMode.test.tsx > browser mode > the studio home says this browser keeps the record, never the developer host text; delete-all asks first
+Error: Not implemented: window.scrollTo
+    at module.exports (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at /private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/browser/Window.js:960:7
+    at on (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/src/studio/StudioApp.tsx:28:94)
+    at callTheUserObjectsOperation (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at EventTargetImpl._dispatch (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at fireAnEvent (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/helpers/events.js:18:36)
+    at SessionHistory._fireEvents (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/window/SessionHistory.js:148:7)
+    at fireEvents (/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-tree/frontend/node_modules/jsdom/lib/jsdom/living/window/SessionHistory.js:133:35) [90mundefined[39m
+
+ ✓ src/workbench/Workbench.test.tsx (7 tests) 494ms
+ ✓ src/studio/passcode-cancel.test.tsx (1 test) 143ms
+ ✓ src/browser/BrowserMode.test.tsx (4 tests) 664ms
+   ✓ browser mode > the studio home says this browser keeps the record, never the developer host text; delete-all asks first  458ms
+ ✓ src/lib/refusals.test.ts (29 tests) 11ms
+ ✓ src/studio/Learn.test.tsx (6 tests) 797ms
+ ✓ src/studio/useCourse.status.test.ts (6 tests) 6ms
+ ✓ src/studio/StudentKinds.test.tsx (4 tests) 882ms
+   ✓ K3 · Rehearse names the kind in the trace > clarify, about_helper and the redirect each get their own label and trace  376ms
+ ✓ src/components/TimelineCard/TimelineCard.test.tsx (5 tests) 179ms
+ ✓ src/studio/CourseStudio.auto-advance.test.tsx (1 test) 768ms
+   ✓ the studio's one status line and the announced auto-advance > announces 'Objectives confirmed. On to the plan.' once and moves focus to the plan heading  767ms
+ ✓ src/studio/PasscodeNote.test.tsx (6 tests) 262ms
+ ✓ src/browser/passcode.seam.test.ts (4 tests) 6ms
+ ✓ src/components/PlanCard/design.test.ts (8 tests) 6ms
+ ✓ src/components/ActivityRail/host-contract.test.ts (3 tests) 15ms
+ ✓ src/studio/RecordCard.test.tsx (6 tests) 186ms
+ ✓ src/lib/fetchFailure.test.ts (5 tests) 2ms
+ ✓ src/live/reasonText.test.ts (16 tests) 11ms
+ ✓ src/studio/useCourse.brief-chain.test.tsx (4 tests) 166ms
+ ✓ src/studio/sourceUse.test.ts (10 tests) 38ms
+ ✓ src/live/handout.test.ts (5 tests) 4ms
+ ✓ src/gate/reword-flow.test.ts (2 tests) 20ms
+ ✓ src/studio/CourseStudio.decisions.test.tsx (7 tests) 23ms
+ ✓ src/gate/pin.test.ts (8 tests) 3ms
+ ✓ src/studio/N1.waits.test.tsx (4 tests) 88ms
+ ✓ src/studio/StudentAge.test.tsx (2 tests) 1423ms
+   ✓ N4 · student preview (Learn) > attempt_first reads as the host wrote it; a general answer carries the plain label; a nudge cites the activity  666ms
+   ✓ N4 · Rehearse names the kind in the trace > attempt_first, the general explanation and the nudge each get their own label and trace  757ms
+ ✓ src/studio/Learners.bands.test.tsx (4 tests) 27ms
+ ✓ src/studio/K5.polish.test.tsx (5 tests) 273ms
+ ✓ src/browser/BrowserRecord.test.tsx (3 tests) 95ms
+ ✓ src/studio/audience.test.ts (6 tests) 15ms
+ ✓ src/studio/Rehearse.test.tsx (3 tests) 1197ms
+   ✓ G4: cancelling the passcode in Rehearse keeps the question and returns focus > 'Not now' keeps the typed question and focuses the Ask button  648ms
+ ✓ src/design/tokens.test.ts (4 tests) 10ms
+ ✓ src/live/suggest.test.ts (12 tests) 7ms
+ ✓ src/studio/aiStatus.test.ts (9 tests) 4ms
+ ✓ src/studio/SourcesPanel.test.tsx (4 tests) 152ms
+ ✓ src/studio/RevisionNote.test.tsx (5 tests) 108ms
+ ✓ src/materials/session.test.ts (6 tests) 3ms
+ ✓ src/gate/crypto-shim.test.ts (3 tests) 6ms
+ ✓ src/studio/mapLines.test.ts (2 tests) 11ms
+ ✓ src/browser/site.dialog-failure.test.ts (1 test) 3ms
+ ✓ src/browser/PasscodeDialog.focus.test.tsx (1 test) 91ms
+ ✓ src/studio/versionDiff.reword.test.ts (1 test) 10ms
+ ✓ src/studio/CourseStudio.back.test.tsx (2 tests) 460ms
+   ✓ Back in the course steps > on the Objectives step, Back shows the Brief; on the Brief there is no Back  456ms
+ ✓ src/lib/retired-words.test.ts (3 tests) 2ms
+ ✓ src/studio/layout-copy.test.ts (2 tests) 2ms
+ ✓ src/studio/Refusal.test.tsx (1 test) 40ms
+ ✓ src/studio/sourceCount.test.ts (2 tests) 10ms
+ ✓ src/studio/links.n2.test.ts (2 tests) 2ms
+ ✓ src/studio/TopBar.landing.test.tsx (2 tests) 100ms
+ ✓ src/studio/NewCourseWizard.test.tsx (12 tests) 7497ms
+   ✓ NewCourseWizard > first run opens on the welcome, and nothing is recorded while moving through the steps  882ms
+   ✓ NewCourseWizard > Back at the first step is disabled: it goes to the previous step, never jumps to the welcome  570ms
+   ✓ NewCourseWizard > the review's confirm sends create (no materials), answers, files, outline — in that order — and lands on the course  1195ms
+   ✓ NewCourseWizard > N1: typed objectives with no sources become proposals: after the outline, the wizard asks the host to derive them  1230ms
+   ✓ NewCourseWizard > when the host asks questions the wizard did not show, it records the answers it has and confirms nothing  894ms
+   ✓ NewCourseWizard > objectives need either written ones or sources to propose from  435ms
+   ✓ NewCourseWizard step 1 (G2b): learners, skill map, consequences > M1 condensed: one quiet consequence line (AI rule · map topics that fit · one N-minute plan); no histogram strip  1221ms
+   ✓ NewCourseWizard step 1 (K2): How long is the lesson? > five chips, 45 by default; picking 60 shows on the review and is sent as lessonMinutes  482ms
+   ✓ NewCourseWizard step 2 (M1): the skill map > nothing is pre-anchored; anchor + connect from another thread; the map source is on by default; confirm sends both pointers  429ms
+
+ Test Files  72 passed (72)
+      Tests  634 passed (634)
+   Start at  20:13:15
+   Duration  9.34s (transform 2.70s, setup 6.95s, collect 9.30s, tests 28.25s, environment 18.87s, prepare 2.93s)
+

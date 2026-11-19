@@ -1,0 +1,16 @@
+BASELINE ['test/n1-address-policy.test.mjs'] -> exit 0, tests 2, fail 0
+KILLED   | N1 widen /24 back to /16 | exit 1, 2/2 failed | e.g. ['address table: exact special-purpose ranges, both directions', 'a name resolving to 192.0.66.161 is allowed; to 169.254.169.254 it is refused, and the reason names the address']
+BASELINE ['test/n4-student-age.test.mjs'] -> exit 0, tests 8, fail 0
+KILLED   | N4 age switch: every course is adult | exit 1, 4/8 failed | e.g. ["N4 1. attempt-first: forbidden AI or a learner-first try; mode from the course's recorded ages first", "N4 2. under 18: an answer resting on an attempt-first activity becomes the host's attempt_first reply"]
+KILLED   | N4 age switch: no course is adult | exit 1, 4/8 failed | e.g. ["N4 1. attempt-first: forbidden AI or a learner-first try; mode from the course's recorded ages first", "N4 4. 18+: a general explanation on the course's subject, labelled, with no lesson cite"]
+KILLED   | N4 age switch: threshold 18 -> 16 | exit 1, 1/8 failed | e.g. ["N4 1. attempt-first: forbidden AI or a learner-first try; mode from the course's recorded ages first"]
+KILLED   | N4 age switch: no recorded ages counts as adult | exit 1, 1/8 failed | e.g. ["N4 1. attempt-first: forbidden AI or a learner-first try; mode from the course's recorded ages first"]
+KILLED   | N4 under-18 attempt-first branch removed | exit 1, 2/8 failed | e.g. ["N4 2. under 18: an answer resting on an attempt-first activity becomes the host's attempt_first reply", "N4 8. the route keys the mode on the course's RECORDED ages (G2a) and reads the sealed plan's design (aiStatus)"]
+BASELINE ['test/assessment-net.test.mjs', 'test/student.test.mjs', 'test/redteam.test.mjs', 'test/student-kinds.test.mjs', 'test/n4-student-age.test.mjs'] -> exit 0, tests 56, fail 0
+KILLED   | N4 assessment net off (looksLikeAssessment -> false) | exit 1, 8/56 failed | e.g. ['G1: the net refuses cold phrasings that ask for a verdict on the asker', 'G3: normalisation removes invisible characters, folds apostrophes and homoglyphs, and applies NFKC']
+KILLED   | N4 assessment net runs after the adult general branch (order swapped) | exit 1, 1/56 failed | e.g. ['N4 6. every age: the assessment refusal and its net win over every new path']
+BASELINE ['test/n4-student-age.test.mjs', 'test/student.test.mjs', 'test/student-kinds.test.mjs', 'test/redteam.test.mjs'] -> exit 0, tests 50, fail 0
+KILLED   | N4 under-18 cite check loosened (unknown cite accepted) | exit 1, 1/50 failed | e.g. ['an answer still needs a valid cite: kind answer with no valid cite is the redirect']
+BASELINE ['test/n3-plan-edit.test.mjs'] -> exit 0, tests 7, fail 0
+KILLED   | N3 re-clamp a teacher's AI status to the stage rule | exit 1, 1/7 failed | e.g. ["N3: a teacher's AI status against the stage rule is kept, marked and recorded; never re-clamped, also after a restart"]
+KILLED   | N3 teacher override mark dropped | exit 1, 1/7 failed | e.g. ["N3: a teacher's AI status against the stage rule is kept, marked and recorded; never re-clamped, also after a restart"]

@@ -1,0 +1,28 @@
+== A. Node host request bodies (configured reasoning = low)
+PASS  A rank: upstream reasoning = {"enabled":false} — got {"enabled":false} task=undefined
+PASS  A answer: upstream reasoning = {"enabled":false} — got {"enabled":false} task=undefined
+PASS  A objectives: upstream reasoning = {"effort":"low"} — got {"effort":"low"} task=undefined
+PASS  A suggest: upstream reasoning = {"effort":"low"} — got {"effort":"low"} task=undefined
+PASS  A plan: upstream reasoning = {"effort":"low"} — got {"effort":"low"} task=undefined
+== B. Site: browser-host bodies through the real /api/worker handler
+PASS  B rank: client sent task=rank; Vercel upstream reasoning = {"enabled":false} — status 200, upstream {"enabled":false}
+PASS  B answer: client sent task=answer; Vercel upstream reasoning = {"enabled":false} — status 200, upstream {"enabled":false}
+PASS  B objectives: client sent task=objectives; Vercel upstream reasoning = {"effort":"low"} — status 200, upstream {"effort":"low"}
+PASS  B suggest: client sent task=suggest; Vercel upstream reasoning = {"effort":"low"} — status 200, upstream {"effort":"low"}
+PASS  B plan: client sent task=plan; Vercel upstream reasoning = {"effort":"low"} — status 200, upstream {"effort":"low"}
+PASS  B hostile: reasoning high + task plan -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: reasoning high, no task -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: reasoning on + task rank -> reasoning {"enabled":false}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"enabled":false} max_tokens 16000 zdr true
+PASS  B hostile: reasoning_effort top-level -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: task as object -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: task __proto__ -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: task constructor -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: task hasOwnProperty -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: task array -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: task 'RANK' upper -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+PASS  B hostile: extra keys (provider, max_tokens) -> reasoning {"effort":"low"}, task/provider/max_tokens not client-controlled — status 200 upstream reasoning {"effort":"low"} max_tokens 16000 zdr true
+  note: the client CAN lower reasoning for itself by naming task=rank|answer (off); it cannot raise it above the configured default.
+== C. Real deadlines (a fetch that never answers)
+PASS  C rank ends at about 25 s with WORKER_TIMEOUT — 25002 ms WORKER_TIMEOUT
+PASS  C answer ends at about 20 s with WORKER_TIMEOUT — 20001 ms WORKER_TIMEOUT
+ALL PASS

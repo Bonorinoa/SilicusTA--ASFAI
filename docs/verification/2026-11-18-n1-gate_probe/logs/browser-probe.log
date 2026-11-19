@@ -1,0 +1,36 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+PASS  ITEM3 the map wait shows elapsed seconds (first seen) — first seen at 9709 ms after the rank call began (rule: after 10 s)
+  map text while waiting: "STEP 2 OF 6\n\nOn the skill map\n\nWhere your lesson sits among the topics learners meet. Silicus suggests; you anchor one.\n\nFinding what comes before and after each suggestion\n\n10 s\n\nTaking longer than usual. You can search the map or skip it.\n\nOne model call. You can skip the map at any time.\n\nMarble "
+PASS  ITEM3 the map ranking times out with its own words — shown 25171 ms after the call began (rule: 25 s)
+PASS  ITEM3 the ranking timeout falls between 24 s and 27 s — 25171 ms
+  proposals on the objectives page: ["Explain how a plant makes its food From your answer Accept Edit Drop","Name what a plant needs to make sugar From your answer Accept Edit Drop","Compare a leaf and a root in one sentence From your answer Accept Edit Drop"]
+PASS  ITEM1 each typed line is a proposal on the objectives page (3 of 3, no click) — 3 proposals
+PASS  ITEM1 the proposals are labelled as the teacher's own — Explain how a plant makes its food From your answer Accept Edit Drop
+PASS  ITEM1 there is no 'Use my answers' button
+PASS  ITEM1 accepting a typed proposal puts exactly that statement in the document
+  event kinds so far: ["course.created","intake.answered","checkpoint.confirmed","checkpoint.confirmed","objectives.proposed","objectives.decided"]
+  objective events: [{"kind":"objectives.proposed","keys":"kind,items,sources,assistantText"},{"kind":"objectives.decided","keys":"kind,decisions,text"}]
+  proposals left after dropping two: 0
+  BODY at objectives confirm: Silicus / Courses / How plants eat ✓ Brief ✓ Objectives 3 Plan 4 Publish AI ready 6 decisions recorded About Silicus SOURCES ✓ listed No sources yet. You can plan from your own answers instead. + Add a source YouTube Local app only Text is read in this tab, sent once when you ask for a draft, and forgotten on reload. Objectives confirmed. On to the plan. Your turn: draft the lesson plan ← Back to Objectives STEP 3 OF 4 Lesson plan Activities with minutes, each pointing to an objective you confir
+PASS  drafting the plan completes
+PASS  confirming the plan moves to Publish
+PASS  ITEM1 version 1 is published
+  export button clicked: true
+PASS  ITEM1 export downloads a JSON file — silicus-course-1.json
+PASS  ITEM1 the export is valid JSON and holds the accepted statement — 11366 bytes
+PASS  ITEM1 the export's objectives list is exactly the one accepted statement (typed lines never accepted stay out of the published objectives) — [["Name what a plant needs to make sugar","ai"]]
+  export top-level keys: kind,course,checkpoints,intake,objectives,decisions,plan,versions,timeline,integrity
+PASS  ITEM3 the helper's wait shows elapsed seconds after ten — 10057 ms
+PASS  ITEM3 the helper times out with its own words — 20160 ms (rule: 20 s)
+PASS  ITEM3 the helper timeout falls between 19 s and 22 s — 20160 ms
+  browser->/api/worker bodies: {
+ "RANK skill-map | task=rank | reasoning={\"enabled\":false}": 1,
+ "Draft one less | task=plan | reasoning=null": 1,
+ "You are a stud | task=answer | reasoning={\"enabled\":false}": 1
+}
+PASS  ITEM3 the browser sent the RANK call with task=rank — {"at":1795058746646,"task":"rank","reasoning":{"enabled":false},"kind":"RANK skill-map","keys":"max_tokens,messages,mode
+PASS  ITEM3 the browser sent helper calls with task=answer
+PASS  ITEM3 the plan call carries task=plan
+
+20/20 N1V browser checks passed
+EXIT=0

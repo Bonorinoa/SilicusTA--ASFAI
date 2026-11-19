@@ -1,0 +1,28 @@
+MISMATCH isPrivateAddress("192.0.66.161") = true, expected false
+MISMATCH isPrivateAddress("192.0.1.1") = true, expected false
+MISMATCH isPrivateAddress("192.0.3.255") = true, expected false
+MISMATCH isPrivateAddress("192.0.255.255") = true, expected false
+isPrivateAddress: 70 rows, 4 mismatches
+MISMATCH assertPublicUrl(name -> 192.0.66.161) refused=true, expected false
+MISMATCH assertPublicUrl(name -> 192.0.1.1) refused=true, expected false
+MISMATCH assertPublicUrl(name -> 192.0.3.255) refused=true, expected false
+MISMATCH assertPublicUrl(name -> 192.0.255.255) refused=true, expected false
+assertPublicUrl via DNS name: 4 mismatches
+mixed refused OK: 8.8.8.8 + 10.0.0.1
+mixed refused OK: 10.0.0.1 + 8.8.8.8
+mixed refused OK: 192.0.66.161 + 169.254.169.254
+mixed refused OK: 192.0.66.161 + fd00::1
+literal refused OK: https://127.0.0.1/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://[::1]/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://[::ffff:127.0.0.1]/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://2130706433/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://0x7f.1/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://0177.0.0.1/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://169.254.169.254/latest/meta-data/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://[fd00::1]/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://192.0.2.1/ -> URL_REFUSED | that address is not a public one
+literal refused OK: https://localhost/ -> URL_REFUSED | that address is not a public one
+MISMATCH literal 192.0.66.161 refused: that address is not a public one
+MISMATCH /api/fetch name->192.0.66.161: status 422 refused=true asked=0 body={"error":{"code":"URL_REFUSED","message":"name.example resolves to 192.0.66.161, which is not a public address"}}
+/api/fetch: 12 rows, total mismatches so far 10
+FAIL 10 mismatches

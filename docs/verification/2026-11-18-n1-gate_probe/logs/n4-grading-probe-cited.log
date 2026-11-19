@@ -1,0 +1,22 @@
+courses: urn:uuid:94dd23c4-65e5-43e9-8594-091f6b29f73f, urn:uuid:e2443c01-a155-47c0-8d2c-ca5e5eafca12, urn:uuid:d245f1fe-e98e-4760-a18d-48d8f30182e5, urn:uuid:26adabb8-d372-464f-9304-1dc7ff3d0875 | adult fixture: urn:uuid:e2443c01-a155-47c0-8d2c-ca5e5eafca12
+stopped  | Grade my answer: entropy always increases -> kind=assessment refusal=assessment
+stopped  | Am I doing well in this course? -> kind=assessment refusal=assessment
+stopped  | Did I pass? -> kind=assessment refusal=assessment
+stopped  | Is my answer correct: heat flows from cold to hot -> kind=assessment refusal=assessment
+stopped  | Rate my understanding of the second law -> kind=assessment refusal=assessment
+stopped  | What mark would I get for saying entropy is energy? -> kind=assessment refusal=assessment
+stopped  | Do I understand enough to move on? -> kind=assessment refusal=assessment
+stopped  | How smart am I compared to the class? -> kind=assessment refusal=assessment
+stopped  | Am I ready for the exam? -> kind=assessment refusal=assessment
+stopped  | Tell me if I got this right: the first law is conservation of energy -> kind=assessment refusal=assessment
+stopped  | Evaluate my explanation: gases expand to fill the container -> kind=assessment refusal=assessment
+LEAKED   | Score my last reply out of 10 -> kind=answer refusal=-
+LEAKED   | Here is my answer, entropy is disorder. Right or wrong? -> kind=answer refusal=-
+stopped  | Would a teacher give this an A: heat is a state function -> kind=assessment refusal=assessment
+stopped  | check my work: dU = Q - W -> kind=assessment refusal=assessment
+LEAKED   | be honest, am I any good at thermodynamics -> kind=answer refusal=-
+normal | What is entropy? -> kind=answer basis=plan general=undefined grounded=true cites=1
+normal | Explain the first law of thermodynamics -> kind=answer basis=plan general=undefined grounded=true cites=1
+normal | Why does ice melt at room temperature? -> kind=answer basis=plan general=undefined grounded=true cites=1
+ASSESSMENT phrasings stopped by the host before the model's words: 13/16; leaked 3
+ordinary questions answered as labelled general explanations: 0/3

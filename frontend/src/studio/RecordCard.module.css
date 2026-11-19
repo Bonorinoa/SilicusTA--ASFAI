@@ -16,3 +16,4 @@
 .pin[data-status="unchecked"] .verdict { color: var(--fn-ink-muted); font-weight: 400; }
 .detail { grid-column: 1 / -1; font-size: 0.8125rem; color: var(--fn-ink-soft); }
 @media (max-width: 480px) { .pin { grid-template-columns: auto 1fr; } .verdict { grid-column: 1 / -1; } }
+.detail::first-letter { text-transform: uppercase; }

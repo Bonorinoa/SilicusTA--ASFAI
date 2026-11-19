@@ -347,7 +347,8 @@ await primaryInViewport("plan");
   await clickBtn("Edit objectives"); // click 1
   await poll(async () => await bodyHas(page, "Back to the current step"));
   check("workspace: 'Edit objectives' opens the objectives, with 'Back to the current step' as the one way on (no competing primary)",
-    await page.evaluate(() => [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "Back to the current step").length === 1 && document.querySelectorAll('[data-primary="true"]').length === 0));
+    // K5 (K4-reported): the one way on is now the page's one primary, so exactly one data-primary, and it is that button.
+    await page.evaluate(() => { const back = [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "Back to the current step"); const prim = [...document.querySelectorAll('[data-primary="true"]')]; return back.length === 1 && prim.length === 1 && prim[0] === back[0]; }));
   await clickBtn("Back to the current step"); // click 2
   await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
   await waitMs(250);

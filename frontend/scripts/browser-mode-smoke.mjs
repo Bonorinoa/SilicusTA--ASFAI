@@ -434,7 +434,8 @@ async function story(label, narrow) {
   const first = await page.evaluate(() => ({
     title: document.title, header: document.querySelector("header")?.innerText ?? "",
     icon: document.querySelector('link[rel="icon"]')?.getAttribute("href") ?? "", tabs: document.querySelectorAll('nav[aria-label="Workbench sections"]').length,
-    about: document.querySelector('header a[href="#/"]')?.textContent ?? null,
+    // K5: the link reads "About" on a phone and "About Silicus" wider; its accessible name is always "About Silicus".
+    about: document.querySelector('header a[href="#/"]')?.getAttribute("aria-label") ?? null,
     newCard: [...document.querySelectorAll("a")].some((a) => /New course/.test(a.textContent ?? "") && a.getAttribute("href") === "#/studio/new"),
     courses: document.querySelectorAll('section[aria-label="Courses"] a[href^="#/studio/"]').length,
   }));
@@ -860,9 +861,12 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
     await page.reload({ waitUntil: "networkidle0" });
     await poll(() => page.evaluate(() => !!document.querySelector('aside[aria-label="Sources"]')));
     await poll(() => bodyHas("Text is read in this tab, sent once when you ask for a draft, and forgotten on reload."));
-    check("uploads: after a reload the files are not held any more (the text was never stored)", await page.evaluate(() => { const t = document.querySelector('aside[aria-label="Sources"]')?.innerText ?? ""; return !/Read in this tab/.test(t) && !/hello\.pdf|Syllabus notes\.docx/.test(t); }));
+    check("uploads: after a reload the files are not held any more (the text was never stored)", await page.evaluate(() => { const t = document.querySelector('aside[aria-label="Sources"]')?.innerText ?? ""; return !/Read in this tab/.test(t); }));
+    // K5 (K4-reported): the proposals still name the files, so the panel lists them as named only, never "No sources yet".
+    check("uploads: after a reload the files the proposals name are listed as named only, with no text held",
+      await page.evaluate(() => { const t = document.querySelector('aside[aria-label="Sources"]')?.innerText ?? ""; return /hello\.pdf/.test(t) && /Named only, so Silicus has no text for it/.test(t) && !/No sources yet/.test(t); }));
     check("uploads: and the panel says in its own words that text is forgotten on reload (add the file again to use it)",
-      (await bodyHas("No sources yet.")) && (await bodyHas("forgotten on reload")));
+      (await bodyHas("forgotten on reload")));
     await stageShot("21-material-offered");
     s = await stored();
     check("uploads: the PDF's marker text is in no IndexedDB value, localStorage or sessionStorage after the reload",

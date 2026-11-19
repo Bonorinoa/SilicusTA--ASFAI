@@ -1,0 +1,2615 @@
+TAP version 13
+# Subtest: one row per mapped event: oldest first, seq strictly increasing, the right actor, action and artifact
+ok 1 - one row per mapped event: oldest first, seq strictly increasing, the right actor, action and artifact
+  ---
+  duration_ms: 6.515583
+  type: 'test'
+  ...
+# Subtest: a proposal the teacher's own answers produced is Silicus, not the drafting model
+ok 2 - a proposal the teacher's own answers produced is Silicus, not the drafting model
+  ---
+  duration_ms: 2.562458
+  type: 'test'
+  ...
+# Subtest: objectives drafted from material: counts only (the rail's contract), never names or the material text
+ok 3 - objectives drafted from material: counts only (the rail's contract), never names or the material text
+  ---
+  duration_ms: 2.439917
+  type: 'test'
+  ...
+# Subtest: replay: a session reloaded from the same log yields a byte-identical activity
+ok 4 - replay: a session reloaded from the same log yields a byte-identical activity
+  ---
+  duration_ms: 3.087833
+  type: 'test'
+  ...
+# Subtest: an event kind the table does not know is skipped, not an error
+ok 5 - an event kind the table does not know is skipped, not an error
+  ---
+  duration_ms: 0.095167
+  type: 'test'
+  ...
+# Subtest: the whole HTTP story (material in, decisions, plan, publish): the secret never appears in view.activity
+ok 6 - the whole HTTP story (material in, decisions, plan, publish): the secret never appears in view.activity
+  ---
+  duration_ms: 107.363625
+  type: 'test'
+  ...
+# Subtest: a worker's suggested objectives are their own rail row: worker / objectives.suggested, a count, never the statements
+ok 7 - a worker's suggested objectives are their own rail row: worker / objectives.suggested, a count, never the statements
+  ---
+  duration_ms: 0.093708
+  type: 'test'
+  ...
+# Subtest: agesError accepts the valid shapes and rejects everything else
+ok 8 - agesError accepts the valid shapes and rejects everything else
+  ---
+  duration_ms: 0.40425
+  type: 'test'
+  ...
+# Subtest: stageForAges uses the youngest age, following the owner's bands
+ok 9 - stageForAges uses the youngest age, following the owner's bands
+  ---
+  duration_ms: 0.074667
+  type: 'test'
+  ...
+# Subtest: the anchor identifies the sealed version and the log at that moment
+ok 10 - the anchor identifies the sealed version and the log at that moment
+  ---
+  duration_ms: 8.433084
+  type: 'test'
+  ...
+# Subtest: the anchor is stable across a restart when nothing changed
+ok 11 - the anchor is stable across a restart when nothing changed
+  ---
+  duration_ms: 2.464125
+  type: 'test'
+  ...
+# Subtest: PIN RESOLVES THE ANCHOR: a self-consistent rewrite passes verify() but fails the pin
+ok 12 - PIN RESOLVES THE ANCHOR: a self-consistent rewrite passes verify() but fails the pin
+  ---
+  duration_ms: 2.291875
+  type: 'test'
+  ...
+# Subtest: PIN RESOLVES THE ANCHOR: a tail truncation passes verify() but the pinned version is gone
+ok 13 - PIN RESOLVES THE ANCHOR: a tail truncation passes verify() but the pinned version is gone
+  ---
+  duration_ms: 3.424958
+  type: 'test'
+  ...
+# Subtest: an export round-trips through the archive with a verified digest
+ok 14 - an export round-trips through the archive with a verified digest
+  ---
+  duration_ms: 10.02425
+  type: 'test'
+  ...
+# Subtest: the archived export is complete enough to re-read the record
+ok 15 - the archived export is complete enough to re-read the record
+  ---
+  duration_ms: 2.513917
+  type: 'test'
+  ...
+# Subtest: the archive refuses a record that no longer matches its digest
+ok 16 - the archive refuses a record that no longer matches its digest
+  ---
+  duration_ms: 3.896958
+  type: 'test'
+  ...
+# Subtest: an unknown ref is an explicit error, not an empty record
+ok 17 - an unknown ref is an explicit error, not an empty record
+  ---
+  duration_ms: 0.20475
+  type: 'test'
+  ...
+# Subtest: consent flow: PKCE + state, tokens land in a 0600 file, status never shows a token
+ok 18 - consent flow: PKCE + state, tokens land in a 0600 file, status never shows a token
+  ---
+  duration_ms: 33.402041
+  type: 'test'
+  ...
+# Subtest: callback CSRF: a forged, replayed or foreign state is refused
+ok 19 - callback CSRF: a forged, replayed or foreign state is refused
+  ---
+  duration_ms: 10.512083
+  type: 'test'
+  ...
+# Subtest: a stale consent link expires; a wrong iss is refused (mix-up)
+ok 20 - a stale consent link expires; a wrong iss is refused (mix-up)
+  ---
+  duration_ms: 13.659375
+  type: 'test'
+  ...
+# Subtest: a code stolen without its verifier is useless (PKCE)
+ok 21 - a code stolen without its verifier is useless (PKCE)
+  ---
+  duration_ms: 10.017791
+  type: 'test'
+  ...
+# Subtest: SSRF: a discovered endpoint off the issuer origin, or a mismatched issuer, is refused
+ok 22 - SSRF: a discovered endpoint off the issuer origin, or a mismatched issuer, is refused
+  ---
+  duration_ms: 17.500125
+  type: 'test'
+  ...
+# Subtest: refresh: expiry inside a minute refreshes once (single-flight); a dead refresh token means reconnect
+ok 23 - refresh: expiry inside a minute refreshes once (single-flight); a dead refresh token means reconnect
+  ---
+  duration_ms: 18.1575
+  type: 'test'
+  ...
+# Subtest: MCP client: initialize + tools/list + callTool over JSON
+ok 24 - MCP client: initialize + tools/list + callTool over JSON
+  ---
+  duration_ms: 15.123167
+  type: 'test'
+  ...
+# Subtest: MCP client: initialize + tools/list + callTool over SSE
+ok 25 - MCP client: initialize + tools/list + callTool over SSE
+  ---
+  duration_ms: 13.993541
+  type: 'test'
+  ...
+# Subtest: no credential, or a rejected one: AUTH_REQUIRED, never an invented result
+ok 26 - no credential, or a rejected one: AUTH_REQUIRED, never an invented result
+  ---
+  duration_ms: 17.025917
+  type: 'test'
+  ...
+# Subtest: the token file never holds anything but the host's own credentials
+ok 27 - the token file never holds anything but the host's own credentials
+  ---
+  duration_ms: 5.963
+  type: 'test'
+  ...
+# Subtest: test/asfai-fixture.mjs
+ok 6 - test/asfai-fixture.mjs
+  ---
+  duration_ms: 53.948958
+  type: 'test'
+  ...
+# Subtest: round 1 sends NO fields; the host cannot go again until the teacher answers
+ok 29 - round 1 sends NO fields; the host cannot go again until the teacher answers
+  ---
+  duration_ms: 53.343
+  type: 'test'
+  ...
+# Subtest: an answer with no usable fields lets the host send NOTHING (it will not invent topic/course/outcomes)
+ok 30 - an answer with no usable fields lets the host send NOTHING (it will not invent topic/course/outcomes)
+  ---
+  duration_ms: 25.709292
+  type: 'test'
+  ...
+# Subtest: the second call is built from the teacher's answers and nothing else
+ok 31 - the second call is built from the teacher's answers and nothing else
+  ---
+  duration_ms: 16.953167
+  type: 'test'
+  ...
+# Subtest: a model/UI-supplied field cannot ride along: server routes ignore everything but the teacher's answers
+ok 32 - a model/UI-supplied field cannot ride along: server routes ignore everything but the teacher's answers
+  ---
+  duration_ms: 27.34425
+  type: 'test'
+  ...
+# Subtest: validate_outline is a SIGNAL: it records a verdict but cannot confirm a plan
+ok 33 - validate_outline is a SIGNAL: it records a verdict but cannot confirm a plan
+  ---
+  duration_ms: 21.098542
+  type: 'test'
+  ...
+# Subtest: a schema rejection from ASFAI is recorded as a 'not valid' verdict with reasons, not a crash
+ok 34 - a schema rejection from ASFAI is recorded as a 'not valid' verdict with reasons, not a crash
+  ---
+  duration_ms: 22.292459
+  type: 'test'
+  ...
+# Subtest: ASFAI outage: a clear 502, and the course keeps working locally
+ok 35 - ASFAI outage: a clear 502, and the course keeps working locally
+  ---
+  duration_ms: 20.410833
+  type: 'test'
+  ...
+# [asfai] callback received: params=code,state
+# [asfai] callback refused: BAD_STATE — unknown or already-used authorization state
+# Subtest: not connected: 401 AUTH_REQUIRED and an honest status
+ok 36 - not connected: 401 AUTH_REQUIRED and an honest status
+  ---
+  duration_ms: 4.920375
+  type: 'test'
+  ...
+# Subtest: a partial reply is kept and not sent; the second call waits until every asked question has an answer
+ok 37 - a partial reply is kept and not sent; the second call waits until every asked question has an answer
+  ---
+  duration_ms: 12.642292
+  type: 'test'
+  ...
+# Subtest: a hostile objectives body cannot inject a statement: the host derives from its own record
+ok 38 - a hostile objectives body cannot inject a statement: the host derives from its own record
+  ---
+  duration_ms: 32.353
+  type: 'test'
+  ...
+# Subtest: the objectives route proposes once; a second call is refused, not duplicated
+ok 39 - the objectives route proposes once; a second call is refused, not duplicated
+  ---
+  duration_ms: 58.702
+  type: 'test'
+  ...
+# Subtest: a client cannot reach the objectives checkpoint without the teacher's answers
+ok 40 - a client cannot reach the objectives checkpoint without the teacher's answers
+  ---
+  duration_ms: 26.279416
+  type: 'test'
+  ...
+# Subtest: the plan is drafted from the CONFIRMED objectives; a client cannot supply activities
+ok 41 - the plan is drafted from the CONFIRMED objectives; a client cannot supply activities
+  ---
+  duration_ms: 105.329541
+  type: 'test'
+  ...
+# Subtest: no worker configured: the plan step refuses with 501 and the course is untouched
+ok 42 - no worker configured: the plan step refuses with 501 and the course is untouched
+  ---
+  duration_ms: 115.418625
+  type: 'test'
+  ...
+# Subtest: a worker that misbehaves is a 502 refusal, never a half-written plan
+ok 43 - a worker that misbehaves is a 502 refusal, never a half-written plan
+  ---
+  duration_ms: 77.942042
+  type: 'test'
+  ...
+# Subtest: a plan cannot be drafted before the teacher has confirmed an objective
+ok 44 - a plan cannot be drafted before the teacher has confirmed an objective
+  ---
+  duration_ms: 22.5995
+  type: 'test'
+  ...
+# Subtest: the objectives the teacher confirms are byte-identical to what ASFAI was told
+ok 45 - the objectives the teacher confirms are byte-identical to what ASFAI was told
+  ---
+  duration_ms: 18.768917
+  type: 'test'
+  ...
+# Subtest: the report-back route is gone: a client cannot supply a prepare_outline result
+ok 46 - the report-back route is gone: a client cannot supply a prepare_outline result
+  ---
+  duration_ms: 28.450167
+  type: 'test'
+  ...
+# [asfai] callback received: params=code,error,state
+# [asfai] callback refused: BAD_STATE — unknown or already-used authorization state
+# Subtest: status, connect, and a refused callback leak no token material, and a script in the error is not reflected
+ok 47 - status, connect, and a refused callback leak no token material, and a script in the error is not reflected
+  ---
+  duration_ms: 14.673667
+  type: 'test'
+  ...
+# Subtest: a course id of . or .. cannot escape the data directory
+ok 48 - a course id of . or .. cannot escape the data directory
+  ---
+  duration_ms: 20.776459
+  type: 'test'
+  ...
+# Subtest: an archive ref cannot traverse, and the HTTP response does not carry the absolute path
+ok 49 - an archive ref cannot traverse, and the HTTP response does not carry the absolute path
+  ---
+  duration_ms: 13.123208
+  type: 'test'
+  ...
+# Subtest: Host and Origin lookalikes are refused
+ok 50 - Host and Origin lookalikes are refused
+  ---
+  duration_ms: 10.300333
+  type: 'test'
+  ...
+# Subtest: two racing intake calls cannot authorize the outline before the teacher answers
+ok 51 - two racing intake calls cannot authorize the outline before the teacher answers
+  ---
+  duration_ms: 30.561708
+  type: 'test'
+  ...
+# Subtest: G1: the net refuses cold phrasings that ask for a verdict on the asker
+ok 52 - G1: the net refuses cold phrasings that ask for a verdict on the asker
+  ---
+  duration_ms: 18.685542
+  type: 'test'
+  ...
+# Subtest: G2: the net answers lesson questions that share its vocabulary
+ok 53 - G2: the net answers lesson questions that share its vocabulary
+  ---
+  duration_ms: 1.105834
+  type: 'test'
+  ...
+# Subtest: G3: normalisation removes invisible characters, folds apostrophes and homoglyphs, and applies NFKC
+ok 54 - G3: normalisation removes invisible characters, folds apostrophes and homoglyphs, and applies NFKC
+  ---
+  duration_ms: 3.996958
+  type: 'test'
+  ...
+# Subtest: G3: a typo inside an asker-owned frame is still the same request
+ok 55 - G3: a typo inside an asker-owned frame is still the same request
+  ---
+  duration_ms: 0.197
+  type: 'test'
+  ...
+# Subtest: G3: an imperative assessment verb in a second sentence, after the asker says they finished, is a request
+ok 56 - G3: an imperative assessment verb in a second sentence, after the asker says they finished, is a request
+  ---
+  duration_ms: 0.232167
+  type: 'test'
+  ...
+# Subtest: G1: every pattern stays inside the ReDoS budget on 800 characters
+ok 57 - G1: every pattern stays inside the ReDoS budget on 800 characters
+  ---
+  duration_ms: 94.187167
+  type: 'test'
+  ...
+# Subtest: the browser host's shared modules name no server env variable or key
+ok 58 - the browser host's shared modules name no server env variable or key
+  ---
+  duration_ms: 7.683167
+  type: 'test'
+  ...
+# Subtest: create -> confirm -> propose -> decide -> plan -> publish
+ok 59 - create -> confirm -> propose -> decide -> plan -> publish
+  ---
+  duration_ms: 7.525459
+  type: 'test'
+  ...
+# Subtest: restart: a fresh session rebuilt from the event log is identical
+ok 60 - restart: a fresh session rebuilt from the event log is identical
+  ---
+  duration_ms: 4.058625
+  type: 'test'
+  ...
+# Subtest: the log is hash-chained: tampering with a past event is detected
+ok 61 - the log is hash-chained: tampering with a past event is detected
+  ---
+  duration_ms: 3.076417
+  type: 'test'
+  ...
+# Subtest: the public API takes intents, never provenance; recorded decisions cite the host's own turn
+ok 62 - the public API takes intents, never provenance; recorded decisions cite the host's own turn
+  ---
+  duration_ms: 2.025792
+  type: 'test'
+  ...
+# Subtest: publish is blocked until the plan is confirmed
+ok 63 - publish is blocked until the plan is confirmed
+  ---
+  duration_ms: 2.038125
+  type: 'test'
+  ...
+# Subtest: a tampered event log is REFUSED at load (fail closed)
+ok 64 - a tampered event log is REFUSED at load (fail closed)
+  ---
+  duration_ms: 1.716875
+  type: 'test'
+  ...
+# Subtest: the ledger object is not reachable, so a caller cannot mint a teacher turn
+ok 65 - the ledger object is not reachable, so a caller cannot mint a teacher turn
+  ---
+  duration_ms: 1.625833
+  type: 'test'
+  ...
+# Subtest: raw material text sent on POST /api/courses is kept nowhere: not meta, not the event, not the view, export or backup (U-2)
+ok 66 - raw material text sent on POST /api/courses is kept nowhere: not meta, not the event, not the view, export or backup (U-2)
+  ---
+  duration_ms: 4.307833
+  type: 'test'
+  ...
+# Subtest: material names are bounded to the shipped UI's own limits (24 names, 200 chars); non-names are dropped
+ok 67 - material names are bounded to the shipped UI's own limits (24 names, 200 chars); non-names are dropped
+  ---
+  duration_ms: 1.175666
+  type: 'test'
+  ...
+# Subtest: a JSON null, an array or a scalar body to POST /api/courses is a 400, not a 500 (E3)
+ok 68 - a JSON null, an array or a scalar body to POST /api/courses is a 400, not a 500 (E3)
+  ---
+  duration_ms: 0.616834
+  type: 'test'
+  ...
+# Subtest: extra keys on every decision verb never reach the log, and an invented alignment never becomes a public id
+ok 69 - extra keys on every decision verb never reach the log, and an invented alignment never becomes a public id
+  ---
+  duration_ms: 82.165834
+  type: 'test'
+  ...
+# Subtest: a non-object decision or an unknown verb is still refused by the gate, and carries nothing
+ok 70 - a non-object decision or an unknown verb is still refused by the gate, and carries nothing
+  ---
+  duration_ms: 9.05975
+  type: 'test'
+  ...
+# Subtest: the host derives objectives from the teacher's recorded answers, not from the caller
+ok 71 - the host derives objectives from the teacher's recorded answers, not from the caller
+  ---
+  duration_ms: 5.475459
+  type: 'test'
+  ...
+# Subtest: with nothing of the teacher's on record, the host refuses instead of inventing
+ok 72 - with nothing of the teacher's on record, the host refuses instead of inventing
+  ---
+  duration_ms: 1.302291
+  type: 'test'
+  ...
+# Subtest: a second derive does not duplicate the teacher's objectives
+ok 73 - a second derive does not duplicate the teacher's objectives
+  ---
+  duration_ms: 1.26775
+  type: 'test'
+  ...
+# Subtest: a derived proposal survives a restart with the same ids and wording
+ok 74 - a derived proposal survives a restart with the same ids and wording
+  ---
+  duration_ms: 1.349541
+  type: 'test'
+  ...
+# Subtest: a derived proposal records NO assistant turn — the system quoted, it did not author
+ok 75 - a derived proposal records NO assistant turn — the system quoted, it did not author
+  ---
+  duration_ms: 1.058833
+  type: 'test'
+  ...
+# Subtest: the teacher still decides: a derived proposal is not a confirmed objective
+ok 76 - the teacher still decides: a derived proposal is not a confirmed objective
+  ---
+  duration_ms: 1.790792
+  type: 'test'
+  ...
+# Subtest: a locally-answered course does not claim ASFAI as the source
+ok 77 - a locally-answered course does not claim ASFAI as the source
+  ---
+  duration_ms: 0.887292
+  type: 'test'
+  ...
+# Subtest: the source label is frozen at proposal time: a later ASFAI consult does not rewrite it
+ok 78 - the source label is frozen at proposal time: a later ASFAI consult does not rewrite it
+  ---
+  duration_ms: 3.441333
+  type: 'test'
+  ...
+# Subtest: the plan is drafted with context from BOTH sources, records refs only, and survives a restart
+ok 79 - the plan is drafted with context from BOTH sources, records refs only, and survives a restart
+  ---
+  duration_ms: 66.309084
+  type: 'test'
+  ...
+# Subtest: with no sources configured the draft is unchanged: no context block, no citations, no extra event field
+ok 80 - with no sources configured the draft is unchanged: no context block, no citations, no extra event field
+  ---
+  duration_ms: 20.054041
+  type: 'test'
+  ...
+# Subtest: ASFAI's graph is NOT queried for a course whose answers never went to ASFAI - the local ontology still is
+ok 81 - ASFAI's graph is NOT queried for a course whose answers never went to ASFAI - the local ontology still is
+  ---
+  duration_ms: 22.480917
+  type: 'test'
+  ...
+# Subtest: a local ontology alone drafts a cited plan with NO ASFAI at all
+ok 82 - a local ontology alone drafts a cited plan with NO ASFAI at all
+  ---
+  duration_ms: 10.825041
+  type: 'test'
+  ...
+# Subtest: a source that throws, hangs or is down never fails the draft
+ok 83 - a source that throws, hangs or is down never fails the draft
+  ---
+  duration_ms: 6.956917
+  type: 'test'
+  ...
+# Subtest: a source that cannot verify yields an UNVERIFIED citation, and the record says so
+ok 84 - a source that cannot verify yields an UNVERIFIED citation, and the record says so
+  ---
+  duration_ms: 11.073417
+  type: 'test'
+  ...
+# Subtest: a citation the source then reports as unknown is dropped, and the draft survives
+ok 85 - a citation the source then reports as unknown is dropped, and the draft survives
+  ---
+  duration_ms: 11.9155
+  type: 'test'
+  ...
+# Subtest: citations are suggestions: they are not in the sealed package, and they confirm nothing
+ok 86 - citations are suggestions: they are not in the sealed package, and they confirm nothing
+  ---
+  duration_ms: 51.498958
+  type: 'test'
+  ...
+# Subtest: the knowledge-status route reports capability only: no path, no credential
+ok 87 - the knowledge-status route reports capability only: no path, no credential
+  ---
+  duration_ms: 6.366959
+  type: 'test'
+  ...
+# Subtest: creation stores ages and the anchor on course.created, and the view derives the stage
+ok 88 - creation stores ages and the anchor on course.created, and the view derives the stage
+  ---
+  duration_ms: 35.576625
+  type: 'test'
+  ...
+# Subtest: a legacy course without ages keeps working and its view carries no ages/stage/anchor
+ok 89 - a legacy course without ages keeps working and its view carries no ages/stage/anchor
+  ---
+  duration_ms: 9.635833
+  type: 'test'
+  ...
+# Subtest: bad ages are a 400 with a plain message; the anchor is checked against the snapshot
+ok 90 - bad ages are a 400 with a plain message; the anchor is checked against the snapshot
+  ---
+  duration_ms: 35.734334
+  type: 'test'
+  ...
+# Subtest: an anchor cannot be accepted when the Marble graph is not wired (fail closed)
+ok 91 - an anchor cannot be accepted when the Marble graph is not wired (fail closed)
+  ---
+  duration_ms: 1.45275
+  type: 'test'
+  ...
+# Subtest: the anchor is a pointer, not an identity: the sealed package's objective list carries no mt_
+ok 92 - the anchor is a pointer, not an identity: the sealed package's objective list carries no mt_
+  ---
+  duration_ms: 3.682333
+  type: 'test'
+  ...
+# Subtest: a legacy course without ages still drives and seals the same way
+ok 93 - a legacy course without ages still drives and seals the same way
+  ---
+  duration_ms: 2.087125
+  type: 'test'
+  ...
+# Subtest: a hostile web page (foreign Origin) cannot create a course, read status, or get CORS
+ok 94 - a hostile web page (foreign Origin) cannot create a course, read status, or get CORS
+  ---
+  duration_ms: 49.80475
+  type: 'test'
+  ...
+# Subtest: the app's own origin works and is the only one echoed back
+ok 95 - the app's own origin works and is the only one echoed back
+  ---
+  duration_ms: 15.639875
+  type: 'test'
+  ...
+# Subtest: DNS rebinding: a non-loopback Host header is refused
+ok 96 - DNS rebinding: a non-loopback Host header is refused
+  ---
+  duration_ms: 10.897792
+  type: 'test'
+  ...
+# Subtest: a POST must be JSON (so a hostile form cannot skip the CORS preflight)
+ok 97 - a POST must be JSON (so a hostile form cannot skip the CORS preflight)
+  ---
+  duration_ms: 6.741417
+  type: 'test'
+  ...
+# [asfai] callback received: params=code,state
+# [asfai] callback refused: BAD_STATE — unknown or already-used authorization state
+# Subtest: the callback is reachable from ASFAI's redirect (no Origin on a navigation) but a forged state is refused
+ok 98 - the callback is reachable from ASFAI's redirect (no Origin on a navigation) but a forged state is refused
+  ---
+  duration_ms: 10.926667
+  type: 'test'
+  ...
+# Subtest: health
+ok 99 - health
+  ---
+  duration_ms: 32.666958
+  type: 'test'
+  ...
+# Subtest: full flow over HTTP, then a NEW app instance serves the identical record
+ok 100 - full flow over HTTP, then a NEW app instance serves the identical record
+  ---
+  duration_ms: 164.575125
+  type: 'test'
+  ...
+# Subtest: a client cannot fabricate provenance over the wire
+ok 101 - a client cannot fabricate provenance over the wire
+  ---
+  duration_ms: 104.51725
+  type: 'test'
+  ...
+# Subtest: publish while blocked returns 409 with the gate's blockers
+ok 102 - publish while blocked returns 409 with the gate's blockers
+  ---
+  duration_ms: 10.21175
+  type: 'test'
+  ...
+# Subtest: unknown course is a 404, not a crash
+ok 103 - unknown course is a 404, not a crash
+  ---
+  duration_ms: 25.787875
+  type: 'test'
+  ...
+# Subtest: a malformed percent-encoded course id or archive ref is a 400, not a 500 (L1)
+ok 104 - a malformed percent-encoded course id or archive ref is a 400, not a 500 (L1)
+  ---
+  duration_ms: 13.035
+  type: 'test'
+  ...
+# Subtest: checkpoint 2 is refused over HTTP until the intake is authorized
+ok 105 - checkpoint 2 is refused over HTTP until the intake is authorized
+  ---
+  duration_ms: 63.993208
+  type: 'test'
+  ...
+# Subtest: an export round-trips through the HTTP archive
+ok 106 - an export round-trips through the HTTP archive
+  ---
+  duration_ms: 83.544792
+  type: 'test'
+  ...
+# Subtest: a tampered event log is refused over HTTP (fail closed)
+ok 107 - a tampered event log is refused over HTTP (fail closed)
+  ---
+  duration_ms: 57.905083
+  type: 'test'
+  ...
+# Subtest: R5: the AI-path refusal codes map to stable statuses, and the code survives every one
+ok 108 - R5: the AI-path refusal codes map to stable statuses, and the code survives every one
+  ---
+  duration_ms: 0.433292
+  type: 'test'
+  ...
+# Subtest: the captured fixtures are the live contract: no receipt, no draftAuthorization
+ok 109 - the captured fixtures are the live contract: no receipt, no draftAuthorization
+  ---
+  duration_ms: 1.061083
+  type: 'test'
+  ...
+# Subtest: checkpoint 2 refuses until the intake is authorized
+ok 110 - checkpoint 2 refuses until the intake is authorized
+  ---
+  duration_ms: 4.701209
+  type: 'test'
+  ...
+# Subtest: BYSS: reporting ready_to_draft with no teacher answer does NOT authorize checkpoint 2
+ok 111 - BYSS: reporting ready_to_draft with no teacher answer does NOT authorize checkpoint 2
+  ---
+  duration_ms: 1.138792
+  type: 'test'
+  ...
+# Subtest: the real round (clarifying -> teacher answer -> ready_to_draft) authorizes checkpoint 2
+ok 112 - the real round (clarifying -> teacher answer -> ready_to_draft) authorizes checkpoint 2
+  ---
+  duration_ms: 1.122709
+  type: 'test'
+  ...
+# Subtest: a teacher can state everything upfront: a direct ready_to_draft needs no answer
+ok 113 - a teacher can state everything upfront: a direct ready_to_draft needs no answer
+  ---
+  duration_ms: 0.899167
+  type: 'test'
+  ...
+# Subtest: a draftAuthorization, when a server does emit one, authorizes on its own
+ok 114 - a draftAuthorization, when a server does emit one, authorizes on its own
+  ---
+  duration_ms: 1.193792
+  type: 'test'
+  ...
+# Subtest: the intake survives a restart (it is part of the log)
+ok 115 - the intake survives a restart (it is part of the log)
+  ---
+  duration_ms: 1.411416
+  type: 'test'
+  ...
+# Subtest: a fresh course asks the teacher the three questions itself, with no ASFAI
+ok 116 - a fresh course asks the teacher the three questions itself, with no ASFAI
+  ---
+  duration_ms: 0.640667
+  type: 'test'
+  ...
+# Subtest: the host's own questions are the SAME ids and prompts ASFAI asks, so every derivation is unchanged
+ok 117 - the host's own questions are the SAME ids and prompts ASFAI asks, so every derivation is unchanged
+  ---
+  duration_ms: 0.8755
+  type: 'test'
+  ...
+# Subtest: the teacher's own answers authorize checkpoint 2 with no ASFAI at all
+ok 118 - the teacher's own answers authorize checkpoint 2 with no ASFAI at all
+  ---
+  duration_ms: 1.121167
+  type: 'test'
+  ...
+# Subtest: BYSS: a teacher turn that carries no answers does not authorize the local path
+ok 119 - BYSS: a teacher turn that carries no answers does not authorize the local path
+  ---
+  duration_ms: 0.826667
+  type: 'test'
+  ...
+# Subtest: a locally-authorized course replays: the answers are the evidence, not memory
+ok 120 - a locally-authorized course replays: the answers are the evidence, not memory
+  ---
+  duration_ms: 0.99475
+  type: 'test'
+  ...
+# Subtest: consulting ASFAI does not open checkpoint 2 on the answers alone (the boundary between the two paths)
+ok 121 - consulting ASFAI does not open checkpoint 2 on the answers alone (the boundary between the two paths)
+  ---
+  duration_ms: 0.718583
+  type: 'test'
+  ...
+# Subtest: an outline already confirmed locally stays confirmed if ASFAI is consulted afterwards
+ok 122 - an outline already confirmed locally stays confirmed if ASFAI is consulted afterwards
+  ---
+  duration_ms: 0.729917
+  type: 'test'
+  ...
+# Subtest: a citation ref must be one we supplied, or it is refused
+ok 123 - a citation ref must be one we supplied, or it is refused
+  ---
+  duration_ms: 1.018583
+  type: 'test'
+  ...
+# Subtest: a citation carries its source, and its text is never treated as a statement
+ok 124 - a citation carries its source, and its text is never treated as a statement
+  ---
+  duration_ms: 0.858375
+  type: 'test'
+  ...
+# Subtest: a citation is bounded: a source cannot hand the prompt a novel
+ok 125 - a citation is bounded: a source cannot hand the prompt a novel
+  ---
+  duration_ms: 0.120167
+  type: 'test'
+  ...
+# Subtest: the base source is a state, not a capability: nothing enabled, nothing verified
+ok 126 - the base source is a state, not a capability: nothing enabled, nothing verified
+  ---
+  duration_ms: 0.110834
+  type: 'test'
+  ...
+# Subtest: retrieveAll: a source that throws, hangs, is disabled, or returns junk contributes nothing - and nothing throws
+ok 127 - retrieveAll: a source that throws, hangs, is disabled, or returns junk contributes nothing - and nothing throws
+  ---
+  duration_ms: 51.405541
+  type: 'test'
+  ...
+# Subtest: retrieveAll: a source may only mint refs in its own namespace, and refs are unique across sources
+ok 128 - retrieveAll: a source may only mint refs in its own namespace, and refs are unique across sources
+  ---
+  duration_ms: 0.236208
+  type: 'test'
+  ...
+# Subtest: retrieveAll: a source that sends the teacher's words off this machine is consulted only when permitted
+ok 129 - retrieveAll: a source that sends the teacher's words off this machine is consulted only when permitted
+  ---
+  duration_ms: 0.315
+  type: 'test'
+  ...
+# Subtest: verifyCitations: only a source that actually CHECKED can verify; unreachable is neither verified nor unknown
+ok 130 - verifyCitations: only a source that actually CHECKED can verify; unreachable is neither verified nor unknown
+  ---
+  duration_ms: 0.172375
+  type: 'test'
+  ...
+# Subtest: lessonMinutes: absent is unset; whole numbers 10-180 pass; anything else is a plain refusal
+ok 131 - lessonMinutes: absent is unset; whole numbers 10-180 pass; anything else is a plain refusal
+  ---
+  duration_ms: 0.453875
+  type: 'test'
+  ...
+# Subtest: length check: exact and within ±10% add no note; over and under name both numbers; nothing is rescaled
+ok 132 - length check: exact and within ±10% add no note; over and under name both numbers; nothing is rescaled
+  ---
+  duration_ms: 0.335166
+  type: 'test'
+  ...
+# Subtest: length check: an activity with no minutes is named, counted as 0, and the total is still checked
+ok 133 - length check: an activity with no minutes is named, counted as 0, and the total is still checked
+  ---
+  duration_ms: 0.108416
+  type: 'test'
+  ...
+# Subtest: the prompt states the length and the ±10% rule; spaced reviews are outside it; no length = old prompt
+ok 134 - the prompt states the length and the ±10% rule; spaced reviews are outside it; no length = old prompt
+  ---
+  duration_ms: 23.493542
+  type: 'test'
+  ...
+# Subtest: the host check after the model: within tolerance no note; over keeps the plan's own numbers and adds a note
+ok 135 - the host check after the model: within tolerance no note; over keeps the plan's own numbers and adds a note
+  ---
+  duration_ms: 14.658875
+  type: 'test'
+  ...
+# Subtest: runaway bound: the prompt caps activities and text; the host keeps the first 8 activities with a note
+ok 136 - runaway bound: the prompt caps activities and text; the host keeps the first 8 activities with a note
+  ---
+  duration_ms: 2.361083
+  type: 'test'
+  ...
+# worker reply: long finish=? output_chars=100383 completion_tokens=not reported reasoning_tokens=not reported max_tokens=16000
+# Subtest: runaway bound: every free-text field is cut to its limit by the host's clean()
+ok 137 - runaway bound: every free-text field is cut to its limit by the host's clean()
+  ---
+  duration_ms: 10.211334
+  type: 'test'
+  ...
+# Subtest: the course record carries lessonMinutes on the disk store and the record store, byte-identically
+ok 138 - the course record carries lessonMinutes on the disk store and the record store, byte-identically
+  ---
+  duration_ms: 4.019917
+  type: 'test'
+  ...
+# Subtest: CourseSession: lessonMinutes is stored, replayed and shown; a bad value is refused; a legacy course is unset
+ok 139 - CourseSession: lessonMinutes is stored, replayed and shown; a bad value is refused; a legacy course is unset
+  ---
+  duration_ms: 5.681292
+  type: 'test'
+  ...
+# Subtest: the library lists every course newest first, with honest progress and no content
+ok 140 - the library lists every course newest first, with honest progress and no content
+  ---
+  duration_ms: 33.0445
+  type: 'test'
+  ...
+# Subtest: a course whose record does not verify is listed as needing attention, not silently dropped
+ok 141 - a course whose record does not verify is listed as needing attention, not silently dropped
+  ---
+  duration_ms: 12.975916
+  type: 'test'
+  ...
+# Subtest: the OpenRouter preset: URL, model and key defaults, zero-data-retention ON unless explicitly switched off
+ok 142 - the OpenRouter preset: URL, model and key defaults, zero-data-retention ON unless explicitly switched off
+  ---
+  duration_ms: 0.147041
+  type: 'test'
+  ...
+# Subtest: without the preset nothing claims zero-retention it was not asked for, and the other presets are unchanged
+ok 143 - without the preset nothing claims zero-retention it was not asked for, and the other presets are unchanged
+  ---
+  duration_ms: 0.21925
+  type: 'test'
+  ...
+# Subtest: a teacher who never connects ASFAI reaches a sealed, verified package
+ok 144 - a teacher who never connects ASFAI reaches a sealed, verified package
+  ---
+  duration_ms: 127.309041
+  type: 'test'
+  ...
+# Subtest: the intake/call route still refuses cleanly when ASFAI is not connected, and the course is untouched
+ok 145 - the intake/call route still refuses cleanly when ASFAI is not connected, and the course is untouched
+  ---
+  duration_ms: 32.110833
+  type: 'test'
+  ...
+# rank prompt: 70195 characters, 1599 topics
+# rankMap usage: input_tokens=20000 output_tokens=300 topics=1599
+# rankMap usage: input_tokens=20000 output_tokens=300 topics=1599
+# Subtest: rankInput: the topics overlapping ages 4–10, names + subject + domain only (1,599 of 1,912)
+ok 146 - rankInput: the topics overlapping ages 4–10, names + subject + domain only (1,599 of 1,912)
+  ---
+  duration_ms: 5.083291
+  type: 'test'
+  ...
+# Subtest: validateRanking: unknown / out-of-age ids, long threads, a 4th thread and repeats are dropped; why is cleaned to 120
+ok 147 - validateRanking: unknown / out-of-age ids, long threads, a 4th thread and repeats are dropped; why is cleaned to 120
+  ---
+  duration_ms: 2.689625
+  type: 'test'
+  ...
+# Subtest: mapLanes on the scripted ranking: real-edge chains, off-chain suggestions as pills with a true note
+ok 148 - mapLanes on the scripted ranking: real-edge chains, off-chain suggestions as pills with a true note
+  ---
+  duration_ms: 2.146417
+  type: 'test'
+  ...
+# Subtest: missingTitleWord: 'grass' is in no topic name at 4–10
+ok 149 - missingTitleWord: 'grass' is in no topic name at 4–10
+  ---
+  duration_ms: 1.454083
+  type: 'test'
+  ...
+# Subtest: POST /api/knowledge/marble/rank: lanes on a good reply; an empty map with a reason (never an error) otherwise
+ok 150 - POST /api/knowledge/marble/rank: lanes on a good reply; an empty map with a reason (never an error) otherwise
+  ---
+  duration_ms: 9.244875
+  type: 'test'
+  ...
+# Subtest: PlanWorker.rankMap logs the wire's token counts
+ok 151 - PlanWorker.rankMap logs the wire's token counts
+  ---
+  duration_ms: 20.255458
+  type: 'test'
+  ...
+# Subtest: marbleConnected: both stores record it identically; the handler refuses a bad one; the view replays it
+ok 152 - marbleConnected: both stores record it identically; the handler refuses a bad one; the view replays it
+  ---
+  duration_ms: 7.179291
+  type: 'test'
+  ...
+# Subtest: the skill map as a source: transient text to the worker, {kind:'marble', id} on the record, proposals labelled 'marble'
+ok 153 - the skill map as a source: transient text to the worker, {kind:'marble', id} on the record, proposals labelled 'marble'
+  ---
+  duration_ms: 2.609041
+  type: 'test'
+  ...
+# Subtest: parseMarbleSnapshot accepts the trimmed shape and refuses garbage
+ok 154 - parseMarbleSnapshot accepts the trimmed shape and refuses garbage
+  ---
+  duration_ms: 1.960417
+  type: 'test'
+  ...
+# Subtest: get resolves the demo ids from the real snapshot, with the trimmed fields only
+ok 155 - get resolves the demo ids from the real snapshot, with the trimmed fields only
+  ---
+  duration_ms: 10.177583
+  type: 'test'
+  ...
+# Subtest: snapshot hashes match the recorded ones: the committed file names the exact bytes that were downloaded
+ok 156 - snapshot hashes match the recorded ones: the committed file names the exact bytes that were downloaded
+  ---
+  duration_ms: 6.408917
+  type: 'test'
+  ...
+# Subtest: prerequisites(id) returns hard and soft edges with reason, null for an unknown id
+ok 157 - prerequisites(id) returns hard and soft edges with reason, null for an unknown id
+  ---
+  duration_ms: 0.419916
+  type: 'test'
+  ...
+# Subtest: dependents(id): the topics that name this one as their prerequisite, with the edge direction held
+ok 158 - dependents(id): the topics that name this one as their prerequisite, with the edge direction held
+  ---
+  duration_ms: 0.142417
+  type: 'test'
+  ...
+# Subtest: an edge whose prerequisite is not in the snapshot is kept as a row the app cannot resolve
+ok 159 - an edge whose prerequisite is not in the snapshot is kept as a row the app cannot resolve
+  ---
+  duration_ms: 0.049958
+  type: 'test'
+  ...
+# Subtest: search scores name above description above evidence, filters by age overlap, and stays lexical
+ok 160 - search scores name above description above evidence, filters by age overlap, and stays lexical
+  ---
+  duration_ms: 0.664417
+  type: 'test'
+  ...
+# Subtest: search uses name, description AND evidence: a term only in the evidence line still hits
+ok 161 - search uses name, description AND evidence: a term only in the evidence line still hits
+  ---
+  duration_ms: 0.057375
+  type: 'test'
+  ...
+# Subtest: audienceAges reads a course answer's age band; nothing else
+ok 162 - audienceAges reads a course answer's age band; nothing else
+  ---
+  duration_ms: 1.020542
+  type: 'test'
+  ...
+# Subtest: createMarbleService loads lazily, caches, and retries a failed load
+ok 163 - createMarbleService loads lazily, caches, and retries a failed load
+  ---
+  duration_ms: 0.497042
+  type: 'test'
+  ...
+# Subtest: a locally answered course drafts with a Marble citation, verified by snapshot membership
+ok 164 - a locally answered course drafts with a Marble citation, verified by snapshot membership
+  ---
+  duration_ms: 70.508667
+  type: 'test'
+  ...
+# Subtest: a 19-year-old course is the wrong grain: Marble returns nothing, and the draft has no Marble citation
+ok 165 - a 19-year-old course is the wrong grain: Marble returns nothing, and the draft has no Marble citation
+  ---
+  duration_ms: 6.484125
+  type: 'test'
+  ...
+# Subtest: an age band inside the course is honoured: nodes outside the band are not cited
+ok 166 - an age band inside the course is honoured: nodes outside the band are not cited
+  ---
+  duration_ms: 18.566792
+  type: 'test'
+  ...
+# Subtest: a source failure degrades: a broken snapshot still drafts, with no Marble citation
+ok 167 - a source failure degrades: a broken snapshot still drafts, with no Marble citation
+  ---
+  duration_ms: 3.576708
+  type: 'test'
+  ...
+# Subtest: without an anchor, the current behaviour stays: the walk crosses into History (the verifier's repro)
+ok 168 - without an anchor, the current behaviour stays: the walk crosses into History (the verifier's repro)
+  ---
+  duration_ms: 39.623792
+  type: 'test'
+  ...
+# Subtest: with an anchor in Computing / Artificial Intelligence, the Roman and rainforest topics are gone
+ok 169 - with an anchor in Computing / Artificial Intelligence, the Roman and rainforest topics are gone
+  ---
+  duration_ms: 2.585208
+  type: 'test'
+  ...
+# Subtest: the walk itself stops crossing domains: an in-scope hit's out-of-scope neighbours are not cited
+ok 170 - the walk itself stops crossing domains: an in-scope hit's out-of-scope neighbours are not cited
+  ---
+  duration_ms: 1.314334
+  type: 'test'
+  ...
+# Subtest: an anchor missing from the snapshot fails closed, and 19-22 is the wrong grain even with matching words
+ok 171 - an anchor missing from the snapshot fails closed, and 19-22 is the wrong grain even with matching words
+  ---
+  duration_ms: 24.59425
+  type: 'test'
+  ...
+# Subtest: coverage counts the topics overlapping the range, with the 3..25 strip for the histogram
+ok 172 - coverage counts the topics overlapping the range, with the 3..25 strip for the histogram
+  ---
+  duration_ms: 34.05575
+  type: 'test'
+  ...
+# Subtest: coverage: ages 19-22 overlap nothing, defaults cover the whole graph, and bad input is a 400
+ok 173 - coverage: ages 19-22 overlap nothing, defaults cover the whole graph, and bad input is a 400
+  ---
+  duration_ms: 25.347042
+  type: 'test'
+  ...
+# Subtest: neighbourhood: prerequisites two hops up and dependents one hop down, with full rows
+ok 174 - neighbourhood: prerequisites two hops up and dependents one hop down, with full rows
+  ---
+  duration_ms: 2.135708
+  type: 'test'
+  ...
+# Subtest: neighbourhood refuses unknown ids and malformed encoding, read-only like the topic route
+ok 175 - neighbourhood refuses unknown ids and malformed encoding, read-only like the topic route
+  ---
+  duration_ms: 9.234625
+  type: 'test'
+  ...
+# Subtest: search returns the small, stable shape, honouring ages and limit
+ok 176 - search returns the small, stable shape, honouring ages and limit
+  ---
+  duration_ms: 118.779792
+  type: 'test'
+  ...
+# Subtest: topic by id returns the node with its prerequisites and dependents
+ok 177 - topic by id returns the node with its prerequisites and dependents
+  ---
+  duration_ms: 9.392958
+  type: 'test'
+  ...
+# Subtest: hard edges and soft edges both resolve the OTHER demo direction
+ok 178 - hard edges and soft edges both resolve the OTHER demo direction
+  ---
+  duration_ms: 1.776334
+  type: 'test'
+  ...
+# Subtest: the routes are read-only and refuse bad input
+ok 179 - the routes are read-only and refuse bad input
+  ---
+  duration_ms: 24.23575
+  type: 'test'
+  ...
+# Subtest: with no marble service the routes say so in the house style
+ok 180 - with no marble service the routes say so in the house style
+  ---
+  duration_ms: 1.256875
+  type: 'test'
+  ...
+# Subtest: knowledge status carries marble together with the other sources
+ok 181 - knowledge status carries marble together with the other sources
+  ---
+  duration_ms: 6.665917
+  type: 'test'
+  ...
+# Subtest: 'propose from my materials' authorizes the local outline, with topic and course - and is never objective text
+ok 182 - 'propose from my materials' authorizes the local outline, with topic and course - and is never objective text
+  ---
+  duration_ms: 36.7085
+  type: 'test'
+  ...
+# Subtest: BYSS: the materials answer alone, a wrong value, or a hostile shape does not authorize anything
+ok 183 - BYSS: the materials answer alone, a wrong value, or a hostile shape does not authorize anything
+  ---
+  duration_ms: 30.636667
+  type: 'test'
+  ...
+# Subtest: once ASFAI has been consulted the stand-in no longer authorizes: ASFAI's observed round governs, as before
+ok 184 - once ASFAI has been consulted the stand-in no longer authorizes: ASFAI's observed round governs, as before
+  ---
+  duration_ms: 1.109166
+  type: 'test'
+  ...
+# Subtest: objectives are proposed from the material, labelled by name, recorded as a model's work, and the text is NOT kept
+ok 185 - objectives are proposed from the material, labelled by name, recorded as a model's work, and the text is NOT kept
+  ---
+  duration_ms: 27.016417
+  type: 'test'
+  ...
+# Subtest: the record replays byte-identically, and a second proposal is refused rather than duplicated
+ok 186 - the record replays byte-identically, and a second proposal is refused rather than duplicated
+  ---
+  duration_ms: 23.947959
+  type: 'test'
+  ...
+# Subtest: a hostile body cannot inject an objective, a source label, an assistant turn or provenance
+ok 187 - a hostile body cannot inject an objective, a source label, an assistant turn or provenance
+  ---
+  duration_ms: 29.648667
+  type: 'test'
+  ...
+# Subtest: material that tries to command the worker only changes what is PROPOSED, and the teacher still decides
+ok 188 - material that tries to command the worker only changes what is PROPOSED, and the teacher still decides
+  ---
+  duration_ms: 10.584708
+  type: 'test'
+  ...
+# Subtest: refusals are honest and leave the course alone: no worker (501), nothing to read (422), checkpoint order (409)
+ok 189 - refusals are honest and leave the course alone: no worker (501), nothing to read (422), checkpoint order (409)
+  ---
+  duration_ms: 57.927834
+  type: 'test'
+  ...
+# Subtest: R1: a bad provenance label no longer discards the batch, and an id still names the real source
+ok 190 - R1: a bad provenance label no longer discards the batch, and an id still names the real source
+  ---
+  duration_ms: 23.496792
+  type: 'test'
+  ...
+# Subtest: R2: proposing from sources carries the objectives already on the course into the prompt
+ok 191 - R2: proposing from sources carries the objectives already on the course into the prompt
+  ---
+  duration_ms: 37.996916
+  type: 'test'
+  ...
+# Subtest: a worker that misbehaves is a 502 refusal, never half-written proposals
+ok 192 - a worker that misbehaves is a 502 refusal, never half-written proposals
+  ---
+  duration_ms: 23.531916
+  type: 'test'
+  ...
+# worker reply: truncated finish=length output_chars=15 completion_tokens=not reported reasoning_tokens=not reported max_tokens=16000
+# Subtest: an OpenAI length finish is a 502 WORKER_TRUNCATED refusal on the Node host
+ok 193 - an OpenAI length finish is a 502 WORKER_TRUNCATED refusal on the Node host
+  ---
+  duration_ms: 8.5435
+  type: 'test'
+  ...
+# Subtest: a public page is fetched by the host, and a private address is refused before the worker is ever called
+ok 194 - a public page is fetched by the host, and a private address is refused before the worker is ever called
+  ---
+  duration_ms: 15.766542
+  type: 'test'
+  ...
+# Subtest: the whole story with NO typed outcomes and NO ASFAI: material -> proposals -> teacher -> plan -> sealed package
+ok 195 - the whole story with NO typed outcomes and NO ASFAI: material -> proposals -> teacher -> plan -> sealed package
+  ---
+  duration_ms: 28.718083
+  type: 'test'
+  ...
+# Subtest: the worker status reports capability and typical waits, never a key or a URL
+ok 196 - the worker status reports capability and typical waits, never a key or a URL
+  ---
+  duration_ms: 2.49325
+  type: 'test'
+  ...
+# Subtest: the Node status endpoint applies per-task SILICUS_TYPICAL_SECONDS overrides and ignores invalid JSON
+ok 197 - the Node status endpoint applies per-task SILICUS_TYPICAL_SECONDS overrides and ignores invalid JSON
+  ---
+  duration_ms: 3.696041
+  type: 'test'
+  ...
+# Subtest: explicit: an objective you wrote first does not block proposing from sources, and the worker sees it
+ok 198 - explicit: an objective you wrote first does not block proposing from sources, and the worker sees it
+  ---
+  duration_ms: 5.44875
+  type: 'test'
+  ...
+# Subtest: explicit: a second material round is refused while the first waits, and allowed once it is decided
+ok 199 - explicit: a second material round is refused while the first waits, and allowed once it is decided
+  ---
+  duration_ms: 3.036041
+  type: 'test'
+  ...
+# Subtest: explicit: after the teacher confirms the objectives, another material round is refused OBJECTIVES_CONFIRMED
+ok 200 - explicit: after the teacher confirms the objectives, another material round is refused OBJECTIVES_CONFIRMED
+  ---
+  duration_ms: 1.689417
+  type: 'test'
+  ...
+# Subtest: explicit: the rounds survive a reload (replay is exact)
+ok 201 - explicit: the rounds survive a reload (replay is exact)
+  ---
+  duration_ms: 1.848709
+  type: 'test'
+  ...
+# Subtest: auto (historical): any earlier round still refuses ALREADY_PROPOSED, even when it is fully decided
+ok 202 - auto (historical): any earlier round still refuses ALREADY_PROPOSED, even when it is fully decided
+  ---
+  duration_ms: 2.066167
+  type: 'test'
+  ...
+# Subtest: a pasted text becomes a named, bounded, digested material - and the text is returned, never stored
+ok 203 - a pasted text becomes a named, bounded, digested material - and the text is returned, never stored
+  ---
+  duration_ms: 1.538042
+  type: 'test'
+  ...
+# Subtest: limits: nothing, too many, no name, unreadable - each is a clear refusal or a skip, never a crash
+ok 204 - limits: nothing, too many, no name, unreadable - each is a clear refusal or a skip, never a crash
+  ---
+  duration_ms: 0.462166
+  type: 'test'
+  ...
+# Subtest: size: one material is clipped, the whole request is capped, and the clip is reported
+ok 205 - size: one material is clipped, the whole request is capped, and the clip is reported
+  ---
+  duration_ms: 8.577459
+  type: 'test'
+  ...
+# Subtest: duplicate and hostile names are made unique and one-line
+ok 206 - duplicate and hostile names are made unique and one-line
+  ---
+  duration_ms: 0.123083
+  type: 'test'
+  ...
+# Subtest: two identical names AT the 160-char limit terminate and stay distinct (U-5)
+ok 207 - two identical names AT the 160-char limit terminate and stay distinct (U-5)
+  ---
+  duration_ms: 0.222625
+  type: 'test'
+  ...
+# Subtest: duplicate names at the limit keep a suffix by truncating the BASE, not the suffix
+ok 208 - duplicate names at the limit keep a suffix by truncating the BASE, not the suffix
+  ---
+  duration_ms: 0.1215
+  type: 'test'
+  ...
+# Subtest: address policy: private, loopback, link-local, mapped and unknown shapes are all refused
+ok 209 - address policy: private, loopback, link-local, mapped and unknown shapes are all refused
+  ---
+  duration_ms: 3.392
+  type: 'test'
+  ...
+# Subtest: a URL must be https, plain, standard-port and publicly addressed - or it is refused before any request
+ok 210 - a URL must be https, plain, standard-port and publicly addressed - or it is refused before any request
+  ---
+  duration_ms: 0.65
+  type: 'test'
+  ...
+# Subtest: a redirect to a private address is refused on that hop; a redirect loop stops
+ok 211 - a redirect to a private address is refused on that hop; a redirect loop stops
+  ---
+  duration_ms: 9.289834
+  type: 'test'
+  ...
+# Subtest: a web page becomes readable text with a title; scripts, styles and markup are gone
+ok 212 - a web page becomes readable text with a title; scripts, styles and markup are gone
+  ---
+  duration_ms: 1.622208
+  type: 'test'
+  ...
+# Subtest: a fetch is bounded: an unreadable type and an oversize body are refused
+ok 213 - a fetch is bounded: an unreadable type and an oversize body are refused
+  ---
+  duration_ms: 1.3095
+  type: 'test'
+  ...
+# Subtest: youtube links of every common shape yield the same 11-character id; anything else is null
+ok 214 - youtube links of every common shape yield the same 11-character id; anything else is null
+  ---
+  duration_ms: 0.184542
+  type: 'test'
+  ...
+# Subtest: youtube: captions are read from the watch page's own caption track, preferring human English over auto
+ok 215 - youtube: captions are read from the watch page's own caption track, preferring human English over auto
+  ---
+  duration_ms: 0.480958
+  type: 'test'
+  ...
+# Subtest: youtube: no captions is a normal state with a way forward; a caption track off youtube.com is refused
+ok 216 - youtube: no captions is a normal state with a way forward; a caption track off youtube.com is refused
+  ---
+  duration_ms: 0.299542
+  type: 'test'
+  ...
+# Subtest: normalizeText strips control, bidi and line-separator characters
+ok 217 - normalizeText strips control, bidi and line-separator characters
+  ---
+  duration_ms: 0.047209
+  type: 'test'
+  ...
+# Subtest: yt-dlp is the fallback when the page's own captions are not there - and only if the teacher's machine has it
+ok 218 - yt-dlp is the fallback when the page's own captions are not there - and only if the teacher's machine has it
+  ---
+  duration_ms: 9.591958
+  type: 'test'
+  ...
+# Subtest: yt-dlp runs with an argument ARRAY and a validated id, in a private temp dir that is removed afterwards
+ok 219 - yt-dlp runs with an argument ARRAY and a validated id, in a private temp dir that is removed afterwards
+  ---
+  duration_ms: 10.650709
+  type: 'test'
+  ...
+# Subtest: yt-dlp: human captions win over auto ones, a non-zero exit with a file is fine, and no file is a clear refusal
+ok 220 - yt-dlp: human captions win over auto ones, a non-zero exit with a file is fine, and no file is a clear refusal
+  ---
+  duration_ms: 5.861375
+  type: 'test'
+  ...
+# Subtest: a page's <main> content is preferred over its navigation chrome
+ok 221 - a page's <main> content is preferred over its navigation chrome
+  ---
+  duration_ms: 0.105416
+  type: 'test'
+  ...
+# Subtest: yt-dlp is told to actually WRITE the captions: --print implies a dry run unless --no-simulate (found by a live run, pinned here)
+ok 222 - yt-dlp is told to actually WRITE the captions: --print implies a dry run unless --no-simulate (found by a live run, pinned here)
+  ---
+  duration_ms: 2.091666
+  type: 'test'
+  ...
+# Subtest: K1: a failed page keeps its status in the sentence, and a timeout says it took too long
+ok 223 - K1: a failed page keeps its status in the sentence, and a timeout says it took too long
+  ---
+  duration_ms: 0.758542
+  type: 'test'
+  ...
+# Subtest: test/mock-asfai.mjs
+ok 33 - test/mock-asfai.mjs
+  ---
+  duration_ms: 46.94475
+  type: 'test'
+  ...
+# Subtest: test/mock-worker.mjs
+ok 34 - test/mock-worker.mjs
+  ---
+  duration_ms: 52.328792
+  type: 'test'
+  ...
+# Subtest: explicit: deciding the last proposal does NOT confirm checkpoint 3; the teacher's own confirm does
+ok 226 - explicit: deciding the last proposal does NOT confirm checkpoint 3; the teacher's own confirm does
+  ---
+  duration_ms: 5.222084
+  type: 'test'
+  ...
+# Subtest: explicit: a new proposal after the teacher's confirm reopens checkpoint 3
+ok 227 - explicit: a new proposal after the teacher's confirm reopens checkpoint 3
+  ---
+  duration_ms: 1.915083
+  type: 'test'
+  ...
+# Subtest: explicit: confirm refuses OBJECTIVES_PENDING while a proposal is still undecided
+ok 228 - explicit: confirm refuses OBJECTIVES_PENDING while a proposal is still undecided
+  ---
+  duration_ms: 1.111458
+  type: 'test'
+  ...
+# Subtest: explicit: confirm refuses NO_OBJECTIVES when nothing was decided
+ok 229 - explicit: confirm refuses NO_OBJECTIVES when nothing was decided
+  ---
+  duration_ms: 1.938541
+  type: 'test'
+  ...
+# Subtest: auto (the default): the last decision still confirms, and confirmObjectives refuses OBJECTIVES_AUTO
+ok 230 - auto (the default): the last decision still confirms, and confirmObjectives refuses OBJECTIVES_AUTO
+  ---
+  duration_ms: 1.289209
+  type: 'test'
+  ...
+# Subtest: replay: an explicit course round-trips — same view, mode explicit, objectives confirmed
+ok 231 - replay: an explicit course round-trips — same view, mode explicit, objectives confirmed
+  ---
+  duration_ms: 1.797584
+  type: 'test'
+  ...
+# Subtest: an old-shape record (no field) replays as auto, keeps its confirmed objectives, and writes no field
+ok 232 - an old-shape record (no field) replays as auto, keeps its confirmed objectives, and writes no field
+  ---
+  duration_ms: 1.780375
+  type: 'test'
+  ...
+# Subtest: the mode is read from the CHAINED course.created event only: editing meta.json cannot flip an auto course
+ok 233 - the mode is read from the CHAINED course.created event only: editing meta.json cannot flip an auto course
+  ---
+  duration_ms: 1.415292
+  type: 'test'
+  ...
+# Subtest: only the exact value "explicit" is stored; "auto", "banana", "" and a missing field are all auto
+ok 234 - only the exact value "explicit" is stored; "auto", "banana", "" and a missing field are all auto
+  ---
+  duration_ms: 5.048125
+  type: 'test'
+  ...
+# Subtest: HTTP: POST /api/courses stores the mode only for "explicit", and the view reports it
+ok 235 - HTTP: POST /api/courses stores the mode only for "explicit", and the view reports it
+  ---
+  duration_ms: 1.94125
+  type: 'test'
+  ...
+# Subtest: HTTP: POST /objectives/confirm confirms in explicit mode; extra body keys never reach the log
+ok 236 - HTTP: POST /objectives/confirm confirms in explicit mode; extra body keys never reach the log
+  ---
+  duration_ms: 3.101167
+  type: 'test'
+  ...
+# Subtest: HTTP: the route refuses OBJECTIVES_AUTO on an auto course and OBJECTIVES_PENDING while undecided
+ok 237 - HTTP: the route refuses OBJECTIVES_AUTO on an auto course and OBJECTIVES_PENDING while undecided
+  ---
+  duration_ms: 2.9845
+  type: 'test'
+  ...
+# Subtest: a v1 plan passes unchanged: no v2 key appears and no notes key is invented
+ok 238 - a v1 plan passes unchanged: no v2 key appears and no notes key is invented
+  ---
+  duration_ms: 31.927583
+  type: 'test'
+  ...
+# Subtest: every schema-v2 field round-trips on a valid plan
+ok 239 - every schema-v2 field round-trips on a valid plan
+  ---
+  duration_ms: 1.998166
+  type: 'test'
+  ...
+# Subtest: unknown values are dropped with a note the teacher can see
+ok 240 - unknown values are dropped with a note the teacher can see
+  ---
+  duration_ms: 2.82
+  type: 'test'
+  ...
+# Subtest: stage 1 clamps every non-forbidden aiStatus to forbidden, with a note
+ok 241 - stage 1 clamps every non-forbidden aiStatus to forbidden, with a note
+  ---
+  duration_ms: 1.870792
+  type: 'test'
+  ...
+# Subtest: stage 2 clamps required to permitted, with a note; stage 3 never leaves required; stage 4 keeps required
+ok 242 - stage 2 clamps required to permitted, with a note; stage 3 never leaves required; stage 4 keeps required
+  ---
+  duration_ms: 11.896583
+  type: 'test'
+  ...
+# Subtest: stage 3: a permitted use with no first try before it is clamped to forbidden, with a note (P2V C2, owner decision)
+ok 243 - stage 3: a permitted use with no first try before it is clamped to forbidden, with a note (P2V C2, owner decision)
+  ---
+  duration_ms: 8.948
+  type: 'test'
+  ...
+# Subtest: P2V C1: helpAfter "ai" is dropped at stages 1-2 with a note, and kept (with a note) at stages 3-4
+ok 244 - P2V C1: helpAfter "ai" is dropped at stages 1-2 with a note, and kept (with a note) at stages 3-4
+  ---
+  duration_ms: 7.010292
+  type: 'test'
+  ...
+# Subtest: P2V C1: operationDoneBy "ai" is noted at every stage, value kept (the record stays the model's proposal)
+ok 245 - P2V C1: operationDoneBy "ai" is noted at every stage, value kept (the record stays the model's proposal)
+  ---
+  duration_ms: 21.000959
+  type: 'test'
+  ...
+# worker reply: long finish=? output_chars=21127 completion_tokens=not reported reasoning_tokens=not reported max_tokens=16000
+# Subtest: P2V C3: a hostile model string echoed in a note is clipped with clean
+ok 246 - P2V C3: a hostile model string echoed in a note is clipped with clean
+  ---
+  duration_ms: 1.818958
+  type: 'test'
+  ...
+# Subtest: a permitted or required use without a noAiAlternative is noted
+ok 247 - a permitted or required use without a noAiAlternative is noted
+  ---
+  duration_ms: 5.686416
+  type: 'test'
+  ...
+# Subtest: a course with no structured ages gets no aiStatus or aiPolicy claims, and says so in a note
+ok 248 - a course with no structured ages gets no aiStatus or aiPolicy claims, and says so in a note
+  ---
+  duration_ms: 1.313833
+  type: 'test'
+  ...
+# Subtest: stages 3 and 4 never carry a plan-level aiPolicy line
+ok 249 - stages 3 and 4 never carry a plan-level aiPolicy line
+  ---
+  duration_ms: 7.848625
+  type: 'test'
+  ...
+# Subtest: a v1 plan on an aged course is NOT widened with a host aiPolicy (absent stays absent)
+ok 250 - a v1 plan on an aged course is NOT widened with a host aiPolicy (absent stays absent)
+  ---
+  duration_ms: 0.963375
+  type: 'test'
+  ...
+# Subtest: sessions: invalid entries are dropped with a note, chat is never a kind, duplicates are noted, order is sorted
+ok 251 - sessions: invalid entries are dropped with a note, chat is never a kind, duplicates are noted, order is sorted
+  ---
+  duration_ms: 2.40325
+  type: 'test'
+  ...
+# Subtest: spacedReviews: bad entries are dropped, the rest are sorted by afterDays
+ok 252 - spacedReviews: bad entries are dropped, the rest are sorted by afterDays
+  ---
+  duration_ms: 0.863708
+  type: 'test'
+  ...
+# Subtest: planDesignOf extracts only the schema-v2 slice, and null when there is none
+ok 253 - planDesignOf extracts only the schema-v2 slice, and null when there is none
+  ---
+  duration_ms: 0.151084
+  type: 'test'
+  ...
+# Subtest: anchorPrerequisites asks sources only when there is an anchor, and degrades safely
+ok 254 - anchorPrerequisites asks sources only when there is an anchor, and degrades safely
+  ---
+  duration_ms: 0.108375
+  type: 'test'
+  ...
+# Subtest: prompt snapshot without an anchor: the pinned base prompt, no stage rule, no prereq id
+ok 255 - prompt snapshot without an anchor: the pinned base prompt, no stage rule, no prereq id
+  ---
+  duration_ms: 0.849166
+  type: 'test'
+  ...
+# Subtest: prompt snapshot with an anchor: the stage rule and the hard prerequisite id are in, and only the anchored prompt names the prerequisite
+ok 256 - prompt snapshot with an anchor: the stage rule and the hard prerequisite id are in, and only the anchored prompt names the prerequisite
+  ---
+  duration_ms: 0.727458
+  type: 'test'
+  ...
+# Subtest: each teacher outcome sentence becomes one local proposal, verbatim
+ok 257 - each teacher outcome sentence becomes one local proposal, verbatim
+  ---
+  duration_ms: 0.729375
+  type: 'test'
+  ...
+# Subtest: no outcomes, no proposals — the proposer never invents one
+ok 258 - no outcomes, no proposals — the proposer never invents one
+  ---
+  duration_ms: 0.621875
+  type: 'test'
+  ...
+# Subtest: a proposal is always kind:local — the proposer cannot mint a Marble id
+ok 259 - a proposal is always kind:local — the proposer cannot mint a Marble id
+  ---
+  duration_ms: 0.217375
+  type: 'test'
+  ...
+# Subtest: a single-string answer is split on newlines, so one line is one objective
+ok 260 - a single-string answer is split on newlines, so one line is one objective
+  ---
+  duration_ms: 0.115333
+  type: 'test'
+  ...
+# Subtest: the teacher's wording is preserved: no trimming inside, no rewriting
+ok 261 - the teacher's wording is preserved: no trimming inside, no rewriting
+  ---
+  duration_ms: 0.10625
+  type: 'test'
+  ...
+# Subtest: outcomeSentences is THE split rule: array in, string in, junk out
+ok 262 - outcomeSentences is THE split rule: array in, string in, junk out
+  ---
+  duration_ms: 0.116666
+  type: 'test'
+  ...
+# Subtest: the proposals derive from the same list intake.mjs sends ASFAI — one rule, one home
+ok 263 - the proposals derive from the same list intake.mjs sends ASFAI — one rule, one home
+  ---
+  duration_ms: 0.051042
+  type: 'test'
+  ...
+# Subtest: the two source labels are distinct and both honest
+ok 264 - the two source labels are distinct and both honest
+  ---
+  duration_ms: 0.0485
+  type: 'test'
+  ...
+# Subtest: teacherStatement is outcomeSentences' own rule applied to ONE sentence, not a second rule
+ok 265 - teacherStatement is outcomeSentences' own rule applied to ONE sentence, not a second rule
+  ---
+  duration_ms: 1.173791
+  type: 'test'
+  ...
+# Subtest: every gate blocker form gets a code; unknown text is kept, never dropped
+ok 266 - every gate blocker form gets a code; unknown text is kept, never dropped
+  ---
+  duration_ms: 0.873584
+  type: 'test'
+  ...
+# Subtest: a real session: every blocker state the gate produces is classified, none is OTHER
+ok 267 - a real session: every blocker state the gate produces is classified, none is OTHER
+  ---
+  duration_ms: 12.885708
+  type: 'test'
+  ...
+# Subtest: the record store behind the shared handler matches the disk host over HTTP: same transcript, same log bytes, same meta
+ok 268 - the record store behind the shared handler matches the disk host over HTTP: same transcript, same log bytes, same meta
+  ---
+  duration_ms: 147.367458
+  type: 'test'
+  ...
+# Subtest: a record store reloaded from its own writes replays to the same view; an edited line is refused, never served
+ok 269 - a record store reloaded from its own writes replays to the same view; an edited line is refused, never served
+  ---
+  duration_ms: 7.428875
+  type: 'test'
+  ...
+# Subtest: a backup of a store round-trips through readBackup and replays to the same view
+ok 270 - a backup of a store round-trips through readBackup and replays to the same view
+  ---
+  duration_ms: 7.068
+  type: 'test'
+  ...
+# Subtest: a tampered backup is refused, whole, with a clear reason: payload edit, recomputed-envelope edit, meta mismatch, not a backup
+ok 271 - a tampered backup is refused, whole, with a clear reason: payload edit, recomputed-envelope edit, meta mismatch, not a backup
+  ---
+  duration_ms: 6.757167
+  type: 'test'
+  ...
+# Subtest: S5: prototype-pollution keys in an answer change nothing, anywhere
+ok 272 - S5: prototype-pollution keys in an answer change nothing, anywhere
+  ---
+  duration_ms: 32.370916
+  type: 'test'
+  ...
+# Subtest: S5: twenty parallel answers and confirms leave a log that still verifies
+ok 273 - S5: twenty parallel answers and confirms leave a log that still verifies
+  ---
+  duration_ms: 52.245875
+  type: 'test'
+  ...
+# Subtest: S5: a course answered locally and then sent to ASFAI is never stuck - one more teacher reply recovers it
+ok 274 - S5: a course answered locally and then sent to ASFAI is never stuck - one more teacher reply recovers it
+  ---
+  duration_ms: 1.984792
+  type: 'test'
+  ...
+# Subtest: S5: line separators and control characters in an outcome cannot forge a second objective line
+ok 275 - S5: line separators and control characters in an outcome cannot forge a second objective line
+  ---
+  duration_ms: 0.145458
+  type: 'test'
+  ...
+# Subtest: S6: a source that returns 100,000 citations cannot bloat the prompt: the total is capped
+ok 276 - S6: a source that returns 100,000 citations cannot bloat the prompt: the total is capped
+  ---
+  duration_ms: 50.257375
+  type: 'test'
+  ...
+# Subtest: S6: refs with whitespace, line breaks or brackets are dropped at the door, so the prompt and the match always agree
+ok 277 - S6: refs with whitespace, line breaks or brackets are dropped at the door, so the prompt and the match always agree
+  ---
+  duration_ms: 0.238375
+  type: 'test'
+  ...
+# Subtest: S6: an enormous or node-stuffed ontology file is refused as 'no context', not read into memory
+ok 278 - S6: an enormous or node-stuffed ontology file is refused as 'no context', not read into memory
+  ---
+  duration_ms: 29.3105
+  type: 'test'
+  ...
+# Subtest: S7: every spelling of a private address is refused (hex-mapped IPv6, NAT64, 6to4, site-local, numeric and short IPv4, trailing dot)
+ok 279 - S7: every spelling of a private address is refused (hex-mapped IPv6, NAT64, 6to4, site-local, numeric and short IPv4, trailing dot)
+  ---
+  duration_ms: 0.966666
+  type: 'test'
+  ...
+# Subtest: S7: a page title or material name cannot make a model's proposal look like the teacher's own words
+ok 280 - S7: a page title or material name cannot make a model's proposal look like the teacher's own words
+  ---
+  duration_ms: 36.1025
+  type: 'test'
+  ...
+# Subtest: S7: yt-dlp ignores the machine's own config (a config file can add --exec)
+ok 281 - S7: yt-dlp ignores the machine's own config (a config file can add --exec)
+  ---
+  duration_ms: 9.411667
+  type: 'test'
+  ...
+# Subtest: worker: a model that never answers is a refusal within the timeout, not a course frozen forever
+ok 282 - worker: a model that never answers is a refusal within the timeout, not a course frozen forever
+  ---
+  duration_ms: 152.9595
+  type: 'test'
+  ...
+# Subtest: worker: while the model hangs, the course lock is released when the timeout fires, so the course stays usable
+ok 283 - worker: while the model hangs, the course lock is released when the timeout fires, so the course stays usable
+  ---
+  duration_ms: 208.55175
+  type: 'test'
+  ...
+# Subtest: asfai: a server that never answers is an unreachable-ASFAI error within the timeout, not a hung request
+ok 284 - asfai: a server that never answers is an unreachable-ASFAI error within the timeout, not a hung request
+  ---
+  duration_ms: 121.897833
+  type: 'test'
+  ...
+# Subtest: S8: a hostile student request cannot read another course, an unpublished draft, or write anything
+ok 285 - S8: a hostile student request cannot read another course, an unpublished draft, or write anything
+  ---
+  duration_ms: 4.9935
+  type: 'test'
+  ...
+# Subtest: AUDIT: after a seal the gate lets a teacher add and revoke, refuses a RENAME of a confirmed objective (reword is the verb for that), and does nothing until asked
+ok 286 - AUDIT: after a seal the gate lets a teacher add and revoke, refuses a RENAME of a confirmed objective (reword is the verb for that), and does nothing until asked
+  ---
+  duration_ms: 68.24625
+  type: 'test'
+  ...
+# Subtest: E2E: publish v1, revise, publish v2, restart: both versions verify, and students read v2 only once it is sealed
+ok 287 - E2E: publish v1, revise, publish v2, restart: both versions verify, and students read v2 only once it is sealed
+  ---
+  duration_ms: 83.412667
+  type: 'test'
+  ...
+# Subtest: with the AI worker OFF a published course can still be revised where no plan is needed, and says so where one is
+ok 288 - with the AI worker OFF a published course can still be revised where no plan is needed, and says so where one is
+  ---
+  duration_ms: 33.289166
+  type: 'test'
+  ...
+# Subtest: RED TEAM: the text a teacher types into a revision is one clean line, or it is refused and nothing is recorded
+ok 289 - RED TEAM: the text a teacher types into a revision is one clean line, or it is refused and nothing is recorded
+  ---
+  duration_ms: 54.0355
+  type: 'test'
+  ...
+# Subtest: concurrent revisions and a publish leave a log that verifies, and every add is recorded once
+ok 290 - concurrent revisions and a publish leave a log that verifies, and every add is recorded once
+  ---
+  duration_ms: 30.634125
+  type: 'test'
+  ...
+# Subtest: there is no route that starts a revision: it is a reading of the record, not a switch a client can flip
+ok 291 - there is no route that starts a revision: it is a reading of the record, not a switch a client can flip
+  ---
+  duration_ms: 15.558792
+  type: 'test'
+  ...
+# Subtest: reword over HTTP with the AI worker OFF: id and plan kept, the plan is flagged not invalidated, v1 never changes, v2 carries the new wording
+ok 292 - reword over HTTP with the AI worker OFF: id and plan kept, the plan is flagged not invalidated, v1 never changes, v2 carries the new wording
+  ---
+  duration_ms: 106.121042
+  type: 'test'
+  ...
+# Subtest: reword, publish, restart: the whole view is byte-identical, the log verifies, and a reworded-but-unpublished draft survives a restart
+ok 293 - reword, publish, restart: the whole view is byte-identical, the log verifies, and a reworded-but-unpublished draft survives a restart
+  ---
+  duration_ms: 39.721625
+  type: 'test'
+  ...
+# Subtest: the revision view notices a reword of an objective added after the seal too; reword-and-back is not a change
+ok 294 - the revision view notices a reword of an objective added after the seal too; reword-and-back is not a change
+  ---
+  duration_ms: 17.934
+  type: 'test'
+  ...
+# Subtest: an objective the teacher ADDED can be reworded; the row keeps its own wording as the original
+ok 295 - an objective the teacher ADDED can be reworded; the row keeps its own wording as the original
+  ---
+  duration_ms: 20.558583
+  type: 'test'
+  ...
+# Subtest: refusals are clear and write nothing: proposed, dropped, unknown, mt_*, unchanged, malformed
+ok 296 - refusals are clear and write nothing: proposed, dropped, unknown, mt_*, unchanged, malformed
+  ---
+  duration_ms: 53.780542
+  type: 'test'
+  ...
+# Subtest: RED TEAM: hostile statements are one clean line or refused, with nothing recorded; the same rule as add/rename
+ok 297 - RED TEAM: hostile statements are one clean line or refused, with nothing recorded; the same rule as add/rename
+  ---
+  duration_ms: 50.0255
+  type: 'test'
+  ...
+# Subtest: RED TEAM: a client cannot supply provenance, ids, kind, alignment, time or mt_* keys with a reword
+ok 298 - RED TEAM: a client cannot supply provenance, ids, kind, alignment, time or mt_* keys with a reword
+  ---
+  duration_ms: 12.0085
+  type: 'test'
+  ...
+# Subtest: RED TEAM: a reword with no teacher text, and a body with no decisions, are refused
+ok 299 - RED TEAM: a reword with no teacher text, and a body with no decisions, are refused
+  ---
+  duration_ms: 15.408042
+  type: 'test'
+  ...
+# Subtest: a failed second decision in a batch leaves the first unrecorded (all or nothing) and the log verifying
+ok 300 - a failed second decision in a batch leaves the first unrecorded (all or nothing) and the log verifying
+  ---
+  duration_ms: 12.165792
+  type: 'test'
+  ...
+# Subtest: concurrent rewords of one and several objectives, with a publish in the middle, leave a verifying log and a consistent record
+ok 301 - concurrent rewords of one and several objectives, with a publish in the middle, leave a verifying log and a consistent record
+  ---
+  duration_ms: 25.412667
+  type: 'test'
+  ...
+# Subtest: the same reword sent twice (a retry) is applied once per request but never corrupts the log
+ok 302 - the same reword sent twice (a retry) is applied once per request but never corrupts the log
+  ---
+  duration_ms: 10.752875
+  type: 'test'
+  ...
+# Subtest: test/scripted-course.mjs
+ok 43 - test/scripted-course.mjs
+  ---
+  duration_ms: 31.4745
+  type: 'test'
+  ...
+# Subtest: AI in Daily Life (5-12): a coherent stage-1 plan the host keeps without adjusting
+ok 304 - AI in Daily Life (5-12): a coherent stage-1 plan the host keeps without adjusting
+  ---
+  duration_ms: 27.595834
+  type: 'test'
+  ...
+# Subtest: stage-3 Computing (12-14): the AI-with-no-first-try activity is clamped, with a visible note naming it
+ok 305 - stage-3 Computing (12-14): the AI-with-no-first-try activity is clamped, with a visible note naming it
+  ---
+  duration_ms: 4.545666
+  type: 'test'
+  ...
+# Subtest: stage-3 fixture (unit only): when the clamped activity's prose still mentions AI, the host keeps the prose and the marker flag still shows
+ok 306 - stage-3 fixture (unit only): when the clamped activity's prose still mentions AI, the host keeps the prose and the marker flag still shows
+  ---
+  duration_ms: 2.285209
+  type: 'test'
+  ...
+# Subtest: the v1 scripted plan is unchanged for the v1 tests
+ok 307 - the v1 scripted plan is unchanged for the v1 tests
+  ---
+  duration_ms: 0.164084
+  type: 'test'
+  ...
+# Subtest: sha256 matches node:crypto on every length around the 64-byte block and padding boundaries
+ok 308 - sha256 matches node:crypto on every length around the 64-byte block and padding boundaries
+  ---
+  duration_ms: 18.7455
+  type: 'test'
+  ...
+# Subtest: sha256 matches node:crypto over 3000 random byte strings (up to 20 KB)
+ok 309 - sha256 matches node:crypto over 3000 random byte strings (up to 20 KB)
+  ---
+  duration_ms: 42.433458
+  type: 'test'
+  ...
+# Subtest: sha256Hex matches node:crypto on random Unicode text (UTF-8, astral, controls, bidi)
+ok 310 - sha256Hex matches node:crypto on random Unicode text (UTF-8, astral, controls, bidi)
+  ---
+  duration_ms: 67.410542
+  type: 'test'
+  ...
+# Subtest: base64url matches node:crypto's base64url digest encoding
+ok 311 - base64url matches node:crypto's base64url digest encoding
+  ---
+  duration_ms: 3.388
+  type: 'test'
+  ...
+# Subtest: the ASFAI source searches the graph with the published payload and maps hits to citations
+ok 312 - the ASFAI source searches the graph with the published payload and maps hits to citations
+  ---
+  duration_ms: 31.3215
+  type: 'test'
+  ...
+# Subtest: the teacher's confirmed objectives are searched too, deduplicated, and bounded
+ok 313 - the teacher's confirmed objectives are searched too, deduplicated, and bounded
+  ---
+  duration_ms: 21.2015
+  type: 'test'
+  ...
+# Subtest: an empty graph result is a normal signal, not an error
+ok 314 - an empty graph result is a normal signal, not an error
+  ---
+  duration_ms: 4.208875
+  type: 'test'
+  ...
+# Subtest: a children's node that LOOKS like a university match is returned as labelled context, never as a match to trust
+ok 315 - a children's node that LOOKS like a university match is returned as labelled context, never as a match to trust
+  ---
+  duration_ms: 5.627208
+  type: 'test'
+  ...
+# Subtest: verify() asks the graph by membership; an unknown ref is reported
+ok 316 - verify() asks the graph by membership; an unknown ref is reported
+  ---
+  duration_ms: 11.232417
+  type: 'test'
+  ...
+# Subtest: an unreachable graph degrades to no context and an UNCHECKED verify - never a throw, never a false 'verified'
+ok 317 - an unreachable graph degrades to no context and an UNCHECKED verify - never a throw, never a false 'verified'
+  ---
+  duration_ms: 10.26125
+  type: 'test'
+  ...
+# Subtest: not connected is a state: the source is disabled and sends nothing
+ok 318 - not connected is a state: the source is disabled and sends nothing
+  ---
+  duration_ms: 5.8385
+  type: 'test'
+  ...
+# Subtest: it declares that it sends the teacher's words to ASFAI, so the course can refuse it
+ok 319 - it declares that it sends the teacher's words to ASFAI, so the course can refuse it
+  ---
+  duration_ms: 0.077167
+  type: 'test'
+  ...
+# Subtest: a name that already carries an age phrase gets exactly ONE age phrase in its label
+ok 320 - a name that already carries an age phrase gets exactly ONE age phrase in its label
+  ---
+  duration_ms: 0.473625
+  type: 'test'
+  ...
+# Subtest: a local ontology file retrieves by lexical match and verifies by membership
+ok 321 - a local ontology file retrieves by lexical match and verifies by membership
+  ---
+  duration_ms: 9.178375
+  type: 'test'
+  ...
+# Subtest: it matches on the teacher's confirmed objectives as well as the topic, and nothing off-topic
+ok 322 - it matches on the teacher's confirmed objectives as well as the topic, and nothing off-topic
+  ---
+  duration_ms: 3.814166
+  type: 'test'
+  ...
+# Subtest: a university topic is a first-class match: the ontology is not a children's map
+ok 323 - a university topic is a first-class match: the ontology is not a children's map
+  ---
+  duration_ms: 1.009333
+  type: 'test'
+  ...
+# Subtest: no file configured is a state, not a crash
+ok 324 - no file configured is a state, not a crash
+  ---
+  duration_ms: 0.13
+  type: 'test'
+  ...
+# Subtest: a malformed or missing ontology file degrades to no context, and says it did not check
+ok 325 - a malformed or missing ontology file degrades to no context, and says it did not check
+  ---
+  duration_ms: 9.637875
+  type: 'test'
+  ...
+# Subtest: nodes without an id or a title are skipped, not fatal
+ok 326 - nodes without an id or a title are skipped, not fatal
+  ---
+  duration_ms: 2.566042
+  type: 'test'
+  ...
+# Subtest: it sends nothing anywhere: no egress, so it is consulted even for a course that never touched ASFAI
+ok 327 - it sends nothing anywhere: no egress, so it is consulted even for a course that never touched ASFAI
+  ---
+  duration_ms: 1.743209
+  type: 'test'
+  ...
+# Subtest: the source is local, verifying, and carries its own namespace
+ok 328 - the source is local, verifying, and carries its own namespace
+  ---
+  duration_ms: 1.591375
+  type: 'test'
+  ...
+# Subtest: the retrieval label carries the node's age range, once, like the ASFAI source
+ok 329 - the retrieval label carries the node's age range, once, like the ASFAI source
+  ---
+  duration_ms: 3.853125
+  type: 'test'
+  ...
+# Subtest: a citation is verified by membership, and a stranger's ref is reported unknown
+ok 330 - a citation is verified by membership, and a stranger's ref is reported unknown
+  ---
+  duration_ms: 0.695084
+  type: 'test'
+  ...
+# Subtest: an unloadable snapshot degrades to no context, and verification says it did not check
+ok 331 - an unloadable snapshot degrades to no context, and verification says it did not check
+  ---
+  duration_ms: 0.346417
+  type: 'test'
+  ...
+# Subtest: a query for a course with no overlaps returns nothing, even when the words match
+ok 332 - a query for a course with no overlaps returns nothing, even when the words match
+  ---
+  duration_ms: 0.391333
+  type: 'test'
+  ...
+# Subtest: when the audience ages overlap the Marble band, hits are filtered to that overlap
+ok 333 - when the audience ages overlap the Marble band, hits are filtered to that overlap
+  ---
+  duration_ms: 1.764333
+  type: 'test'
+  ...
+# Subtest: an audience the source cannot read fails closed: no citations at all (C1)
+ok 334 - an audience the source cannot read fails closed: no citations at all (C1)
+  ---
+  duration_ms: 0.373334
+  type: 'test'
+  ...
+# Subtest: topicOf: the lesson's own words, as the student preview already shows them
+ok 335 - topicOf: the lesson's own words, as the student preview already shows them
+  ---
+  duration_ms: 0.637708
+  type: 'test'
+  ...
+# Subtest: 1. kind: an unknown kind is off_topic, and an off_topic reply is the host's redirect
+ok 336 - 1. kind: an unknown kind is off_topic, and an off_topic reply is the host's redirect
+  ---
+  duration_ms: 16.021833
+  type: 'test'
+  ...
+# Subtest: 2. clarify: the host lists at most 3 cited item labels; invalid ids are off_topic
+ok 337 - 2. clarify: the host lists at most 3 cited item labels; invalid ids are off_topic
+  ---
+  duration_ms: 0.494209
+  type: 'test'
+  ...
+# Subtest: 3. about_helper: fixed host text naming the lesson title, no model words
+ok 338 - 3. about_helper: fixed host text naming the lesson title, no model words
+  ---
+  duration_ms: 0.107584
+  type: 'test'
+  ...
+# Subtest: 4. off_topic: the redirect names up to 3 objectives in the lesson's words, then the teacher
+ok 339 - 4. off_topic: the redirect names up to 3 objectives in the lesson's words, then the teacher
+  ---
+  duration_ms: 0.097625
+  type: 'test'
+  ...
+# Subtest: an answer still needs a valid cite: kind answer with no valid cite is the redirect
+ok 340 - an answer still needs a valid cite: kind answer with no valid cite is the redirect
+  ---
+  duration_ms: 0.109041
+  type: 'test'
+  ...
+# Subtest: 5. assessment is unchanged: the fixed refusal, and the regex net wins over every kind
+ok 341 - 5. assessment is unchanged: the fixed refusal, and the regex net wins over every kind
+  ---
+  duration_ms: 0.260667
+  type: 'test'
+  ...
+# Subtest: worker: the prompt names the five kinds and says the host writes the words for the new ones
+ok 342 - worker: the prompt names the five kinds and says the host writes the words for the new ones
+  ---
+  duration_ms: 24.652458
+  type: 'test'
+  ...
+# Subtest: worker: kind is normalised (answer fails closed; unknown is off_topic; clarify keeps only known ids)
+ok 343 - worker: kind is normalised (answer fails closed; unknown is off_topic; clarify keeps only known ids)
+  ---
+  duration_ms: 19.861792
+  type: 'test'
+  ...
+# Subtest: nothing to ask until a version is sealed
+ok 344 - nothing to ask until a version is sealed
+  ---
+  duration_ms: 23.119208
+  type: 'test'
+  ...
+# Subtest: an answer that cites the sealed package is grounded, and shows what it rests on
+ok 345 - an answer that cites the sealed package is grounded, and shows what it rests on
+  ---
+  duration_ms: 35.295875
+  type: 'test'
+  ...
+# Subtest: the model sees ONLY the sealed package: confirmed objectives and the confirmed plan, nothing dropped or drafted
+ok 346 - the model sees ONLY the sealed package: confirmed objectives and the confirmed plan, nothing dropped or drafted
+  ---
+  duration_ms: 18.100583
+  type: 'test'
+  ...
+# Subtest: no valid citation means no answer: the fixed 'ask your teacher', never a guess
+ok 347 - no valid citation means no answer: the fixed 'ask your teacher', never a guess
+  ---
+  duration_ms: 36.134583
+  type: 'test'
+  ...
+# Subtest: a chat is NOT evidence: it writes nothing - no log event, no ledger turn, no file
+ok 348 - a chat is NOT evidence: it writes nothing - no log event, no ledger turn, no file
+  ---
+  duration_ms: 12.142834
+  type: 'test'
+  ...
+# Subtest: no student identity is accepted, and a hostile question cannot widen the package
+ok 349 - no student identity is accepted, and a hostile question cannot widen the package
+  ---
+  duration_ms: 13.943041
+  type: 'test'
+  ...
+# Subtest: input is bounded and honest: empty question 422; history trimmed; no worker 501; a bad worker 502
+ok 350 - input is bounded and honest: empty question 422; history trimmed; no worker 501; a bad worker 502
+  ---
+  duration_ms: 27.535667
+  type: 'test'
+  ...
+# Subtest: it reads the LATEST sealed version, and the package view is plain data
+ok 351 - it reads the LATEST sealed version, and the package view is plain data
+  ---
+  duration_ms: 6.610875
+  type: 'test'
+  ...
+# Subtest: an answer the package does not cover falls back, fail-closed on inScope (the capital-of-France leak)
+ok 352 - an answer the package does not cover falls back, fail-closed on inScope (the capital-of-France leak)
+  ---
+  duration_ms: 41.639083
+  type: 'test'
+  ...
+# Subtest: the student prompt asks for a reply kind (K3; it replaced inScope) and says to answer only the question asked
+ok 353 - the student prompt asks for a reply kind (K3; it replaced inScope) and says to answer only the question asked
+  ---
+  duration_ms: 7.700667
+  type: 'test'
+  ...
+# Subtest: an explanation of an idea a cited item names is grounded and labelled basis 'explanation'
+ok 354 - an explanation of an idea a cited item names is grounded and labelled basis 'explanation'
+  ---
+  duration_ms: 6.256083
+  type: 'test'
+  ...
+# Subtest: a reply with no basis is a plan answer; an unrecognised basis is the more hedged 'explanation'
+ok 355 - a reply with no basis is a plan answer; an unrecognised basis is the more hedged 'explanation'
+  ---
+  duration_ms: 13.34375
+  type: 'test'
+  ...
+# Subtest: an assessment request gets the fixed ASSESSMENT sentence and refusal 'assessment'
+ok 356 - an assessment request gets the fixed ASSESSMENT sentence and refusal 'assessment'
+  ---
+  duration_ms: 7.071084
+  type: 'test'
+  ...
+# Subtest: an unknown or missing refusal is off_topic; 'assessment' wins even if the model also said inScope true and cited
+ok 357 - an unknown or missing refusal is off_topic; 'assessment' wins even if the model also said inScope true and cited
+  ---
+  duration_ms: 43.608584
+  type: 'test'
+  ...
+# Subtest: the server-side heuristic catches assessment questions even when the worker misses them
+ok 358 - the server-side heuristic catches assessment questions even when the worker misses them
+  ---
+  duration_ms: 415.589709
+  type: 'test'
+  ...
+# Subtest: the heuristic does not trigger on non-assessment questions
+ok 359 - the heuristic does not trigger on non-assessment questions
+  ---
+  duration_ms: 253.58675
+  type: 'test'
+  ...
+# Subtest: an explanation with no valid cite fails closed to off_topic
+ok 360 - an explanation with no valid cite fails closed to off_topic
+  ---
+  duration_ms: 16.268042
+  type: 'test'
+  ...
+# Subtest: the answer speaks the student's words: the prompt forbids package, version, sealed and item ids in the answer
+ok 361 - the answer speaks the student's words: the prompt forbids package, version, sealed and item ids in the answer
+  ---
+  duration_ms: 4.634458
+  type: 'test'
+  ...
+# Subtest: the prompt allows an explanation only of a named idea, at the package's age, in 3 sentences, and names both refusals
+ok 362 - the prompt allows an explanation only of a named idea, at the package's age, in 3 sentences, and names both refusals
+  ---
+  duration_ms: 4.585958
+  type: 'test'
+  ...
+# Subtest: suggest: up to 3 proposals labelled 'suggested by Silicus', each waiting for the teacher, one model turn recorded
+ok 363 - suggest: up to 3 proposals labelled 'suggested by Silicus', each waiting for the teacher, one model turn recorded
+  ---
+  duration_ms: 42.21275
+  type: 'test'
+  ...
+# Subtest: suggest reads NO body, and what the model is told is the teacher's recorded words plus what already exists
+ok 364 - suggest reads NO body, and what the model is told is the teacher's recorded words plus what already exists
+  ---
+  duration_ms: 12.74625
+  type: 'test'
+  ...
+# Subtest: 409 PROPOSE_FIRST before any objectives are proposed: a suggestion can never take the slot of the teacher's own
+ok 365 - 409 PROPOSE_FIRST before any objectives are proposed: a suggestion can never take the slot of the teacher's own
+  ---
+  duration_ms: 9.076542
+  type: 'test'
+  ...
+# Subtest: 409 NO_TEACHER_OUTCOMES without an outcome of the teacher's own; nothing is written, the model is not called
+ok 366 - 409 NO_TEACHER_OUTCOMES without an outcome of the teacher's own; nothing is written, the model is not called
+  ---
+  duration_ms: 7.289583
+  type: 'test'
+  ...
+# Subtest: 409 SUGGESTIONS_PENDING while a suggested proposal is undecided; a new batch only after the teacher decided the last
+ok 367 - 409 SUGGESTIONS_PENDING while a suggested proposal is undecided; a new batch only after the teacher decided the last
+  ---
+  duration_ms: 12.188833
+  type: 'test'
+  ...
+# Subtest: a second batch is allowed once the first is decided and the checkpoint is still open (teacher's own undecided)
+ok 368 - a second batch is allowed once the first is decided and the checkpoint is still open (teacher's own undecided)
+  ---
+  duration_ms: 9.478541
+  type: 'test'
+  ...
+# Subtest: model output is untrusted: cleaned, de-duplicated against existing and itself, empties dropped, the label is never the model's
+ok 369 - model output is untrusted: cleaned, de-duplicated against existing and itself, empties dropped, the label is never the model's
+  ---
+  duration_ms: 6.604208
+  type: 'test'
+  ...
+# Subtest: zero usable suggestions is a named 502, and the record does not move; a reply that is not a list is WORKER_BAD_OUTPUT
+ok 370 - zero usable suggestions is a named 502, and the record does not move; a reply that is not a list is WORKER_BAD_OUTPUT
+  ---
+  duration_ms: 21.878625
+  type: 'test'
+  ...
+# Subtest: no worker configured: 501; GET is 405; the outline must be confirmed first
+ok 371 - no worker configured: 501; GET is 405; the outline must be confirmed first
+  ---
+  duration_ms: 15.874584
+  type: 'test'
+  ...
+# Subtest: suggestions carry their label in the view and the hash-chained log still verifies
+ok 372 - suggestions carry their label in the view and the hash-chained log still verifies
+  ---
+  duration_ms: 6.264417
+  type: 'test'
+  ...
+# Subtest: parseEnvText reads KEY=VALUE lines, ignoring comments and blank lines, stripping quotes
+ok 373 - parseEnvText reads KEY=VALUE lines, ignoring comments and blank lines, stripping quotes
+  ---
+  duration_ms: 0.475666
+  type: 'test'
+  ...
+# Subtest: selectWorkerEnv forwards only the drafting-worker variables, dropping every unrelated secret
+ok 374 - selectWorkerEnv forwards only the drafting-worker variables, dropping every unrelated secret
+  ---
+  duration_ms: 0.355458
+  type: 'test'
+  ...
+# Subtest: resolveCredential mirrors workerFromEnv: the preset decides which key name is read
+ok 375 - resolveCredential mirrors workerFromEnv: the preset decides which key name is read
+  ---
+  duration_ms: 0.152208
+  type: 'test'
+  ...
+# Subtest: the missing-credential message is one line, names the file and the exact fix, and carries no value
+ok 376 - the missing-credential message is one line, names the file and the exact fix, and carries no value
+  ---
+  duration_ms: 0.102209
+  type: 'test'
+  ...
+# Subtest: no credential in the named file: the launcher refuses to start, exit 1, with a clear one-line message
+ok 377 - no credential in the named file: the launcher refuses to start, exit 1, with a clear one-line message
+  ---
+  duration_ms: 34.035125
+  type: 'test'
+  ...
+# Subtest: a key without its preset is refused: the launcher names the missing provider, not a false success
+ok 378 - a key without its preset is refused: the launcher names the missing provider, not a false success
+  ---
+  duration_ms: 31.045125
+  type: 'test'
+  ...
+# Subtest: a credential in the named file: the launcher starts the real server, configured true, and leaks nothing
+ok 379 - a credential in the named file: the launcher starts the real server, configured true, and leaks nothing
+  ---
+  duration_ms: 120.272416
+  type: 'test'
+  ...
+# Subtest: a WorkerError thrown by fetchImpl keeps its code and message
+ok 380 - a WorkerError thrown by fetchImpl keeps its code and message
+  ---
+  duration_ms: 0.943791
+  type: 'test'
+  ...
+# Subtest: any other fetch failure is still WORKER_UNREACHABLE
+ok 381 - any other fetch failure is still WORKER_UNREACHABLE
+  ---
+  duration_ms: 0.692625
+  type: 'test'
+  ...
+# Subtest: no worker configured is a state, not a crash
+ok 382 - no worker configured is a state, not a crash
+  ---
+  duration_ms: 1.481833
+  type: 'test'
+  ...
+# Subtest: a worker with no objectives to draft from refuses
+ok 383 - a worker with no objectives to draft from refuses
+  ---
+  duration_ms: 0.124375
+  type: 'test'
+  ...
+# Subtest: the worker drafts from the teacher's confirmed wording, and cites only the ids it was given
+ok 384 - the worker drafts from the teacher's confirmed wording, and cites only the ids it was given
+  ---
+  duration_ms: 19.341125
+  type: 'test'
+  ...
+# Subtest: a worker that returns junk produces a refusal, never a broken plan
+ok 385 - a worker that returns junk produces a refusal, never a broken plan
+  ---
+  duration_ms: 3.891291
+  type: 'test'
+  ...
+# Subtest: a worker that cites an objective we did not send is refused
+ok 386 - a worker that cites an objective we did not send is refused
+  ---
+  duration_ms: 2.235417
+  type: 'test'
+  ...
+# Subtest: a worker cannot smuggle student chat in as evidence
+ok 387 - a worker cannot smuggle student chat in as evidence
+  ---
+  duration_ms: 2.524584
+  type: 'test'
+  ...
+# Subtest: a worker that says nothing the learner or teacher does is refused
+ok 388 - a worker that says nothing the learner or teacher does is refused
+  ---
+  duration_ms: 3.409042
+  type: 'test'
+  ...
+# Subtest: a plan with no activities, or an activity citing nothing, is refused
+ok 389 - a plan with no activities, or an activity citing nothing, is refused
+  ---
+  duration_ms: 2.687459
+  type: 'test'
+  ...
+# Subtest: a markdown-fenced JSON answer is accepted, then validated like anything else
+ok 390 - a markdown-fenced JSON answer is accepted, then validated like anything else
+  ---
+  duration_ms: 3.34825
+  type: 'test'
+  ...
+# Subtest: a non-loopback http worker is refused: the host is otherwise loopback-only
+ok 391 - a non-loopback http worker is refused: the host is otherwise loopback-only
+  ---
+  duration_ms: 0.4095
+  type: 'test'
+  ...
+# Subtest: an unreachable worker is a refusal with a code, not a crash
+ok 392 - an unreachable worker is a refusal with a code, not a crash
+  ---
+  duration_ms: 0.435666
+  type: 'test'
+  ...
+# Subtest: an error status from the worker is a refusal
+ok 393 - an error status from the worker is a refusal
+  ---
+  duration_ms: 1.677083
+  type: 'test'
+  ...
+# Subtest: the credential rides in a header, never in the URL
+ok 394 - the credential rides in a header, never in the URL
+  ---
+  duration_ms: 1.571666
+  type: 'test'
+  ...
+# Subtest: with no context the prompt and the plan are byte-identical to before sources existed
+ok 395 - with no context the prompt and the plan are byte-identical to before sources existed
+  ---
+  duration_ms: 5.081792
+  type: 'test'
+  ...
+# Subtest: retrieved context reaches the prompt with its refs, framed as untrusted reference material
+ok 396 - retrieved context reaches the prompt with its refs, framed as untrusted reference material
+  ---
+  duration_ms: 1.144125
+  type: 'test'
+  ...
+# Subtest: an activity citing a ref we did not supply is refused
+ok 397 - an activity citing a ref we did not supply is refused
+  ---
+  duration_ms: 1.475458
+  type: 'test'
+  ...
+# Subtest: an activity that cites a supplied ref keeps it; citations are optional and deduplicated
+ok 398 - an activity that cites a supplied ref keeps it; citations are optional and deduplicated
+  ---
+  duration_ms: 1.82425
+  type: 'test'
+  ...
+# Subtest: a citation can not stand in for an objective: citing only a graph node is still refused
+ok 399 - a citation can not stand in for an objective: citing only a graph node is still refused
+  ---
+  duration_ms: 0.881459
+  type: 'test'
+  ...
+# Subtest: hostile retrieved text cannot forge a prompt line, and the plan is judged by the same rules anyway
+ok 400 - hostile retrieved text cannot forge a prompt line, and the plan is judged by the same rules anyway
+  ---
+  duration_ms: 1.605833
+  type: 'test'
+  ...
+# Subtest: ZDR is OFF unless asked; when on, the router is told zero-data-retention only and the reply is bounded
+ok 401 - ZDR is OFF unless asked; when on, the router is told zero-data-retention only and the reply is bounded
+  ---
+  duration_ms: 2.285209
+  type: 'test'
+  ...
+# Subtest: ZDR fails CLOSED: a router refusal is a refusal, never a retry against a retaining provider
+ok 402 - ZDR fails CLOSED: a router refusal is a refusal, never a retry against a retaining provider
+  ---
+  duration_ms: 0.816833
+  type: 'test'
+  ...
+# Subtest: the reply cap (H): 16,000 by default, an override applies, and the 32,000 ceiling holds
+ok 403 - the reply cap (H): 16,000 by default, an override applies, and the 32,000 ceiling holds
+  ---
+  duration_ms: 2.44675
+  type: 'test'
+  ...
+# Subtest: the OpenAI wire sends each reasoning option exactly; model-default omits it
+ok 404 - the OpenAI wire sends each reasoning option exactly; model-default omits it
+  ---
+  duration_ms: 4.519667
+  type: 'test'
+  ...
+# Subtest: reasoning is never sent on the Anthropic wire
+ok 405 - reasoning is never sent on the Anthropic wire
+  ---
+  duration_ms: 0.95325
+  type: 'test'
+  ...
+# worker reply: truncated finish=length output_chars=15 completion_tokens=not reported reasoning_tokens=not reported max_tokens=16000
+# Subtest: an OpenAI length finish is a clear truncation refusal before JSON parsing
+ok 406 - an OpenAI length finish is a clear truncation refusal before JSON parsing
+  ---
+  duration_ms: 1.039542
+  type: 'test'
+  ...
+# Subtest: K4 C2: a truncated reply logs its length and the route's token counts, never the content
+ok 407 - K4 C2: a truncated reply logs its length and the route's token counts, never the content
+  ---
+  duration_ms: 0.420583
+  type: 'test'
+  ...
+# Subtest: K4 C2: a long reply is logged with 'not reported' counts when the route sends no usage; a short one is not logged
+ok 408 - K4 C2: a long reply is logged with 'not reported' counts when the route sends no usage; a short one is not logged
+  ---
+  duration_ms: 0.662375
+  type: 'test'
+  ...
+# Subtest: the PlanWorker default deadline is 120 seconds
+ok 409 - the PlanWorker default deadline is 120 seconds
+  ---
+  duration_ms: 0.026792
+  type: 'test'
+  ...
+# Subtest: objectives are proposed from the material, which reaches the prompt as untrusted subject matter
+ok 410 - objectives are proposed from the material, which reaches the prompt as untrusted subject matter
+  ---
+  duration_ms: 1.759916
+  type: 'test'
+  ...
+# Subtest: proposed objectives are cleaned, deduplicated and capped; an unknown name is dropped, not fatal
+ok 411 - proposed objectives are cleaned, deduplicated and capped; an unknown name is dropped, not fatal
+  ---
+  duration_ms: 1.381792
+  type: 'test'
+  ...
+# Subtest: R1: a bad provenance label is dropped from that objective, never a refusal of the whole batch
+ok 412 - R1: a bad provenance label is dropped from that objective, never a refusal of the whole batch
+  ---
+  duration_ms: 0.636875
+  type: 'test'
+  ...
+# Subtest: R1: the prompt carries a short id per material and the model's ids map back to names; unknown ids drop
+ok 413 - R1: the prompt carries a short id per material and the model's ids map back to names; unknown ids drop
+  ---
+  duration_ms: 0.82725
+  type: 'test'
+  ...
+# Subtest: R1: only a batch with NO usable objective left is refused
+ok 414 - R1: only a batch with NO usable objective left is refused
+  ---
+  duration_ms: 0.756084
+  type: 'test'
+  ...
+# Subtest: R2: the objectives prompt carries the teacher's own objectives, and a repeat of one is dropped
+ok 415 - R2: the objectives prompt carries the teacher's own objectives, and a repeat of one is dropped
+  ---
+  duration_ms: 0.949708
+  type: 'test'
+  ...
+# Subtest: R2: an objective already on the course is not repeated in the prompt, and nobody's objectives means no block
+ok 416 - R2: an objective already on the course is not repeated in the prompt, and nobody's objectives means no block
+  ---
+  duration_ms: 1.634292
+  type: 'test'
+  ...
+# Subtest: F4: a round whose every proposal repeats an objective already on the course is ROUND_NOTHING_NEW, not WORKER_BAD_OUTPUT
+ok 417 - F4: a round whose every proposal repeats an objective already on the course is ROUND_NOTHING_NEW, not WORKER_BAD_OUTPUT
+  ---
+  duration_ms: 1.268708
+  type: 'test'
+  ...
+# Subtest: a worker that proposes nothing usable, or no list, is a refusal; no material or no worker is a state
+ok 418 - a worker that proposes nothing usable, or no list, is a refusal; no material or no worker is a state
+  ---
+  duration_ms: 3.492125
+  type: 'test'
+  ...
+# Subtest: hostile material cannot forge a material header or break out of its block
+ok 419 - hostile material cannot forge a material header or break out of its block
+  ---
+  duration_ms: 0.829958
+  type: 'test'
+  ...
+# Subtest: a student answer must cite the package; unknown ids are dropped, and no valid citation is left visible to the caller
+ok 420 - a student answer must cite the package; unknown ids are dropped, and no valid citation is left visible to the caller
+  ---
+  duration_ms: 5.34025
+  type: 'test'
+  ...
+# Subtest: the Anthropic wire: x-api-key + version header, Messages body, typed content blocks parsed (thinking skipped)
+ok 421 - the Anthropic wire: x-api-key + version header, Messages body, typed content blocks parsed (thinking skipped)
+  ---
+  duration_ms: 1.053125
+  type: 'test'
+  ...
+# Subtest: the Anthropic wire serves every worker call: objectives and student answers too, with the same validation
+ok 422 - the Anthropic wire serves every worker call: objectives and student answers too, with the same validation
+  ---
+  duration_ms: 1.760417
+  type: 'test'
+  ...
+# Subtest: the Anthropic wire refuses to claim zero-data-retention, and an unknown provider is a configuration error
+ok 423 - the Anthropic wire refuses to claim zero-data-retention, and an unknown provider is a configuration error
+  ---
+  duration_ms: 0.143042
+  type: 'test'
+  ...
+# Subtest: an Anthropic error body or an empty reply is a refusal, not a plan
+ok 424 - an Anthropic error body or an empty reply is a refusal, not a plan
+  ---
+  duration_ms: 1.732625
+  type: 'test'
+  ...
+# Subtest: workerFromEnv: Anthropic defaults (URL, model, ANTHROPIC_API_KEY), OpenRouter stays the default wire, and ZDR on Anthropic refuses to start
+ok 425 - workerFromEnv: Anthropic defaults (URL, model, ANTHROPIC_API_KEY), OpenRouter stays the default wire, and ZDR on Anthropic refuses to start
+  ---
+  duration_ms: 0.154416
+  type: 'test'
+  ...
+# Subtest: workerFromEnv reasoning parity: OpenRouter defaults low; other presets require an explicit setting
+ok 426 - workerFromEnv reasoning parity: OpenRouter defaults low; other presets require an explicit setting
+  ---
+  duration_ms: 0.072291
+  type: 'test'
+  ...
+# Subtest: a real model echoes the prompt's [brackets] around a cited id: that still matches, and nothing else is loosened
+ok 427 - a real model echoes the prompt's [brackets] around a cited id: that still matches, and nothing else is loosened
+  ---
+  duration_ms: 1.089208
+  type: 'test'
+  ...
+# Subtest: the course answer is in the plan prompt, with the line that makes the model honour it; absent or empty leaves the prompt unchanged
+ok 428 - the course answer is in the plan prompt, with the line that makes the model honour it; absent or empty leaves the prompt unchanged
+  ---
+  duration_ms: 2.973666
+  type: 'test'
+  ...
+# Subtest: the course answer is untrusted: one line, bounded to 300 characters, cannot forge an objective line
+ok 429 - the course answer is untrusted: one line, bounded to 300 characters, cannot forge an objective line
+  ---
+  duration_ms: 0.782083
+  type: 'test'
+  ...
+# Subtest: the host hands the teacher's course answer to the worker when it drafts the plan
+ok 430 - the host hands the teacher's course answer to the worker when it drafts the plan
+  ---
+  duration_ms: 4.451167
+  type: 'test'
+  ...
+# Subtest: answerStudent: basis and refusal are normalised before the caller sees them (explanation kept; out of scope carries a known refusal)
+ok 431 - answerStudent: basis and refusal are normalised before the caller sees them (explanation kept; out of scope carries a known refusal)
+  ---
+  duration_ms: 4.137417
+  type: 'test'
+  ...
+# Subtest: suggestObjectives: a worker-side prompt of teacher words only; the reply is bare statements, at most 3, none a repeat
+ok 432 - suggestObjectives: a worker-side prompt of teacher words only; the reply is bare statements, at most 3, none a repeat
+  ---
+  duration_ms: 1.403542
+  type: 'test'
+  ...
+1..432
+# tests 432
+# suites 0
+# pass 432
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5936.545667

@@ -1,0 +1,703 @@
+
+ RUN  v3.2.7 /private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/k5base/frontend
+
+ ❯ src/studio/K5.polish.test.tsx (5 tests | 5 failed) 1144ms
+   × K5 polish > two files chosen at once keep both, not only the last 1122ms
+     → expected 'Sources · 1 sourceShowSourcesTXTb-not…' to contain 'a-notes.txt'
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"Sources"[39m
+        [33mclass[39m=[32m"_sources_12a83a"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"_r_0_"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"_sourcesToggle_12a83a"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [36m<strong>[39m
+              [0mSources[0m
+            [36m</strong>[39m
+            [0m · [0m
+            [0m1 source[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+          [36m>[39m
+            [0mShow[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_sourcesBody_12a83a"[39m
+          [33mid[39m=[32m"_r_0_"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_sectionLabel_12a83a"[39m
+          [36m>[39m
+            [36m<span>[39m
+              [0mSources[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"_sourceList_12a83a"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"_sourceItem_12a83a"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"_sourceIcon_12a83a"[39m
+              [36m>[39m
+                [0mTXT[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mstyle[39m=[32m"min-width: 0;"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_sourceName_12a83a"[39m
+                [36m>[39m
+                  [0mb-notes.txt[0m
+                [36m</span>[39m
+                [36m<br />[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_sourceMeta_12a83a"[39m
+                [36m>[39m
+                  [0mRead in this tab · [0m
+                  [0mText · 12 characters[0m
+                [36m</span>[39m
+              [36m</span>[39m
+              [36m<button[39m
+                [33maria-label[39m=[32m"Remove b-notes.txt from this tab"[39m
+                [33mclass[39m=[32m"_sourceRemove_12a83a"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m×[0m
+              [36m</button>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_addSource_12a83a"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m+ Add a source[0m
+          [36m</button>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"_sourceFoot_12a83a"[39m
+          [36m>[39m
+            [0mText is read in this tab, sent once when you ask for a draft, and forgotten on reload.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<dialog[39m
+          [33maria-label[39m=[32m"Add a source"[39m
+          [33mclass[39m=[32m"_dialog_579285"[39m
+          [33mopen[39m=[32m""[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_dialogBody_579285"[39m
+          [36m>[39m
+            [36m<h2[39m
+              [33mstyle[39m=[32m"font-size: 1.5rem;"[39m
+            [36m>[39m
+              [0mAdd a source[0m
+            [36m</h2>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_dropArea_1c4aa5"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_drop_1c4aa5"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"_dropTitle_1c4aa5"[39m
+                [36m>[39m
+                  [0mDrop files here[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"_dropHint_1c4aa5"[39m
+                [36m>[39m
+                  [0mPDF, Word, PowerPoint or text. Read here in the tab; the file itself isn’t uploaded or kept.[0m
+                [36m</p>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"_fileButton_1c4aa5"[39m
+                  [33mfor[39m=[32m"_r_1_"[39m
+                [36m>[39m
+                  [0mChoose files[0m
+                  [36m<input[39m
+                    [33maccept[39m=[32m".pdf,.docx,.pptx,.txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"[39m
+                    [33mclass[39m=[32m"_visuallyHidden_1c4aa5"[39m
+                    [33mid[39m=[32m"_r_1_"[39m
+                    [33mmultiple[39m=[32m""[39m
+                    [33mtype[39m=[32m"file"[39m
+                  [36m/>[39m
+                [36m</label>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_field_579285"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"_label_579285"[39m
+                  [33mfor[39m=[32m"_r_2_"[39m
+                [36m>[39m
+                  [0mOr paste text, or a web page address[0m
+                [36m</label>[39m
+                [36m<textarea[39m
+                  [33maria-describedby[39m=[32m"_r_3_"[39m
+                  [33mclass[39m=[32m"_textarea_579285"[39m
+                  [33mid[39m=[32m"_r_2_"[39m
+                  [33mplaceholder[39m=[32m"Paste lesson notes, or https://…"[39m
+                  [33mrows[39m=[32m"3"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_pasteFoot_1c4aa5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_hint_579285"[39m
+                    [33mid[39m=[32m"_r_3_"[39m
+                  [36m>[39m
+                    [0mText stays in this tab. A web page is fetched once, when Silicus reads your sources.[0m
+                  [36m</span>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"_button_579285 _secondary_579285 _small_579285 "[39m
+                    [33mdisabled[39m=[32m""[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0mAdd text[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_dialogFoot_579285"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"_button_579285 _primary_5792...
+   × K5 polish > after a reload, a file the proposals name is a source, not 'No sources yet' 11ms
+     → [2mexpect([22m[31melement[39m[2m).not.toBeInTheDocument()[22m
+
+[31mexpected document not to contain element, found <p
+  class="_sourceMeta_12a83a"
+>
+  No sources yet. You can plan from your own answers instead.
+</p> instead[39m
+   × K5 polish > the plan step's wait is not a second role=status region 7ms
+     → expected …(1) to have a length of +0 but got 1
+   × K5 polish > 'Back to the current step' is the primary action wherever it appears 2ms
+     → expected '    bar = <ActionBar text={plan?.stat…' to contain 'data-primary="true"'
+   × K5 polish > the wizard's mobile step bar lays every step on one row 1ms
+     → expected '/* The onboarding wizard (R7) and the…' to match /\.mobileBar \{[^}]*grid-auto-flow: co…/
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/studio/K5.polish.test.tsx > K5 polish > two files chosen at once keep both, not only the last
+AssertionError: expected 'Sources · 1 sourceShowSourcesTXTb-not…' to contain 'a-notes.txt'
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"Sources"[39m
+        [33mclass[39m=[32m"_sources_12a83a"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-controls[39m=[32m"_r_0_"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33mclass[39m=[32m"_sourcesToggle_12a83a"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [36m<strong>[39m
+              [0mSources[0m
+            [36m</strong>[39m
+            [0m · [0m
+            [0m1 source[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+          [36m>[39m
+            [0mShow[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_sourcesBody_12a83a"[39m
+          [33mid[39m=[32m"_r_0_"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_sectionLabel_12a83a"[39m
+          [36m>[39m
+            [36m<span>[39m
+              [0mSources[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"_sourceList_12a83a"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"_sourceItem_12a83a"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"_sourceIcon_12a83a"[39m
+              [36m>[39m
+                [0mTXT[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mstyle[39m=[32m"min-width: 0;"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_sourceName_12a83a"[39m
+                [36m>[39m
+                  [0mb-notes.txt[0m
+                [36m</span>[39m
+                [36m<br />[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_sourceMeta_12a83a"[39m
+                [36m>[39m
+                  [0mRead in this tab · [0m
+                  [0mText · 12 characters[0m
+                [36m</span>[39m
+              [36m</span>[39m
+              [36m<button[39m
+                [33maria-label[39m=[32m"Remove b-notes.txt from this tab"[39m
+                [33mclass[39m=[32m"_sourceRemove_12a83a"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m×[0m
+              [36m</button>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_addSource_12a83a"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0m+ Add a source[0m
+          [36m</button>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"_sourceFoot_12a83a"[39m
+          [36m>[39m
+            [0mText is read in this tab, sent once when you ask for a draft, and forgotten on reload.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<dialog[39m
+          [33maria-label[39m=[32m"Add a source"[39m
+          [33mclass[39m=[32m"_dialog_579285"[39m
+          [33mopen[39m=[32m""[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_dialogBody_579285"[39m
+          [36m>[39m
+            [36m<h2[39m
+              [33mstyle[39m=[32m"font-size: 1.5rem;"[39m
+            [36m>[39m
+              [0mAdd a source[0m
+            [36m</h2>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_dropArea_1c4aa5"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_drop_1c4aa5"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"_dropTitle_1c4aa5"[39m
+                [36m>[39m
+                  [0mDrop files here[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"_dropHint_1c4aa5"[39m
+                [36m>[39m
+                  [0mPDF, Word, PowerPoint or text. Read here in the tab; the file itself isn’t uploaded or kept.[0m
+                [36m</p>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"_fileButton_1c4aa5"[39m
+                  [33mfor[39m=[32m"_r_1_"[39m
+                [36m>[39m
+                  [0mChoose files[0m
+                  [36m<input[39m
+                    [33maccept[39m=[32m".pdf,.docx,.pptx,.txt,.md,.markdown,.vtt,.srt,.html,.htm,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"[39m
+                    [33mclass[39m=[32m"_visuallyHidden_1c4aa5"[39m
+                    [33mid[39m=[32m"_r_1_"[39m
+                    [33mmultiple[39m=[32m""[39m
+                    [33mtype[39m=[32m"file"[39m
+                  [36m/>[39m
+                [36m</label>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_field_579285"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"_label_579285"[39m
+                  [33mfor[39m=[32m"_r_2_"[39m
+                [36m>[39m
+                  [0mOr paste text, or a web page address[0m
+                [36m</label>[39m
+                [36m<textarea[39m
+                  [33maria-describedby[39m=[32m"_r_3_"[39m
+                  [33mclass[39m=[32m"_textarea_579285"[39m
+                  [33mid[39m=[32m"_r_2_"[39m
+                  [33mplaceholder[39m=[32m"Paste lesson notes, or https://…"[39m
+                  [33mrows[39m=[32m"3"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_pasteFoot_1c4aa5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_hint_579285"[39m
+                    [33mid[39m=[32m"_r_3_"[39m
+                  [36m>[39m
+                    [0mText stays in this tab. A web page is fetched once, when Silicus reads your sources.[0m
+                  [36m</span>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"_button_579285 _secondary_579285 _small_579285 "[39m
+                    [33mdisabled[39m=[32m""[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0mAdd text[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_dialogFoot_579285"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"_button_579285 _primary_5792...
+
+Expected: [32m"a-notes.txt"[39m
+Received: [31m"Sources · 1 sourceShowSourcesTXTb-notes.txtRead in this tab · Text · 12 characters×+ Add a sourceText is read in this tab, sent once when you ask for a draft, and forgotten on reload.Add a sourceDrop files herePDF, Word, PowerPoint or text. Read here in the tab; the file itself isn’t uploaded or kept.Choose filesOr paste text, or a web page addressText stays in this tab. A web page is fetched once, when Silicus reads your sources.Add textDone"[39m
+
+ ❯ src/studio/K5.polish.test.tsx:29:20
+     27|     await waitFor(() => {
+     28|       const text = container.textContent ?? "";
+     29|       expect(text).toContain("a-notes.txt");
+       |                    ^
+     30|       expect(text).toContain("b-notes.txt");
+     31|     });
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../../k5tree/frontend/node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../../k5tree/frontend/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../../k5tree/frontend/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/studio/K5.polish.test.tsx > K5 polish > after a reload, a file the proposals name is a source, not 'No sources yet'
+Error: [2mexpect([22m[31melement[39m[2m).not.toBeInTheDocument()[22m
+
+[31mexpected document not to contain element, found <p
+  class="_sourceMeta_12a83a"
+>
+  No sources yet. You can plan from your own answers instead.
+</p> instead[39m
+ ❯ src/studio/K5.polish.test.tsx:36:54
+     34|   it("after a reload, a file the proposals name is a source, not 'No s…
+     35|     render(<Panel proposals={[{ source: "from material: unit-3.pdf" },…
+     36|     expect(screen.queryByText(/No sources yet/)).not.toBeInTheDocument…
+       |                                                      ^
+     37|     expect(screen.getByText("unit-3.pdf")).toBeInTheDocument();
+     38|     expect(screen.getByText("glossary.docx")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/studio/K5.polish.test.tsx > K5 polish > the plan step's wait is not a second role=status region
+AssertionError: expected …(1) to have a length of +0 but got 1
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ src/studio/K5.polish.test.tsx:43:59
+     41|   it("the plan step's wait is not a second role=status region", () => {
+     42|     const { container } = render(<WaitLines live={false} label="Drafti…
+     43|     expect(container.querySelectorAll('[role="status"]')).toHaveLength…
+       |                                                           ^
+     44|     expect(screen.getByRole("group", { name: "Drafting the plan" })).t…
+     45|     expect(src("steps/PlanStep.tsx")).toMatch(/<WaitLines live=\{false…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/studio/K5.polish.test.tsx > K5 polish > 'Back to the current step' is the primary action wherever it appears
+AssertionError: expected '    bar = <ActionBar text={plan?.stat…' to contain 'data-primary="true"'
+
+Expected: [32m"data-primary="true""[39m
+Received: [31m"    bar = <ActionBar text={plan?.status === "confirmed" ? <><strong>Plan confirmed.</strong> Nothing here changes.</> : "A look at the plan."}><Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button></ActionBar>;"[39m
+
+ ❯ src/studio/K5.polish.test.tsx:52:40
+     50|       const lines = src(f).split("\n").filter((l) => l.includes(">Back…
+     51|       expect(lines.length).toBeGreaterThan(0);
+     52|       for (const l of lines) expect(l).toContain('data-primary="true"'…
+       |                                        ^
+     53|     }
+     54|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/studio/K5.polish.test.tsx > K5 polish > the wizard's mobile step bar lays every step on one row
+AssertionError: expected '/* The onboarding wizard (R7) and the…' to match /\.mobileBar \{[^}]*grid-auto-flow: co…/
+
+[32m- Expected:[39m 
+/\.mobileBar \{[^}]*grid-auto-flow: column/
+
+[31m+ Received:[39m 
+"/* The onboarding wizard (R7) and the one source drop zone. Builds on studio.css's --fn-* tokens. */
+
+.page {
+  max-width: 1040px; margin: 0 auto; box-sizing: border-box; padding: 40px 32px 64px;
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); column-gap: 56px; align-items: start;
+}
+
+/* K4 (C6): the map step takes a little more width so two-word topic names fit on one line in the five columns. */
+.page[data-map=\"true\"] { max-width: 1120px; }
+.page[data-welcome=\"true\"] { grid-template-columns: minmax(0, 1fr); justify-items: center; padding-top: 56px; }
+
+/* ---- the spine: the steps as a short table of contents ---- */
+.spine { position: sticky; top: 101px; display: flex; flex-direction: column; gap: 18px; }
+.spineList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-left: 1px solid var(--fn-line); }
+.spineItem {
+  position: relative; padding: 9px 0 9px 18px; font-size: 0.875rem; color: var(--fn-ink-muted);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.spineItem::before {
+  content: \"\"; position: absolute; left: -4px; top: 15px; width: 7px; height: 7px; border-radius: 999px;
+  background: var(--fn-desk); border: 1px solid var(--fn-line-dash);
+}
+.spineItem[data-state=\"done\"] { color: var(--fn-ink-soft); }
+.spineItem[data-state=\"done\"]::before { background: var(--fn-done); border-color: var(--fn-done); }
+.spineItem[aria-current=\"step\"] { color: var(--fn-ink); font-weight: 600; }
+.spineItem[aria-current=\"step\"]::before { background: var(--fn-accent); border-color: var(--fn-accent); }
+.spineNum { font-variant-numeric: tabular-nums; margin-right: 6px; }
+.spineNote { font-weight: 400; font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; white-space: pre-line; }
+.spinePromise { font-size: 0.75rem; color: var(--fn-ink-muted); line-height: 1.5; }
+.mobileStep { display: none; }
+
+/* ---- the sheet: one step at a time ---- */
+.sheet {
+  min-width: 0; max-width: 640px; box-sizing: border-box; padding: 36px 40px 28px;
+  background: var(--fn-sheet); border: 1px solid var(--fn-line); border-radius: 14px; box-shadow: var(--fn-shadow);
+  display: flex; flex-direction: column; gap: 22px;
+}
+.kicker { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fn-ink-muted); }
+.title { font-size: clamp(1.75rem, 3.4vw, 2.25rem); line-height: 1.12; }
+.lede { font-size: 1.0625rem; color: var(--fn-ink-soft); max-width: 56ch; }
+.head { display: flex; flex-direction: column; gap: 8px; }
+.fields { display: flex; flex-direction: column; gap: 18px; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding-top: 18px; border-top: 1px solid var(--fn-line-soft); margin-top: 4px;
+}
+.footBare { border-top: 0; padding-top: 4px; }
+.footNote { font-size: 0.8125rem; color: var(--fn-ink-muted); }
+.footButtons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; min-width: 0; }
+
+/* ---- welcome ---- */
+.welcome { max-width: 720px; }
+.promises { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--fn-line-soft); }
+.promise { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: 4px 12px; padding: 14px 0; border-bottom: 1px solid var(--fn-line-soft); }
+.promiseNum { font-family: var(--fn-serif); font-size: 1.25rem; color: #9a9283; line-height: 1.3; }
+.promiseTitle { font-family: var(--fn-serif); font-size: 1.125rem; font-weight: 600; }
+.promiseText { grid-column: 2; font-size: 0.9375rem; color: var(--fn-ink-soft); }
+
+/* ---- sources ---- */
+.dropArea { display: flex; flex-direction: column; gap: 16px; }
+.drop {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 22px 22px 20px;
+  border: 1.5px dashed var(--fn-line-dash); border-radius: 12px; background: #fffdf8;
+  transition: background 160ms var(--fn-ease), border-color 160ms var(--fn-ease);
+}
+.drop[data-over=\"true\"] { background: var(--fn-accent-wash); border-color: var(--fn-accent); }
+.dropTitle { font-family: var(--fn-serif); font-size: 1.25rem; font-weight: 600; }
+.dropHint { font-size: 0.875rem; color: var(--fn-ink-soft); }
+.fileButton {
+  margin-top: 8px; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 7px;
+  border: 1px solid #b8ad97; background: var(--fn-sheet); font-weight: 500; cursor: pointer;
+}
+.fileButton:hover { border-color: var(--fn-ink-muted); }
+.fileButton:focus-within { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
+.fileButton[aria-disabled=\"true\"] { opacity: 0.45; cursor: not-allowed; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.pasteFoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; }
+.pasteFoot > span { flex: 1 1 240px; min-width: 0; }
+.problem { font-size: 0.875rem; color: #6a3a2c; background: #f6e7e1; border-radius: 8px; padding: 10px 12px; }
+
+.itemList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--fn-line-soft); }
+.item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--fn-line-soft); }
+.itemIcon { flex: 0 0 34px; height: 34px; border-radius: 7px; background: #e7e0d0; display: grid; place-items: center; font-size: 0.625rem; font-weight: 700; color: var(--fn-ink-soft); letter-spacing: 0.04em; }
+.itemBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.itemName { font-size: 0.9375rem; overflow-wrap: anywhere; }
+.itemState { font-size: 0.8125rem; color: var(--fn-ink-muted); display: flex; align-items: center; gap: 6px; }
+.itemState[data-tone=\"read\"] { color: var(--fn-done); }
+.itemRemove { background: none; border: 0; color: var(--fn-ink-muted); cursor: pointer; min-height: 36px; padding: 0 8px; border-radius: 6px; font-size: 0.8125rem; }
+.itemRemove:hover { background: var(--fn-line-soft); color: var(--fn-ink); }
+
+/* ---- objectives ---- */
+.choice {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start;
+  padding: 14px 16px; border: 1px solid var(--fn-line); border-radius: 10px; background: #fffdf8; cursor: pointer;
+}
+.choice:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); }
+.choice input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--fn-accent); }
+.choiceTitle { font-weight: 600; }
+.choiceText { grid-column: 2; font-size: 0.875rem; color: var(--fn-ink-soft); }
+
+/* ---- AI check (wizard step and the studio's AI status) ---- */
+.check { display: flex; flex-direction: column; gap: 14px; }
+.diagnosis { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; }
+.dot { width: 10px; height: 10px; border-radius: 999px; background: var(--fn-line-dash); transform: translateY(1px); }
+.dot[data-tone=\"ok\"] { background: var(--fn-done); }
+.dot[data-tone=\"warn\"] { background: #b8872a; }
+.dot[data-tone=\"off\"] { background: var(--fn-danger); }
+.diagnosisText { font-family: var(--fn-serif); font-size: 1.1875rem; line-height: 1.4; }
+.diagnosisFix { grid-column: 2; font-size: 0.9375rem; color: var(--fn-ink-soft); }
+.facts { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 18px; font-size: 0.875rem; padding: 14px 0 0; border-top: 1px solid var(--fn-line-soft); }
+.facts dt { color: var(--fn-ink-muted); }
+.facts dd { margin: 0; color: var(--fn-ink); overflow-wrap: anywhere; }
+.checkActions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---- summary ---- */
+.summary { margin: 0; display: flex; flex-direction: column; border-top: 1px solid var(--fn-line-soft); }
+.summaryRow { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) auto; gap: 4px 16px; padding: 14px 0; border-bottom: 1px solid var(--fn-line-soft); align-items: baseline; }
+.summaryRow dt { font-size: 0.8125rem; color: var(--fn-ink-muted); }
+.summaryRow dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.summaryList { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.summaryEdit { background: none; border: 0; color: var(--fn-accent); cursor: pointer; font-size: 0.8125rem; min-height: 36px; padding: 0 6px; border-radius: 6px; }
+.summaryEdit:hover { background: var(--fn-accent-wash); }
+.sends { font-size: 0.875rem; color: var(--fn-ink-soft); background: var(--fn-desk); border-radius: 10px; padding: 14px 16px; }
+.sends strong { color: var(--fn-ink); }
+
+/* ---- narrow ---- */
+@media (max-width: 860px) {
+  .page { grid-template-columns: minmax(0, 1fr); padding: 16px 16px 40px; row-gap: 14px; }
+  .spine { display: none; }
+  .mobileStep { display: flex; flex-direction: column; gap: 8px; font-size: 0.8125rem; color: var(--fn-ink-muted); }
+  .mobileBar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .mobileSeg { height: 3px; border-radius: 3px; background: var(--fn-line); }
+  .mobileSeg[data-done=\"true\"] { background: var(--fn-accent); }
+  .sheet { padding: 24px 18px 20px; border-radius: 12px; }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+  .summaryRow { grid-template-columns: minmax(0, 1fr) auto; }
+  .summaryRow dt { grid-column: 1; }
+  .summaryRow dd { grid-column: 1 / -1; grid-row: 2; }
+  .summaryRow .summaryEdit { grid-column: 2; grid-row: 1; }
+  .foot { position: sticky; bottom: 0; background: var(--fn-sheet); padding-bottom: 4px; }
+}
+
+/* ---- step 1 (G2b): learners, the skill-map strip, topic two ways, consequences ---- */
+.learners, .topicWays { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.learners > legend, .topicWays > legend { padding: 0; margin-bottom: 10px; }
+.groups { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.group {
+  position: relative; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px 11px; min-height: 72px;
+  border: 1px solid var(--fn-line); border-radius: 10px; background: #fffdf8; cursor: pointer;
+  transition: border-color 140ms var(--fn-ease), background 140ms var(--fn-ease);
+}
+.group:hover { border-color: var(--fn-ink-muted); }
+/* H2a: a band the exact ages also touch — lighter than the clicked band (thin accent edge, no wash, no inset). */
+.group[data-covered=\"true\"] { border-color: var(--fn-accent); border-style: dashed; }
+.rangeLabel { font-size: 0.8125rem; font-weight: 600; color: var(--fn-ink-soft); font-variant-numeric: tabular-nums; }
+.group:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); box-shadow: inset 0 0 0 1px var(--fn-accent); }
+.group:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
+.groupAges { font-family: var(--fn-serif); font-size: 1.375rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.groupName { font-size: 0.78125rem; font-weight: 600; color: var(--fn-ink-soft); line-height: 1.25; }
+.refine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--fn-ink-soft); }
+.refineRange { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--fn-line-dash); border-radius: 8px; overflow: hidden; background: #fffdf8; }
+.stepper button { border: 0; background: var(--fn-desk); width: 36px; min-height: 36px; font: inherit; font-size: 1rem; cursor: pointer; color: var(--fn-ink); }
+.stepper button:hover:not(:disabled) { background: var(--fn-line-soft); }
+.stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+.stepper button:focus-visible { outline: 2px solid var(--fn-accent); outline-offset: -2px; }
+.stepValue { min-width: 2.25rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; color: var(--fn-ink); font-variant-numeric: tabular-nums; }
+.strip { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 34px; padding: 3px 4px 0; background: var(--fn-desk); border-radius: 6px; }
+.bar { flex: 1 1 0; min-width: 0; background: #d9cfb9; border-radius: 2px 2px 0 0; transition: background 140ms var(--fn-ease); }
+.bar[data-on=\"true\"] { background: var(--fn-accent); }
+.ticks { position: relative; height: 14px; font-size: 0.6875rem; color: var(--fn-ink-muted); font-variant-numeric: tabular-nums; }
+.ticks span { position: absolute; transform: translateX(-50%); }
+.ticks span:nth-child(1) { left: 2.2%; } .ticks span:nth-child(2) { left: 23.9%; } .ticks span:nth-child(3) { left: 41.3%; }
+.ticks span:nth-child(4) { left: 54.3%; } .ticks span:nth-child(5) { left: 71.7%; } .ticks span:nth-child(6) { left: 97.8%; }
+.stripCaption { font-size: 0.8125rem; color: var(--fn-ink-soft); font-variant-numeric: tabular-nums; }
+
+.ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.way {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; padding: 12px 14px;
+  border: 1px solid var(--fn-line); border-radius: 10px; background: #fffdf8; cursor: pointer;
+}
+.way:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); }
+.way[data-disabled=\"true\"] { cursor: not-allowed; background: var(--fn-desk); }
+.way[data-disabled=\"true\"] .wayTitle { color: var(--fn-ink-muted); }
+.way input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--fn-accent); }
+.wayTitle { font-weight: 600; font-size: 0.9375rem; }
+.wayText { grid-column: 2; font-size: 0.8125rem; color: var(--fn-ink-soft); }
+.mapSearch { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px dashed var(--fn-line-dash); border-radius: 10px; }
+.hits { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--fn-line-soft); max-height: 260px; overflow-y: auto; }
+.hit {
+  width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; text-align: left; font: inherit;
+  padding: 9px 6px; border: 0; border-bottom: 1px solid var(--fn-line-soft); background: none; cursor: pointer; color: var(--fn-ink);
+}
+.hit:hover, .hit:focus-visible { background: var(--fn-accent-wash); outline: none; }
+.hitName { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+.hitMeta { font-size: 0.8125rem; color: var(--fn-ink-muted); }
+.anchor { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; background: var(--fn-accent-wash); border: 1px solid var(--fn-accent); }
+.anchorBody { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.anchorKicker { font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fn-ink-muted); }
+.anchorName { font-family: var(--fn-serif); font-size: 1.0625rem; font-weight: 600; overflow-wrap: anywhere; }
+.credit { font-size: 0.6875rem; color: var(--fn-ink-muted); line-height: 1.45; overflow-wrap: anywhere; }
+.credit a { color: inherit; }
+
+.consequences { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--fn-line); border-radius: 10px; overflow: hidden; background: var(--fn-desk); }
+.tile { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; min-width: 0; }
+.tile + .tile { border-left: 1px solid var(--fn-line); }
+.tile[data-tone=\"none\"] { background: #f2ebd9; }
+.tileTitle { font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fn-ink-muted); }
+.tileLead { font-family: var(--fn-serif); font-weight: 600; font-size: 1rem; }
+.tileText { font-size: 0.8125rem; color: var(--fn-ink-soft); line-height: 1.45; }
+
+@media (max-width: 860px) {
+  .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .group:last-child { grid-column: 1 / -1; }
+  .ways { grid-template-columns: minmax(0, 1fr); }
+  .consequences { grid-template-columns: minmax(0, 1fr); }
+  .tile + .tile { border-left: 0; border-top: 1px solid var(--fn-line); }
+}
+
+/* K2: the lesson-length chips (\"How long is the lesson?\") — one row of pills, the checked one in the accent. */
+.lengthField { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lengthField > legend { padding: 0; margin-bottom: 6px; }
+.lengthChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lengthChip {
+  display: inline-flex; align-items: center; padding: 7px 14px; border: 1px solid var(--fn-line); border-radius: 999px;
+  background: #fffdf8; font-size: 0.9375rem; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.lengthChip:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); font-weight: 600; }
+.lengthChip:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
+
+/* ---- M1: the condensed flow ---- */
+.sheetWide { max-width: none; }
+.addNote { align-self: flex-start; background: none; border: 0; padding: 0; min-height: 32px; font: inherit; font-size: 0.875rem; color: var(--fn-accent); cursor: pointer; }
+.addNote:hover { color: var(--fn-accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+.consequenceLine { margin: 0; font-size: 0.8125rem; color: var(--fn-ink-soft); padding: 10px 12px; background: var(--fn-desk); border-radius: 8px; line-height: 1.5; }
+.itemIcon input { width: 18px; height: 18px; margin: 0; accent-color: var(--fn-accent); }
+.nowrap { white-space: nowrap; }
+"
+
+ ❯ src/studio/K5.polish.test.tsx:57:38
+     55| 
+     56|   it("the wizard's mobile step bar lays every step on one row", () => {
+     57|     expect(src("Wizard.module.css")).toMatch(/\.mobileBar \{[^}]*grid-…
+       |                                      ^
+     58|   });
+     59| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  18:22:15
+   Duration  1.64s (transform 115ms, setup 51ms, collect 149ms, tests 1.14s, environment 138ms, prepare 25ms)
+

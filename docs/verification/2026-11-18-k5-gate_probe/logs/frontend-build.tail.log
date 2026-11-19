@@ -1,0 +1,33 @@
+
+> silicus-ta-frontend@0.1.0 build
+> tsc -p tsconfig.json && vite build
+
+vite v6.4.4 building for production...
+transforming...
+✓ 169 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/MARBLE-ATTRIBUTION-LosmfyyF.md                         0.90 kB
+dist/index.html                                                    1.28 kB │ gzip:   0.68 kB
+dist/assets/public-sans-vietnamese-wght-normal-CtlIRbEm.woff2      7.72 kB
+dist/assets/public-sans-latin-ext-wght-normal-MQgHevqp.woff2      18.47 kB
+dist/assets/public-sans-latin-wght-normal-DdeTHZLK.woff2          26.83 kB
+dist/assets/source-serif-4-variable-BNk_--v2.woff2                50.95 kB
+dist/assets/source-serif-4-variable-italic-CfMpusKC.woff2         51.72 kB
+dist/assets/pdf.worker.min-Dkey6ZUl.mjs                        1,321.31 kB
+dist/assets/marble-snapshot-B9Cjl5Qs.json                      2,048.75 kB │ gzip: 555.41 kB
+dist/assets/index-DBcpx7bF.css                                    64.99 kB │ gzip:  10.62 kB
+dist/assets/StudioApp-PjyVdZcj.css                                65.91 kB │ gzip:  12.28 kB
+dist/assets/pdf.worker.min-OGYDhRwp.js                             0.07 kB │ gzip:   0.09 kB
+dist/assets/_commonjs-dynamic-modules-B9lKsKkd.js                  0.47 kB │ gzip:   0.31 kB
+dist/assets/jszip.min-CBFutFRr.js                                 97.49 kB │ gzip:  30.27 kB
+dist/assets/StudioApp-Dca833Hs.js                                185.62 kB │ gzip:  58.77 kB
+dist/assets/mammoth.browser.min-WTckL4F8.js                      304.02 kB │ gzip:  92.76 kB
+dist/assets/index-DK6KZ751.js                                    335.32 kB │ gzip: 104.45 kB
+dist/assets/pdf-q-5ow4VI.js                                      541.88 kB │ gzip: 164.72 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.05s

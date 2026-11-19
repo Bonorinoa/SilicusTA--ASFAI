@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/k5tree/frontend
+
+ ✓ src/studio/K5.polish.test.tsx (5 tests) 117ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  18:22:17
+   Duration  705ms (transform 134ms, setup 78ms, collect 171ms, tests 117ms, environment 155ms, prepare 26ms)
+

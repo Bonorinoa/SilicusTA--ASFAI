@@ -811,6 +811,11 @@
 .editCancel:focus-visible,
 .editInput:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .editButton:disabled { opacity: 0.45; cursor: default; }
+/* N5 (C5): cited objectives as checkboxes; the shape row (move, remove, add). */
+.editChoices { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.editChoice { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; }
+.shapeRow { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.addActivity { margin: 0.75rem 0 0; }
 .editForm {
   display: grid;
   gap: var(--space-3);
@@ -874,7 +879,7 @@ textarea.editInput { resize: vertical; line-height: var(--leading-sm); }
   color: var(--color-ink);
 }
 @media print {
-  .editButton, .editForm { display: none !important; }
+  .editButton, .editForm, .shapeRow, .addActivity { display: none !important; }
 }
 .laterItem .editButton { grid-column: -2 / -1; justify-self: start; }
 .laterItem .editForm { grid-column: 1 / -1; margin: 0; }

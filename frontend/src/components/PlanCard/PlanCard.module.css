@@ -876,5 +876,5 @@ textarea.editInput { resize: vertical; line-height: var(--leading-sm); }
 @media print {
   .editButton, .editForm { display: none !important; }
 }
-.laterItem .editButton { grid-column: 2; justify-self: start; }
+.laterItem .editButton { grid-column: -2 / -1; justify-self: start; }
 .laterItem .editForm { grid-column: 1 / -1; margin: 0; }

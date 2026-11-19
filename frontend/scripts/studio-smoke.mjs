@@ -497,6 +497,61 @@ try {
   check("K2 the plan header reads '45 min lesson · activities 45 min' (the scripted minutes add up), with no length note",
     /45 min lesson · activities 45 min/i.test(await body()) && !/Activities add up to/.test(await body()));
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
+
+  // ---- N3: everything generated is editable. Keyboard to Edit, change three fields, Save; the trace, the K2
+  // re-check and the stage-1 teacher override all show; then the minutes go back so the rest of the run is unchanged.
+  {
+    const setField = (form, label, value) => page.evaluate((form, label, value) => {
+      const f = document.querySelector(`form[data-plan-edit-form="${form}"]`);
+      const l = f && [...f.querySelectorAll("label")].find((x) => x.textContent === label);
+      const el = l && document.getElementById(l.htmlFor);
+      if (!el) return false;
+      const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(el, value);
+      el.dispatchEvent(new Event(el.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
+      return true;
+    }, form, label, value);
+    const editButtons = await page.evaluate(() => [...document.querySelectorAll("button[data-plan-edit]")].map((b) => b.getAttribute("aria-label")));
+    check("N3 the draft plan offers Edit on the title, every activity and every later review",
+      editButtons.includes("Edit the plan title") && editButtons.includes("Edit activity 1") && editButtons.includes("Edit activity 3") && editButtons.includes("Edit later review 1"), JSON.stringify(editButtons));
+    await page.focus('button[aria-label="Edit activity 3"]');
+    await page.keyboard.press("Enter");
+    const opened = await page.waitForSelector('form[data-plan-edit-form="activity 3"]', { timeout: 5000 }).then(() => true, () => false);
+    const focusIn = await page.evaluate(() => !!document.activeElement?.closest('form[data-plan-edit-form="activity 3"]'));
+    const set = (await setField("activity 3", "Then they decide", "Each pair keeps or changes its sort, and says which card moved and why."))
+      && (await setField("activity 3", "Minutes", "25")) && (await setField("activity 3", "AI status", "permitted"));
+    check("N3 Enter on 'Edit activity 3' opens the inline form with focus inside it, and its fields take new values", opened && focusIn && set, JSON.stringify({ opened, focusIn, set }));
+    if (process.env.N3_SHOTS) {
+      await page.evaluate(() => { document.querySelector('form[data-plan-edit-form="activity 3"]')?.closest("li")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -90); });
+      await page.screenshot({ path: `${process.env.N3_SHOTS}/n3-plan-edit-form.png` }).catch(() => {});
+    }
+    await page.evaluate(() => document.querySelector('form[data-plan-edit-form="activity 3"] button[type="submit"]')?.click());
+    const saved = await page.waitForFunction(() => /You edited Activity 3: then they decide/.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false);
+    const after = await page.evaluate(() => ({
+      trace: [...document.querySelectorAll("[data-plan-edit-line]")].map((e) => e.textContent),
+      override: document.querySelector("[data-teacher-override]")?.textContent ?? "",
+      chip: document.querySelector('article[aria-label^="Lesson plan"] [data-status]')?.textContent ?? "",
+      form: !!document.querySelector("form[data-plan-edit-form]"),
+      text: document.body.innerText,
+    }));
+    check("N3 Save records the edit: the trace says 'You edited Activity 3: then they decide' (and minutes, AI status), the form closes, the draft says 'edited by you'",
+      saved && !after.form && after.trace.some((t) => t.startsWith("You edited Activity 3: then they decide")) && after.trace.some((t) => t.startsWith("You edited Activity 3: minutes")) && /edited by you/.test(after.chip),
+      JSON.stringify({ trace: after.trace, chip: after.chip }).slice(0, 300));
+    check("N3 the teacher's AI status stands and is marked against the age rule (never re-clamped)",
+      /^Teacher override: AI permitted for ages \d+–\d+ \(the rule says forbidden\)$/.test(after.override), after.override);
+    check("N3 the K2 minutes check re-runs after the edit: 55 of 45 shows the length note",
+      /activities 55 min/i.test(after.text) && /Activities add up to 55 min; you asked for 45\. Trim or edit\./.test(after.text));
+    if (process.env.N3_SHOTS) {
+      await page.evaluate(() => { document.querySelector("[data-teacher-override]")?.closest("li")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -90); });
+      await page.screenshot({ path: `${process.env.N3_SHOTS}/n3-plan-edited.png` }).catch(() => {});
+    }
+    await page.click('button[aria-label="Edit activity 3"]');
+    await page.waitForSelector('form[data-plan-edit-form="activity 3"]', { timeout: 5000 }).catch(() => {});
+    await setField("activity 3", "Minutes", "15");
+    await page.evaluate(() => document.querySelector('form[data-plan-edit-form="activity 3"] button[type="submit"]')?.click());
+    const back = await page.waitForFunction(() => /activities 45 min/i.test(document.body.innerText) && !/Activities add up to/.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false);
+    check("N3 setting the minutes back clears the length note (the check re-runs again)", back);
+  }
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
   await markLanding("Course Publish");

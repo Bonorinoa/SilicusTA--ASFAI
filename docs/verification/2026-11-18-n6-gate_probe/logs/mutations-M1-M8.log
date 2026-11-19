@@ -1,0 +1,21 @@
+M1 default author -> 'teacher' (gate, both sites)
+    confirm-gate:node.. exit=1 failed=1 ['objective proposals record their author, default to ai, and reject any other value']
+    host:node.. exit=1 failed=5 ['explicit: a second material round is refused while the first waits, and allowed once it is decided', 'the pre-N6 record verifies and exports byte-for-byte the same view', 'the pre-N6 record survives backup verification and replay without gaining fields', "suggest: up to 3 proposals labelled 'suggested by Silicus', each waiting for the teacher, one model turn recorded"]
+M2 drop the gate's edit marker (editedByTeacher/teacherEditCount never set)
+    confirm-gate:node.. exit=1 failed=1 ['a confirmed edited plan records teacher authorship and the edit-operation count']
+    host:node.. exit=1 failed=1 ['N3: an edit is a recorded plan.edited event; the edited plan is a new draft with the same activities']
+M2b host never writes teacherEditCount on plan.confirmed
+    host:node.. exit=1 failed=1 ['N3: an edit is a recorded plan.edited event; the edited plan is a new draft with the same activities']
+M3 bad proposedBy fails OPEN (validation loop removed)
+    confirm-gate:node.. exit=1 failed=1 ['objective proposals record their author, default to ai, and reject any other value']
+M4 host #rows filter reverted to AI-only
+    host:node.. exit=1 failed=87 ['a hostile objectives body cannot inject a statement: the host derives from its own record', 'the objectives route proposes once; a second call is refused, not duplicated', 'the plan is drafted from the CONFIRMED objectives; a client cannot supply activities', 'no worker configured: the plan step refuses with 501 and the course is untouched']
+M5 harness.views filter reverted to AI-only
+    frontend:npx.. exit=1 failed=1 ['src/gate/harness.test.ts > ConfirmGateHarness (UI ↔ confirm-gate binding) > views() includes teacher-typed proposals because they still await a teacher decision']
+M6 harness.views row label forced 'ai'
+    frontend:npx.. exit=1 failed=1 ['src/gate/harness.test.ts > ConfirmGateHarness (UI ↔ confirm-gate binding) > views() includes teacher-typed proposals because they still await a teacher decision']
+M7 DecisionCard queue reverted to by==='ai'
+    frontend:npx.. exit=0 failed=0 []
+M8 harness.summary reverted to by==='ai'
+    frontend:npx.. exit=1 failed=1 ['src/gate/harness.test.ts > ConfirmGateHarness (UI ↔ confirm-gate binding) > views() includes teacher-typed proposals because they still await a teacher decision']
+CONTROL (no mutation): ['confirm-gate exit=0', 'frontend exit=0']

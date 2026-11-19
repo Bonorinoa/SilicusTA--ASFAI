@@ -1,0 +1,32 @@
+PASS A1 proposedBy="student" in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy="TEACHER" in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy="teacher " in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy="" in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy=0 in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy=false in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy={} in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy=["teacher"] in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy="model" in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A1 proposedBy="system" in the 2nd item of a batch -> BAD_INPUT code=BAD_INPUT
+PASS A2 proposedBy=undefined defaults to "ai" (the less-trusted label) ai
+PASS A2 proposedBy=null defaults to "ai" (the less-trusted label) ai
+PASS A3 a rejected batch leaves no orphan proposal: the one valid proposal, once accepted, confirms checkpoint 3 
+PASS A4 a teacher-authored proposal is NOT confirmed by being teacher-authored 
+PASS A5 a model-channel turn cannot confirm a teacher-authored proposal code=NON_TEACHER_TURN
+PASS A6 only a teacher turn confirms it; the confirmed record keeps proposedBy=teacher proposedBy=teacher
+PASS A7 teacherEditCount does not substitute for a teacher turn: model-channel provenance + count -> refused, plan stays draft, no marker code=NON_TEACHER_TURN
+PASS A8 no provenance + count -> refused code=MISSING_PROVENANCE
+PASS A9 teacherEditCount=0 -> BAD_INPUT, plan stays draft code=BAD_INPUT
+PASS A9 teacherEditCount=-1 -> BAD_INPUT, plan stays draft code=BAD_INPUT
+PASS A9 teacherEditCount=1.5 -> BAD_INPUT, plan stays draft code=BAD_INPUT
+PASS A9 teacherEditCount=2 -> BAD_INPUT, plan stays draft code=BAD_INPUT
+PASS A9 teacherEditCount=NaN -> BAD_INPUT, plan stays draft code=BAD_INPUT
+PASS A9 teacherEditCount=null -> BAD_INPUT, plan stays draft code=BAD_INPUT
+PASS B1 a hostile /objectives body (items[] + proposedBy) injects nothing: the only proposal is the teacher's own wizard line status=200 statements=["Students can explain how a plant makes food."]
+PASS B2 the host decides authorship itself: client 'proposedBy:"ai"' does not relabel the wizard line (by=teacher) ["teacher"]
+PASS B3 client-supplied teacherEditCount/editedByTeacher on /plan/confirm is ignored: no marker in the log or export status=200 plan.editedByTeacher=undefined count=undefined
+PASS B4 after one real edit the recorded count is 1, whatever the client claimed edit=200 confirm=200 count=1
+PASS B5 the draft's origin is still 'ai' in the export after a teacher edit proposedBy=ai
+PASS B6 hash chain verifies after all of the above {"ok":true,"events":10,"head":"cdbe596d9c793aa807e2db0f96fcd39ca5345c474acdd7ebf6c7c61d5211d879"}
+
+all passed

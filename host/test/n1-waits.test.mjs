@@ -17,8 +17,8 @@ function capture(content, opts = {}) {
 }
 
 test("the policy table: rank and answer off with 25 s / 20 s; everything else keeps the configured value", () => {
-  assert.deepEqual(TASK_REASONING, { rank: "off", answer: "off" });
-  assert.deepEqual(TASK_TIMEOUT_MS, { rank: 25_000, answer: 20_000 });
+  assert.deepEqual(TASK_REASONING, { rank: "off", answer: "off", answer_adult: "low" }); // N5: 18+ helper low
+  assert.deepEqual(TASK_TIMEOUT_MS, { rank: 25_000, answer: 20_000, answer_adult: 20_000 });
   for (const t of ["objectives", "suggest", "plan", null, "bogus"]) assert.equal(taskReasoning(t, "low"), "low", String(t));
   assert.equal(taskTimeoutMs("rank", 120_000), 25_000);
   assert.equal(taskTimeoutMs("rank", 10_000), 10_000, "a shorter configured deadline still wins");

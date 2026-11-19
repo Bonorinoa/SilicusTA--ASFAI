@@ -16,7 +16,7 @@
  */
 import { EVIDENCE_KINDS } from "../confirm-gate/confirm-gate.mjs";
 import { unknownRefs } from "./knowledge.mjs";
-import { normalizeReasoning, reasoningBody, taskReasoning, taskTimeoutMs, TASKS } from "./worker-config.mjs";
+import { answerTask, normalizeReasoning, reasoningBody, taskReasoning, taskTimeoutMs, TASKS } from "./worker-config.mjs";
 import { lengthNotes, lengthPromptLines, MAX_ACTIVITIES, TEXT_LIMITS } from "./lesson-length.mjs";
 import { stageForAges } from "./ages.mjs";
 
@@ -340,7 +340,7 @@ export class PlanWorker {
    */
   async answerStudent({ question = "", history = [], title = "", items = [], ages = "", adult = false } = {}) {
     this.#requireEnabled();
-    const raw = await this.#json(buildStudentPrompt({ question, history, title, items, ages, adult: adult === true }), null, "answer");
+    const raw = await this.#json(buildStudentPrompt({ question, history, title, items, ages, adult: adult === true }), null, answerTask(adult));
     return validateAnswer(raw, items);
   }
 }

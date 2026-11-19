@@ -473,7 +473,7 @@ if (D2_DIR) {
   await snap("19b-learn-top", () => window.scrollTo(0, 0));
   await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });
   await sleep(1500);
-  await page.evaluate(() => [...document.querySelectorAll("a, button")].find((e) => (e.textContent ?? "").trim() === "Brief")?.click());
+  await page.evaluate(() => [...document.querySelectorAll("a, button")].filter((e) => /Brief/.test(e.textContent ?? "")).sort((a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length)[0]?.click());
   await sleep(1200);
   await snap("11-course-brief", () => window.scrollTo(0, 0));
   await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });

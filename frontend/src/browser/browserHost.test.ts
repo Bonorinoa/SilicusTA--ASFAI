@@ -21,6 +21,8 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MATERIAL, MATERIAL_SECRET, runScriptedCourse } from "../../../host/test/scripted-course.mjs";
 import { linkDigest } from "../../../host/chain.mjs";
+import { CourseSession } from "../../../host/course.mjs";
+import { RecordStore, metaText } from "../../../host/record-store.mjs";
 import { comparePin, pinVersion, type CourseAnchor } from "../gate/pin";
 import { PASSCODE_KEY, setPasscodePrompt } from "./passcode";
 import { MESSAGES } from "./site";
@@ -172,6 +174,22 @@ describe("the record survives a reload, and a tampered record is flagged, never 
     expect(after.versions).toHaveLength(1);
     expect((await r.call("GET", `${c}/verify`)).json).toMatchObject({ ok: true, events: before.integrity.events, head: before.integrity.head });
     expect((await r.call("GET", "/api/courses")).json.courses[0].progress).toEqual({ confirmed: 5, total: 5, versions: 1 });
+  });
+
+  it("a pre-N6 fixture keeps its old anchor and still passes comparePin", () => {
+    const fixture = JSON.parse(readFileSync(new URL("../../../host/fixtures/n6-pre-authorship-record.json", import.meta.url), "utf8"));
+    const courseId = fixture.meta.courseId as string;
+    const store = new RecordStore();
+    store.load({
+      metas: [{ courseId, text: metaText(fixture.meta) }],
+      events: fixture.lines.map((line: string, i: number) => ({ courseId, seq: i + 1, line })),
+    });
+    const session = CourseSession.load(store, courseId);
+    const now = session.publishAnchor(1) as CourseAnchor;
+    expect(now).toEqual(fixture.expectedAnchor);
+    const oldPin = { ...(fixture.expectedAnchor as CourseAnchor), pinnedAt: 1767225600000 };
+    expect(comparePin(oldPin, now).status).toBe("ok");
+    expect(JSON.parse(JSON.stringify(session.export()))).toEqual(fixture.expectedExport);
   });
 
   async function tamperWith(r: Rig, fn: (store: IDBObjectStore, row: { courseId: string; seq: number; line: string }) => void, seq: number) {

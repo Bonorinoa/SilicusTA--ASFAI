@@ -988,7 +988,7 @@ function buildStudentPrompt({ question, history, title, items, ages = "", adult 
     '- kind "answer": the package covers or names what was asked. Both kinds of answer must cite the package item they rest on:',
     `  - basis "plan": the question is about what the lesson contains; restate what the cited item says.`,
     `  - basis "explanation": the student asks what a word or idea means, and a package item NAMES that word or idea. Explain it in at most 3 sentences, in plain words for ${who}, and cite that item. Do not explain anything no package item names.`,
-    '- kind "clarify": the question is about this lesson but too vague to answer, such as a single word or a topic name. Put in "cites" the 1 to 3 package items it could be about. The host asks the student which one they mean.',
+    '- kind "clarify": the message is about this lesson but asks nothing: a single word, a topic name, or a short phrase with no question in it. Do NOT answer it, even when you could explain the word; choose "clarify" and put in "cites" the 1 to 3 package items it could be about. The host asks the student which one they mean. Example: the student writes only "photosynthesis" -> {"kind": "clarify", "basis": null, "answer": "", "cites": ["objective:1", "activity:2"]}. A real question (\"What does photosynthesis mean?\") is not clarify.',
     '- kind "about_helper": the student asks who or what you are, your name, or what you can do. The host introduces the helper.',
     '- kind "assessment": the student asks for a grade, to be told they passed, to have mastery judged, or how they are doing.',
     '- kind "off_topic": no package item covers or names what was asked. Never guess. The host points the student back to the lesson.',

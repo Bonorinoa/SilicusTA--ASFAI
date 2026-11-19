@@ -126,6 +126,8 @@ import { TurnLedger } from "./host-guard.mjs";
  * @property {readonly Activity[]} activities
  * @property {"ai"} proposedBy
  * @property {number} proposedAt
+ * @property {true} [editedByTeacher]  Present on confirmation when the host recorded teacher edits.
+ * @property {number} [teacherEditCount]  Number of recorded edit operations in that plan's lineage.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -526,12 +528,12 @@ export class ConfirmGate {
   /* ------------------------- objectives (checkpoint 3) ------------------- */
 
   /**
-   * AI proposes objectives. Proposals are NEVER confirmed here — the returned
+   * Records objective proposals. Proposals are NEVER confirmed here — the returned
    * records hard-code `confirmedByEducator: false`. Each proposal (public or
    * local) gets its own stable local `urn:uuid:` id; `mt_*` ids are optional
    * references only and never a state key.
    *
-   * @param {readonly {kind: "public"|"local", publicId?: string, statement?: string, alignment?: AlignmentRef}[]} items
+   * @param {readonly {kind: "public"|"local", publicId?: string, statement?: string, alignment?: AlignmentRef, proposedBy?: "ai"|"teacher"}[]} items
    * @returns {readonly ObjectiveRecord[]}
    */
   proposeObjectives(items) {
@@ -539,9 +541,16 @@ export class ConfirmGate {
     if (!Array.isArray(items) || items.length === 0) {
       throw new ConfirmGateError("proposeObjectives requires a non-empty array of proposals", "BAD_INPUT");
     }
+    for (const item of items) {
+      const proposedBy = item?.proposedBy ?? "ai";
+      if (proposedBy !== "ai" && proposedBy !== "teacher") {
+        throw new ConfirmGateError(`proposedBy must be "ai" or "teacher", got: ${String(item?.proposedBy)}`, "BAD_INPUT");
+      }
+    }
     /** @type {ObjectiveRecord[]} */
     const created = [];
     for (const item of items) {
+      const proposedBy = item.proposedBy ?? "ai";
       const id = this.#idFactory();
       /** @type {ObjectiveRecord} */
       let record;
@@ -557,7 +566,7 @@ export class ConfirmGate {
           statement: item.statement ? requireText(item.statement, "statement") : undefined,
           alignment: normalizeAlignment(item.alignment, false),
           confirmedByEducator: false,
-          proposedBy: "ai",
+          proposedBy,
           proposedAt: this.#clock(),
         };
       } else if (item.kind === "local") {
@@ -567,7 +576,7 @@ export class ConfirmGate {
           statement: requireText(item.statement, "statement (kind: local)"),
           alignment: normalizeAlignment(item.alignment, false),
           confirmedByEducator: false,
-          proposedBy: "ai",
+          proposedBy,
           proposedAt: this.#clock(),
         };
       } else {
@@ -1086,15 +1095,18 @@ export class ConfirmGate {
    * `confirm_lesson_plan`). Idempotent per (plan, turnRef); a later teacher
    * turn may re-confirm (e.g. after an invalidation + fix).
    *
-   * @param {{planId?: string, provenance: TeacherProvenance}} spec
+   * @param {{planId?: string, provenance: TeacherProvenance, teacherEditCount?: number}} spec
    * @returns {Readonly<LessonPlanRecord>}
    */
-  confirmLessonPlan({ planId, provenance }) {
+  confirmLessonPlan({ planId, provenance, teacherEditCount }) {
     this.#requirePriorCheckpoints("plan");
     const id = planId ?? this.#latestPlanId;
     if (!id) throw new ConfirmGateError("no lesson plan has been proposed yet", "UNKNOWN_PLAN");
     const entry = this.#plans.get(id);
     if (!entry) throw new ConfirmGateError(`unknown lesson plan: ${id}`, "UNKNOWN_PLAN");
+    if (teacherEditCount !== undefined && (!Number.isInteger(teacherEditCount) || teacherEditCount < 1)) {
+      throw new ConfirmGateError("teacherEditCount must be a positive integer", "BAD_INPUT");
+    }
     const prov = this.#requireTeacherProvenance(provenance, { notBefore: entry.record.proposedAt });
 
     const key = `confirm-plan:${id}:${prov.turnRef}`;
@@ -1102,6 +1114,10 @@ export class ConfirmGate {
       return Object.freeze({ ...entry.record }); // idempotent replay.
     }
     entry.record.status = "confirmed";
+    if (teacherEditCount !== undefined) {
+      entry.record.editedByTeacher = true;
+      entry.record.teacherEditCount = teacherEditCount;
+    }
     entry.invalidationReason = null;
     entry.confirmation = { key, provenance: prov, decisionId: this.#idFactory(), boundCourseVersion: this.#nextVersion };
     entry.wordingMark = this.#rewords.length; // a deliberate re-confirmation is made with any reword notice in view

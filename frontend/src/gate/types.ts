@@ -154,6 +154,8 @@ export interface LessonPlanView {
   citations?: readonly PlanCitationView[];
   /** N3: this draft is the teacher's edit of a plan Silicus drafted. */
   editedByTeacher?: boolean;
+  /** N6: recorded edit operations before the teacher confirmed this plan; absent on old records and unedited plans. */
+  teacherEditCount?: number;
   /* ---- plan schema v2 (host metadata; absent on a v1 plan) ---- */
   sessions?: readonly PlanSessionView[];
   spacedReviews?: readonly SpacedReviewView[];

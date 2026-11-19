@@ -19,8 +19,10 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MATERIAL, MATERIAL_SECRET, runScriptedCourse } from "../../../host/test/scripted-course.mjs";
+import { MATERIAL, MATERIAL_SECRET, runAuthorshipCourse, runScriptedCourse } from "../../../host/test/scripted-course.mjs";
 import { linkDigest } from "../../../host/chain.mjs";
+import { CourseSession } from "../../../host/course.mjs";
+import { RecordStore, metaText } from "../../../host/record-store.mjs";
 import { comparePin, pinVersion, type CourseAnchor } from "../gate/pin";
 import { PASSCODE_KEY, setPasscodePrompt } from "./passcode";
 import { MESSAGES } from "./site";
@@ -28,6 +30,10 @@ import { createBrowserHost } from "./browserHost";
 import { everythingStored, fakeSite, MemoryStorage, ORIGIN, rig, type Rig } from "./testkit";
 
 const PARITY_SCRIPT = fileURLToPath(new URL("../../../host/scripts/parity-run.mjs", import.meta.url));
+const N6_PARITY_SCRIPT = fileURLToPath(new URL("../../../host/scripts/n6-parity-run.mjs", import.meta.url));
+const PRE_N6_FIXTURE = JSON.parse(
+  readFileSync(new URL("../../../host/fixtures/n6-pre-authorship-record.json", import.meta.url), "utf8"),
+);
 
 afterEach(() => { setPasscodePrompt(null); vi.restoreAllMocks(); });
 
@@ -85,6 +91,45 @@ describe("parity: one API, two hosts", () => {
     expect(joined).not.toMatch(/forged|attacker/);
     expect(joined).not.toContain('"mt_1"');
   }, 60_000);
+
+  it("N6 parity: teacher-typed authorship and the edited-plan marker are byte-identical on both hosts", async () => {
+    const node = spawnSync(process.execPath, [N6_PARITY_SCRIPT], { encoding: "utf8", timeout: 60_000 });
+    expect(node.status, node.stderr).toBe(0);
+    const disk = JSON.parse(node.stdout) as { transcript: any[]; lines: string[]; meta: string };
+
+    let n = 0;
+    vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(() => `00000000-0000-4000-8000-${String(++n).padStart(12, "0")}` as `${string}-${string}-${string}-${string}-${string}`);
+    vi.spyOn(Date, "now").mockReturnValue(1767225600000);
+    const r = await rig();
+    const { transcript } = await runAuthorshipCourse((method: string, path: string, body?: unknown) => r.call(method as "GET" | "POST", path, body));
+    const dump = await r.host.dump();
+
+    expect(transcript).toEqual(disk.transcript);
+    expect(dump.events.sort((a, b) => a.seq - b.seq).map((event) => event.line)).toEqual(disk.lines);
+    expect(dump.metas.map((meta) => meta.text)).toEqual([disk.meta]);
+
+    const exported = transcript.find((step: any) => step.path.endsWith("/export"))?.json;
+    expect(exported.objectives).toHaveLength(1);
+    expect(exported.objectives[0].proposedBy).toBe("teacher");
+    expect(exported.plan).toMatchObject({ proposedBy: "ai", editedByTeacher: true, teacherEditCount: 1 });
+    expect(exported.versions[0].lessonPlan).toMatchObject({ proposedBy: "ai", editedByTeacher: true, teacherEditCount: 1 });
+    expect(disk.lines.some((line) => line.includes('"plan.confirmed"') && line.includes('"teacherEditCount":1'))).toBe(true);
+    const anchor = transcript.find((step: any) => step.path.endsWith("/anchor/1"))?.json.anchor as CourseAnchor;
+    expect(comparePin({ ...anchor, pinnedAt: 1767225600000 }, anchor).status).toBe("ok");
+  }, 60_000);
+
+  it("N6 compatibility: comparePin accepts the anchor replayed from a pre-authorship record", () => {
+    const fixture = PRE_N6_FIXTURE;
+    const store = new RecordStore();
+    store.load({
+      metas: [{ courseId: fixture.meta.courseId, text: metaText(fixture.meta) }],
+      events: fixture.lines.map((line: string, i: number) => ({ courseId: fixture.meta.courseId, seq: i + 1, line })),
+    });
+    const anchor = CourseSession.load(store, fixture.meta.courseId).publishAnchor(1) as CourseAnchor;
+
+    expect(anchor).toEqual(fixture.expectedAnchor);
+    expect(comparePin({ ...fixture.expectedAnchor, pinnedAt: 1767225600000 }, anchor).status).toBe("ok");
+  });
 
   it("Marble parity: the browser host serves the same read-only search and topic shapes the Node host serves, from the same snapshot", async () => {
     const r = await rig({ marbleLoad: async () => readFileSync(new URL("../../../host/data/marble/marble-snapshot.json", import.meta.url), "utf8") });
@@ -172,6 +217,22 @@ describe("the record survives a reload, and a tampered record is flagged, never 
     expect(after.versions).toHaveLength(1);
     expect((await r.call("GET", `${c}/verify`)).json).toMatchObject({ ok: true, events: before.integrity.events, head: before.integrity.head });
     expect((await r.call("GET", "/api/courses")).json.courses[0].progress).toEqual({ confirmed: 5, total: 5, versions: 1 });
+  });
+
+  it("a pre-N6 fixture keeps its old anchor and still passes comparePin", () => {
+    const fixture = JSON.parse(readFileSync(new URL("../../../host/fixtures/n6-pre-authorship-record.json", import.meta.url), "utf8"));
+    const courseId = fixture.meta.courseId as string;
+    const store = new RecordStore();
+    store.load({
+      metas: [{ courseId, text: metaText(fixture.meta) }],
+      events: fixture.lines.map((line: string, i: number) => ({ courseId, seq: i + 1, line })),
+    });
+    const session = CourseSession.load(store, courseId);
+    const now = session.publishAnchor(1) as CourseAnchor;
+    expect(now).toEqual(fixture.expectedAnchor);
+    const oldPin = { ...(fixture.expectedAnchor as CourseAnchor), pinnedAt: 1767225600000 };
+    expect(comparePin(oldPin, now).status).toBe("ok");
+    expect(JSON.parse(JSON.stringify(session.export()))).toEqual(fixture.expectedExport);
   });
 
   async function tamperWith(r: Rig, fn: (store: IDBObjectStore, row: { courseId: string; seq: number; line: string }) => void, seq: number) {

@@ -127,6 +127,47 @@ export async function runScriptedCourse(call) {
   return { courseId: id, transcript };
 }
 
+/** N6 parity story: teacher-typed objective wording plus a teacher-edited, confirmed plan. */
+export async function runAuthorshipCourse(call) {
+  const transcript = [];
+  const step = async (method, path, body) => {
+    const r = await call(method, path, body);
+    transcript.push({ method, path, status: r.status, json: r.json });
+    return r;
+  };
+
+  const created = await step("POST", "/api/courses", { owner: "Ada Lovelace", title: "Teacher authorship" });
+  const id = created.json.courseId;
+  const c = `/api/courses/${encodeURIComponent(id)}`;
+  await step("POST", `${c}/checkpoints`, { id: "files", text: "Confirm the empty material list." });
+  await step("POST", `${c}/intake/answer`, {
+    text: "My brief and outcome.",
+    answers: {
+      topic: "photosynthesis",
+      course: "Science, ages 8-10",
+      learning_outcomes: "Students can explain how a plant makes food.",
+    },
+  });
+  await step("POST", `${c}/checkpoints`, { id: "outline", text: "Confirm the outline." });
+  const proposed = await step("POST", `${c}/objectives`, {});
+  await step("POST", `${c}/decisions`, {
+    text: "Accept my objective.",
+    decisions: proposed.json.proposals.map((p) => ({ verb: "accept", proposalId: p.id })),
+  });
+  const drafted = await step("POST", `${c}/plan`, {});
+  await step("POST", `${c}/plan/edit`, {
+    planId: drafted.json.id,
+    text: "Edit the plan title.",
+    edits: [{ path: "title", value: "Plants make food" }],
+  });
+  await step("POST", `${c}/plan/confirm`, { text: "Confirm my edited lesson plan." });
+  await step("POST", `${c}/publish`, { text: "Publish the course package." });
+  await step("GET", `${c}/export`);
+  await step("GET", `${c}/verify`);
+  await step("GET", `${c}/anchor/1`);
+  return { courseId: id, transcript };
+}
+
 /* ============================================================================================================
  * SCRIPTED v2 PLANS: test-fixture content for the smokes and the screenshot scripts (H2b). Not a product claim,
  * not model output, and not a recommended lesson: a fixed reply the stand-in model gives so the browser shows

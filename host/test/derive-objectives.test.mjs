@@ -44,7 +44,7 @@ test("the host derives objectives from the teacher's recorded answers, not from 
   assert.equal(JSON.stringify(r.proposals).includes("mt_"), false, "no Marble id anywhere");
   assert.ok(r.proposals.every((p) => p.source === "from your answer to ASFAI"));
   assert.ok(r.proposals.every((p) => p.status === "proposed"), "a proposal is never pre-confirmed");
-  assert.ok(r.proposals.every((p) => p.by === "ai"));
+  assert.ok(r.proposals.every((p) => p.by === "teacher"), "the record credits the teacher's own wording");
 });
 
 test("with nothing of the teacher's on record, the host refuses instead of inventing", () => {

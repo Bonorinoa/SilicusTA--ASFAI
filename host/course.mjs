@@ -169,7 +169,9 @@ export class CourseSession {
   /** N3: plan ids the teacher produced by editing, and the trace of every saved plan edit (from the log). */
   #editedPlans = new Set();
   #planEdits = [];
-  /** @type {string[]} proposal ids in the order the AI proposed them */
+  /** New records: cumulative recorded edit operations per plan lineage; confirmation freezes the count into gate state. */
+  #teacherEditCounts = new Map();
+  /** @type {string[]} proposal ids in proposal order */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
   #sources = new Map();
@@ -335,6 +337,9 @@ export class CourseSession {
         const design = planDesignOf(edited);
         if (design) this.#planDesign.set(record.id, design);
         this.#editedPlans.add(record.id);
+        // Count edit operations, not Save clicks: a multi-field Save changed each named field, while N5 shape
+        // edits are one operation each. The count follows the newly proposed plan through successive edits.
+        this.#teacherEditCounts.set(record.id, (this.#teacherEditCounts.get(plan.id) ?? 0) + edits.length);
         const objectiveLabels = new Map(this.#gate.confirmedObjectives().map((o, i) => [o.id, `Objective ${i + 1}`]));
         const preview = (v) => (v === undefined || v === null ? null
           : Array.isArray(v) ? v.map((id) => objectiveLabels.get(id) ?? "an objective").join(", ").slice(0, 160)
@@ -356,6 +361,7 @@ export class CourseSession {
         this.#gate.confirmLessonPlan({
           ...(event.planId ? { planId: event.planId } : {}),
           provenance: this.#prov(turnRef, event.at),
+          ...(event.teacherEditCount !== undefined ? { teacherEditCount: event.teacherEditCount } : {}),
         });
         return;
       }
@@ -496,7 +502,7 @@ export class CourseSession {
         reason: "objectives have already been proposed for this course",
       };
     }
-    const items = objectivesFromAnswers(this.#intake.answers());
+    const items = objectivesFromAnswers(this.#intake.answers()).map((item) => ({ ...item, proposedBy: "teacher" }));
     if (items.length === 0) {
       return {
         ok: false,
@@ -845,7 +851,16 @@ export class CourseSession {
   /** Checkpoint 4: the teacher confirms the plan. */
   confirmLessonPlan({ text, planId = null, at } = {}) {
     const a = at ?? Date.now();
-    const event = { kind: "plan.confirmed", planId, text: requireMsg(text, "text"), at: a };
+    const currentPlanId = planId ?? this.#gate.currentPlan()?.id;
+    const teacherEditCount = currentPlanId ? this.#teacherEditCounts.get(currentPlanId) ?? 0 : 0;
+    const event = {
+      kind: "plan.confirmed",
+      planId,
+      text: requireMsg(text, "text"),
+      // Additive: old records omit this and replay byte-for-byte as before.
+      ...(teacherEditCount > 0 ? { teacherEditCount } : {}),
+      at: a,
+    };
     this.#apply(event);
     this.#append(event);
     return this.view().plan;
@@ -891,7 +906,9 @@ export class CourseSession {
     const seen = new Set();
     for (const id of this.#proposalIds) {
       const proposal = this.#gate.getProposal(id);
-      if (!proposal || proposal.proposedBy !== "ai") continue;
+      // This list means proposals awaiting or carrying a decision, not "AI-generated".
+      // Teacher-typed lines are proposals too; authorship only changes the label, never the decision gate.
+      if (!proposal) continue;
       seen.add(id);
       const mine = decisions.filter((d) => d.verb !== "add" && d.proposalId === id);
       const status = mine.some((d) => d.verb === "drop")
@@ -916,7 +933,7 @@ export class CourseSession {
         alignment: alignmentSource
           ? { publicId: alignmentSource.publicId, relationship: alignmentSource.relationship, suggested: !alignmentSource.confirmedByEducator }
           : null,
-        by: "ai",
+        by: proposal.proposedBy,
         citedByPlan: cited.has(id),
       });
     }

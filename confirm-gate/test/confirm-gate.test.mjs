@@ -135,6 +135,40 @@ test("objectives checkpoint auto-confirms when every proposal is decided, reopen
   assert.equal(ctx.gate.publishStatus().canPublish, false);
 });
 
+test("objective proposals record their author, default to ai, and reject any other value", () => {
+  const ctx = makeCtx();
+  walkToPlan(ctx);
+
+  const [ai, teacher] = ctx.gate.proposeObjectives([
+    { kind: "local", statement: "Suggested outcome." },
+    { kind: "local", statement: "Teacher-typed outcome.", proposedBy: "teacher" },
+  ]);
+  assert.equal(ai.proposedBy, "ai");
+  assert.equal(teacher.proposedBy, "teacher");
+  assert.equal(teacher.confirmedByEducator, false, "authorship does not bypass the teacher decision");
+
+  assert.throws(
+    () => ctx.gate.proposeObjectives([{ kind: "local", statement: "Forged outcome.", proposedBy: "student" }]),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+
+  const atomic = makeCtx();
+  walkToPlan(atomic);
+  assert.throws(
+    () => atomic.gate.proposeObjectives([
+      { kind: "local", statement: "Must not be partly recorded." },
+      { kind: "local", statement: "Bad author.", proposedBy: "student" },
+    ]),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+  const [only] = atomic.gate.proposeObjectives([{ kind: "local", statement: "The only recorded proposal." }]);
+  atomic.gate.confirmObjectives({
+    provenance: atomic.say("Accept the only proposal.").prov,
+    decisions: [{ verb: "accept", proposalId: only.id }],
+  });
+  assert.equal(atomic.gate.checkpoints().objectives.status, "confirmed", "a bad batch records nothing");
+});
+
 /* --------------------------------- (ii) ----------------------------------- */
 
 test("(ii) publish is blocked while any objective in the plan is unconfirmed", () => {
@@ -492,6 +526,46 @@ test("confirm calls are idempotent; conflicting re-decisions are rejected", () =
   assert.equal(v1.version, 1);
   assert.equal(v1again.version, 1);
   assert.equal(ctx.gate.versions().length, 1);
+});
+
+test("a confirmed edited plan records teacher authorship and the edit-operation count", () => {
+  const ctx = makeCtx();
+  walkToPlan(ctx);
+  const [p] = ctx.gate.proposeObjectives([{ kind: "local", statement: "Outcome A." }]);
+  ctx.gate.confirmObjectives({
+    provenance: ctx.say("Accept A.").prov,
+    decisions: [{ verb: "accept", proposalId: p.id }],
+  });
+  const draft = ctx.gate.proposeLessonPlan({ title: "Lesson 1", activities: [activity([p.id])] });
+  assert.equal(draft.proposedBy, "ai");
+  assert.equal(draft.editedByTeacher, undefined);
+  assert.equal(draft.teacherEditCount, undefined);
+  assert.throws(
+    () => ctx.gate.confirmLessonPlan({ provenance: ctx.say("Bad zero count.").prov, teacherEditCount: 0 }),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+  assert.throws(
+    () => ctx.gate.confirmLessonPlan({ provenance: ctx.say("Bad fractional count.").prov, teacherEditCount: 1.5 }),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+  assert.equal(ctx.gate.currentPlan().status, "draft");
+
+  const confirmed = ctx.gate.confirmLessonPlan({
+    provenance: ctx.say("Confirm my edited plan.").prov,
+    teacherEditCount: 2,
+  });
+  assert.equal(confirmed.proposedBy, "ai", "the draft's origin remains the AI");
+  assert.equal(confirmed.editedByTeacher, true);
+  assert.equal(confirmed.teacherEditCount, 2);
+
+  const old = makeCtx();
+  walkToPlan(old);
+  const [oldP] = old.gate.proposeObjectives([{ kind: "local", statement: "Old outcome." }]);
+  old.gate.confirmObjectives({ provenance: old.say("Accept.").prov, decisions: [{ verb: "accept", proposalId: oldP.id }] });
+  old.gate.proposeLessonPlan({ title: "Old plan", activities: [activity([oldP.id])] });
+  const oldConfirmed = old.gate.confirmLessonPlan({ provenance: old.say("Confirm old plan.").prov });
+  assert.equal(oldConfirmed.editedByTeacher, undefined);
+  assert.equal(oldConfirmed.teacherEditCount, undefined);
 });
 
 /* ------------------------- version binding (contract) --------------------- */

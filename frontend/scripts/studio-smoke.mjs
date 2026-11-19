@@ -298,7 +298,12 @@ try {
   await clickPrimary("Confirm and create the course");
   await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
   check("confirming the review creates the course and opens it in the studio", /#\/studio\//.test(await page.evaluate(() => location.hash)));
-  check("it lands on Objectives (the brief is confirmed by the same click)", await waitText("From your answers", 10000));
+  check("it lands on Objectives (the brief is confirmed by the same click)", await page.waitForFunction(() => /step 2 of 4/i.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false));
+  // N1 (L1 finding 1): "One per line. Each becomes a proposal you accept, edit or drop." The typed lines arrive as
+  // proposals labelled as the teacher's own, with no click on "Use my answers".
+  check("N1 the typed objectives arrive on the objectives page as the teacher's own proposals (no click)",
+    await page.waitForFunction(() => { const a = [...document.querySelectorAll('aside[aria-label="Proposals"] article')].map((n) => n.textContent); return a.length === 2 && a.some((x) => /Explain how a plant makes its food/.test(x)) && a.some((x) => /Name what a plant needs to make sugar/.test(x)) && a.every((x) => /From your answer/i.test(x)); }, { timeout: 10000 }).then(() => true, () => false)
+      && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Use my answers"))));
   const ev = (await stored()).events.sort((x, y) => x.seq - y.seq).map((e) => JSON.parse(e.line).event);
   const trail = ev.filter((e) => ["course.created", "intake.answered", "checkpoint.confirmed"].includes(e.kind)).map((e) => e.kind === "checkpoint.confirmed" ? `${e.kind}:${e.id}` : e.kind);
   check("one confirm leaves the brief's intents in the brief's order: create, answers, files, outline", JSON.stringify(trail) === JSON.stringify(["course.created", "intake.answered", "checkpoint.confirmed:files", "checkpoint.confirmed:outline"]), JSON.stringify(trail));
@@ -321,7 +326,7 @@ try {
   await page.keyboard.press("Escape");
   await sleep(300);
   await clickBy("Objectives");
-  await waitText("From your answers", 6000);
+  await page.waitForFunction(() => /step 2 of 4/i.test(document.body.innerText), { timeout: 6000 }).catch(() => undefined);
 
   // ---- objectives (lane D): the wizard made an EXPLICIT course (R4). Writing your own comes first, before any proposal (R3 UI).
   check("D the course is explicit: one held 'Confirm objectives' primary, the add form before any proposal",
@@ -361,7 +366,7 @@ try {
   check("G2c submitting it is the ordinary teacher add: one add intent with no Marble id; the objective is teacher-origin with a local URN",
     g2cEv.length === 1 && g2cEv[0].kind === "objectives.decided" && g2cEv[0].decisions?.length === 1 && g2cEv[0].decisions[0].verb === "add" && !/mt_/.test(g2cJson)
       && /^urn:uuid:[0-9a-f-]{36}$/.test(g2cRow?.id ?? "") && g2cRow?.by === "teacher" && g2cRow?.own === true, `${JSON.stringify(g2cRow)} ${g2cJson.slice(0, 300)}`);
-  await clickBy("Use my answers");
+  // N1: the teacher's answers are already proposals (the wizard derived them); no "Use my answers" click.
   await waitText("Proposals", 8000);
   await sleep(500);
   const cards = await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length);

@@ -437,6 +437,14 @@ try {
     await g2cBtn("Add");
     await g2cWait((n) => document.querySelectorAll("li[data-objective-id]").length >= n, 8000, k + 1);
   }
+  // N1: the wizard's typed lines are now proposals on this page too; drop them so the set is the three suggestions
+  // (Confirm stays held while any proposal waits, as before).
+  for (let i = 0; i < 10 && await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length) > 0; i++) {
+    await g2cBtn("Drop");
+    await sleep(200);
+    await g2cBtn("Drop it");
+    await sleep(400);
+  }
   await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
   await g2cBtn("Confirm objectives");
   const g2cPlan = await g2cWait(() => !!document.querySelector("[data-prereq-strip]") && /Step 3 of 4/i.test(document.body.innerText), 12000);
@@ -591,8 +599,8 @@ try {
   s3Walk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
   s3Walk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
   if (s3Walk.includes(false)) console.log(`H2b stage-3 walk stalled: ${JSON.stringify(s3Walk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
-  // No anchor, so no suggestions: the brief's outcomes come back as proposals ("Use my answers"); accept each.
-  await g2cMove("Use my answers", () => document.querySelectorAll('aside[aria-label="Proposals"] article').length > 0, 8000);
+  // No anchor, so no suggestions. N1: the brief's typed outcomes arrive as proposals on their own; accept each.
+  await g2cWait(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length > 0, 8000);
   for (let i = 0; i < 10 && await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length) > 0; i++) {
     await g2cBtn("Accept");
     await sleep(400);

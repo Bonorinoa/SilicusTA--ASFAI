@@ -326,14 +326,17 @@ test("no worker configured: the plan step refuses with 501 and the course is unt
   assert.equal((await getView(courseId)).plan, null, "nothing was written");
 });
 
-test("a worker that misbehaves is a 502 refusal, never a half-written plan", async () => {
+test("a worker that misbehaves twice is a named 502 refusal and a visible failed-plan record, never a half-written plan", async () => {
   const wm = await startMockWorker({ reply: { title: "T", activities: [{ title: "A", objectiveIds: ["urn:uuid:ghost"], learnerDoes: "x", teacherDoes: "y" }] } });
   MOCKS.push(wm);
   const { post, getView, courseId } = await appAtConfirmedObjectives({ worker: new PlanWorker({ url: wm.url, model: "test" }) });
   const r = await post(`/api/courses/${courseId}/plan`, {});
   assert.equal(r.status, 502);
-  assert.equal(r.json.code, "WORKER_BAD_OUTPUT");
-  assert.equal((await getView(courseId)).plan, null, "the course was left alone");
+  assert.equal(r.json.code, "PLAN_DRAFT_FAILED");
+  assert.equal(r.json.message, "Silicus couldn't finish this plan. Try again, or shorten the sources.");
+  const view = await getView(courseId);
+  assert.equal(view.plan, null, "no half-written plan landed");
+  assert.deepEqual(view.activity.map((item) => item.action).slice(-2), ["plan.retry", "plan.failed"]);
 });
 
 test("a plan cannot be drafted before the teacher has confirmed an objective", async () => {

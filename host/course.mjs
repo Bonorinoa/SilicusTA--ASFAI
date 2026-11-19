@@ -35,6 +35,8 @@ import { lessonMinutesError } from "./lesson-length.mjs";
 import { PlanEditError, MAX_EDITS, applyEdits, editLabel, gateSpecOf, normalizeValue, parsePath, shapeIndexMap, valueAt, valueSha } from "./plan-edit.mjs";
 
 const CHANNEL = "silicus-ui";
+const PLAN_RETRYABLE = new Set(["WORKER_TRUNCATED", "WORKER_BAD_OUTPUT", "WORKER_TIMEOUT", "WORKER_UNREACHABLE"]);
+const PLAN_FAILURE_MESSAGE = "Silicus couldn't finish this plan. Try again, or shorten the sources.";
 
 /** The course's event log does not verify. The record is refused, never patched. */
 export class CourseIntegrityError extends Error {
@@ -297,6 +299,10 @@ export class CourseSession {
         }
         return;
       }
+      case "plan.draft_retried":
+      case "plan.draft_failed":
+        // Trace-only events. They change no gate or plan state, but stay in the hash-chained record and activity.
+        return;
       case "plan.proposed": {
         if (event.assistantText) {
           this.#ledger.recordAssistantTurn(event.assistantText, { channel: "model", at: event.at });
@@ -755,18 +761,34 @@ export class CourseSession {
     // learners recall or bet on the prerequisite first. Not a context citation, never stored.
     const anchorPrereqs = await anchorPrerequisites(sources, this.#anchor);
 
+    const draft = () => worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs, lessonMinutes: this.#lessonMinutes });
+    const a = at ?? Date.now();
     let drafted;
+    let attempts = 0;
     try {
-      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs, lessonMinutes: this.#lessonMinutes });
-    } catch (e) {
-      return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
+      attempts += 1;
+      drafted = await draft();
+    } catch (first) {
+      const firstCode = first?.code ?? "WORKER_FAILED";
+      if (!PLAN_RETRYABLE.has(firstCode)) {
+        this.#append({ kind: "plan.draft_failed", attempts, reason: firstCode, at: a });
+        return { ok: false, code: firstCode, reason: first instanceof Error ? first.message : String(first) };
+      }
+      this.#append({ kind: "plan.draft_retried", attempt: attempts, reason: firstCode, at: a });
+      try {
+        attempts += 1;
+        drafted = await draft();
+      } catch (second) {
+        const secondCode = second?.code ?? "WORKER_FAILED";
+        this.#append({ kind: "plan.draft_failed", attempts, reason: secondCode, at: a });
+        return { ok: false, code: "PLAN_DRAFT_FAILED", reason: PLAN_FAILURE_MESSAGE };
+      }
     }
 
     // Split the citations off the spec: the gate ignores them, and the log keeps refs only.
     const spec = { ...drafted, activities: drafted.activities.map(({ citations: _c, ...rest }) => rest) };
     const citations = await this.#resolveCitations(drafted, context, sources);
 
-    const a = at ?? Date.now();
     const event = {
       kind: "plan.proposed",
       spec,

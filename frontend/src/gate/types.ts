@@ -230,6 +230,8 @@ export interface ActivityItem {
     /** Contract 2026-10-16: the worker suggested objectives that complement the teacher's. facts: `count` (number). */
     | "objectives.suggested"
     | "objectives.decided"
+    | "plan.retry"
+    | "plan.failed"
     | "plan.drafted"
     | "plan.checked"
     | "plan.confirmed"

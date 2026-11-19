@@ -580,6 +580,50 @@ test("the host hands the teacher's course answer to the worker when it drafts th
   assert.equal((await run({ topic: "fractions", course: "Grade 3 math, one 45-minute lesson", learning_outcomes: "x" })).course, "Grade 3 math, one 45-minute lesson");
 });
 
+async function readyCourseForPlanRetry() {
+  const store = new CourseStore(mkdtempSync(join(tmpdir(), "silicus-plan-retry-")));
+  const session = CourseSession.create(store, { owner: "teacher:tk-1", title: "Reliable plans", ages: { min: 10, max: 11 }, lessonMinutes: 45 });
+  session.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  session.answerIntake({ text: "answers", answers: { topic: "Water cycles", course: "Middle school science", learning_outcomes: "Explain evaporation." }, at: 1100 });
+  session.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 1200 });
+  session.proposeObjectives({ items: [{ kind: "local", statement: "Students can explain evaporation." }], at: 1300 });
+  session.decideObjectives({ decisions: [{ verb: "accept", proposalId: session.view().proposals[0].id }], text: "Accept.", at: 1400 });
+  return { store, session };
+}
+
+const workerFailure = (code) => Object.assign(new Error(`scripted ${code}`), { code });
+
+test("the host retries one truncated plan automatically and records the retry before the completed draft", async () => {
+  const { store, session } = await readyCourseForPlanRetry();
+  let calls = 0;
+  const worker = { draft: async (args) => {
+    calls += 1;
+    if (calls === 1) throw workerFailure("WORKER_TRUNCATED");
+    return { title: "Water moves", audience: { ageRangeStart: 18, ageRangeEnd: 40 }, activities: [{ title: "Trace the cycle", minutes: 45, objectiveIds: args.objectives.map((o) => o.id), learnerDoes: "Trace water through a diagram.", teacherDoes: "Ask what changes state.", evidenceIfAny: "work-product", citations: ["asfai:fixture-water"] }] };
+  } };
+
+  const result = await session.draftPlanFromObjectives({ worker, at: 1500 });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(calls, 2);
+  const actions = session.view().activity.map((item) => item.action);
+  assert.deepEqual(actions.slice(-2), ["plan.retry", "plan.drafted"]);
+  assert.deepEqual(CourseSession.load(store, session.meta.courseId).view().activity.map((item) => item.action).slice(-2), ["plan.retry", "plan.drafted"], "the retry survives replay");
+});
+
+test("the host retries one empty plan, then records and returns the plain final failure", async () => {
+  const { store, session } = await readyCourseForPlanRetry();
+  let calls = 0;
+  const worker = { draft: async () => { calls += 1; throw workerFailure("WORKER_BAD_OUTPUT"); } };
+
+  const result = await session.draftPlanFromObjectives({ worker, at: 1500 });
+  assert.deepEqual(result, { ok: false, code: "PLAN_DRAFT_FAILED", reason: "Silicus couldn't finish this plan. Try again, or shorten the sources." });
+  assert.equal(calls, 2);
+  const failed = session.view().activity.at(-1);
+  assert.equal(failed.action, "plan.failed");
+  assert.deepEqual(failed.facts, { attempts: 2, reason: "WORKER_BAD_OUTPUT" });
+  assert.equal(CourseSession.load(store, session.meta.courseId).view().activity.at(-1).action, "plan.failed", "the failure survives replay");
+});
+
 
 test("answerStudent: basis and refusal are normalised before the caller sees them (explanation kept; out of scope carries a known refusal)", async () => {
   const items = [{ id: "objective:1", label: "Objective 1", text: "x" }];

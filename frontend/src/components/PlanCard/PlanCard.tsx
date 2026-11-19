@@ -28,6 +28,8 @@ export interface PlanCardProps {
   plan: LessonPlanView;
   /** K2: the lesson length the teacher set on the course (minutes). Absent on courses created without one. */
   lessonMinutes?: number;
+  /** The course record's ages. The model's `plan.audience` is only a guess and is never displayed. */
+  courseAges?: { min: number; max: number } | null;
   /** Confirmed objectives (the citation key), from the gate's confirmed set. */
   objectives: readonly ObjectiveCiteView[];
   /** Who confirmed the plan (parent-supplied provenance summary). */
@@ -91,7 +93,7 @@ const SOURCE_LABEL: Record<string, string> = {
   "marble": "Marble's skill taxonomy",
 };
 
-export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline", onEdit, editBusy = false, aiEditable = false }: PlanCardProps) {
+export function PlanCard({ plan, lessonMinutes, courseAges = null, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline", onEdit, editBusy = false, aiEditable = false }: PlanCardProps) {
   // N3: which part is open for editing ("plan", "a:<activity id>", "r:<review index>"); one at a time.
   const [editing, setEditing] = useState<string | null>(null);
   // N5 (C5): the activity whose removal waits for a second click ("Remove activity 2?").
@@ -195,13 +197,7 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
       ) : null}
 
       <p className={styles.meta}>
-        {plan.audience?.ageRangeStart !== undefined ? (
-          <span>
-            {AUDIENCE_BAND_LABEL} {plan.audience.ageRangeStart}
-            {plan.audience.ageRangeEnd !== undefined ? `–${plan.audience.ageRangeEnd}` : "+"}
-          </span>
-        ) : null}
-        <span className={styles.metaDot}> · </span>
+        {courseAges ? <><span>{AUDIENCE_BAND_LABEL} {courseAges.min}–{courseAges.max}</span><span className={styles.metaDot}> · </span></> : null}
         {lessonMinutes !== undefined
           ? <span data-lesson-length>{lessonMinutes} min lesson · activities {totalMinutes} min</span>
           : <span>{plural(totalMinutes, "minute")}</span>}

@@ -12,6 +12,8 @@
  *   objectives.drafted    count: number, materials: number
  *   objectives.suggested  count: number
  *   objectives.decided    accepted, renamed, dropped, added: number
+ *   plan.retry             attempt: number, reason: string
+ *   plan.failed            attempts: number, reason: string
  *   plan.drafted          activities: number
  *   plan.checked          valid: boolean, issues: number
  *   package.sealed        version: number
@@ -74,6 +76,10 @@ export function sentenceOf(it: Pick<ActivityItem, "action" | "facts"> & Partial<
         .flatMap((verb) => { const n = num(facts, verb); return n !== null && n > 0 ? [`${n.toLocaleString("en-US")} ${verb}`] : []; });
       return parts.length > 0 ? `Your decisions: ${parts.join(", ")}` : "Decided on the proposed objectives";
     }
+    case "plan.retry":
+      return "Retried the lesson plan after an incomplete reply";
+    case "plan.failed":
+      return "Could not finish the lesson plan after retrying";
     case "plan.drafted": {
       const n = num(facts, "activities");
       return n === null ? "Drafted a lesson plan" : `Drafted a lesson plan with ${plural(n, "activity", "activities")}`;

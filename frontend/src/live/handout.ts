@@ -16,15 +16,14 @@ export function handoutFilename(version: PackageVersionView): string {
   return `silicus-handout-${slug}-v${version.version}.html`;
 }
 
-export function buildHandoutHtml(version: PackageVersionView): string {
+export function buildHandoutHtml(version: PackageVersionView, courseAges: { min: number; max: number } | null = null): string {
   const objectives = version.objectiveRefs.map((o) => `<li>${esc(o.statement ?? o.publicId ?? "")}</li>`).join("\n");
   const activities = (version.lessonPlan?.activities ?? [])
     .map((a) => `<li><h3>${esc(a.title)} <span class="min">${esc(a.minutes)} min</span></h3><p>${esc(a.learnerDoes)}</p></li>`)
     .join("\n");
   const published = new Date(version.publishedAt).toISOString().slice(0, 10);
-  const audience = version.lessonPlan?.audience;
-  const ages = audience?.ageRangeStart !== undefined
-    ? `<p class="meta">Ages ${esc(audience.ageRangeStart)}${audience.ageRangeEnd !== undefined ? `–${esc(audience.ageRangeEnd)}` : "+"}</p>` : "";
+  const ages = courseAges
+    ? `<p class="meta">Ages ${esc(courseAges.min)}–${esc(courseAges.max)}</p>` : "";
   return `<!doctype html>
 <html lang="en">
 <head>

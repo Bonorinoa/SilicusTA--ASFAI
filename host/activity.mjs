@@ -62,6 +62,10 @@ function rowOf(event, published) {
       }
       return { actor: "teacher", action: "objectives.decided", artifact: "objectives", facts };
     }
+    case "plan.draft_retried":
+      return { actor: "worker", action: "plan.retry", artifact: "plan", facts: { attempt: Number.isInteger(event.attempt) ? event.attempt : 1, reason: typeof event.reason === "string" ? event.reason : "WORKER_FAILED" } };
+    case "plan.draft_failed":
+      return { actor: "worker", action: "plan.failed", artifact: "plan", facts: { attempts: Number.isInteger(event.attempts) ? event.attempts : 1, reason: typeof event.reason === "string" ? event.reason : "WORKER_FAILED" } };
     case "plan.proposed": {
       const facts = { activities: count(event.spec?.activities) };
       if (count(event.citations) > 0) facts.citations = event.citations.length;

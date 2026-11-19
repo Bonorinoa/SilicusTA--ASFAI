@@ -18,15 +18,21 @@ const version = (over: Partial<PackageVersionView> = {}): PackageVersionView => 
 });
 
 describe("the student handout", () => {
-  it("carries the confirmed objectives and what learners do, with ages, minutes and the honesty line", () => {
-    const html = buildHandoutHtml(version());
+  it("carries the confirmed objectives and what learners do, with recorded ages, minutes and the honesty line", () => {
+    const html = buildHandoutHtml(version(), { min: 10, max: 12 });
     expect(html).toContain("Students can explain what an algorithm is.");
     expect(html).toContain("Spot the claim");
     expect(html).toContain("20 min");
     expect(html).toContain("Mark the sentence that makes a claim.");
-    expect(html).toContain("Ages 8–10");
+    expect(html).toContain("Ages 10–12");
+    expect(html).not.toContain("Ages 8–10");
     expect(html).toContain("not evidence of learning");
     expect(html).toContain("2026-10-14");
+  });
+
+  it("does not display the model's audience guess when course ages are unknown", () => {
+    const html = buildHandoutHtml(version(), null);
+    expect(html).not.toContain("Ages 8–10");
   });
 
   it("leaves out everything a student should not see: teacher moves and notes", () => {

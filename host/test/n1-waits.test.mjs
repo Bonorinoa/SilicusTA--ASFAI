@@ -1,7 +1,7 @@
 /**
  * n1-waits.test.mjs — N1 item 3 (L1 finding 3): per-task reasoning and deadlines. Ranking the map and answering a
- * student run with reasoning OFF and their own deadlines (25 s, 20 s); objectives, suggestions and the plan keep the
- * configured default. A deadline that passes is WORKER_TIMEOUT, which the studio words kindly.
+ * student and plan tasks run with reasoning OFF; rank and answer keep their own deadlines (25 s, 20 s).
+ * Objectives and suggestions keep the configured default. A deadline that passes is WORKER_TIMEOUT.
  */
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
@@ -16,10 +16,11 @@ function capture(content, opts = {}) {
   return { seen, worker: new PlanWorker({ url: "https://w.example/v1", model: "m", reasoning: "low", fetchImpl, log: () => {}, ...opts }) };
 }
 
-test("the policy table: rank and answer off with 25 s / 20 s; everything else keeps the configured value", () => {
-  assert.deepEqual(TASK_REASONING, { rank: "off", answer: "off", answer_adult: "low" }); // N5: 18+ helper low
+test("the policy table: rank, answer and plan off; only rank and answer have shorter deadlines", () => {
+  assert.deepEqual(TASK_REASONING, { rank: "off", answer: "off", answer_adult: "low", plan: "off" }); // N5: 18+ helper low
   assert.deepEqual(TASK_TIMEOUT_MS, { rank: 25_000, answer: 20_000, answer_adult: 20_000 });
-  for (const t of ["objectives", "suggest", "plan", null, "bogus"]) assert.equal(taskReasoning(t, "low"), "low", String(t));
+  for (const t of ["objectives", "suggest", null, "bogus"]) assert.equal(taskReasoning(t, "low"), "low", String(t));
+  assert.equal(taskReasoning("plan", "low"), "off");
   assert.equal(taskTimeoutMs("rank", 120_000), 25_000);
   assert.equal(taskTimeoutMs("rank", 10_000), 10_000, "a shorter configured deadline still wins");
   assert.equal(taskTimeoutMs("plan", 120_000), 120_000);

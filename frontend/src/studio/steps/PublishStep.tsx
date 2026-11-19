@@ -21,7 +21,7 @@ export function PublishStep({ c, view, onLook }: StepProps) {
   const [armed, setArmed] = useState(false);
 
   if (published && !drafting) {
-    const handout = () => download(new Blob([buildHandoutHtml(published)], { type: "text/html" }), handoutFilename(published));
+    const handout = () => download(new Blob([buildHandoutHtml(published, view.course.ages ?? null)], { type: "text/html" }), handoutFilename(published));
     return (
       <div className={s.doc}>
         <div className={s.docInner}>
@@ -96,6 +96,7 @@ export function PublishStep({ c, view, onLook }: StepProps) {
           <PlanCard
             plan={plan}
             lessonMinutes={view.course.lessonMinutes}
+            courseAges={view.course.ages ?? null}
             objectives={view.objectives}
             teacher={{ name: view.course.owner }}
             onPrint={() => window.print()}

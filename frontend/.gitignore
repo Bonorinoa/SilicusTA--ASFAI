@@ -5,3 +5,4 @@ dist/
 
 # Design-review captures and print artifacts (regenerable: scripts/shots.mjs)
 shots/
+tsconfig.tsbuildinfo

@@ -44,6 +44,9 @@ describe("learning-design wording (plan schema v2)", () => {
     expect(shown).toHaveLength(6);
     expect(more).toBe(2);
     expect(adjustedNotes(undefined)).toEqual({ shown: [], more: 0 });
+    // N2 (L1): the host's note says where and what changed; the field name reads as plain words.
+    expect(adjustedNotes(['removed the supportingPhase from activity 2 "Oreo phases": the AI gave "0", and it must be a whole number from 1 to 4.']).shown[0])
+      .toBe('Removed the second phase from activity 2 "Oreo phases": the AI gave "0", and it must be a whole number from 1 to 4.');
     expect(adjustedNotes(['aiStatus "required" clamped to "permitted": never required.', "a permitted or required AI use needs a noAiAlternative."]).shown)
       .toEqual(['AI use "required" clamped to "permitted": never required.', "A permitted or required AI use needs a no-AI alternative."]);
   });

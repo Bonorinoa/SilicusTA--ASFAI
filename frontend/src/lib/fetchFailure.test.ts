@@ -47,4 +47,10 @@ describe("plain words for a page that could not be read", () => {
     expect(skippedLine("https://example.org/c", skipped)).toBe(`Skipped: ${TIMEOUT}`);
     expect(skippedDetail("https://example.org/a", skipped)).toBe("that link answered 403");
   });
+
+  it("N1: a refused address gets the same closed Details as other failures, with the host's sentence", () => {
+    const skipped = [{ name: "https://meta.example/", code: "URL_REFUSED", reason: "meta.example resolves to 169.254.169.254, which is not a public address" }];
+    expect(skippedLine("https://meta.example/", skipped)).toBe("Skipped: Silicus does not open this kind of address");
+    expect(skippedDetail("https://meta.example/", skipped)).toBe("meta.example resolves to 169.254.169.254, which is not a public address");
+  });
 });

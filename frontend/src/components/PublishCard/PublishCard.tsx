@@ -131,7 +131,8 @@ export function PublishCard({
     flashTimer.current = setTimeout(() => setHintFlash(false), 1200);
   };
 
-  // The reasons in a teacher's words (the host classifies each gate blocker; the raw text lives in Record details).
+  // The reasons in a teacher's words (the host classifies each gate blocker). The studio has no Record details
+  // panel, so the gate's raw text is not on screen (classic-parity row 25, K5V C2).
   const reasons = reasonsFor(status);
 
   const reviewClick = () => {

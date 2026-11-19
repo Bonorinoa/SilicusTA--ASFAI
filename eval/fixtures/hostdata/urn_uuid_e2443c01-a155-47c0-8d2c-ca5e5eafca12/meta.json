@@ -1,0 +1,13 @@
+{
+  "courseId": "urn:uuid:e2443c01-a155-47c0-8d2c-ca5e5eafca12",
+  "owner": "Dr. Okafor",
+  "title": "Thermodynamics I",
+  "description": "",
+  "materials": [],
+  "seed": "urn:uuid:78c6a0d1-1131-4bbd-b26e-4496fc48c5b6",
+  "ages": {
+    "min": 18,
+    "max": 25
+  },
+  "createdAt": 1795057393279
+}

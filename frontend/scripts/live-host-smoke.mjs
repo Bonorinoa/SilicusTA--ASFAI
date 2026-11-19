@@ -271,7 +271,7 @@ const courseId = await runWizard({ title: COURSE1, owner: "Ada Lovelace", goal: 
 const v0 = await getView(courseId);
 check("a course exists on the host after the wizard's confirm", courseId.startsWith("urn:uuid:") && (await listCourses()).length === 1 && v0.course.title === COURSE1);
 check("the wizard asked the host to rank the skill map (the ranking call went to the host and was answered)", rankCalls.length >= 1 && rankCalls.every((s) => s === 200), JSON.stringify(rankCalls));
-check("the lesson plan stage is not open yet: the wizard lands on Objectives", await waitBody("From your answers", 10000));
+check("the lesson plan stage is not open yet: the wizard lands on Objectives", await poll(() => page.evaluate(() => /step 2 of 4/i.test(document.body.innerText)), 10000).then(() => true, () => false));
 check("materials confirmed IN THE HOST (the wizard's confirm sent the source-list intent)", v0.checkpoints.files.status === "confirmed");
 check("the teacher's answers are recorded on the host and arm the round",
   v0.intake.roundAnswered === true && v0.intake.outlineAuthorized === true && v0.intake.questionsFrom === "local"
@@ -312,10 +312,9 @@ check("the host cannot ask ASFAI again before the teacher answers", rushed.statu
 
 // AI proposes (no teacher turn required), the teacher decides, the teacher confirms.
 await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });
-await waitBody("From your answers");
-await clickBtn("Use my answers");
+// N1: the wizard already turned the typed lines into proposals (the host derived them); no "Use my answers" click.
 await poll(async () => (await getView(courseId)).proposals.length === 2);
-check("the host proposed 2 objectives, one per recorded outcome line", true);
+check("the host proposed 2 objectives, one per recorded outcome line, with no click (N1)", !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Use my answers"))));
 await poll(() => page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length === 2));
 check("stage: the objectives stage has exactly one primary action (Confirm objectives, held until every proposal is decided)",
   (await primaryCount()) === 1 && await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].every((b) => b.textContent.trim() === "Confirm objectives" && b.disabled)), `primaries=${await primaryCount()}`);
@@ -514,8 +513,6 @@ await post(`/api/courses/${probe2}/intake/answer`, { text: "three", answers: { l
 check("local: the third answer opens the outline", (await getView(probe2)).intake.outlineAuthorized === true);
 
 await page.goto(`${APP}/#/studio/${encodeURIComponent(course2)}`, { waitUntil: "networkidle0" });
-await waitBody("From your answers");
-await clickBtn("Use my answers");
 await poll(async () => (await getView(course2)).proposals.length === 2);
 const labelled = (await getView(course2)).proposals;
 check("local: proposals are the teacher's own sentences, labelled 'from your answer' (not 'to ASFAI')",

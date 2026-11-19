@@ -48,7 +48,7 @@ export function RevisionNote({ revision, workerConfigured, busy, onDraftPlan }: 
       {needsPlan ? (
         workerConfigured ? (
           <div className={s.rowActions}>
-            <Button disabled={busy} onClick={onDraftPlan}>Draft a new lesson plan from your confirmed objectives</Button>
+            <Button className={s.wrapButton} disabled={busy} onClick={onDraftPlan}>Draft a new lesson plan from your confirmed objectives</Button>
             <span className={s.trustText}>The AI drafts; you still read and confirm the plan yourself.</span>
           </div>
         ) : (

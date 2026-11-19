@@ -125,9 +125,19 @@ export interface StudentAnswer {
   kind?: StudentReplyKind;
   /** K3: lesson items a clarify or off_topic reply offers, in the lesson's own words (objective statement or activity title). */
   offers?: { id: string; topic: string }[];
+  /**
+   * N4 (owner, 18 Nov), 18+ courses only: a general explanation of the course's subject that the lesson does not cover.
+   * Not grounded and no cites; the UI labels it "General explanation, not from your lesson".
+   */
+  general?: boolean;
+  /** N4, 18+: help on an attempt-first activity; the answer opens with the host's nudge line. */
+  nudge?: boolean;
+  /** N4, under 18: the attempt-first activity the host-composed reply names, by its title in the plan. */
+  activity?: { id: string; title: string };
 }
 
-export type StudentReplyKind = "answer" | "clarify" | "about_helper" | "off_topic" | "assessment";
+/** N4 adds "attempt_first": under 18, the host's fixed reply for an activity the student tries before any help. */
+export type StudentReplyKind = "answer" | "clarify" | "about_helper" | "off_topic" | "assessment" | "attempt_first";
 
 
 /**
@@ -327,6 +337,9 @@ export const host = {
   /** A student asks about the PUBLISHED package. Read-only: nothing is recorded. */
   askStudent: (id: string, b: { question: string; history?: { role: "student" | "assistant"; text: string }[] }) =>
     call<StudentAnswer>("POST", `/courses/${enc(id)}/student/ask`, b),
+  /** N3: the teacher edits the plan in place. Intents only: field paths and values; the host bounds and records them. */
+  editPlan: (id: string, b: { planId?: string; edits: { path: string; value: unknown }[]; text: string }) =>
+    call<{ plan: unknown; unchanged: boolean }>("POST", `/courses/${enc(id)}/plan/edit`, b),
   confirmPlan: (id: string, b: { text: string; planId?: string }) =>
     call("POST", `/courses/${enc(id)}/plan/confirm`, b),
   publish: (id: string, b: { text: string; note?: string }) =>

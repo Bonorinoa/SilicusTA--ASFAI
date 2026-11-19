@@ -8,6 +8,7 @@ import { host, type HostView, type StudentAnswer } from "../gate/transport";
 import { href } from "./StudioApp";
 import { Skeleton } from "./ui";
 import s from "./Studio.module.css";
+import { Elapsed } from "../components/WaitLines/Elapsed";
 
 const kid = (statement: string) => statement.replace(/^(students|learners)\s+(can|will)\s+/i, "").replace(/^./, (c) => c.toUpperCase()).replace(/\.$/, "");
 
@@ -36,8 +37,10 @@ export function Learn({ courseId }: { courseId: string }) {
       const history = turns.flatMap((t) => (t.a ? [{ role: "student" as const, text: t.q }, { role: "assistant" as const, text: t.a.answer }] : [])).slice(-6);
       const a = await host.askStudent(courseId, { question: question.slice(0, 800), history });
       setTurns((t) => t.map((x, k) => (k === i ? { ...x, a } : x)));
-    } catch {
-      setTurns((t) => t.map((x, k) => (k === i ? { ...x, error: "Silicus couldn’t answer just now. Try again in a moment." } : x)));
+    } catch (e) {
+      // N1: the helper has 20 s; a timeout says so in kind words.
+      const error = (e as { code?: string } | null)?.code === "WORKER_TIMEOUT" ? "That took too long. Ask again." : "Silicus couldn’t answer just now. Try again in a moment.";
+      setTurns((t) => t.map((x, k) => (k === i ? { ...x, error } : x)));
     } finally {
       setAsking(false);
     }
@@ -101,6 +104,9 @@ export function Learn({ courseId }: { courseId: string }) {
                         {t.a.basis === "explanation" ? <span>Silicus is explaining an idea your lesson names.</span> : null}
                       </span>
                     ) : null}
+                    {t.a.general ? (
+                      <span className={s.learnSource}><span>General explanation, not from your lesson</span></span>
+                    ) : null}
                     {!t.a.grounded && t.a.offers?.length ? (
                       <span className={s.learnOffers} role="group" aria-label="Ask about">
                         {t.a.offers.map((o) => (
@@ -112,7 +118,7 @@ export function Learn({ courseId }: { courseId: string }) {
                 ) : t.error ? <div className={s.learnA}>{t.error}</div> : null}
                 </div>
               ))}
-              {asking ? <div className={s.typing} aria-label="Silicus is thinking"><span /><span /><span /></div> : null}
+              {asking ? <div className={s.typing} aria-label="Silicus is thinking"><span /><span /><span /><Elapsed /></div> : null}
               {/* Room for the fixed composer, so the newest answer scrolls clear of it. */}
               <div ref={end} style={{ scrollMarginBottom: 140 }} />
             </section>

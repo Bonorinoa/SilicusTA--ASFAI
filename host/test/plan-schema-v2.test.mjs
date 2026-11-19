@@ -104,7 +104,9 @@ test("unknown values are dropped with a note the teacher can see", async () => {
   assert.equal("session" in a, false);
   assert.equal(spec.aiPolicy, "AI in this course: teacher-led and projected to the whole class, only after children state their own view first; no child uses AI alone.", "the stage rule replaces a contradicting line");
   assert.ok(spec.notes.some((n) => n.startsWith('dropped aiStatus "sometimes"')));
-  assert.ok(spec.notes.some((n) => n.startsWith("dropped phase:")));
+  // N2: the note says where, what the AI gave and what is valid (was "dropped phase: must be a whole number…").
+  assert.ok(spec.notes.some((n) => n.startsWith('removed the phase from activity 1 "') && n.includes('the AI gave "5", and it must be a whole number from 1 to 4.')), spec.notes.join("\n"));
+  assert.ok(spec.notes.some((n) => n.startsWith("removed the supportingPhase from activity 1") && n.includes('gave "0"')));
   assert.ok(spec.notes.some((n) => n.startsWith('dropped channel "visual"')));
   assert.ok(spec.notes.some((n) => n.startsWith("replaced aiPolicy")));
 });

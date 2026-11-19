@@ -126,6 +126,7 @@ export function MapStep({ title, goal, ages, choice, onChoice }: {
   ) : null;
 
   const lede = pick ? "Your pick, with what comes before and after it on the map."
+    : ranked.threads.length === 0 && ranked.reason === "WORKER_TIMEOUT" ? "The map took too long. Search it, or skip it."
     : ranked.threads.length === 0 ? "Silicus had no suggestions for this. Search the map, or skip it."
     : `${ranked.threads.length === 1 ? "One thread fits" : `${ranked.threads.length === 2 ? "Two" : "Three"} threads fit`} your question. Pick the topic your lesson stands on.`;
 

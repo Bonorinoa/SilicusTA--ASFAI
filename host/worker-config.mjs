@@ -14,6 +14,27 @@ export function reasoningBody(value) {
   return undefined;
 }
 
+/**
+ * N1 (L1 finding 3): per-task reasoning and deadlines, the same on both hosts. Ranking the skill map and answering a
+ * student are short, judged-afterwards outputs: reasoning OFF (the L1 ranking spent ~8,000 output tokens, mostly
+ * reasoning, ~100 s). Objectives and the plan keep the configured default. A task not listed keeps the default.
+ * On the site the SERVER applies this from the task name; a client still cannot send a reasoning value.
+ */
+export const TASKS = Object.freeze(["rank", "answer", "objectives", "suggest", "plan"]);
+export const TASK_REASONING = Object.freeze({ rank: "off", answer: "off" });
+export const TASK_TIMEOUT_MS = Object.freeze({ rank: 25_000, answer: 20_000 });
+
+/** The reasoning a task runs with: its fixed setting, or the configured default. */
+export function taskReasoning(task, configured) {
+  return Object.hasOwn(TASK_REASONING, task) ? TASK_REASONING[task] : configured;
+}
+
+/** A task's deadline: its own, when shorter than the configured one. */
+export function taskTimeoutMs(task, configured) {
+  const own = Object.hasOwn(TASK_TIMEOUT_MS, task) ? TASK_TIMEOUT_MS[task] : Infinity;
+  return Math.min(own, configured);
+}
+
 export const DEFAULT_TYPICAL_SECONDS = Object.freeze({
   objectives: Object.freeze([2, 10]),
   // H (14 Nov): the plan cap went 4000 -> 16000 tokens, so a long plan legitimately takes longer; the

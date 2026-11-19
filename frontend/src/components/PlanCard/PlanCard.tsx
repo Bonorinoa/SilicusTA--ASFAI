@@ -1,5 +1,6 @@
 import type { LessonPlanView, ObjectiveCiteView, PlanInvalidationView } from "../../gate/types";
-import { Fragment } from "react";
+import { Fragment, useRef, useState } from "react";
+import { EditButton, EditForm, type EditField, type PlanEdit } from "./PlanEdit";
 import { plural } from "../../lib/plural";
 import styles from "./PlanCard.module.css";
 import { MarbleCredit } from "../MarbleCredit/MarbleCredit";
@@ -51,6 +52,22 @@ export interface PlanCardProps {
    * printed page's own signature) but shows the date only on screen, and the print note is not drawn.
    */
   ids?: "inline" | "record";
+  /**
+   * N3: the teacher edits the plan in place. When given, each activity and plan section shows an Edit button
+   * (screen only). Resolves true when the host recorded the edit. Absent: the page is read-only, as before.
+   */
+  onEdit?: (edits: PlanEdit[], text: string) => Promise<boolean>;
+  /** N3: Save is disabled while another act runs. */
+  editBusy?: boolean;
+  /** N3: the course has ages, so its activities carry an AI status the teacher may set. */
+  aiEditable?: boolean;
+}
+
+/** N3: "Teacher override: AI permitted for ages 4–10 (the rule says forbidden)". */
+const OVERRIDE_WORD: Record<string, string> = { forbidden: "forbidden", permitted: "permitted", required: "required" };
+export function overrideLine(o: NonNullable<LessonPlanView["activities"][number]["teacherOverride"]>): string {
+  const ages = o.ages ? ` for ages ${o.ages.min}–${o.ages.max}` : "";
+  return `Teacher override: AI ${OVERRIDE_WORD[o.aiStatus]}${ages} (the rule says ${OVERRIDE_WORD[o.rule]})`;
 }
 
 const EVIDENCE_VALUE: Record<LessonPlanView["activities"][number]["evidenceIfAny"], string> = {
@@ -74,7 +91,25 @@ const SOURCE_LABEL: Record<string, string> = {
   "marble": "Marble's skill taxonomy",
 };
 
-export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline" }: PlanCardProps) {
+export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline", onEdit, editBusy = false, aiEditable = false }: PlanCardProps) {
+  // N3: which part is open for editing ("plan", "a:<activity id>", "r:<review index>"); one at a time.
+  const [editing, setEditing] = useState<string | null>(null);
+  const editButtons = useRef(new Map<string, HTMLButtonElement | null>());
+  const canEdit = !!onEdit && plan.status !== "invalidated";
+  const closeEdit = (key: string) => {
+    setEditing(null);
+    queueMicrotask(() => editButtons.current.get(key)?.focus());
+  };
+  const save = (key: string, what: string) => async (edits: PlanEdit[], labels: string[]) => {
+    if (!onEdit) return false;
+    const ok = await onEdit(edits, `Edit ${what}: ${labels.join(", ")}.`);
+    if (ok) closeEdit(key);
+    return ok;
+  };
+  const editButton = (key: string, what: string) => canEdit && editing !== key ? (
+    <EditButton what={what} disabled={editing !== null} onClick={() => setEditing(key)}
+      buttonRef={(el) => { editButtons.current.set(key, el); }} />
+  ) : null;
   const citedIds = plan.activities.flatMap((a) => a.objectiveIds);
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
@@ -129,11 +164,25 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
             ? `Confirmed${teacher ? ` by ${teacher.name}` : ""}`
             : plan.status === "invalidated"
               ? "Invalidated — needs re-confirmation"
-              : "Draft"}
+              : plan.editedByTeacher ? "Draft · edited by you" : "Draft"}
         </p>
       </header>
 
-      <h1 className={styles.title}>{plan.title}</h1>
+      {canEdit ? (
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{plan.title}</h1>
+          {editButton("plan", "the plan title")}
+        </div>
+      ) : (
+        <h1 className={styles.title}>{plan.title}</h1>
+      )}
+      {editing === "plan" ? (
+        <EditForm what="the plan title" disabled={editBusy} onCancel={() => closeEdit("plan")} onSave={save("plan", "the plan")}
+          fields={[
+            { path: "title", label: "Plan title", kind: "text", value: plan.title, max: 160, required: true },
+            ...(plan.sessions?.[0]?.evidence ? [{ path: "sessions.0.evidence.whatLearnerProduces", label: "Evidence for this session", kind: "long" as const, value: plan.sessions[0].evidence.whatLearnerProduces, max: 400, required: true }] : []),
+          ]} />
+      ) : null}
 
       <p className={styles.meta}>
         {plan.audience?.ageRangeStart !== undefined ? (
@@ -188,7 +237,16 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
               <div className={styles.activityHead}>
                 <h2 className={styles.activityTitle}>{activity.title}</h2>
                 <p className={styles.minutes}>{activity.minutes} min</p>
+                {editButton(`a:${activity.id}`, `activity ${index + 1}`)}
               </div>
+              {editing === `a:${activity.id}` ? (
+                <EditForm what={`activity ${index + 1}`} disabled={editBusy}
+                  onCancel={() => closeEdit(`a:${activity.id}`)} onSave={save(`a:${activity.id}`, `activity ${index + 1}`)}
+                  fields={activityFields(activity, index, aiEditable)} />
+              ) : null}
+              {activity.teacherOverride ? (
+                <p className={styles.override} data-teacher-override>{overrideLine(activity.teacherOverride)}</p>
+              ) : null}
               {(() => {
                 const phase = activity.phase ? PHASE_LABEL[activity.phase] : null;
                 const support = activity.supportingPhase && activity.supportingPhase !== activity.phase ? PHASE_LABEL[activity.supportingPhase] : null;
@@ -332,6 +390,14 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
                   <span className={styles.laterChange}>What changes: {r.whatChanges}</span>
                   <span className={styles.laterPrompt}>“{r.prompt}”</span>
                 </span>
+                {editButton(`r:${i}`, `later review ${i + 1}`)}
+                {editing === `r:${i}` ? (
+                  <EditForm what={`later review ${i + 1}`} disabled={editBusy} onCancel={() => closeEdit(`r:${i}`)} onSave={save(`r:${i}`, `later review ${i + 1}`)}
+                    fields={[
+                      { path: `spacedReviews.${i}.whatChanges`, label: "What changes", kind: "long", value: r.whatChanges, max: 300, required: true },
+                      { path: `spacedReviews.${i}.prompt`, label: "Prompt", kind: "long", value: r.prompt, max: 400, required: true },
+                    ]} />
+                ) : null}
               </li>
             ))}
           </ol>
@@ -422,6 +488,27 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
       </footer>
     </article>
   );
+}
+
+/** N3: the fields of one activity the teacher may edit, in the order the page reads them. */
+function activityFields(a: LessonPlanView["activities"][number], index: number, aiEditable: boolean): EditField[] {
+  const p = (f: string) => `activities.${index}.${f}`;
+  return [
+    { path: p("title"), label: "Title", kind: "text", value: a.title, max: 120, required: true },
+    { path: p("minutes"), label: "Minutes", kind: "minutes", value: a.minutes },
+    { path: p("phase"), label: "Phase", kind: "phase", value: a.phase ?? null },
+    { path: p("learnerFirst"), label: "Learners first", kind: "long", value: a.learnerFirst ?? null, max: 300 },
+    { path: p("learnerDoes"), label: "Learners", kind: "long", value: a.learnerDoes, max: 600, required: true },
+    { path: p("teacherDoes"), label: "Teacher", kind: "long", value: a.teacherDoes, max: 600, required: true },
+    { path: p("decisionAfterHelp"), label: "Then they decide", kind: "long", value: a.decisionAfterHelp ?? null, max: 300 },
+    ...(aiEditable ? [
+      { path: p("aiStatus"), label: "AI status", kind: "aiStatus" as const, value: a.aiStatus ?? null,
+        hint: "Your choice stands. If it goes against the age rule, the plan says so." },
+      { path: p("noAiAlternative"), label: "Without AI", kind: "long" as const, value: a.noAiAlternative ?? null, max: 300 },
+    ] : []),
+    { path: p("evidenceIfAny"), label: "Evidence", kind: "evidence", value: a.evidenceIfAny },
+    { path: p("notEvidence"), label: "Not evidence", kind: "long", value: a.notEvidence ?? null, max: 300 },
+  ];
 }
 
 export default PlanCard;

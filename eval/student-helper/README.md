@@ -92,3 +92,22 @@ Compared exactly, not rounded:
 - invalid citations = 0
 
 On this branch the helper has no explanation path, so definition is expected to miss. That is the baseline, not a harness bug.
+
+## N4: the helper by age (owner, 18 Nov)
+
+The helper's mode comes from the course's recorded ages (a legacy course falls back to its plan's audience): youngest
+age under 18, or no ages, is the under-18 mode. Two courses were added for it, built by
+`node eval/student-helper/make-n4-fixtures.mjs` through the real host routes with a scripted stand-in model (invented
+text, no network):
+
+- `thermo`, Thermodynamics I, ages 18–25 (18+ mode). `general` (5): on the subject, not in the lesson; expects a
+  labelled general explanation (`kind` answer, `basis` explanation, `general` true). `off_topic` (3): unrelated.
+  `assessment` (3). `nudge` (2): activity 2 has AI forbidden, so it is attempt-first; expects an answer that opens with
+  "Worth trying this yourself first. Here's a nudge:".
+- `cells`, Plant and animal cells, ages 13–15 (under-18 mode). `attempt_first` (3): activity 2 has AI forbidden;
+  expects the host's `attempt_first` reply naming the activity.
+
+The 52 earlier items keep their category, expectation and question. Note for the paid run: the `econ` fixture has no
+recorded ages, and its plan audience is 18–24, so it now runs in the 18+ mode (its off-topic items are unrelated to
+economics, so their expectation is unchanged). Bars: `general.match` >= 80%, `nudge.match` 100%,
+`attempt_first.kind` 100%.

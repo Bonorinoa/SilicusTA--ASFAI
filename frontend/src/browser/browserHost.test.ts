@@ -67,6 +67,11 @@ describe("parity: one API, two hosts", () => {
     expect(dump.metas.map((m) => m.text)).toEqual([disk.meta]);
     // It was a real course: published, grounded, the forged keys cut away on both hosts.
     expect(transcript.find((s: any) => s.path.endsWith("/publish"))?.status).toBe(200);
+    // N3: the plan edit is a real recorded edit on both hosts (not two identical 404s), and the bad path is refused.
+    const edits = transcript.filter((s: any) => s.path.endsWith("/plan/edit"));
+    expect(edits.map((s: any) => s.status)).toEqual([200, 422]);
+    expect(edits[0].json.plan.activities[0]).toMatchObject({ title: "How a leaf makes food", minutes: 12 });
+    expect(disk.lines.filter((l) => l.includes('"plan.edited"')).length).toBe(1);
     expect(transcript.filter((s: any) => s.path.endsWith("/student/ask")).at(-1)?.json.grounded).toBe(true);
     // Forged keys are cut away: the provenance words never appear, and the forged alignment is
     // asserted by its EXACT value ("mt_1" as a JSON string) — never as a prefix, because a real

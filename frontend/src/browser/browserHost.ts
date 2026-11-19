@@ -148,6 +148,7 @@ export async function createBrowserHost(opts: BrowserHostOptions = {}): Promise<
     model: "server",          // a placeholder: the site's function chooses the model
     apiKey: null,             // the key lives in the function, never in the browser
     zdr: false,               // the site decides zero-retention; the UI reads it from the site's status
+    sendTask: true,           // N1: name the task; the site's function picks the reasoning for it
     fetchImpl: ((url: string, init: RequestInit) => site.workerFetch(url, init)) as typeof fetch,
   });
 

@@ -32,6 +32,7 @@ import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
 import { agesError, stageForAges } from "./ages.mjs";
 import { lessonMinutesError } from "./lesson-length.mjs";
+import { PlanEditError, MAX_EDITS, applyEdits, editLabel, gateSpecOf, normalizeValue, parsePath, valueAt, valueSha } from "./plan-edit.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -151,6 +152,11 @@ export class CourseSession {
   #objectivesMode;
   /** @type {{min: number, max: number} | null} Structured ages from the course record (G2a); null = legacy. */
   #ages;
+
+  /** N4: the course's recorded ages (a copy), or null for a legacy course. Read-only. */
+  recordedAges() {
+    return this.#ages ? { min: this.#ages.min, max: this.#ages.max } : null;
+  }
   /** @type {string | null} The skill-map anchor (an mt_* id in the snapshot), or null (G2a). */
   #anchor;
   /** K2: the teacher's lesson length in minutes, or null for a course created without one. */
@@ -160,6 +166,9 @@ export class CourseSession {
   #planAt = null;
   /** @type {Map<string, object>} schema-v2 learning-design per plan id (host metadata, never gate state) */
   #planDesign = new Map();
+  /** N3: plan ids the teacher produced by editing, and the trace of every saved plan edit (from the log). */
+  #editedPlans = new Set();
+  #planEdits = [];
   /** @type {string[]} proposal ids in the order the AI proposed them */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
@@ -297,6 +306,36 @@ export class CourseSession {
         this.#planAt = event.at;
         return;
       }
+      case "plan.edited": {
+        // N3: the teacher's own edit of the plan text. The edited plan is re-proposed to the gate as a new DRAFT
+        // (same activity ids, same cited objectives), so the gate's rules hold for the teacher's text too, a
+        // published version is never changed in place, and the teacher confirms the edited plan.
+        const plan = this.#gate.currentPlan();
+        if (!plan || (event.planId && plan.id !== event.planId)) throw new PlanEditError("PLAN_CHANGED", "the plan changed before this edit was saved");
+        if (plan.status === "invalidated") throw new PlanEditError("PLAN_INVALIDATED", "an invalidated plan cannot be edited; draft a new one");
+        const viewed = this.#withDesign(plan);
+        const edits = (event.edits ?? []).map((e) => {
+          const parsed = parsePath(e.path, viewed);
+          const before = valueAt(viewed, parsed);
+          if (valueSha(before) !== e.beforeSha) throw new PlanEditError("EDIT_STALE", `the recorded edit of ${e.path} does not match the plan it changed`);
+          return { parsed, value: e.after, before };
+        });
+        const turnRef = this.#inbound(event.text, event.at);
+        const edited = applyEdits(viewed, edits, { stage: this.#ages ? stageForAges(this.#ages) : null, ages: this.#ages ?? null, lessonMinutes: this.#lessonMinutes ?? null });
+        const record = this.#gate.proposeLessonPlan(gateSpecOf(edited));
+        const citations = this.#citations.get(plan.id);
+        if (citations) this.#citations.set(record.id, citations);
+        const design = planDesignOf(edited);
+        if (design) this.#planDesign.set(record.id, design);
+        this.#editedPlans.add(record.id);
+        const preview = (v) => (v === undefined || v === null ? null : String(v).slice(0, 160));
+        edits.forEach(({ parsed, value, before }, k) => this.#planEdits.push({
+          id: `plan-edit:${record.id}:${k}`, at: event.at, turnRef, path: parsed.path, label: editLabel(parsed),
+          before: preview(before), after: preview(value),
+        }));
+        this.#planAt = event.at;
+        return;
+      }
       case "plan.confirmed": {
         const turnRef = this.#inbound(event.text, event.at);
         this.#gate.confirmLessonPlan({
@@ -430,7 +469,12 @@ export class CourseSession {
    * ledger must not record a model turn claiming authorship.
    */
   proposeObjectivesFromAnswers({ at } = {}) {
-    if (this.#proposalIds.length > 0) {
+    // N1 (L1 finding 1): an explicit course may have had a source round first; the teacher's typed lines must still
+    // reach the page, once. Refused only when they are already there (in any state) or the set is confirmed.
+    const blocked = this.#objectivesMode === "explicit"
+      ? this.#answersDerived() || this.view().checkpoints.objectives?.status === "confirmed"
+      : this.#proposalIds.length > 0;
+    if (blocked) {
       return {
         ok: false,
         code: "ALREADY_PROPOSED",
@@ -490,12 +534,18 @@ export class CourseSession {
       return { ok: false, code: "NO_MATERIALS", reason: "there is no material to propose objectives from" };
     }
     const answers = this.#intake.answers();
+    // N1 (L1 finding 1): the wizard promised "One per line. Each becomes a proposal you accept, edit or drop." On an
+    // explicit course the teacher's own lines go on the page FIRST, as their words (no model turn), before the model
+    // is asked. They stay even if the model then fails: they never depended on it.
+    if (this.#objectivesMode === "explicit" && !this.#answersDerived() && objectivesFromAnswers(answers).length > 0) {
+      this.proposeObjectivesFromAnswers({ at });
+    }
     // R2 (F4): the worker proposes CONDITIONED on what the teacher already has. Their brief outcomes, and every
     // objective already on the course that is not dropped, each tagged with who it came from (the teacher's own,
     // accepted, or a proposal still waiting). These are untrusted text in the prompt, exactly like the material.
     const outcomes = objectivesFromAnswers(answers).map((o) => o.statement);
     const existing = this.#rows()
-      .filter((r) => r.status !== "dropped")
+      .filter((r) => r.status !== "dropped" && !(r.status === "proposed" && (r.source === SOURCE_FROM_ANSWERS || r.source === SOURCE_FROM_LOCAL_ANSWERS)))
       .map((r) => ({ statement: r.statement, by: r.by === "teacher" ? "teacher" : r.status === "proposed" ? "proposed" : "accepted" }));
     let proposed;
     try {
@@ -505,6 +555,8 @@ export class CourseSession {
         course: String(answers?.course ?? this.meta.title ?? ""),
         outcomes,
         existing,
+        // N2 (L1): what the teacher dropped goes to the model as "do not propose these or close variants".
+        dropped: this.#droppedStatements(),
       });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
@@ -568,7 +620,7 @@ export class CourseSession {
     }
     if (!worker) return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };
     // Everything already on the table, in the teacher's latest wording, so nothing is offered twice (a dropped one too).
-    const existing = rows.flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean);
+    const existing = rows.filter((r) => r.status !== "dropped").flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean);
     let statements;
     try {
       statements = await worker.suggestObjectives({
@@ -576,6 +628,8 @@ export class CourseSession {
         course: String(answers?.course ?? this.meta.title ?? ""),
         outcomes,
         existing,
+        // N2 (L1): dropped ones are named as dropped, so the model avoids close variants too, not only repeats.
+        dropped: this.#droppedStatements(),
       });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
@@ -591,6 +645,11 @@ export class CourseSession {
     this.#apply(event);
     this.#append(event);
     return { ok: true, proposals: this.view().proposals };
+  }
+
+  /** N1: the teacher's brief outcomes are already on the page (proposed, decided or dropped). */
+  #answersDerived() {
+    return this.#rows().some((r) => r.source === SOURCE_FROM_ANSWERS || r.source === SOURCE_FROM_LOCAL_ANSWERS);
   }
 
   /** Checkpoint 3: the AI proposes objectives (never confirmed here). */
@@ -731,6 +790,40 @@ export class CourseSession {
     return this.view().plan;
   }
 
+  /**
+   * N3: the teacher edits the plan in place. The client sends INTENTS only ({path, value} per field); the host
+   * bounds each value with the model's own limits, drops no-ops, and logs the path, the hash of the value it
+   * replaced and the cleaned value. Nothing is re-clamped: a teacher's AI status stands and is marked.
+   */
+  editPlan({ planId = null, edits, text, at } = {}) {
+    const plan = this.#gate.currentPlan();
+    if (!plan) throw new PlanEditError("NO_PLAN", "there is no lesson plan to edit yet");
+    if (planId && planId !== plan.id) throw new PlanEditError("PLAN_CHANGED", "the plan changed since you opened it; read it again, then edit");
+    if (plan.status === "invalidated") throw new PlanEditError("PLAN_INVALIDATED", "an invalidated plan cannot be edited; draft a new one");
+    if (!Array.isArray(edits) || edits.length === 0 || edits.length > MAX_EDITS) {
+      throw new PlanEditError("BAD_EDIT", `an edit carries 1 to ${MAX_EDITS} fields`);
+    }
+    const viewed = this.#withDesign(plan);
+    const seen = new Set();
+    const out = [];
+    for (const e of edits) {
+      if (!e || typeof e !== "object" || Array.isArray(e)) throw new PlanEditError("BAD_EDIT", "each edit is {path, value}");
+      const parsed = parsePath(e.path, viewed);
+      if (seen.has(parsed.path)) throw new PlanEditError("BAD_EDIT", `${parsed.path} is edited twice`);
+      seen.add(parsed.path);
+      const after = normalizeValue(parsed, e.value, { hasAges: !!this.#ages });
+      const before = valueAt(viewed, parsed);
+      if (JSON.stringify(before ?? null) === JSON.stringify(after)) continue;
+      out.push({ path: parsed.path, beforeSha: valueSha(before), after });
+    }
+    if (out.length === 0) return { plan: this.#planView(), unchanged: true };
+    const a = at ?? Date.now();
+    const event = { kind: "plan.edited", planId: plan.id, edits: out, text: requireMsg(text, "text"), at: a };
+    this.#apply(event);
+    this.#append(event);
+    return { plan: this.#planView(), unchanged: false };
+  }
+
   /** Checkpoint 4: the teacher confirms the plan. */
   confirmLessonPlan({ text, planId = null, at } = {}) {
     const a = at ?? Date.now();
@@ -766,6 +859,11 @@ export class CourseSession {
   /** Ids the current plan's activities cite (any plan status): host metadata for the row, never gate state. */
   #citedByPlan() {
     return new Set((this.#gate.currentPlan()?.activities ?? []).flatMap((a) => a.objectiveIds));
+  }
+
+  /** N2: the statements of the proposals the teacher dropped, in the wording they were dropped in. */
+  #droppedStatements() {
+    return [...new Set(this.#rows().filter((r) => r.status === "dropped").flatMap((r) => [r.statement, r.originalStatement]).filter(Boolean))];
   }
 
   #rows() {
@@ -876,7 +974,9 @@ export class CourseSession {
   #planView() {
     const plan = this.#gate.currentPlan();
     if (!plan) return plan;
-    const out = this.#withDesign(plan);
+    const designed = this.#withDesign(plan);
+    // N3: a plan the teacher edited says so (the gate's record keeps proposedBy "ai" for every draft).
+    const out = this.#editedPlans.has(plan.id) ? { ...designed, editedByTeacher: true } : designed;
     const citations = this.#citations.get(plan.id);
     return citations ? { ...out, citations: citations.map((c) => ({ ...c, activityIndexes: [...c.activityIndexes] })) } : out;
   }
@@ -940,6 +1040,10 @@ export class CourseSession {
         source: sourceKey ? this.#sources.get(sourceKey) ?? null : null,
         version: d.boundCourseVersion, turnRef: d.provenance.turnRef,
         decidedBy: d.provenance.decidedBy, channel: d.provenance.channel });
+    }
+    for (const e of this.#planEdits) {
+      events.push({ id: e.id, kind: "plan-edit", at: e.at, label: `You edited ${e.label}`, path: e.path,
+        detail: e.after, before: e.before, turnRef: e.turnRef, decidedBy: this.meta.owner, channel: CHANNEL });
     }
     for (const v of this.#gate.versions()) {
       events.push({ id: `publish:${v.version}`, kind: "publish", at: v.publishedAt,
@@ -1028,6 +1132,15 @@ export class CourseSession {
    */
   latestSealedVersion() {
     return this.#gate.versions().at(-1) ?? null;
+  }
+
+  /**
+   * N4: the latest sealed version as the student helper reads it: the sealed record plus the design overlay of the
+   * plan it was confirmed from (aiStatus, learnerFirst …), the same overlay the published plan page shows. The gate
+   * drops those fields, so without this the helper could not tell an attempt-first activity. Read-only.
+   */
+  latestSealedVersionForStudent() {
+    return this.#versionsView().at(-1) ?? null;
   }
 
   /** WHY the current plan is invalidated: cited objectives no longer confirmed. */

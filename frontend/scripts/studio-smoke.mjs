@@ -62,6 +62,9 @@ const server = createServer(async (req, res) => {
         const q = (prompt.trim().split("\n").at(-1) ?? "").replace(/^Student:\s*/, "").toLowerCase();
         // K3: the model only picks a kind; the host writes the words.
         if (/your name|who are you/.test(q)) reply = { kind: "about_helper", basis: null, answer: "", cites: [] };
+        // N4: a goal question rests on the objective only. The scripted v2 plan (ages 5-12) has AI forbidden in every
+        // activity, so an answer resting on an activity is the host's attempt_first reply instead (checked below).
+        else if (/plants need/i.test(q)) reply = { kind: "answer", basis: "plan", answer: "A plant uses light, water and air to make sugar.", cites: ["objective:1"] };
         else if (q === "plants") reply = { kind: "clarify", basis: null, answer: "", cites: ["[objective:1]", "activity:1"] };
         else if (/game|ignore|instructions|address|my name/.test(q)) reply = { inScope: false, basis: "plan", refusal: "off_topic", answer: "", cites: [] };
         else if (/grade|pass|how am i doing|score|mark/.test(q)) reply = { inScope: false, basis: "plan", refusal: "assessment", answer: "", cites: [] };
@@ -298,7 +301,12 @@ try {
   await clickPrimary("Confirm and create the course");
   await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
   check("confirming the review creates the course and opens it in the studio", /#\/studio\//.test(await page.evaluate(() => location.hash)));
-  check("it lands on Objectives (the brief is confirmed by the same click)", await waitText("From your answers", 10000));
+  check("it lands on Objectives (the brief is confirmed by the same click)", await page.waitForFunction(() => /step 2 of 4/i.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false));
+  // N1 (L1 finding 1): "One per line. Each becomes a proposal you accept, edit or drop." The typed lines arrive as
+  // proposals labelled as the teacher's own, with no click on "Use my answers".
+  check("N1 the typed objectives arrive on the objectives page as the teacher's own proposals (no click)",
+    await page.waitForFunction(() => { const a = [...document.querySelectorAll('aside[aria-label="Proposals"] article')].map((n) => n.textContent); return a.length === 2 && a.some((x) => /Explain how a plant makes its food/.test(x)) && a.some((x) => /Name what a plant needs to make sugar/.test(x)) && a.every((x) => /From your answer/i.test(x)); }, { timeout: 10000 }).then(() => true, () => false)
+      && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Use my answers"))));
   const ev = (await stored()).events.sort((x, y) => x.seq - y.seq).map((e) => JSON.parse(e.line).event);
   const trail = ev.filter((e) => ["course.created", "intake.answered", "checkpoint.confirmed"].includes(e.kind)).map((e) => e.kind === "checkpoint.confirmed" ? `${e.kind}:${e.id}` : e.kind);
   check("one confirm leaves the brief's intents in the brief's order: create, answers, files, outline", JSON.stringify(trail) === JSON.stringify(["course.created", "intake.answered", "checkpoint.confirmed:files", "checkpoint.confirmed:outline"]), JSON.stringify(trail));
@@ -321,7 +329,7 @@ try {
   await page.keyboard.press("Escape");
   await sleep(300);
   await clickBy("Objectives");
-  await waitText("From your answers", 6000);
+  await page.waitForFunction(() => /step 2 of 4/i.test(document.body.innerText), { timeout: 6000 }).catch(() => undefined);
 
   // ---- objectives (lane D): the wizard made an EXPLICIT course (R4). Writing your own comes first, before any proposal (R3 UI).
   check("D the course is explicit: one held 'Confirm objectives' primary, the add form before any proposal",
@@ -361,7 +369,7 @@ try {
   check("G2c submitting it is the ordinary teacher add: one add intent with no Marble id; the objective is teacher-origin with a local URN",
     g2cEv.length === 1 && g2cEv[0].kind === "objectives.decided" && g2cEv[0].decisions?.length === 1 && g2cEv[0].decisions[0].verb === "add" && !/mt_/.test(g2cJson)
       && /^urn:uuid:[0-9a-f-]{36}$/.test(g2cRow?.id ?? "") && g2cRow?.by === "teacher" && g2cRow?.own === true, `${JSON.stringify(g2cRow)} ${g2cJson.slice(0, 300)}`);
-  await clickBy("Use my answers");
+  // N1: the teacher's answers are already proposals (the wizard derived them); no "Use my answers" click.
   await waitText("Proposals", 8000);
   await sleep(500);
   const cards = await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length);
@@ -492,6 +500,61 @@ try {
   check("K2 the plan header reads '45 min lesson · activities 45 min' (the scripted minutes add up), with no length note",
     /45 min lesson · activities 45 min/i.test(await body()) && !/Activities add up to/.test(await body()));
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
+
+  // ---- N3: everything generated is editable. Keyboard to Edit, change three fields, Save; the trace, the K2
+  // re-check and the stage-1 teacher override all show; then the minutes go back so the rest of the run is unchanged.
+  {
+    const setField = (form, label, value) => page.evaluate((form, label, value) => {
+      const f = document.querySelector(`form[data-plan-edit-form="${form}"]`);
+      const l = f && [...f.querySelectorAll("label")].find((x) => x.textContent === label);
+      const el = l && document.getElementById(l.htmlFor);
+      if (!el) return false;
+      const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(el, value);
+      el.dispatchEvent(new Event(el.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
+      return true;
+    }, form, label, value);
+    const editButtons = await page.evaluate(() => [...document.querySelectorAll("button[data-plan-edit]")].map((b) => b.getAttribute("aria-label")));
+    check("N3 the draft plan offers Edit on the title, every activity and every later review",
+      editButtons.includes("Edit the plan title") && editButtons.includes("Edit activity 1") && editButtons.includes("Edit activity 3") && editButtons.includes("Edit later review 1"), JSON.stringify(editButtons));
+    await page.focus('button[aria-label="Edit activity 3"]');
+    await page.keyboard.press("Enter");
+    const opened = await page.waitForSelector('form[data-plan-edit-form="activity 3"]', { timeout: 5000 }).then(() => true, () => false);
+    const focusIn = await page.evaluate(() => !!document.activeElement?.closest('form[data-plan-edit-form="activity 3"]'));
+    const set = (await setField("activity 3", "Then they decide", "Each pair keeps or changes its sort, and says which card moved and why."))
+      && (await setField("activity 3", "Minutes", "25")) && (await setField("activity 3", "AI status", "permitted"));
+    check("N3 Enter on 'Edit activity 3' opens the inline form with focus inside it, and its fields take new values", opened && focusIn && set, JSON.stringify({ opened, focusIn, set }));
+    if (process.env.N3_SHOTS) {
+      await page.evaluate(() => { document.querySelector('form[data-plan-edit-form="activity 3"]')?.closest("li")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -90); });
+      await page.screenshot({ path: `${process.env.N3_SHOTS}/n3-plan-edit-form.png` }).catch(() => {});
+    }
+    await page.evaluate(() => document.querySelector('form[data-plan-edit-form="activity 3"] button[type="submit"]')?.click());
+    const saved = await page.waitForFunction(() => /You edited Activity 3: then they decide/.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false);
+    const after = await page.evaluate(() => ({
+      trace: [...document.querySelectorAll("[data-plan-edit-line]")].map((e) => e.textContent),
+      override: document.querySelector("[data-teacher-override]")?.textContent ?? "",
+      chip: document.querySelector('article[aria-label^="Lesson plan"] [data-status]')?.textContent ?? "",
+      form: !!document.querySelector("form[data-plan-edit-form]"),
+      text: document.body.innerText,
+    }));
+    check("N3 Save records the edit: the trace says 'You edited Activity 3: then they decide' (and minutes, AI status), the form closes, the draft says 'edited by you'",
+      saved && !after.form && after.trace.some((t) => t.startsWith("You edited Activity 3: then they decide")) && after.trace.some((t) => t.startsWith("You edited Activity 3: minutes")) && /edited by you/.test(after.chip),
+      JSON.stringify({ trace: after.trace, chip: after.chip }).slice(0, 300));
+    check("N3 the teacher's AI status stands and is marked against the age rule (never re-clamped)",
+      /^Teacher override: AI permitted for ages \d+–\d+ \(the rule says forbidden\)$/.test(after.override), after.override);
+    check("N3 the K2 minutes check re-runs after the edit: 55 of 45 shows the length note",
+      /activities 55 min/i.test(after.text) && /Activities add up to 55 min; you asked for 45\. Trim or edit\./.test(after.text));
+    if (process.env.N3_SHOTS) {
+      await page.evaluate(() => { document.querySelector("[data-teacher-override]")?.closest("li")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -90); });
+      await page.screenshot({ path: `${process.env.N3_SHOTS}/n3-plan-edited.png` }).catch(() => {});
+    }
+    await page.click('button[aria-label="Edit activity 3"]');
+    await page.waitForSelector('form[data-plan-edit-form="activity 3"]', { timeout: 5000 }).catch(() => {});
+    await setField("activity 3", "Minutes", "15");
+    await page.evaluate(() => document.querySelector('form[data-plan-edit-form="activity 3"] button[type="submit"]')?.click());
+    const back = await page.waitForFunction(() => /activities 45 min/i.test(document.body.innerText) && !/Activities add up to/.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false);
+    check("N3 setting the minutes back clears the length note (the check re-runs again)", back);
+  }
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));
   await markLanding("Course Publish");
@@ -582,7 +645,16 @@ try {
   }
   const answersBefore = await page.evaluate(() => (document.body.innerText.match(/A plant uses light, water and air/g) ?? []).length);
   await page.evaluate((label) => [...document.querySelectorAll('[role="group"][aria-label="Ask about"] button')].find((b) => (b.textContent ?? "").trim() === label)?.click(), offers[offers.length - 1]);
-  check("K3 tapping an offered item asks about it", await page.waitForFunction((n) => (document.body.innerText.match(/A plant uses light, water and air/g) ?? []).length > n, { timeout: 8000 }, answersBefore).then(() => true, () => false));
+  // N4: the last offer is activity 1, and at ages 5-12 its AI status is forbidden, so the answer that rests on it is
+  // replaced by the host's attempt_first reply naming the activity. No model words reach the student.
+  void answersBefore;
+  const tapped = offers[offers.length - 1];
+  check("K3 tapping an offered item asks about it; N4 an attempt-first activity gets the host's try-first reply naming it",
+    await waitText(`This one is for you to try first: ${tapped}${/[.?!…]$/.test(tapped) ? "" : "."} Ask me after you've had a go.`, 8000), tapped);
+  if (process.env.K3_SHOTS) {
+    await sleep(400);
+    await page.screenshot({ path: `${process.env.K3_SHOTS}/n4-learn-attempt-first-desktop.png`, fullPage: true });
+  }
 
   // ---- lane C · R7: a second course through the wizard, proposing from a pasted source on arrival
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });

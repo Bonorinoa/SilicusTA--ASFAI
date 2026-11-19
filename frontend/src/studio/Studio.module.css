@@ -188,6 +188,8 @@ a.crumb:hover { color: var(--fn-ink); }
 .statement { font-family: var(--fn-serif); font-size: 1.0625rem; line-height: 1.45; }
 .provenance { font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; }
 .rowActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* N2 (K5V C1): a long label wraps inside its card on a phone instead of running past it. */
+.wrapButton { white-space: normal; max-width: 100%; padding-top: 8px; padding-bottom: 8px; text-align: center; }
 
 .objList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: obj; }
 .objItem {
@@ -325,3 +327,7 @@ a.crumb:hover { color: var(--fn-ink); }
 @media (max-width: 390px) {
   .trust { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* N3: the plan's edit trace, one line per saved field. */
+.editTrace { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; font-size: var(--fn-text-sm, 0.875rem); }
+.editTraceNow { color: var(--fn-ink-soft); }

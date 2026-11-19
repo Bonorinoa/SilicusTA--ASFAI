@@ -50,7 +50,7 @@ export function Home() {
             <a className={s.newCard} href={href.newCourse}>
               <span className={s.newPlus} aria-hidden="true">+</span>
               <span className={s.courseTitle}>New course</span>
-              <span className={s.courseMeta}>Five short steps: the course, your sources, your objectives, an AI check, then you confirm.</span>
+              <span className={s.courseMeta}>Six short steps: the course, the skill map, your sources, your objectives, an AI check, then you confirm.</span>
             </a>
             {courses === null
               ? [0, 1].map((i) => (

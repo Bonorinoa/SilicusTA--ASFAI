@@ -70,7 +70,7 @@ describe("the site's deadline starts when the request leaves, not when the teach
     const site = createSite({ origin: ORIGIN, fetchImpl: siteFetch(() => new Promise<Response>(() => {}), seen), passcode: keeper, requestTimeoutMs: 60 });
     const err = await site.workerFetch(`${ORIGIN}/api/worker`, { method: "POST", body: "{}" }).then(() => null, (e) => e);
     expect(err).toBeInstanceOf(WorkerError);
-    expect((err as WorkerError).code).toBe("WORKER_UNREACHABLE");
+    expect((err as WorkerError).code).toBe("WORKER_TIMEOUT");
     expect((err as Error).message).toBe(MESSAGES.timeout);
     expect((err as Error).message).not.toMatch(/signal/i);
   });

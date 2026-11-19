@@ -10,7 +10,9 @@
  *     {role, content} strings;
  *   - max_tokens = SILICUS_WORKER_MAX_TOKENS, 16000 by default (hard ceiling 32000): the server decides it,
  *     because a client value could only shrink the reply and turn a normal call into a truncation refusal;
- *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it;
+ *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it. N1: the client may name its
+ *     TASK (rank | answer | objectives | suggest | plan, anything else ignored); the server applies the fixed
+ *     per-task rule from host/worker-config.mjs (rank and answer: off; the rest: the configured default);
  *   - zero-data-retention routing `provider: {zdr: true, data_collection: "deny"}` is sent unless
  *     SILICUS_WORKER_ZDR === "0", and it fails CLOSED: one upstream attempt, never a retry elsewhere;
  *   - OPENROUTER_API_KEY goes only upstream as a Bearer token, never into a response or a log.
@@ -19,7 +21,7 @@
 import { PASSCODE_HEADER, fail, json, rateLimited, readJson, clientIp, isPlainObject, raceAbort } from "./http.mjs";
 import { passcodeConfigured, passcodeMatches } from "./passcode.mjs";
 import { createRateLimiter, dailyCap } from "./ratelimit.mjs";
-import { normalizeReasoning, reasoningBody, typicalSecondsFromJson } from "../../host/worker-config.mjs";
+import { normalizeReasoning, reasoningBody, typicalSecondsFromJson, taskReasoning, TASKS } from "../../host/worker-config.mjs";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const MAX_BODY_BYTES = 512 * 1024;
@@ -74,7 +76,8 @@ export function buildUpstreamBody(input, settings) {
   // Server-decided (see the header): a client `max_tokens` is dropped with every other key.
   body.max_tokens = settings.maxTokensCap;
   if (settings.zdr) body.provider = { ...ZDR_PROVIDER };
-  const reasoning = reasoningBody(settings.reasoning);
+  const task = TASKS.includes(input.task) ? input.task : null;
+  const reasoning = reasoningBody(taskReasoning(task, settings.reasoning));
   if (reasoning) body.reasoning = reasoning;
   return { body };
 }

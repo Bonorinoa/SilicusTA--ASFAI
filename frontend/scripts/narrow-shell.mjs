@@ -437,6 +437,14 @@ try {
     await g2cBtn("Add");
     await g2cWait((n) => document.querySelectorAll("li[data-objective-id]").length >= n, 8000, k + 1);
   }
+  // N1: the wizard's typed lines are now proposals on this page too; drop them so the set is the three suggestions
+  // (Confirm stays held while any proposal waits, as before).
+  for (let i = 0; i < 10 && await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length) > 0; i++) {
+    await g2cBtn("Drop");
+    await sleep(200);
+    await g2cBtn("Drop it");
+    await sleep(400);
+  }
   await g2cWait(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled), 8000);
   await g2cBtn("Confirm objectives");
   const g2cPlan = await g2cWait(() => !!document.querySelector("[data-prereq-strip]") && /Step 3 of 4/i.test(document.body.innerText), 12000);
@@ -591,8 +599,8 @@ try {
   s3Walk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
   s3Walk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
   if (s3Walk.includes(false)) console.log(`H2b stage-3 walk stalled: ${JSON.stringify(s3Walk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
-  // No anchor, so no suggestions: the brief's outcomes come back as proposals ("Use my answers"); accept each.
-  await g2cMove("Use my answers", () => document.querySelectorAll('aside[aria-label="Proposals"] article').length > 0, 8000);
+  // No anchor, so no suggestions. N1: the brief's typed outcomes arrive as proposals on their own; accept each.
+  await g2cWait(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length > 0, 8000);
   for (let i = 0; i < 10 && await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length) > 0; i++) {
     await g2cBtn("Accept");
     await sleep(400);
@@ -611,6 +619,36 @@ try {
   check("H2b the stage-3 plan shows the host's clamp under 'Silicus adjusted'",
     s3 && s3Notes.length === 1 && /clamped to .?forbidden/i.test(s3Notes[0]) && /How a computer finds things fast/.test(await page.evaluate(() => document.body.innerText)), JSON.stringify({ s3Walk, s3Notes }));
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) await g2cTall(1440, 1, "2026-11-14-plan-v2-stage3.png");
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- N2 (K5V C1): revise the published stage-3 course and look at the revision note at 390 px. Removing an
+  // objective the plan cites invalidates the plan, so the note offers "Draft a new lesson plan from your confirmed
+  // objectives" — the button that ran 462 px wide before the fix.
+  const rv = [
+    await g2cMove("Confirm the lesson plan", () => /Review and publish/.test(document.body.innerText), 12000),
+    await g2cMove("Publish version 1…", () => /Publish version 1\?/.test(document.body.innerText)),
+    await g2cMove("Publish version 1", () => /Version 1 is published/.test(document.body.innerText), 12000),
+    await g2cMove("Revise objectives", () => /Objectives confirmed\./.test(document.body.innerText)),
+    // Remove an objective the plan cites ("In the plan"), so the plan is invalidated and a new one is needed.
+    await (async () => { for (let i = 0; i < 20; i++) {
+      if (await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Remove objective"))) return true;
+      await page.evaluate(() => { const li = [...document.querySelectorAll("li[data-objective-id]")].find((l) => /In the plan/.test(l.textContent ?? "")); [...(li?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "Remove")?.click(); });
+      await sleep(500);
+    } return false; })(),
+    await g2cMove("Remove objective", () => !!document.querySelector('section[aria-label="Revising this course"]'), 12000),
+  ];
+  const rvShot = async (name) => { if (process.env.NARROW_SHELL_REVISION_SHOT) { await page.evaluate(() => document.querySelector('section[aria-label="Revising this course"]')?.scrollIntoView({ block: "center" })); await sleep(200); await page.screenshot({ path: `${process.env.NARROW_SHELL_REVISION_SHOT}/${name}` }); } };
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+  await sleep(400);
+  const rvm = await page.evaluate(() => {
+    const card = document.querySelector('section[aria-label="Revising this course"]');
+    const btn = card && [...card.querySelectorAll("button")].find((b) => /Draft a new lesson plan/.test(b.textContent ?? ""));
+    const cr = card?.getBoundingClientRect(), br = btn?.getBoundingClientRect();
+    return { card: !!card, btn: !!btn, cardLeft: cr?.left ?? null, cardRight: cr?.right ?? null, btnLeft: br?.left ?? null, btnRight: br?.right ?? null, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+  });
+  await rvShot("n2-revision-note-390.png");
+  check("N2 K5V C1 at 390 px the revision note's 'Draft a new lesson plan' button stays inside its card, and the page does not scroll sideways",
+    !rv.includes(false) && rvm.card && rvm.btn && rvm.btnLeft >= rvm.cardLeft - 0.5 && rvm.btnRight <= rvm.cardRight + 0.5 && rvm.sw <= rvm.cw, JSON.stringify({ rv, ...rvm }));
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));

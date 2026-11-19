@@ -12,6 +12,12 @@
  *     Only "answer" carries model words. clarify, about_helper and the off_topic redirect are COMPOSED HERE from fixed
  *     text plus the lesson's own words (objective statements as the student preview shows them, activity titles).
  *     An unknown kind is off_topic. The assessment refusal and its regex net are unchanged and win over every kind.
+ *   - N4 (owner, 18 Nov): the helper by age, keyed on the course's recorded ages (youngest < 18, or no ages, is the
+ *     under-18 mode). Under 18, an answer resting on an ATTEMPT-FIRST activity (aiStatus "forbidden", or a learner-first
+ *     try before help) is replaced by the host's `attempt_first` reply naming the activity; the cite check is
+ *     unchanged. 18+, a question on the course's subject that the lesson does not cover may get a general explanation
+ *     (basis "explanation", general: true, no cites, labelled in the UI), and an attempt-first activity gets help led by
+ *     one host-composed nudge line. The assessment refusal and its net still win first at every age.
  *   - NOTHING is recorded: no log event, no ledger turn, no file. A student chat is not evidence of
  *     learning and must never be mistaken for it, so it leaves no trace to mistake.
  *   - No student identity is accepted. The request has a question and optional recent turns; any
@@ -22,6 +28,12 @@
 export const OFF_TOPIC = "That isn't part of today's lesson. Ask your teacher.";
 export const ASSESSMENT = "I can't tell you how you're doing. Your teacher decides that.";
 export const NOT_EVIDENCE = "Asking questions here is not evidence of learning.";
+/** N4: the under-18 attempt-first reply ends with this fixed sentence (the activity is named before it). */
+export const ATTEMPT_FIRST = "Ask me after you've had a go.";
+/** N4: the one host-composed line that leads an adult's help on an attempt-first activity. */
+export const NUDGE = "Worth trying this yourself first. Here's a nudge:";
+/** N4: the age at which the helper may give general explanations and nudges instead of attempt-first replies. */
+export const ADULT_AGE = 18;
 
 const MAX_QUESTION = 800;
 const MAX_TURN = 800;
@@ -36,12 +48,23 @@ export class StudentError extends Error {
   }
 }
 
+/** N4: an activity the student tries before any help: AI forbidden, or a learner-first try before help. */
+export function isAttemptFirst(activity) {
+  return activity?.aiStatus === "forbidden" || (typeof activity?.learnerFirst === "string" && activity.learnerFirst.trim() !== "");
+}
+
+/** N4: 18+ mode only when the youngest recorded age is known and at least 18. No ages is the under-18 mode. */
+export function adultCourse(pkg) {
+  return Number.isFinite(pkg?.minAge) && pkg.minAge >= ADULT_AGE;
+}
+
 /**
  * The citeable view of a sealed version. Ids are stable and human-readable so an answer can say
- * "Objective 2" and the student can find it.
- * @returns {{title: string, version: number, ages: string, items: {id: string, label: string, text: string}[]}}
+ * "Objective 2" and the student can find it. `ages` is the course's recorded {min, max} (G2a); it wins over the
+ * plan's audience for the youngest age, which sets the N4 mode.
+ * @returns {{title: string, version: number, ages: string, minAge: number|null, items: {id: string, label: string, text: string, tryFirst?: true}[]}}
  */
-export function packageOf(version) {
+export function packageOf(version, { ages: courseAges = null } = {}) {
   const objectives = (version.objectiveRefs ?? []).map((o, i) => ({
     id: `objective:${i + 1}`,
     label: `Objective ${i + 1}`,
@@ -51,10 +74,13 @@ export function packageOf(version) {
     id: `activity:${i + 1}`,
     label: `Activity ${i + 1}: ${String(a.title ?? "")}`,
     text: `Learners: ${a.learnerDoes} Teacher: ${a.teacherDoes} About ${Number(a.minutes) || 0} minutes.`,
+    ...(isAttemptFirst(a) ? { tryFirst: true } : {}),
   }));
   const a = version.lessonPlan?.audience;
-  const ages = Number.isFinite(a?.ageRangeStart) && Number.isFinite(a?.ageRangeEnd) ? `${a.ageRangeStart} to ${a.ageRangeEnd}` : "";
-  return { title: String(version.title ?? ""), version: version.version, ages, items: [...objectives, ...activities].filter((i) => i.text) };
+  const recorded = Number.isFinite(courseAges?.min) && Number.isFinite(courseAges?.max);
+  const ages = recorded ? `${courseAges.min} to ${courseAges.max}` : Number.isFinite(a?.ageRangeStart) && Number.isFinite(a?.ageRangeEnd) ? `${a.ageRangeStart} to ${a.ageRangeEnd}` : "";
+  const minAge = recorded ? courseAges.min : Number.isFinite(a?.ageRangeStart) ? a.ageRangeStart : null;
+  return { title: String(version.title ?? ""), version: version.version, ages, minAge, items: [...objectives, ...activities].filter((i) => i.text) };
 }
 
 /* ------------------------------ K3: host-composed replies ------------------------------ */
@@ -89,6 +115,12 @@ export function clarifyReply(items) {
 export function aboutHelperReply(pkg) {
   const title = String(pkg?.title ?? "").replace(/\s+/g, " ").trim();
   return title ? `I'm Silicus, a helper for today's lesson: ${endSentence(title)} Ask me about it.` : "I'm Silicus, a helper for today's lesson. Ask me about it.";
+}
+
+/** N4 attempt_first: "This one is for you to try first: {activity title}. Ask me after you've had a go." */
+export function attemptFirstReply(title) {
+  const t = String(title ?? "").replace(/\s+/g, " ").trim();
+  return t ? `This one is for you to try first: ${endSentence(t)} ${ATTEMPT_FIRST}` : `This one is for you to try first. ${ATTEMPT_FIRST}`;
 }
 
 const objectivesOf = (pkg) => (pkg?.items ?? []).filter((i) => String(i.id).startsWith("objective:"));
@@ -407,7 +439,8 @@ function kindOf(out) {
 /**
  * @param {{pkg: ReturnType<typeof packageOf>, worker: {enabled: boolean, answerStudent: Function}, body: unknown}} input
  * @returns {Promise<{answer: string, grounded: boolean, cites: {id: string, label: string}[], note: string,
- *   kind: "answer"|"clarify"|"about_helper"|"off_topic"|"assessment", basis?: "plan"|"explanation",
+ *   kind: "answer"|"clarify"|"about_helper"|"off_topic"|"assessment"|"attempt_first", basis?: "plan"|"explanation",
+ *   general?: true, nudge?: true, activity?: {id: string, title: string},
  *   refusal?: "off_topic"|"assessment", offers?: {id: string, topic: string}[]}>}
  */
 export async function askStudent({ pkg, worker, body }) {
@@ -415,7 +448,7 @@ export async function askStudent({ pkg, worker, body }) {
   if (!worker || worker.enabled === false) throw new StudentError("WORKER_NOT_CONFIGURED", "no drafting worker is configured");
   let out;
   try {
-    out = await worker.answerStudent({ question, history, title: pkg.title, items: pkg.items, ages: pkg.ages });
+    out = await worker.answerStudent({ question, history, title: pkg.title, items: pkg.items, ages: pkg.ages, adult: adultCourse(pkg) });
   } catch (e) {
     throw Object.assign(new StudentError(e?.code ?? "WORKER_FAILED", e instanceof Error ? e.message : String(e)), { upstream: true });
   }
@@ -436,9 +469,26 @@ export async function askStudent({ pkg, worker, body }) {
     if (chosen.length === 0) return offTopic(pkg);
     return { answer: clarifyReply(chosen), grounded: false, cites: chosen.map((i) => ({ id: i.id, label: i.label })), note: NOT_EVIDENCE, kind, offers: offersOf(chosen) };
   }
+  if (kind !== "answer") return offTopic(pkg);
+  const adult = adultCourse(pkg);
+  // N4, 18+ only: a general explanation on the course's subject, not resting on the lesson. It carries no cites and
+  // is not grounded; the UI labels it "General explanation, not from your lesson".
+  if (adult && out?.basis === "general") {
+    const text = typeof out?.answer === "string" ? out.answer.trim() : "";
+    if (!text) return offTopic(pkg);
+    return { answer: text, grounded: false, cites: [], note: NOT_EVIDENCE, kind, basis: "explanation", general: true };
+  }
   // The cite check for an answer is unchanged: exact ids the host handed out, or the redirect.
   const ids = [...new Set(raw)].filter((id) => byId.has(id));
-  if (kind !== "answer" || ids.length === 0) return offTopic(pkg);
+  if (ids.length === 0) return offTopic(pkg);
+  const tryFirst = ids.map((id) => byId.get(id)).find((i) => i.tryFirst);
+  if (tryFirst && !adult) {
+    // N4, under 18: the helper does not explain an attempt-first activity. Host words only, naming its title.
+    const title = topicOf(tryFirst);
+    return { answer: attemptFirstReply(title), grounded: false, cites: [{ id: tryFirst.id, label: tryFirst.label }], note: NOT_EVIDENCE, kind: "attempt_first", activity: { id: tryFirst.id, title } };
+  }
   const cites = ids.map((id) => ({ id, label: byId.get(id).label }));
-  return { answer: out.answer, grounded: true, cites, note: NOT_EVIDENCE, basis: out.basis === "explanation" ? "explanation" : "plan", kind };
+  const basis = out.basis === "explanation" || out.basis === "general" ? "explanation" : "plan";
+  if (tryFirst) return { answer: `${NUDGE} ${out.answer}`, grounded: true, cites, note: NOT_EVIDENCE, basis, kind, nudge: true };
+  return { answer: out.answer, grounded: true, cites, note: NOT_EVIDENCE, basis, kind };
 }

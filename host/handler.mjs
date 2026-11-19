@@ -71,6 +71,7 @@ export function errorResponse(err) {
   const send = (status, json) => ({ status, json });
   if (err instanceof HttpError) return send(err.status, { ok: false, code: err.code, message: err.message, ...(err.blockers ? { blockers: err.blockers } : {}) });
   if (err && err.name === "PublishBlockedError") return send(409, { ok: false, code: "PUBLISH_BLOCKED", message: err.message, blockers: err.blockers });
+  if (err && err.name === "PlanEditError") return send(err.code === "BAD_EDIT" ? 422 : 409, { ok: false, code: err.code, message: err.message });
   if (err && err.name === "StatementError") return send(422, { ok: false, code: err.code, message: err.message });
   if (err && err.name === "FabricatedConfirmationError") return send(403, { ok: false, code: err.code, message: err.message });
   if (err && err.name === "StudentError") return send(err.code === "NO_QUESTION" ? 422 : err.code === "WORKER_NOT_CONFIGURED" ? 501 : 502, { ok: false, code: err.code, message: err.message });
@@ -356,9 +357,11 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
       // nothing, and a slow model call must not hold up the teacher. Only {question, history} are read.
       if (parts[3] === "student" && parts[4] === "ask" && parts.length === 5) {
         if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
-        const sealed = session(courseId).latestSealedVersion();
+        const s = session(courseId);
+        const sealed = s.latestSealedVersionForStudent();
         if (!sealed) throw new HttpError(409, "NOT_PUBLISHED", "this course has not been published yet");
-        return { status: 200, json: await askStudent({ pkg: packageOf(sealed), worker: planWorker, body: await body() }) };
+        // N4: the course's recorded ages (G2a) set the helper's mode; a legacy course falls back to the plan's audience.
+        return { status: 200, json: await askStudent({ pkg: packageOf(sealed, { ages: s.recordedAges() }), worker: planWorker, body: await body() }) };
       }
 
       return withCourse(courseId, async () => {
@@ -449,6 +452,8 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
           if (!r.ok) throw new HttpError(planStatus(r.code), r.code, r.reason);
           return { status: 200, json: r.plan };
         }
+        // N3: the teacher edits the plan's text in place. Intents only: {planId?, edits: [{path, value}], text}.
+        case "plan/edit": return { status: 200, json: s.editPlan({ planId: b.planId ?? null, edits: b.edits, text: b.text }) };
         case "plan/confirm": return { status: 200, json: s.confirmLessonPlan({ text: b.text, planId: b.planId ?? null }) };
         case "publish":      return { status: 200, json: { version: s.publish({ text: b.text, note: b.note ?? null }) } };
         default: throw new HttpError(404, "NOT_FOUND", `no route: ${url.pathname}`);

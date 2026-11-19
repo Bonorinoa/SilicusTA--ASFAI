@@ -117,7 +117,9 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
       // The deadline covers the NETWORK, never the teacher: start it now, after the passcode is in hand. The caller's
       // signal (PlanWorker's AbortSignal.timeout) started before the dialog opened, so a teacher who took a minute to
       // type the passcode used to find it already expired and nothing was sent ("signal timed out"; found live).
-      const signal = AbortSignal.timeout(requestTimeoutMs);
+      // N1: a task's own deadline (PlanWorker's silicusDeadlineMs: rank 25 s, answer 20 s), when shorter.
+      const own = (init as { silicusDeadlineMs?: unknown }).silicusDeadlineMs;
+      const signal = AbortSignal.timeout(typeof own === "number" && own > 0 ? Math.min(own, requestTimeoutMs) : requestTimeoutMs);
       let res: Response;
       try {
         res = await fetchImpl(url, { ...init, headers, signal });
@@ -140,7 +142,7 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
     } catch (e) {
       if (e instanceof PasscodeUnavailable) throw new WorkerError("PASSCODE_REQUIRED", e.rejected ? MESSAGES.rejected : MESSAGES.cancelled);
       if (e instanceof PasscodeDialogFailed) throw new WorkerError("PASSCODE_REQUIRED", MESSAGES.dialogFailed);
-      if (e instanceof SiteTimeout) throw new WorkerError("WORKER_UNREACHABLE", MESSAGES.timeout);
+      if (e instanceof SiteTimeout) throw new WorkerError("WORKER_TIMEOUT", MESSAGES.timeout);
       throw new WorkerError("WORKER_UNREACHABLE", "The site could not be reached. Check the connection and try again.");
     }
     if (res.ok) return res;

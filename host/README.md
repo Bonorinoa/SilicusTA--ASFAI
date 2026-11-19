@@ -126,6 +126,13 @@ the hash diverge).
 | `POST /api/courses/:id/plan/confirm` | text, planId? | checkpoint 4 (teacher) |
 | `POST /api/courses/:id/publish` | text, note? | checkpoint 5 (teacher) |
 
+The export records authorship additively. Each objective has `proposedBy: "ai" | "teacher"`; a missing value in an
+older proposal still defaults to `"ai"`. A plan draft remains `proposedBy: "ai"`. When the teacher edits and then
+confirms it, the host adds `editedByTeacher: true` and `teacherEditCount` to the confirmed plan and to the sealed
+version. The count is the number of recorded edit operations (named fields or shape changes), not the number of
+Save clicks. Old `plan.confirmed` events omit the count and replay exactly as before. Clients still send only edit
+and confirmation intents; they cannot set any of these authorship fields.
+
 ## The trust boundary
 
 - **Clients send intents only.** There is no field anywhere in this API that

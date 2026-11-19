@@ -109,6 +109,7 @@ describe("parity: one API, two hosts", () => {
     expect(exported.objectives).toHaveLength(1);
     expect(exported.objectives[0].proposedBy).toBe("teacher");
     expect(exported.plan).toMatchObject({ proposedBy: "ai", editedByTeacher: true, teacherEditCount: 1 });
+    expect(exported.versions[0].lessonPlan).toMatchObject({ proposedBy: "ai", editedByTeacher: true, teacherEditCount: 1 });
     expect(disk.lines.some((line) => line.includes('"plan.confirmed"') && line.includes('"teacherEditCount":1'))).toBe(true);
     const anchor = transcript.find((step: any) => step.path.endsWith("/anchor/1"))?.json.anchor as CourseAnchor;
     expect(comparePin({ ...anchor, pinnedAt: 1767225600000 }, anchor).status).toBe("ok");

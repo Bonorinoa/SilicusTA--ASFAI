@@ -5,6 +5,8 @@
   display: grid; grid-template-columns: 220px minmax(0, 1fr); column-gap: 56px; align-items: start;
 }
 
+/* K4 (C6): the map step takes a little more width so two-word topic names fit on one line in the five columns. */
+.page[data-map="true"] { max-width: 1120px; }
 .page[data-welcome="true"] { grid-template-columns: minmax(0, 1fr); justify-items: center; padding-top: 56px; }
 
 /* ---- the spine: the steps as a short table of contents ---- */
@@ -23,7 +25,7 @@
 .spineItem[aria-current="step"] { color: var(--fn-ink); font-weight: 600; }
 .spineItem[aria-current="step"]::before { background: var(--fn-accent); border-color: var(--fn-accent); }
 .spineNum { font-variant-numeric: tabular-nums; margin-right: 6px; }
-.spineNote { font-weight: 400; font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; }
+.spineNote { font-weight: 400; font-size: 0.75rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; white-space: pre-line; }
 .spinePromise { font-size: 0.75rem; color: var(--fn-ink-muted); line-height: 1.5; }
 .mobileStep { display: none; }
 
@@ -45,7 +47,7 @@
 }
 .footBare { border-top: 0; padding-top: 4px; }
 .footNote { font-size: 0.8125rem; color: var(--fn-ink-muted); }
-.footButtons { display: flex; gap: 8px; margin-left: auto; }
+.footButtons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; min-width: 0; }
 
 /* ---- welcome ---- */
 .welcome { max-width: 720px; }
@@ -216,3 +218,22 @@
   .consequences { grid-template-columns: minmax(0, 1fr); }
   .tile + .tile { border-left: 0; border-top: 1px solid var(--fn-line); }
 }
+
+/* K2: the lesson-length chips ("How long is the lesson?") — one row of pills, the checked one in the accent. */
+.lengthField { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lengthField > legend { padding: 0; margin-bottom: 6px; }
+.lengthChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lengthChip {
+  display: inline-flex; align-items: center; padding: 7px 14px; border: 1px solid var(--fn-line); border-radius: 999px;
+  background: #fffdf8; font-size: 0.9375rem; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.lengthChip:has(input:checked) { border-color: var(--fn-accent); background: var(--fn-accent-wash); font-weight: 600; }
+.lengthChip:has(input:focus-visible) { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
+
+/* ---- M1: the condensed flow ---- */
+.sheetWide { max-width: none; }
+.addNote { align-self: flex-start; background: none; border: 0; padding: 0; min-height: 32px; font: inherit; font-size: 0.875rem; color: var(--fn-accent); cursor: pointer; }
+.addNote:hover { color: var(--fn-accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+.consequenceLine { margin: 0; font-size: 0.8125rem; color: var(--fn-ink-soft); padding: 10px 12px; background: var(--fn-desk); border-radius: 8px; line-height: 1.5; }
+.itemIcon input { width: 18px; height: 18px; margin: 0; accent-color: var(--fn-accent); }
+.nowrap { white-space: nowrap; }

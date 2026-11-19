@@ -33,14 +33,35 @@ export function modelReply(prompt) {
   if (p.startsWith("Draft one lesson plan")) {
     const ids = [...p.matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
     const refs = [...p.matchAll(/^- \[([a-z]+:[^\]]+)\]/gm)].map((m) => m[1]);   // reference material, if any was retrieved
+    // K2: the v1 activities share 45 minutes (the wizard's default lesson), so a 45-minute course gets no length note.
+    const share45 = (i) => Math.floor(45 / ids.length) + (i < 45 % ids.length ? 1 : 0);
     return { title: "How plants eat", audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
+      activities: ids.map((id, i) => ({ title: `Activity ${i + 1}`, minutes: share45(i), objectiveIds: [id], learnerDoes: "Look at a leaf.", teacherDoes: "Ask what it needs.", evidenceIfAny: "observation",
         ...(refs[i] ? { citations: [refs[i]] } : {}) })) };
   }
+  if (p.startsWith("RANK skill-map topics")) return scriptedRankMap(p);
   if (p.startsWith("You are a study helper")) {
     return { inScope: true, answer: "A plant uses light, water and air to make sugar.", cites: ["[objective:1]", "activity:1"] };
   }
   return { error: "unexpected prompt" };
+}
+
+/**
+ * M1 · SCRIPTED ranking for "Why is the grass green?", ages 4–10: the real snapshot ids the D1 sketch uses. The
+ * ranks, thread names and "why" lines are scripted, not a model's, and every "why" says so. Only ids that the
+ * prompt actually listed are returned, so a course at other ages gets fewer (or none).
+ */
+export const SCRIPTED_RANKING = [
+  { id: "mt_gLy3ZgZWiN", thread: "Light", why: "[scripted] Colour is light we see: reflection is the core idea." },
+  { id: "mt_lutxvMlkwS", thread: "Plants", why: "[scripted] Staying green and healthy is about what plants need." },
+  { id: "mt_4i-FKXDDXh", thread: "Light", why: "[scripted] Comes right before Reflecting Light; a warm-up for the younger ones." },
+  { id: "mt_3v0VNkwquK", thread: "Plants", why: "[scripted] The younger version of what plants need." },
+  { id: "mt_6xsEXxKdUX", thread: "Plants", why: "[scripted] Leaves make food: a bridge to why they are green." },
+  { id: "mt_nwSWPTENmv", thread: "Light", why: "[scripted] Seeing is a sense: eyes detect light." },
+];
+export function scriptedRankMap(prompt) {
+  const listed = new Set([...String(prompt).matchAll(/^(mt_[A-Za-z0-9_-]+):/gm)].map((m) => m[1]));
+  return { suggestions: SCRIPTED_RANKING.filter((s) => listed.has(s.id)) };
 }
 
 /** The chat-completions body for a request body PlanWorker sent. */
@@ -104,6 +125,8 @@ export async function runScriptedCourse(call) {
  *   - otherwise: "Spotting AI in daily life" for the anchored smoke course (AI in Daily Life, ages 5-12),
  *     which needs no adjustment: AI forbidden everywhere and the stage's own AI line.
  * Both cite the course's own objectives (the urn:uuid ids in the prompt) and nothing else.
+ * K2: each plan's activity minutes add up to 45 (10 + 20 + 15 and 10 + 15 + 20), the wizard's default lesson
+ * length, so a 45-minute course gets no length note. Still scripted fixtures, not model output.
  * ============================================================================================================ */
 
 /** The host's stage 1-2 AI lines (host/worker.mjs STAGE_AI_POLICY), copied: a plan that uses them verbatim
@@ -126,13 +149,13 @@ const DAILY_LIFE = [
     evidenceIfAny: "observation", targetOperation: "tell a device that decides from one that only follows a switch", operationDoneBy: "learner",
     learnerFirst: "Each child bets smart or not-smart for every card and gives one reason.", helpAfter: "teacher", aiStatus: "forbidden",
     decisionAfterHelp: "Each child keeps or changes each bet after the demonstration and says why.", channels: ["speaking", "handling"] },
-  { title: "Sort the AI around us", minutes: 15, phase: 2, session: 1,
+  { title: "Sort the AI around us", minutes: 20, phase: 2, session: 1,
     learnerDoes: "Pairs sort twelve picture cards of things at home and at school into 'uses AI' and 'does not', then sort a second set in which one detail on each card has changed.",
     teacherDoes: "Walks a worked example of one card aloud, then asks each pair which card was hardest.",
     evidenceIfAny: "work-product", targetOperation: "sort everyday things by whether they use AI", operationDoneBy: "learner",
     learnerFirst: "Each pair sorts the first set alone before the worked example.", helpAfter: "worked-example", aiStatus: "forbidden",
     decisionAfterHelp: "Each pair keeps or moves each card after the class check and says why.", channels: ["handling", "writing", "discussion"] },
-  { title: "Patterns, not magic", minutes: 10, phase: 3, supportingPhase: 4, session: 1,
+  { title: "Patterns, not magic", minutes: 15, phase: 3, supportingPhase: 4, session: 1,
     learnerDoes: "Each child explains to a partner how one AI they found learns from patterns in data, then draws that example for the class wall with a one-line caption.",
     teacherDoes: "Listens to three pairs and asks each 'how could it get this wrong?'",
     evidenceIfAny: "work-product", targetOperation: "explain that AI uses patterns and data, not magic", operationDoneBy: "learner",
@@ -154,7 +177,7 @@ const STAGE3_COMPUTING = [
     learnerFirst: "Each pair completes one full pass by hand while the teacher watches.", helpAfter: "ai", aiStatus: "permitted",
     noAiAlternative: "The pair checks its count against a printed worked trace.",
     decisionAfterHelp: "Each pair keeps or corrects its count after the check and says where it went wrong.", channels: ["handling", "discussion"] },
-  { title: "Explain it in your own words", minutes: 15, phase: 3, supportingPhase: 4, session: 1,
+  { title: "Explain it in your own words", minutes: 20, phase: 3, supportingPhase: 4, session: 1,
     learnerDoes: "Each learner explains, from the halving trace on the board, why the middle-check search finds a name faster, then writes a short explanation of binary search for a younger student.",
     teacherDoes: "Reads two explanations aloud and asks the class what each one leaves out.",
     evidenceIfAny: "work-product", targetOperation: "explain why binary search needs a sorted list", operationDoneBy: "learner",

@@ -5,6 +5,7 @@
  * parts from the one table (lib/refusals.ts, R5) with the host's own words kept for a closed Details. Nothing
  * here decides anything; every verb still leaves as an intent and the gate still decides.
  */
+import { mapSourceFor, markMapSourceRead } from "./links";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeIntent } from "../gate/harness";
 import { listPins, pinVersion } from "../gate/pin";
@@ -16,6 +17,7 @@ import { plural } from "../lib/plural";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
 import { explainRefusal, type Act, type Explained } from "../lib/refusals";
 import { recordedNames, type Skipped } from "./sourceUse";
+import { markSourcesRead, sourceKeyOf, sourcesReadFor } from "./links";
 
 export type WaitKind = "objectives" | "suggest" | "plan";
 /**
@@ -77,6 +79,8 @@ export function useCourse(courseId: string) {
   const [skipped, setSkipped] = useState<Skipped[]>([]);
   // ...and the name the host recorded for each source it read (a web page's own title for a link).
   const [recordedAs, setRecordedAs] = useState<Record<string, string>>({});
+  // K1: the sources Silicus has read in this tab (the ones not skipped), so a new round sends only new ones.
+  const [readKeys, setReadKeys] = useState<ReadonlySet<string>>(() => sourcesReadFor(courseId));
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
 
@@ -158,9 +162,16 @@ export function useCourse(courseId: string) {
     proposeFromAnswers: () => run(() => host.proposeObjectives(courseId), "propose"),
     proposeFromSources: (materials: MaterialInput[]) =>
       runAi("objectives", async () => {
-        const r = await host.proposeFromMaterials(courseId, { materials });
+        const useMap = mapSourceFor(courseId);
+        const r = await host.proposeFromMaterials(courseId, { materials, ...(useMap ? { useMap: true } : {}) });
+        if (useMap) markMapSourceRead(courseId);
         setSkipped(r.skipped);
-        setRecordedAs(recordedNames(materials as { name?: string; url?: string }[], r.skipped, r.materials ?? []));
+        // Merged, not replaced: a round of only the new source must not forget what the earlier rounds read.
+        const named = recordedNames(materials as { name?: string; url?: string }[], r.skipped, r.materials ?? []);
+        setRecordedAs((prev) => ({ ...prev, ...named }));
+        const gone = new Set(r.skipped.map((x) => x.name));
+        const keys = (materials as { name?: string; url?: string }[]).map(sourceKeyOf).filter((k) => k && !gone.has(k) && !gone.has(k.slice(0, 120)));
+        setReadKeys(markSourcesRead(courseId, keys));
         if (r.skipped.length) setNotice(`${plural(r.skipped.length, "source was", "sources were")} skipped. Each one says why under Sources.`);
       }, "propose"),
     suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), "suggest"),
@@ -184,7 +195,7 @@ export function useCourse(courseId: string) {
     pins: () => listPins(courseId),
   };
 
-  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, skipped, recordedAs, reload, actions };
+  return { view, missing, busy, notice, problem, setNotice, waiting, sources, setSources, skipped, recordedAs, readKeys, reload, actions };
 }
 
 export function download(blob: Blob, filename: string): void {

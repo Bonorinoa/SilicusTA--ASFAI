@@ -15,13 +15,14 @@ import type { StepProps } from "../CourseStudio";
 import { Badge, Button, Skeleton, ui } from "../ui";
 import { ActionBar } from "./ActionBar";
 import { MarbleCredit } from "../../components/MarbleCredit/MarbleCredit";
-import { EvidenceSuggestions, NeighbourhoodView, NO_TOPICS_LINE, useNeighbourhood, useNoSkillMapTopics } from "../graph/SkillMap";
+import { EvidenceSuggestions, NO_TOPICS_LINE, useNeighbourhood, useNoSkillMapTopics } from "../graph/SkillMap";
+import { mapSourceFor } from "../links";
 import g from "../graph/Graph.module.css";
-import { DECIDED, objectivesOffer } from "./objectivesOffer";
+import { DECIDED, newSources, objectivesOffer } from "./objectivesOffer";
 import s from "../Studio.module.css";
 
 const provenance = (r: ProposalView): string => {
-  const src = r.source ? r.source.charAt(0).toUpperCase() + r.source.slice(1) : r.by === "teacher" ? "Your own" : "Proposed";
+  const src = r.source === "marble" ? "From the skill map (Marble)" : r.source ? r.source.charAt(0).toUpperCase() + r.source.slice(1) : r.by === "teacher" ? "Your own" : "Proposed";
   // The source label keeps its own capitalisation: a web page's title or a file name ("Water cycle - Wikipedia")
   // is a name, and lowercasing it makes the record look like machine text.
   if (r.reworded) return `Reworded by you · ${src}`;
@@ -49,7 +50,13 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   const answers = view.intake.answers ?? {};
   const typedOutcomes = answerText(answers.learning_outcomes).trim() !== "" || Array.isArray(answers.learning_outcomes);
   const materials: MaterialInput[] = [...c.sources.map((h) => ({ name: h.name, text: h.text })), ...links.map((url) => ({ url }))];
-  const offer = objectivesOffer({ rows, mode: view.objectivesMode, confirmed, sourceCount: materials.length, hasOutcomes: typedOutcomes, workerConfigured: worker?.configured });
+  // K1: after the teacher adds a source, the round reads only the new ones; proposals already accepted or
+  // dropped came from the sources read before, so they are not proposed again.
+  const fresh = newSources(materials, rows, c.readKeys ?? new Set(), c.recordedAs ?? {});
+  const again = fresh.length > 0 && fresh.length < materials.length;
+  // M1: the skill-map text is a source of its own while the teacher's choice to use it has not been read yet.
+  const mapOn = !!view.course.marbleAnchor && mapSourceFor(view.course.courseId);
+  const offer = objectivesOffer({ rows, mode: view.objectivesMode, confirmed, sourceCount: fresh.length + (mapOn ? 1 : 0), hasOutcomes: typedOutcomes, workerConfigured: worker?.configured });
   const explicit = offer.mode === "explicit";
   const nothingYet = rows.length === 0 && !drafting;
 
@@ -61,6 +68,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
   // primary is "Confirm objectives", so these stay secondary.
   const sourcesHint = materials.length === 0
     ? "Add a file, some text or a web page under Sources, and Silicus can propose objectives from it."
+    : again
+      ? `${plural(fresh.length, "new source")} since Silicus last read. It reads only ${fresh.length === 1 ? "that one" : "those"}; what you accepted or dropped stays as it is.`
     : written
       ? `Silicus reads ${plural(materials.length, "source")} and matches the style of the ${plural(mine.length, "objective")} you already have.`
       : `Silicus reads ${plural(materials.length, "source")} and proposes objectives. Once you have written some, it matches their style.`;
@@ -76,8 +85,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
                 variant={explicit || written ? "secondary" : "primary"}
                 data-primary={explicit || written ? undefined : "true"}
                 disabled={c.busy || offer.sources.heldBy !== null}
-                onClick={() => void c.actions.proposeFromSources(materials)}
-              >Propose from my sources</Button>
+                onClick={() => void c.actions.proposeFromSources(fresh)}
+              >Propose objectives from sources</Button>
               {offer.sources.heldBy ? <p className={s.provenance}>{offer.sources.heldBy}</p> : null}
             </div>
           ) : null}
@@ -128,7 +137,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
         </div>
       ) : null}
       {/* One credit per surface (H2a): an anchored course already credits Marble under the neighbourhood view. */}
-      {!map && waitingRows.some((r) => r.alignment) ? <MarbleCredit className={g.credit} /> : null}
+      {!map && waitingRows.some((r) => r.alignment || r.source === "marble") ? <MarbleCredit className={g.credit} /> : null}
       {!drafting && waitingRows.length === 0 ? <p className={s.trayEmpty}>Nothing waiting. Everything proposed has a decision.</p> : null}
       {suggest.show && !drafting ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -191,7 +200,15 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
 
           {ways}
 
-          {map ? <NeighbourhoodView data={map} defaultOpen /> : null}
+          {map ? (
+            // M1 · the map once: step 2 of the wizard shows it; here one context line names the anchor.
+            <p className={s.provenance} data-map-context>
+              On the map: <strong>{map.anchor.name}</strong>
+              {map.prerequisites[0] ? ` (after ${map.prerequisites[0].name})` : ""}
+              {view.course.marbleConnected ? " + a connected topic" : ""}
+              <MarbleCredit className={g.credit} />
+            </p>
+          ) : null}
 
           {dropped.length > 0 ? (
             <div>

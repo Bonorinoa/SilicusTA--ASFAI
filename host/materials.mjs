@@ -154,7 +154,9 @@ export async function fetchPublic(raw, { fetchImpl = fetch, lookupImpl = dnsLook
         signal: AbortSignal.timeout(limits.timeoutMs),
         headers: { accept: "text/html,text/plain,application/json;q=0.9,*/*;q=0.1", "user-agent": "SilicusTA/0.1 (+teacher-initiated fetch)", ...headers },
       });
-    } catch {
+    } catch (e) {
+      // K1: a timeout says so, so the studio can tell the teacher the site was slow (not unreachable).
+      if (e && (e.name === "TimeoutError" || e.name === "AbortError")) throw new MaterialError("URL_UNREACHABLE", "reading that link took too long");
       throw new MaterialError("URL_UNREACHABLE", "that link could not be reached");
     }
     if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {

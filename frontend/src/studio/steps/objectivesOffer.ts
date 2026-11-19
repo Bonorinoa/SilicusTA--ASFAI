@@ -8,17 +8,34 @@
  */
 import type { ObjectivesMode, ProposalView } from "../../gate/types";
 import { plural } from "../../lib/plural";
+import type { MaterialInput } from "../../gate/transport";
+import { sourceKeyOf } from "../links";
+import { usedFor } from "../sourceUse";
+
+/**
+ * K1: the sources Silicus has not read yet: not read in this tab's earlier rounds, and not already named by a
+ * proposal's own label (a file whose name is on a proposal was read, even if the tab was not there).
+ */
+export function newSources(
+  materials: readonly MaterialInput[],
+  rows: readonly { source: string | null }[],
+  read: ReadonlySet<string>,
+  recordedAs: Readonly<Record<string, string>>,
+): MaterialInput[] {
+  return materials.filter((m) => {
+    const key = sourceKeyOf(m as { name?: string; url?: string });
+    return !read.has(key) && usedFor(recordedAs[key] ?? key, rows) === 0;
+  });
+}
 
 export const DECIDED = new Set(["accepted", "renamed", "added"]);
-/** Model-written proposals carry one of these labels (host/course.mjs label(); SOURCE_SUGGESTED). */
-const MODEL_LABEL = (source: string | null) => !!source && (source.startsWith("from material:") || source === "suggested by Silicus");
 const ANSWER_LABEL = (source: string | null) => !!source && source.startsWith("from your answer");
 
 export interface ObjectivesOffer {
   mode: ObjectivesMode;
   /** Writing your own: always, while the objectives are not confirmed. */
   canWrite: boolean;
-  /** "Propose from my sources": shown, and held with a reason when a click would be refused. */
+  /** "Propose objectives from sources" (K1; was "Propose from my sources"): shown, and held with a reason when a click would be refused. */
   sources: { show: boolean; heldBy: string | null };
   /** "Use my answers": the brief has outcomes and nothing has been derived from them yet. */
   answers: { show: boolean };
@@ -38,12 +55,12 @@ export function objectivesOffer(args: {
   const { rows, confirmed } = args;
   const waiting = rows.filter((r) => r.status === "proposed");
   const decided = rows.filter((r) => DECIDED.has(r.status));
-  const modelWaiting = waiting.some((r) => MODEL_LABEL(r.source));
   const anyProposalRound = rows.some((r) => r.by !== "teacher");
 
   // Propose from sources. Explicit courses: a new round whenever nothing waits. Auto (older) courses: one round.
   const roundsLeft = mode === "explicit" ? true : !anyProposalRound;
-  const showSources = !confirmed && args.sourceCount > 0 && !modelWaiting && roundsLeft;
+  // K4 (C1): shown while proposals wait, held with "Decide the N proposals waiting first.", never hidden.
+  const showSources = !confirmed && args.sourceCount > 0 && roundsLeft;
   const heldBy = args.workerConfigured === false
     ? "AI drafting isn’t set up here. You can still write your own."
     : waiting.length > 0

@@ -399,3 +399,18 @@ describe("objective chips carry their statements (C1)", () => {
     expect(css).toMatch(/@media print\s*\{[\s\S]*?\.chipStatement\s*\{[^}]*font-size:\s*9pt/);
   });
 });
+
+// K2: the header names the teacher's lesson length next to the activities' own sum; a course without one is as before.
+describe("PlanCard, lesson length (K2)", () => {
+  const scenario = buildPlanScenario();
+  const sum = scenario.plan.activities.reduce((n, a) => n + a.minutes, 0);
+  it("shows '<length> min lesson · activities <sum> min' when the course has a length", () => {
+    const { container } = render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} lessonMinutes={45} />);
+    expect(container.querySelector("[data-lesson-length]")?.textContent).toBe(`45 min lesson · activities ${sum} min`);
+  });
+  it("a course with no length keeps the old minutes line", () => {
+    const { container } = render(<PlanCard plan={scenario.plan} objectives={scenario.objectives} />);
+    expect(container.querySelector("[data-lesson-length]")).toBeNull();
+    expect(screen.getByText(`${sum} minutes`)).toBeInTheDocument();
+  });
+});

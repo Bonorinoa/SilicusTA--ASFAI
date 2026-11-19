@@ -49,6 +49,10 @@ export interface HostCourseMeta {
   stage?: number;
   /** The skill-map anchor (an mt_* pointer to the node this lesson is about). Never an objective id. */
   marbleAnchor?: string;
+  /** M1: one connected topic from another thread (an mt_* pointer). Never an objective id. */
+  marbleConnected?: string;
+  /** K2: the lesson length the teacher set, whole minutes 10-180; absent on courses created without one. */
+  lessonMinutes?: number;
 }
 
 /** One topic in an anchor's neighbourhood (G2a/G2c). Read-only skill-map data, never an objective. */
@@ -113,7 +117,18 @@ export interface StudentAnswer {
    * The `answer` text is the fixed sentence for that refusal (docs/design/glossary.md). Absent = legacy host.
    */
   refusal?: "off_topic" | "assessment";
+  /**
+   * K3 (owner, 17 Nov): which kind of reply this is. Only "answer" carries the model's words; the host composes
+   * "clarify", "about_helper" and the "off_topic" redirect from fixed text and the lesson's own words.
+   * Absent = a host older than K3 (read it from `grounded` and `refusal`).
+   */
+  kind?: StudentReplyKind;
+  /** K3: lesson items a clarify or off_topic reply offers, in the lesson's own words (objective statement or activity title). */
+  offers?: { id: string; topic: string }[];
 }
+
+export type StudentReplyKind = "answer" | "clarify" | "about_helper" | "off_topic" | "assessment";
+
 
 /**
  * Where a published course stands against its last sealed version, as the HOST reads the record.
@@ -138,6 +153,20 @@ export interface RevisionView {
 }
 
 /** The host's course view: gate state, derived rows, ledger and log fingerprint. */
+/** M1 · the skill-map step's map (host/marble/rank-map.mjs). */
+export interface MarbleMapTopic {
+  id: string; name: string; subject: string; domain: string; ageRangeStart: number; ageRangeEnd: number;
+  description: string; evidence: string[]; fits: boolean;
+}
+export interface MarbleMap {
+  threads: { name: string; chain: (string | null)[]; edges: { from: number; to: number; strength: string }[]; also: { id: string; note: string }[] }[];
+  topics: Record<string, MarbleMapTopic>;
+  suggestions: { id: string; thread: string; why: string; rank: number }[];
+  counts?: { fit: number; total: number };
+  usage?: { input: number | null; output: number | null } | null;
+  reason?: string | null;
+}
+
 export interface HostView {
   course: HostCourseMeta;
   checkpoints: Record<string, HostCheckpoint>;
@@ -232,11 +261,17 @@ const enc = encodeURIComponent;
 export const host = {
   health: () => call<{ ok: boolean; courses: number }>("GET", "/health"),
   listCourses: () => call<{ courses: CourseSummary[] }>("GET", "/courses"),
-  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit"; ages?: { min: number; max: number }; marbleAnchor?: string }) =>
+  createCourse: (b: { owner: string; title: string; description?: string; materials?: { name: string }[]; objectivesConfirm?: "explicit"; ages?: { min: number; max: number }; marbleAnchor?: string; marbleConnected?: string; lessonMinutes?: number }) =>
     call<{ ok: true; courseId: string; view: HostView }>("POST", "/courses", b),
   /** Marble skill map (read-only, G1/G2a). Topics per age for the wizard's strip. */
   marbleCoverage: (min: number, max: number) =>
     call<{ query: { min: number; max: number }; overlapping: number; perAge: { age: number; count: number }[] }>("GET", `/knowledge/marble/coverage?min=${min}&max=${max}`),
+  /** M1: coverage plus the snapshot total and the first title word no topic name contains (wait line 3). */
+  marbleCoverageFor: (min: number, max: number, title: string) =>
+    call<{ overlapping: number; total?: number; missingWord?: string | null }>("GET", `/knowledge/marble/coverage?min=${min}&max=${max}&title=${encodeURIComponent(title.slice(0, 200))}`),
+  /** M1: one model call ranks the topics that fit; the host judges the reply and returns lanes of real edges. */
+  marbleRank: (b: { title: string; goal: string; ages: { min: number; max: number } }) => call<MarbleMap>("POST", "/knowledge/marble/rank", b),
+  marbleLane: (id: string, min: number, max: number) => call<MarbleMap>("GET", `/knowledge/marble/lane/${enc(id)}?min=${min}&max=${max}`),
   marbleSearch: (q: string, ageMin: number, ageMax: number, limit = 8) =>
     call<{ hits: { id: string; name: string; subject: string; domain: string; ageRangeStart: number; ageRangeEnd: number; score: number }[] }>(
       "GET", `/knowledge/marble/search?q=${enc(q)}&ageMin=${ageMin}&ageMax=${ageMax}&limit=${limit}`),
@@ -286,7 +321,7 @@ export const host = {
   /** Is a drafting worker configured? Config only, never a credential. */
   workerStatus: () => call<{ configured: boolean; zdr?: boolean; provider?: string; model?: string | null; passcodeRequired?: boolean; typicalSeconds?: TypicalSeconds }>("GET", "/worker/status"),
   /** The teacher's material goes IN; the WORKER proposes objectives. The host keeps names and digests, never the text. */
-  proposeFromMaterials: (id: string, b: { materials: MaterialInput[] }) =>
+  proposeFromMaterials: (id: string, b: { materials: MaterialInput[]; useMap?: boolean }) =>
     call<{ proposals: ProposalView[]; materials: { name: string; chars: number; kind: string }[]; skipped: { name: string; reason: string }[] }>(
       "POST", `/courses/${enc(id)}/materials/propose`, b),
   /** A student asks about the PUBLISHED package. Read-only: nothing is recorded. */

@@ -67,7 +67,7 @@ export class CourseStore {
   }
 
   /** Create the course record (meta.json) and open its log. Throws if it exists. */
-  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm, ages, marbleAnchor }) {
+  initCourse({ courseId, owner, title, description = "", materials = [], seed, at, objectivesConfirm, ages, marbleAnchor, marbleConnected, lessonMinutes }) {
     const dir = this.#dir(courseId);
     if (existsSync(join(dir, "meta.json"))) throw new Error(`course already exists: ${courseId}`);
     mkdirSync(dir, { recursive: true });
@@ -80,6 +80,9 @@ export class CourseStore {
     const demographics = {
       ...(ages && typeof ages === "object" ? { ages } : {}),
       ...(marbleAnchor ? { marbleAnchor } : {}),
+      ...(marbleConnected ? { marbleConnected } : {}),
+      // K2: the teacher's lesson length; absent is never written (a legacy record stays byte-identical).
+      ...(Number.isInteger(lessonMinutes) ? { lessonMinutes } : {}),
     };
     const meta = Object.freeze({
       courseId, owner, title, description, materials,

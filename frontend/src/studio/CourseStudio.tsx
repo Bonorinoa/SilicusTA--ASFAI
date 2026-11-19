@@ -8,7 +8,7 @@ import { plural } from "../lib/plural";
 import type { ActivityItem } from "../gate/types";
 import { AiCheck } from "./AiCheck";
 import { useAiStatus } from "./aiStatus";
-import { keepLinksForCourse, linksFor, takeProposeOnArrival } from "./links";
+import { keepLinksForCourse, linksFor, takeProposeOnArrival, mapSourceFor } from "./links";
 import { explainRefusal } from "../lib/refusals";
 import { Refusal } from "./Refusal";
 import { SourcesPanel } from "./SourcesPanel";
@@ -37,6 +37,12 @@ export function decisionCount(activity: readonly ActivityItem[]): number {
     n += a.action === "objectives.decided" ? Number(a.facts?.decisions ?? 0) : 1;
   }
   return n;
+}
+
+/** The step before this one in the Brief → Objectives → Plan → Publish order, or null on the Brief. */
+export function previousStep(id: StepId): { id: StepId; label: string } | null {
+  const i = STEP_LIST.findIndex((x) => x.id === id);
+  return i > 0 ? STEP_LIST[i - 1] : null;
 }
 
 export function decisionPillLabel(count: number): string {
@@ -94,7 +100,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
     if (!view || step !== "objectives" || view.proposals.length > 0 || c.busy) return;
     if (!takeProposeOnArrival(courseId)) return;
     const materials = [...c.sources.map((h) => ({ name: h.name, text: h.text })), ...links.map((url) => ({ url }))];
-    if (materials.length > 0) void c.actions.proposeFromSources(materials);
+    if (materials.length > 0 || mapSourceFor(courseId)) void c.actions.proposeFromSources(materials);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [view, step]);
   // The transition sentence has said its piece; the next work begins from a plain turn line.
@@ -154,6 +160,9 @@ export function CourseStudio({ courseId }: { courseId: string }) {
     </nav>
   );
 
+  // Back is the step before the one on screen, never a jump to the Brief (K1, owner walk 17 Nov).
+  const prev = previousStep(shown);
+
   const common = { c, worker, view, looking: looking !== null && looking !== step, onLook: setLooking };
 
   return (
@@ -189,6 +198,11 @@ export function CourseStudio({ courseId }: { courseId: string }) {
           <StepStatus view={view} waiting={c.waiting} worker={worker} transition={transition} />
           {c.problem ? <div className={s.noticeRow}><Refusal problem={c.problem} onClose={() => c.setNotice(null)} /></div>
             : c.notice ? <div className={s.noticeRow}><Notice onClose={() => c.setNotice(null)}>{c.notice}</Notice></div> : null}
+          {prev ? (
+            <div className={s.backRow}>
+              <Button variant="quiet" size="small" onClick={() => setLooking(prev.id === step ? null : prev.id)}>← Back to {prev.label}</Button>
+            </div>
+          ) : null}
           {shown === "brief" ? <BriefStep {...common} /> : null}
           {shown === "objectives" ? <ObjectivesStep {...common} links={links} /> : null}
           {shown === "plan" ? <PlanStep {...common} /> : null}

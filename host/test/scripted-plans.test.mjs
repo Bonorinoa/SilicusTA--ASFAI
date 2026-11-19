@@ -3,7 +3,7 @@
  * (scripted-course.mjs, scriptedPlanV2). Test-fixture content, run through the REAL PlanWorker and the
  * host's validator, so what the screenshots show is what the host keeps.
  *
- *   AI in Daily Life, ages 5-12 (stage 1): 30-40 minutes, 3 activities over phases 1, 2 and 3-4, an
+ *   AI in Daily Life, ages 5-12 (stage 1): 45 minutes (K2: the wizard default), 3 activities over phases 1, 2 and 3-4, an
  *     opening bet on the hard prerequisite, one session evidence line, two spaced reviews, objectives
  *     cited from the course's own, and nothing for the host to adjust.
  *   A stage-3 Computing course, ages 12-14: one activity asks for AI with no first try, and the host's
@@ -37,7 +37,7 @@ test("AI in Daily Life (5-12): a coherent stage-1 plan the host keeps without ad
   assert.equal(spec.title, "Spotting AI in daily life");
   assert.doesNotMatch(JSON.stringify(spec), /plant|leaf|sugar/i, "nothing from the v1 plants story");
   assert.equal(spec.activities.length, 3);
-  assert.ok(minutes(spec) >= 30 && minutes(spec) <= 40, `minutes ${minutes(spec)}`);
+  assert.equal(minutes(spec), 45, "K2: the scripted activities add up to the wizard's default 45-minute lesson");
   assert.deepEqual(spec.activities.map((a) => [a.phase, a.supportingPhase ?? null]), [[1, null], [2, null], [3, 4]]);
   assert.match(spec.activities[0].learnerDoes, /^Opening bet on the hard prerequisite, Smart Versus Not-Smart Devices\./);
   assert.ok(spec.activities[0].learnerFirst, "the bet is the learner's first try");
@@ -56,7 +56,7 @@ test("stage-3 Computing (12-14): the AI-with-no-first-try activity is clamped, w
   const spec = await draftWith({ topic: "Searching and sorting", ages: { min: 12, max: 14 } });
   assert.equal(spec.title, "How a computer finds things fast");
   assert.equal(spec.activities.length, 3);
-  assert.ok(minutes(spec) >= 30 && minutes(spec) <= 40, `minutes ${minutes(spec)}`);
+  assert.equal(minutes(spec), 45, "K2: the scripted activities add up to the wizard's default 45-minute lesson");
   assert.deepEqual(spec.activities.map((a) => a.aiStatus), ["forbidden", "permitted", "forbidden"]);
   assert.equal(spec.activities[2].learnerFirst, undefined, "the third activity has no first try");
   // H3 C2: the clamp note names the activity (number and title), and the activity carries the

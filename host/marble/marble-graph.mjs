@@ -274,5 +274,7 @@ export function createMarbleService(load) {
     },
     async coverage(range = {}) { return (await graph()).coverage(range); },
     async neighbourhood(id) { return (await graph()).neighbourhood(id); },
+    /** M1: the graph itself, for the skill-map step's ranking input, validation and lanes (read-only). */
+    async graph() { return graph(); },
   };
 }

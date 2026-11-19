@@ -236,7 +236,6 @@ const setValue = (selector, text) => page.evaluate((sel, text) => {
   Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }, selector, text);
-const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
 /** Everything this origin holds in IndexedDB. Read IN the page. (Only after a course exists: opening
  *  the store early would create an empty database whose "courses" store does not exist yet.) */
 const stored = () => page.evaluate(async () => {
@@ -275,170 +274,26 @@ const print = (m) => {
 };
 
 try {
-  // ---- first impression: the BARE url lands on the live course (landing + onboarding)
+  // ---- first impression (K1): the classic #/live view is deleted. An old #/live link lands on the landing page,
+  // and the landing is checked at every width. The studio's own surfaces are walked below.
   await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
-  check("the bare URL lands on the live course", await bodyHas("Build a course, one decision at a time"));
+  check("an old #/live link lands on the landing page", await page.evaluate(() => !!document.getElementById("landing-title")));
   for (const w of WIDTHS) print(await at(w, "landing + onboarding"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-landing`, ["shell-header", "hero-steps", "onboarding-card", "record-band"]); }
-
-  // ---- name the course, confirm the materials, answer the intake
-  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
-  await reply("Photosynthesis for the very young — a course whose title is long enough to need wrapping in a narrow window", "Record the course title");
-  // Renamed by the intake-clarity round: the label step is now "What name should this course show for you?".
-  await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
-  await reply("Ada Lovelace", "Record this name");
-  await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
-  await reply("Lesson notes", "Record these names");
-  await poll(() => bodyHas("Confirm the material list"));
-  await poll(async () => (await stored()).metas.length === 1);
-  await clickText("Confirm the material list");
-
-  await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
-  // The intake question state of the onboarding card, at every width.
-  for (const w of WIDTHS) print(await at(w, "onboarding: intake question"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: 1440, height: 1000 }); }
-  await setValue("#intake-topic", "Photosynthesis"); await clickText("Record this answer");
-  await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
-  await setValue("#intake-course", "Science, ages 8-10"); await clickText("Record this answer");
-  await poll(() => bodyHas("Propose these from my materials instead"));
-  await clickText("Propose these from my materials instead");
-  await poll(() => bodyHas("Confirm the brief"));
-  await clickText("Confirm the brief");
-
-  // ---- the material panel, at every width (with one item already added, so the rows are set)
-  await poll(() => bodyHas("Add your material here")); // the intake-clarity round reworded this prompt
-  await page.evaluate(() => {
-    const label = [...document.querySelectorAll("label")].find((l) => /Or paste text/.test(l.textContent ?? ""));
-    const input = document.getElementById(label.htmlFor);
-    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(input, "Lesson notes");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await setValue('textarea[aria-label="Pasted text"]', MATERIAL_TEXT);
-  await clickText("Add this text");
-  await poll(() => bodyHas("Lesson notes ·"));
-  for (const w of WIDTHS) print(await at(w, "materials panel"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-materials`, ["materials-panel", "shell-header"]); }
-  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
-  await clickText("Propose objectives from my materials");
-  await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
-  await page.type('[role="dialog"] input[type="password"]', PASSCODE);
-  await clickText("Continue");
-  await poll(recorded("objectives.proposed"), 20000);
-  await poll(async () => {
-    if ((await stored()).events.filter((e) => JSON.parse(e.line).event.kind === "objectives.decided").length >= 3) return true;
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll("button")].find((x) => (x.getAttribute("aria-label") ?? "").trim().startsWith("Accept objective"));
-      if (b && !b.disabled) b.click();
-    });
-    await sleep(150);
-    return null;
-  }, 25000);
-  // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
-  await poll(() => bodyHas("build the plan"));
-  await clickText("Confirm 3 objectives · build the plan");
-  await poll(recorded("plan.proposed"), 20000);
-  await poll(() => bodyHas("Confirm the lesson plan"));
-  await clickText("Confirm the lesson plan");
-  await poll(recorded("plan.confirmed"));
-  await poll(async () => {
-    const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
-    if (opened) return true;
-    await page.evaluate(() => {
-      const sec = document.querySelector('section[aria-label*="Preview and publish"]');
-      const armed = !!sec && /ready to publish/i.test(sec.innerText);
-      const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
-      if (btn && armed) btn.click();
-    });
-    await sleep(200);
-    return null;
-  }, 12000);
-  await clickText("Publish version 1");
-  await poll(recorded("package.published"));
-  // The host records the publish before the page re-renders the published view: wait for the button, then click
-  // (clicking on the record alone raced the render, about 1 run in 5).
-  await poll(() => page.evaluate(() => [...document.querySelectorAll("button")].some((x) => (x.textContent ?? "").trim() === "Check a student question")));
-  await clickText("Check a student question"); // the helper is collapsed until opened
-  await page.waitForSelector('section[aria-label="Check a student question"] input');
-  await page.type('section[aria-label="Check a student question"] input', "What do plants need to make food?");
-  await clickText("Ask");
-  await poll(() => bodyHas("A plant uses light"), 20000);
-
-  // ---- the whole app at every width
-  check("the published course is on the page with a student answer", await bodyHas("From Objective 1 \u00b7 Activity 1"));
-  for (const w of WIDTHS) print(await at(w, "full live course"));
-  // C-a (workspace): at 380 the stage navigator is the stepper again: a row of labels, no summaries, nothing sticky.
-  await page.setViewport({ width: 380, height: 900, deviceScaleFactor: 1 });
-  const stepper = await page.evaluate(() => {
-    const ol = document.querySelector('ol[aria-label="Steps"]');
-    if (!ol) return null;
-    let sticky = false;
-    for (let e = ol; e && e !== document.body; e = e.parentElement) if (getComputedStyle(e).position === "sticky") sticky = true;
-    return { dir: getComputedStyle(ol).flexDirection, text: ol.innerText.replace(/\s+/g, " "), sticky, right: Math.round(ol.getBoundingClientRect().right), vw: innerWidth };
-  });
-  check("380px: the stage navigator collapses to the stepper (a row of labels, no summaries, nothing sticky)",
-    !!stepper && stepper.dir === "row" && /Material.*Brief.*Objectives.*Plan.*Publish/.test(stepper.text) && !/Version \d|confirmed|min\b/.test(stepper.text) && !stepper.sticky && stepper.right <= stepper.vw,
-    JSON.stringify(stepper));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-course`, ["shell-header", "student-chat", "pinned-copies", "record-band"]); }
-
-  // ---- the data controls in their confirm state (nothing is deleted: "Keep them" is pressed after)
-  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
-  await clickText("Delete all data from this browser");
-  await poll(() => bodyHas("This cannot be undone"));
-  for (const w of WIDTHS) print(await at(w, "record band: delete confirm"));
-  await clickText("Keep them");
-  await poll(() => bodyHas("Export all courses"));
-  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-confirm`, ["record-band"]); }
+  if (SHOT_WIDTH && WIDTHS.includes(SHOT_WIDTH)) { await page.setViewport({ width: SHOT_WIDTH, height: 1000 }); await shots(`${SUFFIX}-landing`, ["shell-header", "hero-steps"]); }
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
-  // ---- G2b: the new-course wizard's step 1 (learner cards, steppers, skill-map strip, anchor, consequences).
+  // ---- G2b/M1: the new-course wizard's step 1 (title, name, goal, learners, length, note, one consequence line).
   // Checked at every width: the page never scrolls sideways and nothing in the step crosses the viewport.
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  // K1: with the classic view gone no course exists yet, so the wizard opens on its first-run welcome: Begin.
+  await poll(() => page.evaluate(() => /Who are your learners\?|Let’s set up your course/.test(document.body.innerText)));
+  if (await bodyHas("Let’s set up your course")) await clickText("Begin");
   await poll(() => bodyHas("Who are your learners?"));
   const g2bClick = (t) => page.evaluate((x) => { const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(x)); el?.click(); return !!el; }, t);
-  await g2bClick("Early primary");
-  await g2bClick("Youngest age: one year older");
-  for (let i = 0; i < 4; i++) await g2bClick("Oldest age: one year older");
-  await page.waitForFunction(() => /Ages 5–12 · [\d,]+ skill-map topics/.test(document.body.innerText), { timeout: 20000 }).catch(() => null);
-  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "AI around us");
-  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
-  await page.type('form[aria-label="Course and learners"] input[type="search"]', "AI in Daily Life");
-  await page.waitForFunction(() => document.querySelector('ul[aria-label="Skill-map topics"] button'), { timeout: 15000 }).catch(() => null);
-  await page.evaluate(() => document.querySelector('ul[aria-label="Skill-map topics"] button')?.click());
-  await page.type('form[aria-label="Course and learners"] textarea', "Mixed class; two learners are new to English.");
-  check("G2b the wizard's step 1 reached the anchored state", await page.waitForFunction(() => document.querySelector('button[aria-label^="Clear the skill-map anchor"]'), { timeout: 5000 }).then(() => true, () => false));
-  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
-    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
-    await sleep(250);
-    const m = await page.evaluate(() => {
-      const vw = document.documentElement.clientWidth;
-      const past = [...document.querySelectorAll('form[aria-label="Course and learners"] *')]
-        .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
-        .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 30)}`);
-      return { sw: document.documentElement.scrollWidth, vw, past };
-    });
-    check(`G2b wizard step 1 does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
-  }
-  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
-    const dir = process.env.NARROW_SHELL_WIZARD_SHOTS;
-    // A viewport as tall as the page (no fullPage stitching), so the sticky bar and footer sit where a reader expects them.
-    const tall = async (width, scale, file) => {
-      await page.setViewport({ width, height: 900, deviceScaleFactor: scale });
-      await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
-      await sleep(300);
-      const h = await page.evaluate(() => document.documentElement.scrollHeight);
-      await page.setViewport({ width, height: h, deviceScaleFactor: scale });
-      await sleep(300);
-      await page.screenshot({ path: join(dir, file) });
-    };
-    await tall(1440, 1, "2026-11-14-wizard-step1-desktop.png");
-    await tall(390, 2, "2026-11-14-wizard-step1-390.png");
-  }
-
-  // ---- G2c: the skill map on the objectives and plan steps of the anchored course (5–12, AI in Daily Life).
+  const GOAL = 'form[aria-label="Course and learners"] input[placeholder="Why leaves stay green, and what that tells us about light"]';
   const g2cBtn = (label) => page.evaluate((x) => { const b = [...document.querySelectorAll("button")].find((e) => !e.disabled && (e.textContent ?? "").trim() === x); b?.click(); return !!b; }, label);
   const g2cWait = (fn, ms = 10000, arg) => page.waitForFunction(fn, { timeout: ms }, arg).then(() => true, () => false);
-  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "AI in daily life"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
   // Each move retries its click until the next screen is there (a click can land while the step still settles).
   const g2cMove = async (label, ready, ms = 12000) => {
     const t0 = Date.now();
@@ -449,17 +304,84 @@ try {
     }
     return page.evaluate(ready);
   };
+  // M1: the browser host asks for the passcode before the ranking call; give it when asked.
+  const mapPasscode = async () => {
+    if (await g2cWait(() => !!document.querySelector('[role="dialog"] input[type="password"]'), 4000)) {
+      await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+      await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent.trim() === "Continue")?.click());
+    }
+  };
+  const mapContinue = (enabled) => page.evaluate((en) => [...document.querySelectorAll('section[aria-label="On the skill map"] button[data-primary="true"]')]
+    .some((b) => b.textContent.trim() === "Continue" && b.disabled === !en), enabled);
+  const overflowIn = (sel) => page.evaluate((s) => {
+    const vw = document.documentElement.clientWidth;
+    const past = [...document.querySelectorAll(s)].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1; })
+      .map((e) => `${e.tagName.toLowerCase()}.${String(e.className?.baseVal ?? e.className).slice(0, 30)}`);
+    return { sw: document.documentElement.scrollWidth, vw, past };
+  }, sel);
+  const tall = async (width, scale, file) => {
+    await page.setViewport({ width, height: 900, deviceScaleFactor: scale });
+    await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
+    await sleep(400);
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewport({ width, height: h, deviceScaleFactor: scale });
+    await sleep(400);
+    await page.screenshot({ path: join(process.env.NARROW_SHELL_WIZARD_SHOTS, file) });
+  };
+  await g2bClick("Early primary");
+  await g2bClick("Youngest age: one year older");
+  for (let i = 0; i < 4; i++) await g2bClick("Oldest age: one year older");
+  await page.waitForFunction(() => /map topics fit/.test(document.querySelector("[data-consequences]")?.textContent ?? ""), { timeout: 20000 }).catch(() => null);
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "AI around us");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.type(GOAL, "Spot the AI in things we use every day");
+  await g2bClick("+ Add a note about the class");
+  await sleep(200);
+  await page.type('form[aria-label="Course and learners"] textarea', "Mixed class; two learners are new to English.");
+  check("M1 the wizard's step 1 is complete (Continue enabled, no anchor picker)", await page.evaluate(() => [...document.querySelectorAll('form[aria-label="Course and learners"] button[data-primary="true"]')].some((b) => !b.disabled)
+    && !document.querySelector('form[aria-label="Course and learners"] input[type="search"]')));
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(250);
+    const m = await overflowIn('form[aria-label="Course and learners"] *');
+    check(`G2b wizard step 1 does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+  }
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
+    await tall(1440, 1, "2026-11-17-wizard-step1-desktop.png");
+    await tall(390, 2, "2026-11-17-wizard-step1-390.png");
+  }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
+  // ---- M1 · step 2, "On the skill map": anchor AI in Daily Life through search (this course's title is not the fixture's).
+  await g2cMove("Continue", () => !!document.querySelector('section[aria-label="On the skill map"]'));
+  await mapPasscode();
+  check("M1 the map step renders after step 1 and Continue waits for an anchor or Skip", await g2cWait(() => !document.querySelector('[aria-busy="true"]') && !!document.querySelector('section[aria-label="On the skill map"]'), 15000) && await mapContinue(false));
+  if (!(await page.evaluate(() => !!document.querySelector("#map-search")))) await g2cBtn("Search the map");
+  await g2cWait(() => !!document.querySelector("#map-search"), 5000);
+  await page.type("#map-search", "AI in Daily Life");
+  await g2cWait(() => !!document.querySelector('button[aria-label="Anchor here: AI in Daily Life"]'), 15000);
+  await page.evaluate(() => document.querySelector('button[aria-label="Anchor here: AI in Daily Life"]')?.click());
+  check("M1 anchoring a search result shows 'Your pick' and enables Continue", await g2cWait(() => /Your pick, with what comes before/.test(document.body.innerText), 10000) && await mapContinue(true));
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(300);
+    const m = await overflowIn('section[aria-label="On the skill map"] *');
+    check(`M1 the map step ('Your pick') does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+  }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+  await g2cMove("Continue", () => !!document.querySelector('input[aria-label="Use the skill-map topics as a source"]'));
+  check("M1 the sources step's map row is checked by default when an anchor exists", await page.evaluate(() => document.querySelector('input[aria-label="Use the skill-map topics as a source"]')?.checked === true));
+  await page.evaluate(() => document.querySelector('input[aria-label="Use the skill-map topics as a source"]')?.click());
   await sleep(500);
   const g2cWalk = [
-    await g2cMove("Continue", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
     await g2cMove("Continue without sources", () => !!document.querySelector('section[aria-label="Your objectives"] textarea')),
   ];
   await setValue('section[aria-label="Your objectives"] textarea', "Spot AI at home and at school");
   g2cWalk.push(await g2cMove("Continue", () => !!document.querySelector('section[aria-label="Review and confirm"]')));
   g2cWalk.push(await g2cMove("Confirm and create the course", () => /^#\/studio\/(?!new$)./.test(location.hash), 15000));
   if (g2cWalk.includes(false)) console.log(`G2c walk stalled: ${JSON.stringify(g2cWalk)} at ${(await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\s+/g, " ")}`);
-  const g2cIn = await g2cWait(() => !!document.querySelector("[data-evidence-suggestions]") && !!document.querySelector("[data-neighbourhood][open]"), 20000);
-  check("G2c the anchored course opens on objectives with the suggestions and the open neighbourhood view", g2cIn);
+  const g2cIn = await g2cWait(() => !!document.querySelector("[data-evidence-suggestions]") && !!document.querySelector("[data-map-context]") && !document.querySelector("[data-neighbourhood]"), 20000);
+  check("M1 the anchored course opens on objectives with the suggestions and the 'On the map' line, and no map", g2cIn);
   const g2cOverflow = async (label) => {
     for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
       await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
@@ -487,8 +409,7 @@ try {
   await g2cOverflow("objectives step (suggestions + neighbourhood)");
   await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
   await sleep(300);
-  check("G2c at 390 px the view stacks into bands (narrow layout)", await page.evaluate(() => document.querySelector("[data-neighbourhood] svg")?.getAttribute("data-orientation") === "narrow"));
-  if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-14-graph-objectives-390.png"); await g2cTall(1440, 1, "2026-11-14-graph-objectives-desktop.png"); }
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) { await g2cTall(390, 2, "2026-11-17-objectives-onthemap-390.png"); await g2cTall(1440, 1, "2026-11-17-objectives-onthemap-desktop.png"); }
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   // Use a suggestion, add it, confirm the objectives: the plan step opens on the prerequisite strip.
   // H2b: use all three suggestions, so the scripted plan cites three of the course's own objectives.
@@ -559,6 +480,78 @@ try {
   await page.emulateMediaType(null);
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
+  // ---- M1 · the map with the scripted ranking ("Why is the grass green?", ages 4–10: the fixture's own course).
+  // The tab holds the passcode by now, so the ranking call runs against the scripted worker.
+  await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
+  await poll(() => bodyHas("Who are your learners?"));
+  await g2bClick("Early primary");
+  for (let i = 0; i < 2; i++) await g2bClick("Oldest age: one year older");
+  await page.waitForFunction(() => /Ages 4–10|4–10/.test(document.body.innerText), { timeout: 10000 }).catch(() => null);
+  await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Why is the grass green?");
+  await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
+  await page.type(GOAL, "Why grass stays green, and what that tells us about light");
+  await sleep(300);
+  await g2cMove("Continue", () => !!document.querySelector('section[aria-label="On the skill map"]'));
+  await mapPasscode();
+  const lanesIn = await g2cWait(() => document.querySelectorAll('section[aria-label^="Thread: "]').length > 0, 20000);
+  const mp = await page.evaluate(() => ({ threads: document.querySelectorAll('section[aria-label^="Thread: "]').length,
+    anchored: document.querySelectorAll('section[aria-label="On the skill map"] [data-anchor="true"]').length,
+    credits: document.querySelectorAll("[data-marble-credit]").length, badges: document.querySelectorAll('[aria-label^="Suggestion "]').length,
+    cols: [...document.querySelectorAll('section[aria-label="On the skill map"] [aria-hidden="true"] > span')].map((s) => s.textContent).join("·") }));
+  check("M1 the scripted ranking draws 1–3 threads with numbered suggestions in five columns, nothing anchored, one credit",
+    lanesIn && mp.threads >= 1 && mp.threads <= 3 && mp.badges >= 1 && mp.anchored === 0 && mp.credits === 1 && mp.cols === "Earlier·Comes before·Best fit·Leads to·Later", JSON.stringify(mp));
+  check("M1 suggestion 1 is selected, not anchored: Continue stays disabled", await mapContinue(false) && await page.evaluate(() => !!document.querySelector("[data-map-detail] [data-anchor-here]")));
+  await page.evaluate(() => document.querySelector("[data-map-detail] [data-anchor-here]")?.click());
+  await sleep(300);
+  check("M1 'Anchor here' anchors the selected topic and enables Continue", await mapContinue(true) && await page.evaluate(() => document.querySelectorAll('section[aria-label="On the skill map"] [data-anchor="true"]').length >= 1));
+  // Connect one topic from the other thread, if the map drew two.
+  const other = await page.evaluate(() => {
+    const lanes = [...document.querySelectorAll('section[aria-label^="Thread: "]')];
+    const lane = lanes.find((l) => !l.querySelector('[data-anchor="true"]'));
+    const b = lane?.querySelector("button[aria-pressed]");
+    b?.click(); return !!b;
+  });
+  if (other) {
+    await sleep(300);
+    await page.evaluate(() => document.querySelector("[data-map-detail] [data-connect]")?.click());
+    await sleep(300);
+    check("M1 Connect marks a topic from the other thread; status and Undo are separate controls", await page.evaluate(() => {
+      const d = document.querySelector("[data-map-detail]");
+      return [...(d?.querySelectorAll("span") ?? [])].some((s) => s.textContent.trim() === "Connected") && [...(d?.querySelectorAll("button") ?? [])].some((b) => b.textContent.trim() === "Undo")
+        && document.querySelectorAll('[data-connected="true"]').length >= 1;
+    }));
+  }
+  for (const w of [...new Set([...WIDTHS, 390])].sort((a, b) => a - b)) {
+    await page.setViewport({ width: w, height: 1000, deviceScaleFactor: 1 });
+    await sleep(300);
+    const m = await overflowIn('section[aria-label="On the skill map"] *');
+    check(`M1 the ranked map does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
+  }
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  check("M1 at 390 px the lanes are a list (no column header, no arcs)", await page.evaluate(() => !document.querySelector('section[aria-label="On the skill map"] svg') && /Top to bottom: each topic comes before the next/.test(document.body.innerText)));
+  // K4 (C6): at 1440 px two-word topic names stay on one line, the node state is its own line, no " · " can break,
+  // and the skip arc has a key.
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+  await sleep(300);
+  const c6 = await page.evaluate(() => {
+    const sec = document.querySelector('section[aria-label="On the skill map"]');
+    const two = [...sec.querySelectorAll("li[data-col] button")].map((b) => [...b.children].find((s) => !s.hasAttribute("aria-label")))
+      .filter((s) => s.textContent.trim().split(/\s+/).length === 2)
+      .map((s) => ({ name: s.textContent.trim(), lines: Math.round(s.getBoundingClientRect().height / parseFloat(getComputedStyle(s).lineHeight)) }));
+    const breakable = [...sec.querySelectorAll("li[data-col] button span"), ...document.querySelectorAll("nav li span")]
+      .map((s) => s.textContent).filter((x) => / ·|· /.test(x));
+    return { two, wrapped: two.filter((x) => x.lines > 1), breakable, states: sec.querySelectorAll("[data-node-state]").length, legend: sec.querySelector("[data-arc-legend]")?.textContent.trim() ?? null, arcs: sec.querySelectorAll("svg path").length - sec.querySelectorAll("[data-arc-legend] path").length };
+  });
+  check("K4 C6 at 1440 px every two-word topic name in the map columns sits on one line", c6.two.length > 0 && c6.wrapped.length === 0, JSON.stringify(c6.wrapped.length ? c6.wrapped : c6.two));
+  check("K4 C6 no ' · ' in a map node or the step spine can break (non-breaking joins; the state word is its own line)", c6.breakable.length === 0 && c6.states >= 1, JSON.stringify({ breakable: c6.breakable, states: c6.states }));
+  check("K4 C6 the skip arc has a key when an arc is drawn", c6.arcs === 0 || /must come first \(skips a step\)/.test(c6.legend ?? ""), JSON.stringify({ arcs: c6.arcs, legend: c6.legend }));
+  if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
+    await tall(1440, 1, "2026-11-17-step2-map-desktop.png");
+    await tall(390, 2, "2026-11-17-step2-map-390.png");
+  }
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+  await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });   // leave the half-made wizard, so the next goto reloads it fresh
   // ---- H2b: a stage-3 course (ages 12–14, Computing, no anchor). The scripted plan's third activity asks for AI
   // with no first try; the host clamps it and the plan shows the note under "Silicus adjusted".
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
@@ -569,10 +562,11 @@ try {
   await page.waitForFunction(() => /Ages 12–14/.test(document.body.innerText), { timeout: 10000 }).catch(() => null);
   await page.type('form[aria-label="Course and learners"] input[placeholder="How plants eat"]', "Searching and sorting");
   await page.type('form[aria-label="Course and learners"] input[placeholder="Ms. Lovelace"]', "Ada Lovelace");
-  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="How plants make food from sunlight"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "How a computer searches and sorts"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
+  await page.evaluate(() => { const i = document.querySelector('form[aria-label="Course and learners"] input[placeholder="Why leaves stay green, and what that tells us about light"]'); if (i && !i.value) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "How a computer searches and sorts"); i.dispatchEvent(new Event("input", { bubbles: true })); } });
   await sleep(400);
   const s3Walk = [
-    await g2cMove("Continue", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
+    await g2cMove("Continue", () => !!document.querySelector('section[aria-label="On the skill map"]')),
+    await g2cMove("Skip the map", () => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Continue without sources")),
     await g2cMove("Continue without sources", () => !!document.querySelector('section[aria-label="Your objectives"] textarea')),
   ];
   await setValue('section[aria-label="Your objectives"] textarea', "Explain why binary search needs a sorted list\nCarry out a bubble sort and count its swaps");

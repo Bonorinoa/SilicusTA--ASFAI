@@ -33,20 +33,26 @@ import { Button, Notice, ui } from "./ui";
 import { intakeText } from "./useCourse";
 import w from "./Wizard.module.css";
 import {
-  EMPTY_AUDIENCE, agesText, audienceAnswer, clearAnchor, groupName, pickAnchor, selectGroup, stageOf, stepAge,
+  AI_RULE, EMPTY_AUDIENCE, agesText, audienceAnswer, groupName, selectGroup, stageOf, stepAge,
   type Audience,
 } from "./audience";
-import { Consequences, LearnersField, StudioMarbleCredit, TopicField, useCoverage } from "./Learners";
+import { LearnersField, StudioMarbleCredit, countOf, useCoverage } from "./Learners";
+import { MapStep, type MapChoice } from "./MapStep";
+import { keepMapSourceForCourse } from "./links";
 
-type StepId = "welcome" | "course" | "sources" | "objectives" | "ai" | "review";
+type StepId = "welcome" | "course" | "map" | "sources" | "objectives" | "ai" | "review";
 const STEPS: { id: Exclude<StepId, "welcome">; label: string }[] = [
   { id: "course", label: "Course and learners" },
+  { id: "map", label: "On the skill map" },
   { id: "sources", label: "Sources" },
   { id: "objectives", label: "Your objectives" },
   { id: "ai", label: "AI check" },
   { id: "review", label: "Review and confirm" },
 ];
 const MAX_SOURCES = 8;
+/** K2 (owner, 17 Nov): the teacher sets the lesson length; the plan fits it. One course is one lesson. */
+export const LESSON_MINUTES = [20, 30, 45, 60, 90] as const;
+export const DEFAULT_LESSON_MINUTES = 45;
 const KIND_LABEL: Record<string, string> = { pdf: "PDF", docx: "DOC", pptx: "PPT", text: "TXT" };
 /** The brief questions this wizard asks itself; any other set means the brief step must ask them. */
 const KNOWN = new Set(["topic", "course", "learning_outcomes"]);
@@ -64,6 +70,14 @@ export function briefAnswers(a: WizardAnswers): Record<string, string> {
   return out;
 }
 
+
+/** K4 (C6): a separator that never starts or ends a line: non-breaking spaces on both sides. */
+const SEP = "\u00a0·\u00a0";
+/** Keep a short part on one line (its spaces become non-breaking). */
+const glue = (s: string) => s.replace(/ /g, "\u00a0").replace(/–/g, "\u2060–\u2060");
+/** Join parts with SEP, dropping empty ones. */
+const keepJoin = (parts: string[]) => parts.filter(Boolean).join(SEP);
+
 export function NewCourseWizard() {
   const ai = useAiStatus();
   const [step, setStep] = useState<StepId | null>(null);
@@ -75,11 +89,18 @@ export function NewCourseWizard() {
   const [touchedChoice, setTouchedChoice] = useState(false);
   const [aud, setAud] = useState<Audience>(EMPTY_AUDIENCE);
   const [notes, setNotes] = useState("");
+  const [lessonMinutes, setLessonMinutes] = useState<number>(DEFAULT_LESSON_MINUTES);
+  // M1: the skill-map step's choice. Nothing is anchored until the teacher anchors or skips.
+  const [mapChoice, setMapChoice] = useState<MapChoice>({ anchor: null, connected: null, skipped: false });
+  const [useMap, setUseMap] = useState(true);
+  const [showNote, setShowNote] = useState(false);
+  const anchor = mapChoice.anchor;
+  const mapSource = useMap && !!anchor;
   const coverage = useCoverage(aud.ages);
   const stage = stageOf(aud);
   const audience = audienceAnswer(aud, notes);
   const headRef = useRef<HTMLHeadingElement>(null);
-  const ids = { title: useId(), owner: useId(), notes: useId(), outcomes: useId() };
+  const ids = { title: useId(), owner: useId(), notes: useId(), outcomes: useId(), goal: useId() };
 
   // First run (no courses yet) opens on the welcome; otherwise straight to the first question.
   useEffect(() => {
@@ -94,20 +115,33 @@ export function NewCourseWizard() {
   }, [step]);
 
   const count = files.length + links.length;
+  // The skill-map text counts as a source for proposing, when it is on (M1).
+  const sourcesIn = count + (mapSource ? 1 : 0);
+  // New ages: a chosen topic that no longer fits is let go (the map re-ranks for the new ages).
+  useEffect(() => {
+    const fitsAges = (t: { ageRangeStart: number; ageRangeEnd: number } | null) => !t || !aud.ages || (t.ageRangeStart <= aud.ages.max && t.ageRangeEnd >= aud.ages.min);
+    setMapChoice((c) => (fitsAges(c.anchor) && fitsAges(c.connected) ? c : { anchor: null, connected: null, skipped: false }));
+  }, [aud.ages]);
   // Proposing from sources is the natural default once there are sources and nothing written yet.
   useEffect(() => {
-    if (!touchedChoice) setA((x) => ({ ...x, fromSources: count > 0 && x.outcomes.trim() === "" }));
-  }, [count, touchedChoice]);
+    if (!touchedChoice) setA((x) => ({ ...x, fromSources: sourcesIn > 0 && x.outcomes.trim() === "" }));
+  }, [sourcesIn, touchedChoice]);
 
   const set = (k: keyof WizardAnswers) => (v: string | boolean) => setA((x) => ({ ...x, [k]: v }));
   const index = STEPS.findIndex((x) => x.id === step);
   const go = (id: StepId) => { setProblem(null); setStep(id); };
   const next = () => go(STEPS[index + 1]?.id ?? "review");
-  const back = () => go(index <= 0 ? "welcome" : STEPS[index - 1].id);
+  // Back is always the previous step. The welcome is a previous step only if this visit showed it (first run);
+  // otherwise Back on the first step has nowhere to go and is disabled, never a jump to some other screen.
+  const [sawWelcome, setSawWelcome] = useState(false);
+  useEffect(() => { if (step === "welcome") setSawWelcome(true); }, [step]);
+  const firstStep = index <= 0;
+  const back = () => { if (!firstStep) go(STEPS[index - 1].id); else if (sawWelcome) go("welcome"); };
 
   const courseOk = a.title.trim() !== "" && a.owner.trim() !== "" && a.topic.trim() !== "" && aud.ages !== null;
   const wrote = a.outcomes.split("\n").some((l) => l.trim() !== "");
-  const objectivesOk = wrote || (a.fromSources && count > 0);
+  const objectivesOk = wrote || (a.fromSources && sourcesIn > 0);
+  const mapOk = !!anchor || mapChoice.skipped;
 
   const confirm = async () => {
     if (busy || !courseOk || !objectivesOk) return;
@@ -116,12 +150,15 @@ export function NewCourseWizard() {
     try {
       const r = await host.createCourse({
         title: a.title.trim(), owner: a.owner.trim(), materials: [], objectivesConfirm: "explicit",
-        ...(aud.ages ? { ages: aud.ages } : {}), ...(aud.anchor ? { marbleAnchor: aud.anchor.id } : {}),
+        ...(aud.ages ? { ages: aud.ages } : {}), ...(anchor ? { marbleAnchor: anchor.id } : {}),
+        ...(anchor && mapChoice.connected ? { marbleConnected: mapChoice.connected.id } : {}),
+        lessonMinutes,
       });
       courseId = r.courseId;
       // Text stays in this tab, held for the course exactly as the Sources panel holds it.
       keepForCourse(courseId, files);
       keepLinksForCourse(courseId, links);
+      keepMapSourceForCourse(courseId, mapSource);
       const view = await host.getCourse(courseId);
       const asked = (view.intake.questions ?? []).map((q) => q.id);
       const all = briefAnswers({ ...a, audience });
@@ -137,7 +174,7 @@ export function NewCourseWizard() {
       await host.answerIntake(courseId, { text: intakeText(answers), answers });
       await host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." });
       await host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." });
-      if (a.fromSources && count > 0) askToProposeOnArrival(courseId);
+      if (a.fromSources && sourcesIn > 0) askToProposeOnArrival(courseId);
       window.location.hash = href.course(courseId);
     } catch (e) {
       const id = courseId;
@@ -168,9 +205,12 @@ export function NewCourseWizard() {
     </nav>
   );
   function noteFor(id: StepId): string {
-    if (id === "course") return a.title.trim();
+    // K4 (C6): no separator is left alone at a line break. The title is its own line; ages and length are one
+    // unbreakable line under it (non-breaking joins; .spineNote keeps the "\n").
+    if (id === "course") return [a.title.trim(), keepJoin([aud.ages ? glue(`Ages ${agesText(aud.ages).replace(/^ages /i, "")}`) : "", glue(`${lessonMinutes} min`)])].filter(Boolean).join("\n");
+    if (id === "map") return mapChoice.skipped ? "Skipped" : anchor ? `${anchor.name}${mapChoice.connected ? ` + ${mapChoice.connected.name}` : ""}` : "";
     if (id === "sources") return count ? plural(count, "source") : "None yet";
-    if (id === "objectives") return [wrote ? plural(a.outcomes.split("\n").filter((l) => l.trim()).length, "of yours", "of yours") : null, a.fromSources && count ? "Silicus proposes" : null].filter(Boolean).join(" · ");
+    if (id === "objectives") return [wrote ? plural(a.outcomes.split("\n").filter((l) => l.trim()).length, "of yours", "of yours") : null, a.fromSources && sourcesIn ? "Silicus proposes" : null].filter((x): x is string => !!x).map(glue).join(SEP);
     if (id === "ai") return ai.diagnosis.label;
     return "";
   }
@@ -192,7 +232,7 @@ export function NewCourseWizard() {
     <div className={w.foot}>
       {note ? <p className={w.footNote}>{note}</p> : null}
       <div className={w.footButtons}>
-        <Button variant="quiet" onClick={back} disabled={busy}>Back</Button>
+        <Button variant="quiet" onClick={back} disabled={busy || (firstStep && !sawWelcome)}>Back</Button>
         {primary}
       </div>
     </div>
@@ -204,13 +244,14 @@ export function NewCourseWizard() {
   if (step === "welcome") {
     body = (
       <section className={`${w.sheet} ${w.welcome}`} aria-label="Welcome">
-        {head("Welcome to Silicus", "Let’s set up your course", "Five short steps. Silicus proposes objectives and drafts a lesson plan; you decide every one of them, and only you publish.")}
+        {head("Welcome to Silicus", "Let’s set up your course", "Six short steps. Silicus proposes objectives and drafts a lesson plan; you decide every one of them, and only you publish.")}
         <ol className={w.promises}>
           <li className={w.promise}><span className={w.promiseNum}>1</span><span className={w.promiseTitle}>Your course and learners</span><span className={w.promiseText}>A title, your name, the topic and who it is for.</span></li>
-          <li className={w.promise}><span className={w.promiseNum}>2</span><span className={w.promiseTitle}>Your sources</span><span className={w.promiseText}>Files, pasted notes or a web page. Read in this tab; only their names go on the record.</span></li>
-          <li className={w.promise}><span className={w.promiseNum}>3</span><span className={w.promiseTitle}>Your objectives</span><span className={w.promiseText}>Write a few, let Silicus propose them from your sources, or both.</span></li>
-          <li className={w.promise}><span className={w.promiseNum}>4</span><span className={w.promiseTitle}>A quick AI check</span><span className={w.promiseText}>Whether drafting is ready, and what to do if it isn’t.</span></li>
-          <li className={w.promise}><span className={w.promiseNum}>5</span><span className={w.promiseTitle}>You confirm</span><span className={w.promiseText}>One page shows everything. Nothing is recorded until you confirm it.</span></li>
+          <li className={w.promise}><span className={w.promiseNum}>2</span><span className={w.promiseTitle}>A place on the skill map</span><span className={w.promiseText}>Silicus suggests topics that fit; you anchor one, or skip it.</span></li>
+          <li className={w.promise}><span className={w.promiseNum}>3</span><span className={w.promiseTitle}>Your sources</span><span className={w.promiseText}>Files, pasted notes or a web page. Read in this tab; only their names go on the record.</span></li>
+          <li className={w.promise}><span className={w.promiseNum}>4</span><span className={w.promiseTitle}>Your objectives</span><span className={w.promiseText}>Write a few, let Silicus propose them from your sources, or both.</span></li>
+          <li className={w.promise}><span className={w.promiseNum}>5</span><span className={w.promiseTitle}>A quick AI check</span><span className={w.promiseText}>Whether drafting is ready, and what to do if it isn’t.</span></li>
+          <li className={w.promise}><span className={w.promiseNum}>6</span><span className={w.promiseTitle}>You confirm</span><span className={w.promiseText}>One page shows everything. Nothing is recorded until you confirm it.</span></li>
         </ol>
         <div className={`${w.foot} ${w.footBare}`}>
           <div className={w.footButtons}>
@@ -234,21 +275,57 @@ export function NewCourseWizard() {
               <input id={ids.owner} className={ui.input} value={a.owner} onChange={(e) => set("owner")(e.target.value)} placeholder="Ms. Lovelace" maxLength={200} />
             </div>
           </div>
+          <div className={ui.field}>
+            <label className={ui.label} htmlFor={ids.goal}>What should they get out of it?</label>
+            <input id={ids.goal} className={ui.input} value={a.topic} onChange={(e) => set("topic")(e.target.value)} placeholder="Why leaves stay green, and what that tells us about light" maxLength={300} />
+          </div>
           <LearnersField aud={aud} coverage={coverage}
             onGroup={(g) => setAud((x) => selectGroup(x, g))} onStep={(k, d) => setAud((x) => stepAge(x, k, d))} />
-          <TopicField aud={aud} coverage={coverage} topic={a.topic} onTopic={(v) => set("topic")(v)}
-            onAnchor={(t) => setAud((x) => pickAnchor(x, t))} onClear={() => setAud((x) => clearAnchor(x))} />
-          <div className={ui.field}>
-            <label className={ui.label} htmlFor={ids.notes}>Anything else about the class? <span style={{ fontWeight: 400 }}>(optional)</span></label>
-            <textarea id={ids.notes} className={ui.textarea} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
-              placeholder="Grade 4 science; two learners are new to English" maxLength={600} />
-            <span className={ui.hint}>Context for the AI, in your words. Silicus never reads ages or rules from it.</span>
-          </div>
-          <Consequences stage={stage} coverage={coverage} />
+
+          <fieldset className={w.lengthField}>
+            <legend className={ui.label}>How long is the lesson?</legend>
+            <div className={w.lengthChips} role="radiogroup" aria-label="Lesson length">
+              {LESSON_MINUTES.map((m) => (
+                <label key={m} className={w.lengthChip}>
+                  <input type="radio" name="lesson-minutes" className={w.visuallyHidden} value={m}
+                    checked={lessonMinutes === m} onChange={() => setLessonMinutes(m)} />
+                  <span>{m} min</span>
+                </label>
+              ))}
+            </div>
+            <span className={ui.hint}>Silicus fits the activities to this length. One course is one lesson.</span>
+          </fieldset>
+          {showNote || notes ? (
+            <div className={ui.field}>
+              <label className={ui.label} htmlFor={ids.notes}>Anything else about the class? <span style={{ fontWeight: 400 }}>(optional)</span></label>
+              <textarea id={ids.notes} className={ui.textarea} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
+                placeholder="Grade 4 science; two learners are new to English" maxLength={600} autoFocus={showNote && !notes} />
+              <span className={ui.hint}>Context for the AI, in your words. Silicus never reads ages or rules from it.</span>
+            </div>
+          ) : <button type="button" className={w.addNote} onClick={() => setShowNote(true)}>+ Add a note about the class</button>}
+          <p className={w.consequenceLine} aria-live="polite" data-consequences>
+            {stage === null ? "Choose your learners to see what changes." : [
+              AI_RULE[stage].split(". ")[0].replace(/\.$/, ""),
+              coverage === "unavailable" ? "the skill map is not available here" : countOf(coverage) !== null ? `${(countOf(coverage) ?? 0).toLocaleString("en-US")}${typeof coverage === "object" && coverage?.total ? ` of ${coverage.total.toLocaleString("en-US")}` : ""} map topics fit` : null,
+            ].filter(Boolean).join(" · ")}
+            {stage === null ? null : <>{" · "}<span className={w.nowrap}>one {lessonMinutes}-minute plan</span></>}
+          </p>
         </div>
         {foot(<Button variant="primary" data-primary="true" type="submit" disabled={!courseOk}>Continue</Button>,
-          courseOk ? null : "A title, your name, your learners and a topic are needed to brief Silicus.")}
+          courseOk ? null : "A title, your name, what they should get out of it and your learners are needed.")}
       </form>
+    );
+  } else if (step === "map" && aud.ages) {
+    const note = anchor ? <>Anchor <strong>{anchor.name}</strong>{mapChoice.connected ? <>{SEP}connected <strong>{mapChoice.connected.name}</strong></> : null}</> : "Anchor a topic, or skip the map.";
+    body = (
+      <section className={`${w.sheet} ${w.sheetWide}`} aria-label="On the skill map">
+        {head(kicker("map"), "On the skill map", "Where your lesson sits among topics children learn. Silicus suggests; you anchor one.")}
+        <MapStep title={a.title} goal={a.topic} ages={aud.ages} choice={mapChoice} onChoice={setMapChoice} />
+        {foot(<>
+          <Button variant="quiet" onClick={() => { setMapChoice({ anchor: null, connected: null, skipped: true }); next(); }} data-skip-map="true">Skip the map</Button>
+          <Button variant="primary" data-primary="true" disabled={!mapOk} onClick={next}>Continue</Button>
+        </>, note)}
+      </section>
     );
   } else if (step === "sources") {
     body = (
@@ -260,8 +337,18 @@ export function NewCourseWizard() {
           onFile={(f) => setFiles((cur) => [...cur.filter((x) => x.name !== f.name), f].slice(0, MAX_SOURCES))}
           onLink={(u) => setLinks((cur) => (cur.includes(u) ? cur : [...cur, u]))}
         />
-        {count > 0 ? (
+        {count > 0 || anchor ? (
           <ul className={w.itemList} aria-label="Sources added">
+            {anchor ? (
+              <li className={w.item} data-map-source>
+                <span className={w.itemIcon}><input type="checkbox" checked={useMap} onChange={(e) => setUseMap(e.target.checked)} aria-label="Use the skill-map topics as a source" /></span>
+                <span className={w.itemBody}>
+                  <span className={w.itemName}>Use the skill-map topics as a source</span>
+                  <span className={w.itemState}>{anchor.name}{mapChoice.connected ? ` + ${mapChoice.connected.name}` : ""}: their descriptions and what a learner can show</span>
+                  <StudioMarbleCredit />
+                </span>
+              </li>
+            ) : null}
             {files.map((f) => (
               <li key={`f-${f.name}`} className={w.item}>
                 <span className={w.itemIcon} aria-hidden="true">{KIND_LABEL[f.kind] ?? "TXT"}</span>
@@ -284,8 +371,8 @@ export function NewCourseWizard() {
             ))}
           </ul>
         ) : null}
-        {foot(<Button variant="primary" data-primary="true" onClick={next}>{count ? "Continue" : "Continue without sources"}</Button>,
-          count ? `${plural(count, "source")} ready.` : null)}
+        {foot(<Button variant="primary" data-primary="true" onClick={next}>{sourcesIn ? "Continue" : "Continue without sources"}</Button>,
+          sourcesIn ? `${plural(sourcesIn, "source")} ready.` : null)}
       </section>
     );
   } else if (step === "objectives") {
@@ -299,17 +386,17 @@ export function NewCourseWizard() {
           <span className={ui.hint}>One per line. Each becomes a proposal you accept, edit or drop.</span>
         </div>
         <label className={w.choice}>
-          <input type="checkbox" checked={a.fromSources} disabled={count === 0}
+          <input type="checkbox" checked={a.fromSources} disabled={sourcesIn === 0}
             onChange={(e) => { setTouchedChoice(true); set("fromSources")(e.target.checked); }} />
           <span className={w.choiceTitle}>Let Silicus propose objectives from my sources</span>
           <span className={w.choiceText}>
-            {count === 0
+            {sourcesIn === 0
               ? "Add a source in the previous step to use this."
-              : `It reads ${plural(count, "source")} when you confirm, and proposes objectives you decide one by one.`}
+              : `It reads ${plural(sourcesIn, "source")} when you confirm, and proposes objectives you decide one by one.`}
           </span>
         </label>
         {foot(<Button variant="primary" data-primary="true" disabled={!objectivesOk} onClick={next}>Continue</Button>,
-          objectivesOk ? null : count ? "Write at least one, or let Silicus propose them." : "Write at least one, or go back and add a source for Silicus to read.")}
+          objectivesOk ? null : sourcesIn ? "Write at least one, or let Silicus propose them." : "Write at least one, or go back and add a source for Silicus to read.")}
       </section>
     );
   } else if (step === "ai") {
@@ -322,7 +409,7 @@ export function NewCourseWizard() {
     );
   } else if (step === "review") {
     const written = a.outcomes.split("\n").map((l) => l.trim()).filter(Boolean);
-    const proposing = a.fromSources && count > 0;
+    const proposing = a.fromSources && sourcesIn > 0;
     const row = (label: string, value: ReactNode, edit: StepId, action = "Change") => (
       <div className={w.summaryRow}>
         <dt>{label}</dt>
@@ -337,16 +424,19 @@ export function NewCourseWizard() {
           {row("Course", a.title.trim(), "course")}
           {row("Your name", a.owner.trim(), "course")}
           {row("Learners", <>{agesText(aud.ages)} · {groupName(aud)}{stage ? ` · AI stage ${stage} of 4` : ""}</>, "course")}
-          {row("Topic", a.topic.trim(), "course")}
-          {row("Skill-map anchor", aud.anchor ? (
+          {row("Lesson length", `${lessonMinutes} min lesson`, "course")}
+          {row("Goal", a.topic.trim(), "course")}
+          {row("Skill map", anchor ? (
             <>
-              {aud.anchor.name} <span className={ui.hint}>· ages {aud.anchor.ageRangeStart}–{aud.anchor.ageRangeEnd} · {aud.anchor.subject}</span>
+              {anchor.name} <span className={ui.hint}>· ages {anchor.ageRangeStart}–{anchor.ageRangeEnd} · {anchor.subject}</span>
+              {mapChoice.connected ? <><br />Connected: {mapChoice.connected.name} <span className={ui.hint}>· ages {mapChoice.connected.ageRangeStart}–{mapChoice.connected.ageRangeEnd}</span></> : null}
               <StudioMarbleCredit />
             </>
-          ) : "None. You write your own objectives.", "course")}
+          ) : "Skipped. You write your own objectives.", "map")}
           {row("About the class", notes.trim() || "Nothing added.", "course")}
-          {row("Sources", count ? (
+          {row("Sources", sourcesIn ? (
             <ul className={w.summaryList}>
+              {mapSource ? <li>Skill-map topics <span className={ui.hint}>· read from the map, credited, never stored</span></li> : null}
               {files.map((f) => <li key={f.name}>{f.name} <span className={ui.hint}>· read in this tab, {plural(f.chars, "character")}</span></li>)}
               {links.map((u) => <li key={u}>{shortAddress(u)} <span className={ui.hint}>· fetched when Silicus reads it</span></li>)}
             </ul>
@@ -354,7 +444,7 @@ export function NewCourseWizard() {
           {row("Objectives", (
             <>
               {written.length ? <ul className={w.summaryList}>{written.map((o) => <li key={o}>{o}</li>)}</ul> : null}
-              {proposing ? <p style={{ marginTop: written.length ? 6 : 0 }}>Silicus proposes objectives from {plural(count, "source")}{written.length ? ", to sit alongside yours" : ""}.</p> : null}
+              {proposing ? <p style={{ marginTop: written.length ? 6 : 0 }}>Silicus proposes objectives from {plural(sourcesIn, "source")}{written.length ? ", to sit alongside yours" : ""}.</p> : null}
             </>
           ), "objectives")}
           {row("AI", ai.diagnosis.sentence, "ai", "Check")}
@@ -377,7 +467,7 @@ export function NewCourseWizard() {
   return (
     <>
       <TopBar crumbs={[{ label: "Courses", href: href.home }, { label: "New course" }]} />
-      <main className={w.page} data-welcome={step === "welcome" || step === null ? "true" : undefined}>
+      <main className={w.page} data-welcome={step === "welcome" || step === null ? "true" : undefined} data-map={step === "map" ? "true" : undefined}>
         {step && step !== "welcome" ? spine : null}
         {mobileStep}
         {body}

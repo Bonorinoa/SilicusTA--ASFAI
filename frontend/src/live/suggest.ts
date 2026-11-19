@@ -23,7 +23,11 @@ export const SUGGEST_REFUSAL: Readonly<Record<string, string>> = Object.fromEntr
 /** The short reason under a held "Suggest up to 3 more" button. */
 export const SUGGEST_HELD = "Decide the suggestions you already have first. Silicus offers one set at a time.";
 
-/** Kept for the classic view (LiveCourse): the same three parts as the studio, as one line. */
+/**
+ * A suggest refusal as one line: the same three parts the studio shows. The classic view that called this was
+ * deleted in K1; no app code calls it now. Its test still pins that every host code has a plain sentence.
+ * The module stays because the studio's Objectives step uses suggestOffer (which holds with SUGGEST_HELD).
+ */
 export function suggestRefusalText(e: unknown): string {
   return refusalLine(explainRefusal(e, "suggest"));
 }

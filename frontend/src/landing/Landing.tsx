@@ -6,7 +6,7 @@ import styles from "./Landing.module.css";
 
 /**
  * Landing — what Silicus is, before the app, in the studio's look (direction A, "Field notes"). It is the bare URL
- * ("", "#", "#/"); its one primary opens the studio at #/studio. The classic page stays at #/live, linked quietly.
+ * ("", "#", "#/"); its one primary opens the studio at #/studio.
  *
  * Every claim is one the product already makes and keeps: no sign-in, no logos, no endorsements, no retention
  * promise. Where the drafting model is involved, the page says the provider's terms apply. Unbuilt things carry a
@@ -205,7 +205,6 @@ export function Landing() {
       <footer className={styles.footer}>
         <div className={styles.column}>
           <p className={styles.footerText}>A prototype. The AI only proposes and drafts.</p>
-          <a className={styles.footerLink} href="#/live">Classic view</a>
         </div>
       </footer>
     </div>

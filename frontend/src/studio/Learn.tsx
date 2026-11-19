@@ -24,10 +24,11 @@ export function Learn({ courseId }: { courseId: string }) {
   const v = view && view !== "missing" ? view : null;
   const version = v?.versions.at(-1) ?? null;
 
-  const ask = async () => {
-    const question = q.trim();
+  /** `text` = a lesson item the helper offered (K3 clarify or redirect); otherwise the typed question. */
+  const ask = async (text?: string) => {
+    const question = (text ?? q).trim();
     if (!question || asking) return;
-    setQ("");
+    if (text === undefined) setQ("");
     const i = turns.length;
     setTurns((t) => [...t, { q: question }]);
     setAsking(true);
@@ -46,6 +47,7 @@ export function Learn({ courseId }: { courseId: string }) {
     <div className={s.learn}>
       <div className={s.learnRibbon}>
         <span>Preview on this device. Students can’t open this link yet.</span>
+        <a href="#/" style={{ color: "inherit" }}>About Silicus</a>
         <a href={href.course(courseId)} style={{ color: "inherit" }}>Back to the studio</a>
       </div>
 
@@ -60,7 +62,7 @@ export function Learn({ courseId }: { courseId: string }) {
                   <span style={{ opacity: 0.85, fontSize: "0.875rem" }}>{version.owner}</span>
                   <h1>{version.title}</h1>
                   <span style={{ opacity: 0.85, fontSize: "0.875rem" }}>
-                    {version.lessonPlan ? `${version.lessonPlan.activities.reduce((n, a) => n + a.minutes, 0)} minutes · ${version.lessonPlan.activities.length} activities` : null}
+                    {version.lessonPlan ? `${v?.course.lessonMinutes !== undefined ? `${v.course.lessonMinutes} min lesson · ` : ""}${version.lessonPlan.activities.reduce((n, a) => n + a.minutes, 0)} minutes · ${version.lessonPlan.activities.length} activities` : null}
                   </span>
                 </>
               ) : <><Skeleton width="30%" height={12} /><Skeleton width="70%" height={34} /></>}
@@ -97,6 +99,13 @@ export function Learn({ courseId }: { courseId: string }) {
                       <span className={s.learnSource}>
                         <span>From the lesson: {t.a.cites.map((c) => c.label).join(" · ")}</span>
                         {t.a.basis === "explanation" ? <span>Silicus is explaining an idea your lesson names.</span> : null}
+                      </span>
+                    ) : null}
+                    {!t.a.grounded && t.a.offers?.length ? (
+                      <span className={s.learnOffers} role="group" aria-label="Ask about">
+                        {t.a.offers.map((o) => (
+                          <button key={o.id} type="button" className={s.learnOffer} disabled={asking} onClick={() => void ask(o.topic)}>{o.topic}</button>
+                        ))}
                       </span>
                     ) : null}
                   </div>

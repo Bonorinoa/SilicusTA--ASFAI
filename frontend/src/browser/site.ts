@@ -178,6 +178,9 @@ export function createSite({ origin, fetchImpl, passcode, requestTimeoutMs = REQ
     if (res.status === 503) throw new MaterialError("FETCH_NOT_CONFIGURED", "Reading links is not set up on this site. Paste the text instead.");
     if (res.status === 429) throw new MaterialError("RATE_LIMITED", "Too many links read just now. Wait a minute and try again.");
     if (res.status === 413) throw new MaterialError("TOO_LARGE", "that page is too large to read");
+    // K1: /api/fetch passes the page's own status in the 422 sentence above ("that link answered 403"); its own
+    // deadline is a 504, which the teacher should read as a slow site, not an unreachable one.
+    if (res.status === 504) throw new MaterialError("URL_UNREACHABLE", "reading that link took too long (504)");
     throw new MaterialError("URL_UNREACHABLE", `that link could not be read (${res.status})`);
   }
 

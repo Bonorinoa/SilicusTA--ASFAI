@@ -1,0 +1,9 @@
+.wait { display: flex; flex-direction: column; gap: 6px; padding: 14px 0; }
+.line { display: flex; align-items: baseline; gap: 10px; font-family: var(--fn-serif); font-size: 1.125rem; color: var(--fn-ink); min-height: 1.6em; }
+.dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 999px; background: var(--fn-accent); transform: translateY(-2px); animation: breathe 1.6s var(--fn-ease) infinite; }
+.text { animation: rise 260ms var(--fn-ease); }
+.late { font-size: 0.875rem; color: var(--fn-ink-soft); padding-left: 18px; }
+.sub { font-size: 0.8125rem; color: var(--fn-ink-muted); padding-left: 18px; }
+@keyframes breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dot, .text { animation: none; } }

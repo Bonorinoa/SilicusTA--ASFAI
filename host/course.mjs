@@ -31,6 +31,7 @@ import { reasonsOf } from "./reasons.mjs";
 import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
 import { agesError, stageForAges } from "./ages.mjs";
+import { lessonMinutesError } from "./lesson-length.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -54,11 +55,19 @@ export class CourseSession {
    * snapshot; it is a POINTER, never an identity — it is stored on the record, never proposed,
    * never confirmed, never part of a sealed objective list.
    */
-  static create(store, { owner, title, description = "", materials = [], objectivesConfirm, ages = null, marbleAnchor = null } = {}) {
+  static create(store, { owner, title, description = "", materials = [], objectivesConfirm, ages = null, marbleAnchor = null, marbleConnected = null, lessonMinutes = null } = {}) {
     const agesMsg = agesError(ages);
     if (agesMsg !== null) {
       const e = new Error(agesMsg);
       e.code = "BAD_AGES";
+      throw e;
+    }
+    // K2: the teacher's lesson length, a whole number of minutes 10-180, checked HERE like the ages so no caller
+    // can persist a bad one. Absent stays absent (a legacy course: no length, no check).
+    const minutesMsg = lessonMinutesError(lessonMinutes);
+    if (minutesMsg !== null) {
+      const e = new Error(minutesMsg);
+      e.code = "BAD_LESSON_MINUTES";
       throw e;
     }
     const courseId = `urn:uuid:${randomUUID()}`;
@@ -70,7 +79,7 @@ export class CourseSession {
     // course's record is byte-identical to one written before the mode existed and replays as "auto".
     const objectivesMode = objectivesConfirm === "explicit" ? "explicit" : undefined;
     const anchor = typeof marbleAnchor === "string" && marbleAnchor.length > 0 ? marbleAnchor : undefined;
-    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, ages, marbleAnchor: anchor, at: Date.now() });
+    store.initCourse({ courseId, owner, title, description, materials: materialNames(materials), seed, objectivesConfirm: objectivesMode, ages, marbleAnchor: anchor, marbleConnected: anchor && typeof marbleConnected === "string" && marbleConnected.startsWith("mt_") && marbleConnected !== anchor ? marbleConnected : undefined, lessonMinutes: Number.isInteger(lessonMinutes) ? lessonMinutes : undefined, at: Date.now() });
     return CourseSession.load(store, courseId);
   }
 
@@ -110,6 +119,10 @@ export class CourseSession {
     const storedAges = (created?.ages && typeof created.ages === "object") ? { min: created.ages.min, max: created.ages.max } : null;
     this.#ages = agesError(storedAges) === null ? storedAges : null;
     this.#anchor = typeof created?.marbleAnchor === "string" && created.marbleAnchor.length > 0 ? created.marbleAnchor : null;
+    // M1: the connected topic, a pointer from the same chained event; only meaningful beside an anchor.
+    this.#connected = this.#anchor && typeof created?.marbleConnected === "string" && created.marbleConnected.startsWith("mt_") ? created.marbleConnected : null;
+    // K2: the lesson length, from the same chained event. Absent or out of range reads as unset (behaves as before).
+    this.#lessonMinutes = Number.isInteger(created?.lessonMinutes) && lessonMinutesError(created.lessonMinutes) === null ? created.lessonMinutes : null;
     this.#ledger = new TurnLedger({ clock: () => this.#now });
     // Checkpoint 2's host-side gate: the ASFAI clarification round, unskippable.
     this.#intake = new LessonIntake({ ledger: this.#ledger, courseId: meta.courseId });
@@ -140,6 +153,9 @@ export class CourseSession {
   #ages;
   /** @type {string | null} The skill-map anchor (an mt_* id in the snapshot), or null (G2a). */
   #anchor;
+  /** K2: the teacher's lesson length in minutes, or null for a course created without one. */
+  #lessonMinutes = null;
+  #connected = null;
   #validations = [];
   #planAt = null;
   /** @type {Map<string, object>} schema-v2 learning-design per plan id (host metadata, never gate state) */
@@ -249,7 +265,8 @@ export class CourseSession {
         if (event.assistantText) {
           this.#ledger.recordAssistantTurn(event.assistantText, { channel: "model", at: event.at });
         }
-        for (const m of event.materials ?? []) this.#materialsUsed.push({ name: m.name, digest: m.digest, chars: m.chars });
+        // M1: a skill-map source is recorded as {kind: "marble", id} only; it is not a material the teacher supplied.
+        for (const m of event.materials ?? []) if (m?.kind !== "marble") this.#materialsUsed.push({ name: m.name, digest: m.digest, chars: m.chars });
         const created = this.#gate.proposeObjectives(event.items);
         created.forEach((record, i) => {
           this.#proposalIds.push(record.id);
@@ -453,7 +470,7 @@ export class CourseSession {
    *
    * @param {{worker: object, materials: {name: string, text: string, chars: number, digest: string}[], at?: number}} input
    */
-  async proposeObjectivesFromMaterials({ worker, materials = [], at } = {}) {
+  async proposeObjectivesFromMaterials({ worker, materials = [], mapMaterials = [], at } = {}) {
     if (this.#objectivesMode === "explicit") {
       // R3 (sprint 2026-10-19), explicit courses only: proposing from sources is a round the teacher can repeat
       // until THEY confirm the objectives. Their own objectives never block it; a round still waiting does.
@@ -468,7 +485,8 @@ export class CourseSession {
       return { ok: false, code: "ALREADY_PROPOSED", reason: "objectives have already been proposed for this course" };
     }
     if (!worker) return { ok: false, code: "WORKER_NOT_CONFIGURED", reason: "no drafting worker is configured" };
-    if (!Array.isArray(materials) || materials.length === 0) {
+    const map = Array.isArray(mapMaterials) ? mapMaterials : [];
+    if ((!Array.isArray(materials) || materials.length === 0) && map.length === 0) {
       return { ok: false, code: "NO_MATERIALS", reason: "there is no material to propose objectives from" };
     }
     const answers = this.#intake.answers();
@@ -482,7 +500,7 @@ export class CourseSession {
     let proposed;
     try {
       proposed = await worker.draftObjectives({
-        materials: materials.map((m) => ({ name: m.name, text: m.text })),
+        materials: [...materials, ...map].map((m) => ({ name: m.name, text: m.text })),
         topic: String(answers?.topic ?? ""),
         course: String(answers?.course ?? this.meta.title ?? ""),
         outcomes,
@@ -498,13 +516,19 @@ export class CourseSession {
       const text = from.length > 0 ? `from material: ${from.join(", ")}` : "from material: (several)";
       return text.length <= 120 ? text : "from material: (several)";
     };
+    const mapNames = new Set(map.map((m) => m.name));
     const a = at ?? Date.now();
     const event = {
       kind: "objectives.proposed",
       items: proposed.map((o) => ({ kind: "local", statement: o.statement })),
-      sources: proposed.map((o) => label(o.from)),
+      // M1: a proposal drawn only from the skill-map text is labelled "marble" (the studio shows the Marble credit);
+      // a mixed one keeps the teacher's material names.
+      sources: proposed.map((o) => {
+        const own = o.from.filter((n) => !mapNames.has(n));
+        return o.from.length > 0 && own.length === 0 ? "marble" : label(own);
+      }),
       assistantText: `Proposed ${proposed.length} objective${proposed.length === 1 ? "" : "s"} from your materials.`,
-      materials: materials.map((m) => ({ name: m.name, digest: m.digest, chars: m.chars })),
+      materials: [...materials.map((m) => ({ name: m.name, digest: m.digest, chars: m.chars })), ...map.map((m) => ({ kind: "marble", id: m.id }))],
       at: a,
     };
     this.#apply(event);
@@ -653,7 +677,7 @@ export class CourseSession {
 
     let drafted;
     try {
-      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs });
+      drafted = await worker.draft({ objectives, topic, materials, course, context, ages: this.#ages ?? null, anchorPrereqs, lessonMinutes: this.#lessonMinutes });
     } catch (e) {
       return { ok: false, code: e?.code ?? "WORKER_FAILED", reason: e instanceof Error ? e.message : String(e) };
     }
@@ -938,6 +962,9 @@ export class CourseSession {
         // objective id, never confirmed, never part of a sealed objective list.
         ...(this.#ages ? { ages: { min: this.#ages.min, max: this.#ages.max }, stage: stageForAges(this.#ages) } : {}),
         ...(this.#anchor ? { marbleAnchor: this.#anchor } : {}),
+        ...(this.#connected ? { marbleConnected: this.#connected } : {}),
+        // K2: the lesson length the teacher set (absent on courses created without one).
+        ...(this.#lessonMinutes !== null ? { lessonMinutes: this.#lessonMinutes } : {}),
       },
       checkpoints: this.#gate.checkpoints(),
       objectivesMode: this.#objectivesMode,

@@ -25,6 +25,8 @@ import {
 export interface PlanCardProps {
   /** The gate's own LessonPlanRecord (confirmed) — rendered, never re-decided. */
   plan: LessonPlanView;
+  /** K2: the lesson length the teacher set on the course (minutes). Absent on courses created without one. */
+  lessonMinutes?: number;
   /** Confirmed objectives (the citation key), from the gate's confirmed set. */
   objectives: readonly ObjectiveCiteView[];
   /** Who confirmed the plan (parent-supplied provenance summary). */
@@ -72,7 +74,7 @@ const SOURCE_LABEL: Record<string, string> = {
   "marble": "Marble's skill taxonomy",
 };
 
-export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline" }: PlanCardProps) {
+export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline" }: PlanCardProps) {
   const citedIds = plan.activities.flatMap((a) => a.objectiveIds);
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
@@ -141,7 +143,9 @@ export function PlanCard({ plan, objectives, teacher, onPrint, invalidation, rew
           </span>
         ) : null}
         <span className={styles.metaDot}> · </span>
-        <span>{plural(totalMinutes, "minute")}</span>
+        {lessonMinutes !== undefined
+          ? <span data-lesson-length>{lessonMinutes} min lesson · activities {totalMinutes} min</span>
+          : <span>{plural(totalMinutes, "minute")}</span>}
         <span className={styles.metaDot}> · </span>
         <span>
           {plan.activities.length} {plan.activities.length === 1 ? "activity" : "activities"}

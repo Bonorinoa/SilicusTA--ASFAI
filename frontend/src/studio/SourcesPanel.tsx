@@ -9,7 +9,7 @@ import { describeFile } from "../materials/display";
 import type { HeldFile } from "../materials/session";
 import { SourceDrop } from "./SourceDrop";
 import { shortAddress } from "./sourceIntake";
-import { legacyNames, skippedLine, usedFor, usedLine, type Skipped } from "./sourceUse";
+import { legacyNames, skippedDetail, skippedLine, usedFor, usedLine, type Skipped } from "./sourceUse";
 import { Button, Dialog, Soon, ui } from "./ui";
 import s from "./Studio.module.css";
 
@@ -45,7 +45,14 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, p
   };
   const useRow = (name: string) => {
     const line = use(name);
-    return line ? <><br /><span className={s.sourceMeta} data-source-use={line.startsWith("Skipped") ? "skipped" : "used"}>{line}</span></> : null;
+    if (!line) return null;
+    const detail = line.startsWith("Skipped") ? skippedDetail(name, skipped) : null;
+    return (
+      <>
+        <br /><span className={s.sourceMeta} data-source-use={line.startsWith("Skipped") ? "skipped" : "used"}>{line}</span>
+        {detail ? <details className={s.sourceMeta}><summary>Details</summary>{detail}</details> : null}
+      </>
+    );
   };
   const count = held.length + links.length + waiting.length;
 

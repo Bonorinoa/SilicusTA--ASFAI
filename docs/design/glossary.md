@@ -48,9 +48,18 @@ when it ran ("Checked 2 minutes ago: no format problems").
   - basis `plan`: "From Objective 2 · Activity 2: Place unit fractions" (existing format).
   - basis `explanation`: "Explains an idea in Objective 2. The explanation is the AI's, not your plan's words."
 - Refusal sentences (exact strings; host constants, smokes assert them):
-  - `off_topic`: "That isn't part of this lesson. Ask your teacher."
+  - `off_topic` (K3 redirect, host-composed): "That isn't part of today's lesson. I can help with: {up to 3 objectives,
+    in the preview's words, joined by ' · '}. Or ask your teacher." With no objective to name: "That isn't part of
+    today's lesson. Ask your teacher."
   - `assessment`: "I can't tell you how you're doing. Your teacher decides that."
   - (Retired: "That isn't in this course yet. Ask your teacher." — "yet" promised content that may never come.)
+  - (Retired by K3: "That isn't part of this lesson. Ask your teacher." — a dead end for a child.)
+- Other host-composed replies (K3, owner 17 Nov; no model words, host constants in `host/student.mjs`):
+  - `clarify`: "What would you like to know? I can help with: {up to 3 items the model chose, ' · '}."
+    Objectives read as the student preview shows them ("Explain why grass is green"); activities by title.
+  - `about_helper`: "I'm Silicus, a helper for today's lesson: {lesson title}. Ask me about it."
+  - Rehearse trace labels: clarify "Asked what they meant · fixed text listing your plan's items"; about_helper
+    "Introduced itself · fixed text"; off_topic "Refused · not in the published version · pointed back to your objectives".
 
 ## Objective sources (labels under each proposed objective)
 

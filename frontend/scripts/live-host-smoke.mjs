@@ -557,6 +557,22 @@ check("revise: the host reads the record as drafting version 2, with the teacher
 await page.reload({ waitUntil: "networkidle0" });   // the API add happened behind the page's back
 await page.evaluate((id) => { location.hash = `#/studio/${encodeURIComponent(id)}`; }, course2);
 await waitBody("Publish version 2");
+// N2 (K5V C1): at 390 px the revision note's "Draft a new lesson plan…" button stays inside its card and the page
+// does not scroll sideways (it measured 462 px wide before the fix).
+{
+  const orig = page.viewport();
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  await sleep(400);
+  const m = await page.evaluate(() => {
+    const card = document.querySelector('section[aria-label="Revising this course"]');
+    const btn = card && [...card.querySelectorAll("button")].find((b) => /Draft a new lesson plan/.test(b.textContent ?? ""));
+    return { card: !!card, btn: !!btn, cardRight: card?.getBoundingClientRect().right ?? null, btnRight: btn?.getBoundingClientRect().right ?? null, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+  });
+  check("N2 K5V C1 at 390 px the revision note's 'Draft a new lesson plan' button stays inside its card, and the page does not scroll sideways",
+    m.card && m.btn && m.btnRight <= m.cardRight + 0.5 && m.sw <= m.cw, JSON.stringify(m));
+  await page.setViewport(orig);
+  await sleep(200);
+}
 check("revise: while drafting, the page lists what changed since version 1 and offers to publish version 2",
   (await hasText("Since version 1")) && (await hasText("Added: Students can debug a short program.")) && !(await hasText("Version 1 is published")));
 check("revise: the UI says you are drafting version 2, and version 1 is still the only sealed version",

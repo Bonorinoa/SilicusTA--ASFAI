@@ -33,6 +33,8 @@ panels as they stood at `437f053` (deleted by K1 in `1bdbae8`, `git diff --stat 
 | 21 | Browser record: back up and restore (`BrowserRecord`, browser host) | yes | `studio/Home.tsx:105` | — |
 | 22 | Demo passcode dialog (`PasscodeDialog`) | yes | `studio/StudioApp.tsx:35` | — |
 | 23 | Look back at a finished step, with one way back (`StepIndex`, `LiveCourse.tsx:860-893`) | yes | `studio/CourseStudio.tsx` stepper, `studio/steps/PlanStep.tsx:25` | `data-primary` added to "Back to the current step" |
+| 24 | **ASFAI course intake** (added by N2 on 18 Nov for K5V C2/G1): ASFAI asks the clarifying questions (`OnboardingChat.tsx`: "Use ASFAI's questionnaire", "Connect ASFAI", "Send to ASFAI"; `LiveCourse.tsx:283-310`) | **no**: the wizard asks its own questions as a form | — | not restored (see below) |
+| 25 | **Record details** (added by N2 on 18 Nov for K5V C2/G2): course id and plan id on screen, the event count, "What the gate said" with the gate's raw publish blockers (`RecordDetails.tsx`) | **partly**: the hash-chain check is row 17; blockers reach the teacher only in plain words (`PublishCard` `reasonsFor`); the raw gate text and the ids are not on screen | — | not restored (see below) |
 
 ## Not restored, one line each (the PM decides)
 
@@ -40,6 +42,10 @@ panels as they stood at `437f053` (deleted by K1 in `1bdbae8`, `git diff --stat 
   not a dependency for the December demo (the graph is Marble, read by us). It does not protect the record.
 - **#19 Timeline card.** It is a second view of the same events the History drawer already lists; it adds no check
   and no teacher control.
+- **#24 ASFAI course intake** (N2). The ASFAI connection is Off in the online app and is not a dependency for the
+  December demo; the wizard's own questions cover topic, course and outcomes. The PM decides.
+- **#25 Record details** (N2). The raw gate text is what helps diagnose a refused publish (K5V); the teacher sees
+  the same blockers in plain words. The PM decides whether a closed "Details" with the raw text is worth restoring.
 - **#20 First-run tour.** Onboarding copy, not a record or control feature; the landing page explains the product.
 
 ## Where the restored features live (K5)

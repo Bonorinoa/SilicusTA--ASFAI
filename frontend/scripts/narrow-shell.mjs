@@ -621,6 +621,36 @@ try {
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) await g2cTall(1440, 1, "2026-11-14-plan-v2-stage3.png");
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
 
+  // ---- N2 (K5V C1): revise the published stage-3 course and look at the revision note at 390 px. Removing an
+  // objective the plan cites invalidates the plan, so the note offers "Draft a new lesson plan from your confirmed
+  // objectives" — the button that ran 462 px wide before the fix.
+  const rv = [
+    await g2cMove("Confirm the lesson plan", () => /Review and publish/.test(document.body.innerText), 12000),
+    await g2cMove("Publish version 1…", () => /Publish version 1\?/.test(document.body.innerText)),
+    await g2cMove("Publish version 1", () => /Version 1 is published/.test(document.body.innerText), 12000),
+    await g2cMove("Revise objectives", () => /Objectives confirmed\./.test(document.body.innerText)),
+    // Remove an objective the plan cites ("In the plan"), so the plan is invalidated and a new one is needed.
+    await (async () => { for (let i = 0; i < 20; i++) {
+      if (await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Remove objective"))) return true;
+      await page.evaluate(() => { const li = [...document.querySelectorAll("li[data-objective-id]")].find((l) => /In the plan/.test(l.textContent ?? "")); [...(li?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "Remove")?.click(); });
+      await sleep(500);
+    } return false; })(),
+    await g2cMove("Remove objective", () => !!document.querySelector('section[aria-label="Revising this course"]'), 12000),
+  ];
+  const rvShot = async (name) => { if (process.env.NARROW_SHELL_REVISION_SHOT) { await page.evaluate(() => document.querySelector('section[aria-label="Revising this course"]')?.scrollIntoView({ block: "center" })); await sleep(200); await page.screenshot({ path: `${process.env.NARROW_SHELL_REVISION_SHOT}/${name}` }); } };
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+  await sleep(400);
+  const rvm = await page.evaluate(() => {
+    const card = document.querySelector('section[aria-label="Revising this course"]');
+    const btn = card && [...card.querySelectorAll("button")].find((b) => /Draft a new lesson plan/.test(b.textContent ?? ""));
+    const cr = card?.getBoundingClientRect(), br = btn?.getBoundingClientRect();
+    return { card: !!card, btn: !!btn, cardLeft: cr?.left ?? null, cardRight: cr?.right ?? null, btnLeft: br?.left ?? null, btnRight: br?.right ?? null, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+  });
+  await rvShot("n2-revision-note-390.png");
+  check("N2 K5V C1 at 390 px the revision note's 'Draft a new lesson plan' button stays inside its card, and the page does not scroll sideways",
+    !rv.includes(false) && rvm.card && rvm.btn && rvm.btnLeft >= rvm.cardLeft - 0.5 && rvm.btnRight <= rvm.cardRight + 0.5 && rvm.sw <= rvm.cw, JSON.stringify({ rv, ...rvm }));
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+
   check("0 console errors", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));
   check("the only network calls were the site's functions", api.calls.every((c) => ["/api/worker", "/api/worker/status"].includes(c.path)));
 

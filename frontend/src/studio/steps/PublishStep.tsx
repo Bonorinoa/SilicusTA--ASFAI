@@ -5,6 +5,7 @@ import { plural } from "../../lib/plural";
 import { buildHandoutHtml, handoutFilename } from "../../live/handout";
 import { reasonsFor } from "../../live/reasonText";
 import { ActionBar } from "./ActionBar";
+import { RecordCard } from "../RecordCard";
 import type { StepProps } from "../CourseStudio";
 import { href } from "../StudioApp";
 import { Button, LinkButton } from "../ui";
@@ -49,6 +50,9 @@ export function PublishStep({ c, view, onLook }: StepProps) {
             <p className={s.docLede} style={{ fontSize: "0.9375rem" }}>Edit, add or remove objectives, then re-draft or re-confirm the plan and publish version {published.version + 1}. Students keep seeing version {published.version} until then.</p>
             <div><Button onClick={() => onLook("objectives")}>Revise objectives</Button></div>
           </section>
+
+          {/* K5: the pinned-copy check, the verified archive and the version comparison, near the published version. */}
+          <RecordCard courseId={id} versions={view.versions} busy={c.busy} />
         </div>
       </div>
     );
@@ -100,6 +104,8 @@ export function PublishStep({ c, view, onLook }: StepProps) {
             ids="record"
           />
         ) : null}
+
+        {published ? <RecordCard courseId={id} versions={view.versions} busy={c.busy} /> : null}
 
         {armed ? (
           <ActionBar text={<><strong>Publish version {next}?</strong> Students get it as it reads above, and it can’t be changed afterwards.</>}>

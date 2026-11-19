@@ -430,7 +430,12 @@ export class CourseSession {
    * ledger must not record a model turn claiming authorship.
    */
   proposeObjectivesFromAnswers({ at } = {}) {
-    if (this.#proposalIds.length > 0) {
+    // N1 (L1 finding 1): an explicit course may have had a source round first; the teacher's typed lines must still
+    // reach the page, once. Refused only when they are already there (in any state) or the set is confirmed.
+    const blocked = this.#objectivesMode === "explicit"
+      ? this.#answersDerived() || this.view().checkpoints.objectives?.status === "confirmed"
+      : this.#proposalIds.length > 0;
+    if (blocked) {
       return {
         ok: false,
         code: "ALREADY_PROPOSED",
@@ -490,12 +495,18 @@ export class CourseSession {
       return { ok: false, code: "NO_MATERIALS", reason: "there is no material to propose objectives from" };
     }
     const answers = this.#intake.answers();
+    // N1 (L1 finding 1): the wizard promised "One per line. Each becomes a proposal you accept, edit or drop." On an
+    // explicit course the teacher's own lines go on the page FIRST, as their words (no model turn), before the model
+    // is asked. They stay even if the model then fails: they never depended on it.
+    if (this.#objectivesMode === "explicit" && !this.#answersDerived() && objectivesFromAnswers(answers).length > 0) {
+      this.proposeObjectivesFromAnswers({ at });
+    }
     // R2 (F4): the worker proposes CONDITIONED on what the teacher already has. Their brief outcomes, and every
     // objective already on the course that is not dropped, each tagged with who it came from (the teacher's own,
     // accepted, or a proposal still waiting). These are untrusted text in the prompt, exactly like the material.
     const outcomes = objectivesFromAnswers(answers).map((o) => o.statement);
     const existing = this.#rows()
-      .filter((r) => r.status !== "dropped")
+      .filter((r) => r.status !== "dropped" && !(r.status === "proposed" && (r.source === SOURCE_FROM_ANSWERS || r.source === SOURCE_FROM_LOCAL_ANSWERS)))
       .map((r) => ({ statement: r.statement, by: r.by === "teacher" ? "teacher" : r.status === "proposed" ? "proposed" : "accepted" }));
     let proposed;
     try {
@@ -591,6 +602,11 @@ export class CourseSession {
     this.#apply(event);
     this.#append(event);
     return { ok: true, proposals: this.view().proposals };
+  }
+
+  /** N1: the teacher's brief outcomes are already on the page (proposed, decided or dropped). */
+  #answersDerived() {
+    return this.#rows().some((r) => r.source === SOURCE_FROM_ANSWERS || r.source === SOURCE_FROM_LOCAL_ANSWERS);
   }
 
   /** Checkpoint 3: the AI proposes objectives (never confirmed here). */

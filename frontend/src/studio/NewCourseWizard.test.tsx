@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   getCourse: vi.fn(),
   answerIntake: vi.fn(),
   confirmCheckpoint: vi.fn(),
+  proposeObjectives: vi.fn(),
   marbleCoverage: vi.fn(),
   marbleSearch: vi.fn(),
   marbleRank: vi.fn(),
@@ -40,6 +41,7 @@ beforeEach(() => {
   mocks.getCourse.mockResolvedValue({ courseId: ID, intake: { questions: QUESTIONS } });
   mocks.answerIntake.mockResolvedValue({});
   mocks.confirmCheckpoint.mockResolvedValue({});
+  mocks.proposeObjectives.mockResolvedValue({ proposals: [] });
   // Topics per age, shaped like the coverage route: none past 15, as in the pinned snapshot.
   mocks.marbleCoverage.mockImplementation(async (min: number, max: number) => ({
     query: { min, max }, overlapping: min > 15 ? 0 : 1320,
@@ -135,6 +137,25 @@ describe("NewCourseWizard", () => {
     expect(heldFor(ID).map((h) => h.name)).toEqual(["Leaves catch light."]);
     expect(linksFor(ID)).toEqual([]);
     expect(takeProposeOnArrival(ID)).toBe(true);
+    // N1: with sources, the host's source round puts the typed lines on the page; the wizard does not derive twice.
+    expect(mocks.proposeObjectives).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe(`#/studio/${encodeURIComponent(ID)}`);
+  });
+
+  it("N1: typed objectives with no sources become proposals: after the outline, the wizard asks the host to derive them", async () => {
+    const user = userEvent.setup();
+    render(<NewCourseWizard />);
+    await fillCourse(user);
+    await user.click(screen.getByRole("button", { name: "Continue without sources" }));
+    await user.type(screen.getByLabelText(/Write a few/), "Explain how a plant makes food{enter}Name the parts of a leaf");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" })); // AI check
+    await user.click(screen.getByRole("button", { name: /^Confirm and create/ }));
+    await waitFor(() => expect(mocks.proposeObjectives).toHaveBeenCalledWith(ID), { timeout: 10_000 });
+    expect(mocks.answerIntake.mock.calls[0][1].answers.learning_outcomes).toBe("Explain how a plant makes food\nName the parts of a leaf");
+    const order = [mocks.confirmCheckpoint, mocks.proposeObjectives].map((m) => m.mock.invocationCallOrder.at(-1)!);
+    expect(order[0]).toBeLessThan(order[1]);
+    expect(takeProposeOnArrival(ID)).toBe(false);
     expect(window.location.hash).toBe(`#/studio/${encodeURIComponent(ID)}`);
   });
 

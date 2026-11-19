@@ -161,7 +161,8 @@ test("the skill map as a source: transient text to the worker, {kind:'marble', i
   const r = { ok: true, proposals: res.json.proposals };
   assert.deepEqual(prompts[0].map((m) => m.name), ["Skill map: Reflecting Light", "Skill map: What Plants Need to Thrive"]);
   assert.equal(r.ok, true);
-  assert.equal(r.proposals[0].source, "marble");
+  // N1: the teacher's typed line goes on the page first, as their own; the model's proposal follows, labelled "marble".
+  assert.deepEqual(r.proposals.map((p) => p.source), ["from your answer", "marble"]);
   assert.match(prompts[0][0].text, /shiny smooth surfaces/);
   const all = JSON.stringify(store.snapshot());
   assert.doesNotMatch(all, /shiny smooth surfaces/, "the map text is never recorded");

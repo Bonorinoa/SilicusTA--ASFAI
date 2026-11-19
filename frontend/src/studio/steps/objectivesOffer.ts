@@ -77,7 +77,8 @@ export function objectivesOffer(args: {
     mode,
     canWrite: !confirmed,
     sources: { show: showSources, heldBy: showSources ? heldBy : null },
-    answers: { show: !confirmed && args.hasOutcomes && !anyProposalRound && !rows.some((r) => ANSWER_LABEL(r.source)) },
+    // N1: on explicit courses a source round no longer hides the teacher's own lines (the host derives them once).
+    answers: { show: !confirmed && args.hasOutcomes && (mode === "explicit" || !anyProposalRound) && !rows.some((r) => ANSWER_LABEL(r.source)) },
     confirm: { show: mode === "explicit" && !confirmed, enabled: decided.length > 0 && waiting.length === 0, text: confirmText },
   };
 }

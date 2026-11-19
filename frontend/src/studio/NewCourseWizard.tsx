@@ -175,6 +175,11 @@ export function NewCourseWizard() {
       await host.confirmCheckpoint(courseId, { id: "files", text: "Confirm the source list." });
       await host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." });
       if (a.fromSources && sourcesIn > 0) askToProposeOnArrival(courseId);
+      // N1 (L1 finding 1): "Each becomes a proposal you accept, edit or drop." With sources, the host puts the typed
+      // lines on the page at the start of the source round. Without, the wizard asks the host to derive them now (the
+      // host reads them from its own record; no statement crosses the wire). A refusal here is not a lost course:
+      // the Objectives step still offers "Use my answers".
+      else if (a.outcomes.split("\n").some((l) => l.trim() !== "")) await host.proposeObjectives(courseId).catch(() => undefined);
       window.location.hash = href.course(courseId);
     } catch (e) {
       const id = courseId;

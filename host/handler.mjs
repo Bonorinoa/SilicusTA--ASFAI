@@ -357,9 +357,11 @@ export function createHandler({ store, asfai: asfaiSvc, worker: planWorker, work
       // nothing, and a slow model call must not hold up the teacher. Only {question, history} are read.
       if (parts[3] === "student" && parts[4] === "ask" && parts.length === 5) {
         if (method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", `${method} not allowed`);
-        const sealed = session(courseId).latestSealedVersion();
+        const s = session(courseId);
+        const sealed = s.latestSealedVersion();
         if (!sealed) throw new HttpError(409, "NOT_PUBLISHED", "this course has not been published yet");
-        return { status: 200, json: await askStudent({ pkg: packageOf(sealed), worker: planWorker, body: await body() }) };
+        // N4: the course's recorded ages (G2a) set the helper's mode; a legacy course falls back to the plan's audience.
+        return { status: 200, json: await askStudent({ pkg: packageOf(sealed, { ages: s.recordedAges() }), worker: planWorker, body: await body() }) };
       }
 
       return withCourse(courseId, async () => {

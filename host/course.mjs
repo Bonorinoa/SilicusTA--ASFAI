@@ -152,6 +152,11 @@ export class CourseSession {
   #objectivesMode;
   /** @type {{min: number, max: number} | null} Structured ages from the course record (G2a); null = legacy. */
   #ages;
+
+  /** N4: the course's recorded ages (a copy), or null for a legacy course. Read-only. */
+  recordedAges() {
+    return this.#ages ? { min: this.#ages.min, max: this.#ages.max } : null;
+  }
   /** @type {string | null} The skill-map anchor (an mt_* id in the snapshot), or null (G2a). */
   #anchor;
   /** K2: the teacher's lesson length in minutes, or null for a course created without one. */

@@ -31,6 +31,9 @@ import { everythingStored, fakeSite, MemoryStorage, ORIGIN, rig, type Rig } from
 
 const PARITY_SCRIPT = fileURLToPath(new URL("../../../host/scripts/parity-run.mjs", import.meta.url));
 const N6_PARITY_SCRIPT = fileURLToPath(new URL("../../../host/scripts/n6-parity-run.mjs", import.meta.url));
+const PRE_N6_FIXTURE = JSON.parse(
+  readFileSync(new URL("../../../host/fixtures/n6-pre-authorship-record.json", import.meta.url), "utf8"),
+);
 
 afterEach(() => { setPasscodePrompt(null); vi.restoreAllMocks(); });
 
@@ -114,6 +117,19 @@ describe("parity: one API, two hosts", () => {
     const anchor = transcript.find((step: any) => step.path.endsWith("/anchor/1"))?.json.anchor as CourseAnchor;
     expect(comparePin({ ...anchor, pinnedAt: 1767225600000 }, anchor).status).toBe("ok");
   }, 60_000);
+
+  it("N6 compatibility: comparePin accepts the anchor replayed from a pre-authorship record", () => {
+    const fixture = PRE_N6_FIXTURE;
+    const store = new RecordStore();
+    store.load({
+      metas: [{ courseId: fixture.meta.courseId, text: metaText(fixture.meta) }],
+      events: fixture.lines.map((line: string, i: number) => ({ courseId: fixture.meta.courseId, seq: i + 1, line })),
+    });
+    const anchor = CourseSession.load(store, fixture.meta.courseId).publishAnchor(1) as CourseAnchor;
+
+    expect(anchor).toEqual(fixture.expectedAnchor);
+    expect(comparePin({ ...fixture.expectedAnchor, pinnedAt: 1767225600000 }, anchor).status).toBe("ok");
+  });
 
   it("Marble parity: the browser host serves the same read-only search and topic shapes the Node host serves, from the same snapshot", async () => {
     const r = await rig({ marbleLoad: async () => readFileSync(new URL("../../../host/data/marble/marble-snapshot.json", import.meta.url), "utf8") });

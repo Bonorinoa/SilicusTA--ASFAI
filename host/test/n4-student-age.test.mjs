@@ -124,17 +124,17 @@ test("N4 7. the worker prompt: try-first items are marked; only an adult course 
   assert.match(seen[1], /unrelated to the course's subject/);
 });
 
-test("N4 8. the route keys the mode on the course's RECORDED ages (G2a), not only the plan's audience", async (t) => {
+test("N4 8. the route keys the mode on the course's RECORDED ages (G2a) and reads the sealed plan's design (aiStatus)", async (t) => {
   const { mkdtempSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const { createApp } = await import("../server.mjs");
   const general = { kind: "answer", basis: "general", answer: "A general explanation.", cites: [] };
   const reply = ({ prompt }) => {
-    if (/COURSE PACKAGE/.test(prompt)) return general;
+    if (/COURSE PACKAGE/.test(prompt)) return /Student: .*activity/.test(prompt) ? { kind: "answer", basis: "plan", answer: "Start with the first sentence.", cites: ["activity:1"] } : general;
     const ids = [...String(prompt).matchAll(/^- (urn:uuid:[0-9a-f-]+):/gm)].map((m) => m[1]);
     return { title: "Steps", audience: { ageRangeStart: 8, ageRangeEnd: 10 },
-      activities: ids.map((id, i) => ({ title: `Spot the claim ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Mark the claim.", teacherDoes: "Ask why.", evidenceIfAny: "observation" })) };
+      activities: ids.map((id, i) => ({ title: `Spot the claim ${i + 1}`, minutes: 15, objectiveIds: [id], learnerDoes: "Mark the claim.", teacherDoes: "Ask why.", evidenceIfAny: "observation", aiStatus: "forbidden" })) };
   };
   const wm = await startMockWorker({ reply });
   const app = createApp({ dataDir: mkdtempSync(join(tmpdir(), "silicus-n4-")), worker: new PlanWorker({ url: wm.url, model: "m" }), sources: [] });
@@ -156,10 +156,19 @@ test("N4 8. the route keys the mode on the course's RECORDED ages (G2a), not onl
     assert.equal(pub.status, 200, JSON.stringify(pub.json));
     return c;
   };
-  const adult = await post(`${await publish({ min: 19, max: 40 })}/student/ask`, { question: "What is a warrant?" });
+  const ac = await publish({ min: 19, max: 40 });
+  const adult = await post(`${ac}/student/ask`, { question: "What is a warrant?" });
   assert.deepEqual([adult.status, adult.json.kind, adult.json.basis, adult.json.general, adult.json.grounded], [200, "answer", "explanation", true, false]);
-  const kid = await post(`${await publish({ min: 12, max: 14 })}/student/ask`, { question: "What is a warrant?" });
+  const nudge = await post(`${ac}/student/ask`, { question: "help with the activity" });
+  assert.deepEqual([nudge.json.kind, nudge.json.nudge, nudge.json.answer], ["answer", true, `${NUDGE} Start with the first sentence.`]);
+  const kc = await publish({ min: 12, max: 14 });
+  const kid = await post(`${kc}/student/ask`, { question: "What is a warrant?" });
   assert.deepEqual([kid.status, kid.json.kind, kid.json.general], [200, "off_topic", undefined]);
-  const legacy = await post(`${await publish(null)}/student/ask`, { question: "What is a warrant?" });
+  const tryFirst = await post(`${kc}/student/ask`, { question: "help with the activity" });
+  assert.deepEqual([tryFirst.json.kind, tryFirst.json.answer], ["attempt_first", "This one is for you to try first: Spot the claim 1. Ask me after you've had a go."]);
+  const lc = await publish(null);
+  const legacy = await post(`${lc}/student/ask`, { question: "What is a warrant?" });
   assert.equal(legacy.json.kind, "off_topic", "no recorded ages and an 8-10 audience: the under-18 mode");
+  const legacyAct = await post(`${lc}/student/ask`, { question: "help with the activity" });
+  assert.equal(legacyAct.json.kind, "answer", "no structured ages: the host drops aiStatus, so nothing is attempt-first");
 });

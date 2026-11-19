@@ -1134,6 +1134,15 @@ export class CourseSession {
     return this.#gate.versions().at(-1) ?? null;
   }
 
+  /**
+   * N4: the latest sealed version as the student helper reads it: the sealed record plus the design overlay of the
+   * plan it was confirmed from (aiStatus, learnerFirst …), the same overlay the published plan page shows. The gate
+   * drops those fields, so without this the helper could not tell an attempt-first activity. Read-only.
+   */
+  latestSealedVersionForStudent() {
+    return this.#versionsView().at(-1) ?? null;
+  }
+
   /** WHY the current plan is invalidated: cited objectives no longer confirmed. */
   planInvalidation() {
     const plan = this.#gate.currentPlan();

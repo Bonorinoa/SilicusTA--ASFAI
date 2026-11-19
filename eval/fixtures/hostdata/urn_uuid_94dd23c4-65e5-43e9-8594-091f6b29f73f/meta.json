@@ -1,0 +1,13 @@
+{
+  "courseId": "urn:uuid:94dd23c4-65e5-43e9-8594-091f6b29f73f",
+  "owner": "Mr. Haddad",
+  "title": "Plant and animal cells",
+  "description": "",
+  "materials": [],
+  "seed": "urn:uuid:545988e3-c9b5-4512-81d3-379ba709b8b3",
+  "ages": {
+    "min": 13,
+    "max": 15
+  },
+  "createdAt": 1795057393305
+}

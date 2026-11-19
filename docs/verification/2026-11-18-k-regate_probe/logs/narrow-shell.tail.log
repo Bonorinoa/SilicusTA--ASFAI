@@ -1,0 +1,22 @@
+\"permitted\" clamped to \"forbidden\" in activity 3 \"Explain it in your own words\": at this stage AI may follow only an attempt the teacher has watched."]}
+PASS  0 console errors
+PASS  the only network calls were the site's functions
+PASS  no overflow on the shell, landing or intake surfaces at 320px
+PASS  no overflow on the shell, landing or intake surfaces at 380px
+PASS  no overflow on the shell, landing or intake surfaces at 480px
+PASS  no overflow on the shell, landing or intake surfaces at 768px
+PASS  no overflow on the shell, landing or intake surfaces at 1440px
+PASS  the landing does not scroll sideways at 320px — scrollWidth 320
+PASS  the landing does not scroll sideways at 380px — scrollWidth 380
+PASS  the landing does not scroll sideways at 480px — scrollWidth 480
+PASS  the landing does not scroll sideways at 768px — scrollWidth 768
+PASS  the landing does not scroll sideways at 1440px — scrollWidth 1440
+
+--- surface widths (how wide each surface wants to be) ---
+   320px  landing + onboarding scrollWidth  320  widest surface: course page (shell) 0→320
+   380px  landing + onboarding scrollWidth  380  widest surface: course page (shell) 0→380
+   480px  landing + onboarding scrollWidth  480  widest surface: course page (shell) 0→480
+   768px  landing + onboarding scrollWidth  768  widest surface: course page (shell) 0→768
+  1440px  landing + onboarding scrollWidth 1440  widest surface: course page (shell) 0→1440
+
+65/65 narrow-shell checks passed

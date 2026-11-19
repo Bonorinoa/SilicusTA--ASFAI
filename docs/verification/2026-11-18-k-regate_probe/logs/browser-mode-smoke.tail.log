@@ -1,0 +1,16 @@
+g 380] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 380] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 380] narrow landing page: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page: no element's content is clipped by its own box
+PASS  [landing 380] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 380] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 380] narrow landing page, Under the hood open: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page, Under the hood open: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page, Under the hood open: no element's content is clipped by its own box
+PASS  [landing 380] landing: Open the studio opens the studio home at #/studio
+PASS  [landing 380] landing: the studio's 'About Silicus' link returns to the landing (#/)
+PASS  [landing 380] landing: an old typed #/live lands on the landing (the classic view is gone)
+PASS  [landing 380] landing: 0 CSP violations and 0 console errors
+
+315/315 browser-mode checks passed

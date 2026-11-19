@@ -1,0 +1,93 @@
+TAP version 13
+# rank prompt: 70195 characters, 1599 topics
+# rankMap usage: input_tokens=20000 output_tokens=300 topics=1599
+# rankMap usage: input_tokens=20000 output_tokens=300 topics=1599
+# Subtest: rankInput: the topics overlapping ages 4–10, names + subject + domain only (1,599 of 1,912)
+ok 1 - rankInput: the topics overlapping ages 4–10, names + subject + domain only (1,599 of 1,912)
+  ---
+  duration_ms: 4.123083
+  type: 'test'
+  ...
+# Subtest: validateRanking: unknown / out-of-age ids, long threads, a 4th thread and repeats are dropped; why is cleaned to 120
+not ok 2 - validateRanking: unknown / out-of-age ids, long threads, a 4th thread and repeats are dropped; why is cleaned to 120
+  ---
+  duration_ms: 0.598
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/kv2/mut/host/test/m1-skill-map.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'mt_gLy3ZgZWiN',
+    +   'mt__p5n8z5soJ',
+        'mt_lutxvMlkwS',
+    -   'mt_nwSWPTENmv'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'mt_gLy3ZgZWiN'
+    1: 'mt_lutxvMlkwS'
+    2: 'mt_nwSWPTENmv'
+  actual:
+    0: 'mt_gLy3ZgZWiN'
+    1: 'mt__p5n8z5soJ'
+    2: 'mt_lutxvMlkwS'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/kv2/mut/host/test/m1-skill-map.test.mjs:50:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: mapLanes on the scripted ranking: real-edge chains, off-chain suggestions as pills with a true note
+ok 3 - mapLanes on the scripted ranking: real-edge chains, off-chain suggestions as pills with a true note
+  ---
+  duration_ms: 2.093917
+  type: 'test'
+  ...
+# Subtest: missingTitleWord: 'grass' is in no topic name at 4–10
+ok 4 - missingTitleWord: 'grass' is in no topic name at 4–10
+  ---
+  duration_ms: 1.14275
+  type: 'test'
+  ...
+# Subtest: POST /api/knowledge/marble/rank: lanes on a good reply; an empty map with a reason (never an error) otherwise
+ok 5 - POST /api/knowledge/marble/rank: lanes on a good reply; an empty map with a reason (never an error) otherwise
+  ---
+  duration_ms: 7.48975
+  type: 'test'
+  ...
+# Subtest: PlanWorker.rankMap logs the wire's token counts
+ok 6 - PlanWorker.rankMap logs the wire's token counts
+  ---
+  duration_ms: 7.500666
+  type: 'test'
+  ...
+# Subtest: marbleConnected: both stores record it identically; the handler refuses a bad one; the view replays it
+ok 7 - marbleConnected: both stores record it identically; the handler refuses a bad one; the view replays it
+  ---
+  duration_ms: 4.556666
+  type: 'test'
+  ...
+# Subtest: the skill map as a source: transient text to the worker, {kind:'marble', id} on the record, proposals labelled 'marble'
+ok 8 - the skill map as a source: transient text to the worker, {kind:'marble', id} on the record, proposals labelled 'marble'
+  ---
+  duration_ms: 2.341125
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 83.1115

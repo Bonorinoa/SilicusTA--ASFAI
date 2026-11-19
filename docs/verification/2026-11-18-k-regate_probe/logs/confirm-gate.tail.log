@@ -1,0 +1,44 @@
+
+  ---
+  duration_ms: 0.746833
+  type: 'test'
+  ...
+# Subtest: RULE: a new draft clears the flag; so does a teacher re-confirmation made after the reword; neither is automatic
+ok 46 - RULE: a new draft clears the flag; so does a teacher re-confirmation made after the reword; neither is automatic
+  ---
+  duration_ms: 0.255209
+  type: 'test'
+  ...
+# Subtest: dropping a reworded objective still invalidates the plan that cites it, and it can no longer be reworded
+ok 47 - dropping a reworded objective still invalidates the plan that cites it, and it can no longer be reworded
+  ---
+  duration_ms: 0.162167
+  type: 'test'
+  ...
+# Subtest: a sealed version never changes; publishing after a reword seals v2 with the new wording
+ok 48 - a sealed version never changes; publishing after a reword seals v2 with the new wording
+  ---
+  duration_ms: 0.448625
+  type: 'test'
+  ...
+# Subtest: a published plan's citations survive: every cited id still resolves to a confirmed objective
+ok 49 - a published plan's citations survive: every cited id still resolves to a confirmed objective
+  ---
+  duration_ms: 0.094958
+  type: 'test'
+  ...
+# Subtest: replay: the same operations over a fresh deterministic gate reproduce every record byte for byte
+ok 50 - replay: the same operations over a fresh deterministic gate reproduce every record byte for byte
+  ---
+  duration_ms: 0.241167
+  type: 'test'
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 48.053625

@@ -1,0 +1,19 @@
+-variable-BNk_--v2.woff2                50.95 kB
+dist/assets/source-serif-4-variable-italic-CfMpusKC.woff2         51.72 kB
+dist/assets/pdf.worker.min-Dkey6ZUl.mjs                        1,321.31 kB
+dist/assets/marble-snapshot-B9Cjl5Qs.json                      2,048.75 kB │ gzip: 555.41 kB
+dist/assets/StudioApp-DxqhLJUl.css                                60.31 kB │ gzip:  11.35 kB
+dist/assets/index-DBcpx7bF.css                                    64.99 kB │ gzip:  10.62 kB
+dist/assets/pdf.worker.min-OGYDhRwp.js                             0.07 kB │ gzip:   0.09 kB
+dist/assets/_commonjs-dynamic-modules-B9lKsKkd.js                  0.47 kB │ gzip:   0.31 kB
+dist/assets/jszip.min-CBFutFRr.js                                 97.49 kB │ gzip:  30.27 kB
+dist/assets/StudioApp-aoBIsR5L.js                                163.54 kB │ gzip:  52.23 kB
+dist/assets/mammoth.browser.min-WTckL4F8.js                      304.02 kB │ gzip:  92.76 kB
+dist/assets/index-Bk1n5XEi.js                                    335.32 kB │ gzip: 104.45 kB
+dist/assets/pdf-q-5ow4VI.js                                      541.88 kB │ gzip: 164.72 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.93s

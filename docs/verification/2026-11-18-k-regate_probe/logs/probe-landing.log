@@ -1,0 +1,29 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+HOME Silicus→#/studio ; About Silicus→#/ ; +New courseFive short →#/studio/new
+PASS  landing link on Studio home — Silicus→#/studio ; About Silicus→#/ ; +New courseFive short →#/studio/new
+wizard welcome Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link on wizard welcome — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+wizard step 1 Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link on wizard step 1 — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+wizard step 2 (map) Silicus→#/studio ; Courses→#/studio ; About Silicus→#/ ; https://withmarble.com→https://withmarble.com ; ODbL 1.0→https://opendatacommons.org/licenses/odbl/1-0/ ; CC BY-SA 4.0→https://creativecommons.org/licenses/by-sa/4.0/ ; attribution notice→/assets/MARBLE-ATTRIBUTION-LosmfyyF.md
+PASS  landing link on wizard step 2 (map) — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/ ; https://withmarble.com→https://withmarble.com ; ODbL 1.0→https:
+wizard step 3 (sources) Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link on wizard step 3 (sources) — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+wizard step 4 (objectives) Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link on wizard step 4 (objectives) — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+wizard review Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link on wizard review — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+COURSE #/studio/urn%3Auuid%3A0f883eb6-430c-4aa7-9b60-f15f608af2b1
+TAB Brief | Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link (#/) present on course tab Brief — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+TAB Objectives | Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link (#/) present on course tab Objectives — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+TAB Plan | Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link (#/) present on course tab Plan — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+TAB Publish | Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+PASS  landing link (#/) present on course tab Publish — Silicus→#/studio ; Courses→#/studio ; About Silicus→#/
+REHEARSE Silicus→#/studio ; Courses→#/studio ; How plants eat→#/studio/urn%3Auuid%3A0f883eb6-430c-4aa7-9b60-f15f608af2b1 ; About Silicus→#/ ; Back to the course→#/studio/urn%3Auuid%3A0f883eb6-430c-4aa7-9b60-f15f608af2b1
+PASS  landing link on Rehearse — Silicus→#/studio ; Courses→#/studio ; How plants eat→#/studio/urn%3Auuid%3A0f883eb6-430c-4aa7-9b60-f15f608af2b1 ; About 
+LEARN About Silicus→#/ ; Back to the studio→#/studio/urn%3Auuid%3A0f883eb6-430c-4aa7-9b60-f15f608af2b1
+PASS  landing link on Learn — About Silicus→#/ ; Back to the studio→#/studio/urn%3Auuid%3A0f883eb6-430c-4aa7-9b60-f15f608af2b1
+14 pass 0 fail

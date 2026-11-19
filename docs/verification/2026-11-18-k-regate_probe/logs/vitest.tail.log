@@ -1,0 +1,17 @@
+l.test.tsx (1 test) 34ms
+ ✓ src/studio/TopBar.landing.test.tsx (2 tests) 115ms
+ ✓ src/studio/NewCourseWizard.test.tsx (11 tests) 6172ms
+   ✓ NewCourseWizard > first run opens on the welcome, and nothing is recorded while moving through the steps  717ms
+   ✓ NewCourseWizard > Back at the first step is disabled: it goes to the previous step, never jumps to the welcome  531ms
+   ✓ NewCourseWizard > the review's confirm sends create (no materials), answers, files, outline — in that order — and lands on the course  1076ms
+   ✓ NewCourseWizard > when the host asks questions the wizard did not show, it records the answers it has and confirms nothing  891ms
+   ✓ NewCourseWizard > objectives need either written ones or sources to propose from  662ms
+   ✓ NewCourseWizard step 1 (G2b): learners, skill map, consequences > M1 condensed: one quiet consequence line (AI rule · map topics that fit · one N-minute plan); no histogram strip  1265ms
+   ✓ NewCourseWizard step 1 (K2): How long is the lesson? > five chips, 45 by default; picking 60 shows on the review and is sent as lessonMinutes  472ms
+   ✓ NewCourseWizard step 2 (M1): the skill map > nothing is pre-anchored; anchor + connect from another thread; the map source is on by default; confirm sends both pointers  415ms
+
+ Test Files  61 passed (61)
+      Tests  550 passed (550)
+   Start at  17:09:57
+   Duration  7.97s (transform 1.88s, setup 6.30s, collect 7.02s, tests 22.92s, environment 20.20s, prepare 2.56s)
+

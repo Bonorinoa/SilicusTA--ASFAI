@@ -1,0 +1,11 @@
+confirm-gate exit 0
+api exit 0
+host exit 0
+e2e-restart exit 0
+vitest exit 0
+build exit 0
+browser-mode-smoke exit 0
+studio-smoke exit 0
+live-host-smoke exit 0
+narrow-shell exit 0
+DONE

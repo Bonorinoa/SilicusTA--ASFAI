@@ -1,0 +1,611 @@
+
+ RUN  v3.2.7 /private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/k5mut
+
+ ❯ src/studio/RecordCard.test.tsx (6 tests | 3 failed) 1112ms
+   × Check my pinned copies (K5) > calls comparePin once per pin on this device, with the host's anchor 3ms
+     → expected "comparePin" to be called 2 times, but got 0 times
+   × Check my pinned copies (K5) > the button drives comparePin and shows 'Differs from the record' for a rewritten version 1061ms
+     → Unable to find an element with the text: Differs from the record: the record may have been changed. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-label[39m=[32m"Your record"[39m
+      [33mclass[39m=[32m"_card_12a83a"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"_cardTitle_12a83a"[39m
+      [36m>[39m
+        [0mYour record[0m
+      [36m</h2>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_block_d03f59"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"_head_d03f59"[39m
+        [36m>[39m
+          [0mPinned copies on this device[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"_trustText_12a83a"[39m
+        [36m>[39m
+          [0mWhen you publish, this [0m
+          [0mdevice[0m
+          [0m keeps its own copy of the version’s fingerprint, apart from the course record. Checking them finds a record that was rewritten or shortened, which the record’s own check cannot.[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33mclass[39m=[32m"_pins_d03f59"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"_pin_d03f59"[39m
+            [33mdata-status[39m=[32m"ok"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+            [36m>[39m
+              [0mVersion [0m
+              [0m1[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_digest_d03f59"[39m
+              [33mtitle[39m=[32m"d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"[39m
+            [36m>[39m
+              [0md1d1d1d1d1d1[0m
+              [0m…[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_verdict_d03f59"[39m
+            [36m>[39m
+              [0mMatches the record[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_detail_d03f59"[39m
+            [36m>[39m
+              [0mstub[0m
+            [36m</span>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"_pin_d03f59"[39m
+            [33mdata-status[39m=[32m"ok"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+            [36m>[39m
+              [0mVersion [0m
+              [0m2[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_digest_d03f59"[39m
+              [33mtitle[39m=[32m"d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"[39m
+            [36m>[39m
+              [0md2d2d2d2d2d2[0m
+              [0m…[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_verdict_d03f59"[39m
+            [36m>[39m
+              [0mMatches the record[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_detail_d03f59"[39m
+            [36m>[39m
+              [0mstub[0m
+            [36m</span>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"_rowActions_12a83a"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mCheck my pinned copies[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"_trustText_12a83a"[39m
+          [36m>[39m
+            [0mEvery pinned copy matches the record.[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_block_d03f59"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"_head_d03f59"[39m
+        [36m>[39m
+          [0mArchive[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"_trustText_12a83a"[39m
+        [36m>[39m
+          [0mWrites the published record to the archive folder on this computer, reads it back, and checks it.[0m
+        [36m</p>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"_rowActions_12a83a"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mArchive a verified copy[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Your record"[39m
+        [33mclass[39m=[32m"_card_12a83a"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mclass[39m=[32m"_cardTitle_12a83a"[39m
+        [36m>[39m
+          [0mYour record[0m
+        [36m</h2>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_block_d03f59"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"_head_d03f59"[39m
+          [36m>[39m
+            [0mPinned copies on this device[0m
+          [36m</h3>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"_trustText_12a83a"[39m
+          [36m>[39m
+            [0mWhen you publish, this [0m
+            [0mdevice[0m
+            [0m keeps its own copy of the version’s fingerprint, apart from the course record. Checking them finds a record that was rewritten or shortened, which the record’s own check cannot.[0m
+          [36m</p>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"_pins_d03f59"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"_pin_d03f59"[39m
+              [33mdata-status[39m=[32m"ok"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+              [36m>[39m
+                [0mVersion [0m
+                [0m1[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_digest_d03f59"[39m
+                [33mtitle[39m=[32m"d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"[39m
+              [36m>[39m
+                [0md1d1d1d1d1d1[0m
+                [0m…[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_verdict_d03f59"[39m
+              [36m>[39m
+                [0mMatches the record[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_detail_d03f59"[39m
+              [36m>[39m
+                [0mstub[0m
+              [36m</span>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"_pin_d03f59"[39m
+              [33mdata-status[39m=[32m"ok"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+              [36m>[39m
+                [0mVersion [0m
+                [0m2[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_digest_d03f59"[39m
+                [33mtitle[39m=[32m"d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"[39m
+              [36m>[39m
+                [0md2d2d2d2d2d2[0m
+                [0m…[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_verdict_d03f59"[39m
+              [36m>[39m
+                [0mMatches the record[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_detail_d03f59"[39m
+              [36m>[39m
+                [0mstub[0m
+              [36m</span>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+          [36m<div[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"_rowActions_12a83a"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mCheck my pinned copies[0m
+            [36m</button>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_trustText_12a83a"[39m
+            [36m>[39m
+              [0mEvery pinned copy matches the record.[0m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_block_d03f59"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"_head_d03f59"[39m
+          [36m>[39m
+            [0mArchive[0m
+          [36m</h3>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"_trustText_12a83a"[39m
+          [36m>[39m
+            [0mWrites the published record to the archive folder on this computer, reads it back, and checks it.[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"_rowActions_12a83a"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mArchive a verified copy[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m...
+   × Check my pinned copies (K5) > a version missing from the record differs too 7ms
+     → expected { version: 1, status: 'ok', …(2) } to match object { version: 1, status: 'missing', …(1) }
+(1 matching property omitted from actual)
+   ✓ Check my pinned copies (K5) > with no pins on this device, says so and offers nothing to check 15ms
+   ✓ Archive a verified copy (K5, Node host) > shows the read-back digest 15ms
+   ✓ Archive a verified copy (K5, Node host) > says plainly when the read-back does not verify 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/studio/RecordCard.test.tsx > Check my pinned copies (K5) > calls comparePin once per pin on this device, with the host's anchor
+AssertionError: expected "comparePin" to be called 2 times, but got 0 times
+ ❯ src/studio/RecordCard.test.tsx:43:35
+     41|     anchorMock.mockImplementation(async (_id: string, v: number) => ({…
+     42|     const out = await checkPinnedCopies(ID);
+     43|     expect(vi.mocked(comparePin)).toHaveBeenCalledTimes(2);
+       |                                   ^
+     44|     expect(vi.mocked(comparePin).mock.calls[0][1]).toEqual(A1);
+     45|     expect(out.map((x) => x.verdict)).toEqual([PIN_MATCHES, PIN_MATCHE…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/studio/RecordCard.test.tsx > Check my pinned copies (K5) > the button drives comparePin and shows 'Differs from the record' for a rewritten version
+TestingLibraryElementError: Unable to find an element with the text: Differs from the record: the record may have been changed. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-label[39m=[32m"Your record"[39m
+      [33mclass[39m=[32m"_card_12a83a"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"_cardTitle_12a83a"[39m
+      [36m>[39m
+        [0mYour record[0m
+      [36m</h2>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_block_d03f59"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"_head_d03f59"[39m
+        [36m>[39m
+          [0mPinned copies on this device[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"_trustText_12a83a"[39m
+        [36m>[39m
+          [0mWhen you publish, this [0m
+          [0mdevice[0m
+          [0m keeps its own copy of the version’s fingerprint, apart from the course record. Checking them finds a record that was rewritten or shortened, which the record’s own check cannot.[0m
+        [36m</p>[39m
+        [36m<ul[39m
+          [33mclass[39m=[32m"_pins_d03f59"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"_pin_d03f59"[39m
+            [33mdata-status[39m=[32m"ok"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+            [36m>[39m
+              [0mVersion [0m
+              [0m1[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_digest_d03f59"[39m
+              [33mtitle[39m=[32m"d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"[39m
+            [36m>[39m
+              [0md1d1d1d1d1d1[0m
+              [0m…[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_verdict_d03f59"[39m
+            [36m>[39m
+              [0mMatches the record[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_detail_d03f59"[39m
+            [36m>[39m
+              [0mstub[0m
+            [36m</span>[39m
+          [36m</li>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"_pin_d03f59"[39m
+            [33mdata-status[39m=[32m"ok"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+            [36m>[39m
+              [0mVersion [0m
+              [0m2[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_digest_d03f59"[39m
+              [33mtitle[39m=[32m"d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"[39m
+            [36m>[39m
+              [0md2d2d2d2d2d2[0m
+              [0m…[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_verdict_d03f59"[39m
+            [36m>[39m
+              [0mMatches the record[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_detail_d03f59"[39m
+            [36m>[39m
+              [0mstub[0m
+            [36m</span>[39m
+          [36m</li>[39m
+        [36m</ul>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"_rowActions_12a83a"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mCheck my pinned copies[0m
+          [36m</button>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"_trustText_12a83a"[39m
+          [36m>[39m
+            [0mEvery pinned copy matches the record.[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_block_d03f59"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"_head_d03f59"[39m
+        [36m>[39m
+          [0mArchive[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"_trustText_12a83a"[39m
+        [36m>[39m
+          [0mWrites the published record to the archive folder on this computer, reads it back, and checks it.[0m
+        [36m</p>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"_rowActions_12a83a"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mArchive a verified copy[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Your record"[39m
+        [33mclass[39m=[32m"_card_12a83a"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mclass[39m=[32m"_cardTitle_12a83a"[39m
+        [36m>[39m
+          [0mYour record[0m
+        [36m</h2>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_block_d03f59"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"_head_d03f59"[39m
+          [36m>[39m
+            [0mPinned copies on this device[0m
+          [36m</h3>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"_trustText_12a83a"[39m
+          [36m>[39m
+            [0mWhen you publish, this [0m
+            [0mdevice[0m
+            [0m keeps its own copy of the version’s fingerprint, apart from the course record. Checking them finds a record that was rewritten or shortened, which the record’s own check cannot.[0m
+          [36m</p>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"_pins_d03f59"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"_pin_d03f59"[39m
+              [33mdata-status[39m=[32m"ok"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+              [36m>[39m
+                [0mVersion [0m
+                [0m1[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_digest_d03f59"[39m
+                [33mtitle[39m=[32m"d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"[39m
+              [36m>[39m
+                [0md1d1d1d1d1d1[0m
+                [0m…[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_verdict_d03f59"[39m
+              [36m>[39m
+                [0mMatches the record[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_detail_d03f59"[39m
+              [36m>[39m
+                [0mstub[0m
+              [36m</span>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"_pin_d03f59"[39m
+              [33mdata-status[39m=[32m"ok"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_pinVersion_d03f59"[39m
+              [36m>[39m
+                [0mVersion [0m
+                [0m2[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_digest_d03f59"[39m
+                [33mtitle[39m=[32m"d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"[39m
+              [36m>[39m
+                [0md2d2d2d2d2d2[0m
+                [0m…[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_verdict_d03f59"[39m
+              [36m>[39m
+                [0mMatches the record[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_detail_d03f59"[39m
+              [36m>[39m
+                [0mstub[0m
+              [36m</span>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+          [36m<div[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"_rowActions_12a83a"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mCheck my pinned copies[0m
+            [36m</button>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"_trustText_12a83a"[39m
+            [36m>[39m
+              [0mEvery pinned copy matches the record.[0m
+            [36m</span>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_block_d03f59"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"_head_d03f59"[39m
+          [36m>[39m
+            [0mArchive[0m
+          [36m</h3>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"_trustText_12a83a"[39m
+          [36m>[39m
+            [0mWrites the published record to the archive folder on this computer, reads it back, and checks it.[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"_rowActions_12a83a"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"_button_579285 _secondary_579285  "[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mArchive a verified copy[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m...
+ ❯ Proxy.waitForWrapper ../k5tree/frontend/node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ src/studio/RecordCard.test.tsx:56:11
+     54|     expect(screen.getAllByText("Not checked yet")).toHaveLength(2);
+     55|     fireEvent.click(screen.getByRole("button", { name: "Check my pinne…
+     56|     await waitFor(() => expect(screen.getByText(PIN_DIFFERS)).toBeInTh…
+       |           ^
+     57|     expect(screen.getByText(PIN_MATCHES)).toBeInTheDocument();
+     58|     expect(vi.mocked(comparePin)).toHaveBeenCalledTimes(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/studio/RecordCard.test.tsx > Check my pinned copies (K5) > a version missing from the record differs too
+AssertionError: expected { version: 1, status: 'ok', …(2) } to match object { version: 1, status: 'missing', …(1) }
+(1 matching property omitted from actual)
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  {[22m
+[32m-   "status": "missing",[39m
+[32m-   "verdict": "Differs from the record: the record may have been changed",[39m
+[31m+   "status": "ok",[39m
+[31m+   "verdict": "Matches the record",[39m
+[2m    "version": 1,[22m
+[2m  }[22m
+
+ ❯ src/studio/RecordCard.test.tsx:65:20
+     63|     anchorMock.mockImplementation(async (_id: string, v: number) => ({…
+     64|     const out = await checkPinnedCopies(ID);
+     65|     expect(out[0]).toMatchObject({ version: 1, status: "missing", verd…
+       |                    ^
+     66|   });
+     67| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 3 passed (6)
+   Start at  18:09:50
+   Duration  1.59s (transform 104ms, setup 52ms, collect 126ms, tests 1.11s, environment 147ms, prepare 25ms)
+

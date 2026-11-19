@@ -1,0 +1,61 @@
+[host] [asfai] callback received: params=code,state
+PASS  host process boots and answers /api/health
+PASS  course created
+PASS  ASFAI consent completes through the host's own callback
+PASS  host-driven prepare_outline returns the clarifying round
+PASS  the host cannot go again before the teacher answers
+PASS  the second call, built from the teacher's answers, reaches ready_to_draft
+PASS  teacher decisions applied through the gate
+PASS  package sealed as version 1
+PASS  view reports all five checkpoints confirmed
+PASS  knowledge sources: ASFAI's graph first, then the local ontology, then Marble, all enabled
+PASS  sources: a course whose answers went to ASFAI is aligned from ASFAI's graph and the ontology file — asfai:mt_0007,asfai:mt_0042,local:ai.claims
+PASS  sources: the sealed version carries no alignment suggestions
+PASS  host process terminated
+PASS  host restarts
+PASS  record is byte-identical after restart
+PASS  event-log hash chain verifies — events=11
+PASS  sealed version survived restart
+PASS  publish still legal after restart
+PASS  schema v2: the plan's phase and sessions survive restart
+PASS  schema v2: a stage-2 "required" was clamped to "permitted" with a note
+PASS  schema v2: a stage-2 plan carries one plan-level aiPolicy line (the stage's), with a replacement note
+PASS  schema v2 (P2ui): the published version's plan, in the teacher's view, carries the design it was confirmed with
+PASS  schema v2 (P2ui): the export's sealed versions stay v1 (the overlay is view-only)
+PASS  local: a fresh course carries the host's own three questions
+PASS  local: asking is not answering - the outline is still refused
+PASS  local: two of three answers do not authorize the outline
+PASS  local: the last answer authorizes the outline
+PASS  local: objectives are the teacher's own words, labelled honestly
+PASS  local: sealed as version 1 with no ASFAI
+PASS  local: aligned from the local ontology file alone
+PASS  local: not one MCP tool call reached ASFAI — before=8 after=8
+PASS  materials: topic and course alone do not open the outline
+PASS  materials: the explicit 'propose from my materials' act opens the local outline
+PASS  materials: a private address is refused before anything is fetched
+PASS  materials: the worker proposed objectives, labelled by material, none confirmed
+PASS  student: nothing to ask before the course is sealed
+PASS  student: a grounded answer cites the sealed package
+PASS  student: asking recorded nothing (the log did not grow)
+PASS  materials: the material text is on no disk (log, meta, archive: nowhere under the data dir)
+PASS  student: no student identifier reached the record
+PASS  revise: a published, untouched course reads as unchanged
+PASS  revise: the host reads the record as drafting version 2, the sealed one unchanged
+PASS  revise: a statement with a line break is refused and nothing is recorded
+PASS  revise: version 2 is sealed and points back at version 1
+PASS  revise: version 1 is byte-identical after version 2 sealed
+PASS  revise: the student still gets a grounded answer from the latest sealed version
+PASS  reword: an unknown id is refused (UNKNOWN_OBJECTIVE) and nothing is recorded
+PASS  reword: accepted; the id is kept and provenance is the host's, never the client's
+PASS  reword: the plan stays confirmed and publishable, and the view says it predates the new wording
+PASS  reword: the revision reading counts it (drafting version 3, objectivesReworded with before/after)
+PASS  reword: the sealed version 2 is byte-identical while the draft differs
+PASS  reword: publishing seals version 3 with the new wording, same plan and ids
+PASS  local: host restarts
+PASS  local: record is byte-identical after restart
+PASS  materials: that course is byte-identical after restart too
+PASS  revise: all versions survive the restart and the chain verifies
+PASS  local: event-log hash chain verifies
+PASS  the first course is untouched by the second
+
+58/58 acceptance checks passed  (data: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-e2e-R1D9fe)

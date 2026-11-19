@@ -1,0 +1,228 @@
+PASS  [setup] the app builds with VITE_SILICUS_MODE=browser
+PASS  [setup] the browser host is its own chunk in the browser build
+PASS  [setup] serving with vercel.json's strict CSP
+PASS  [setup] the built bundle names no server env variable or key
+PASS  [setup] the built bundle holds nothing key-shaped
+PASS  [wide 1440] the bare URL shows the landing, not the live course and not the demo decision card — Plan a lesson with an AI that proposes. You decide.
+[dump]  :: Silicus TA
+Open the studio
+
+A PROTOTYPE, FOR TEACHERS OF LEARNERS AGED 5–14
+
+Plan a lesson with an AI that proposes.
+You decide.
+
+Bring your sources and a few answers. Silicus proposes objectives and drafts a plan; you accept, edit or drop each piece, and only you publish.
+
+Open the studio
+How it works
+
+The AI steps ask for a demo passcode. Ask the person who shared this link.
+
+✓ Brief
+2 Objectives
+3 Plan
+4 Publish
+Learning objectives
+1
+Students can explain how a plant makes its food.
+Accepted · from material: Lesson notes
+2
+Students can name the three things a plant needs.
+Reworded by you
+Proposals
+Students can label the parts of a leaf.
+Suggested by Silicus
+Accept
+Edit
+Drop
+Drafting more · 0:07
+The Objectives step: proposals wait under Proposals until you decide.
+Four steps, each one yours to confirm
+Brief
+
+Your sources and your own answers: the topic, who it’s for, what learners should be able to do.
+
+Objectives
+
+Silicus proposes; each proposal waits beside your list until you accept, edit or drop it.
+
+Plan
+
+Activities with minutes, each pointing to an objective you confirmed. One lesson per course for now.
+
+Publish
+
+A copy students use. It can’t change; your later edits become the next version.
+
+Three places
+The studio
+
+Where you build a course, step by step, with every decision recorded.
+
+Rehearse
+
+Ask what your students will ask, and check the helper refuses what it should.
+
+The student space
+
+What learners see: today’s goals, the activities, and a helper that answers f
+[debug] (no notice)
+FAIL  [wide 1440] the whole flow completed — Error: No element found for selector: a[href="#/live"]     at assert (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/util/assert.js:15:15)     at CdpFrame.click (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:753:17)
+PASS  [narrow 380] narrow landing (bare URL): the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow landing (bare URL): no element's right edge passes the viewport
+PASS  [narrow 380] narrow landing (bare URL): no element's content is clipped by its own box
+PASS  [narrow 380] the bare URL shows the landing, not the live course and not the demo decision card — Plan a lesson with an AI that proposes. You decide.
+[dump]  :: Silicus TA
+Open the studio
+
+A PROTOTYPE, FOR TEACHERS OF LEARNERS AGED 5–14
+
+Plan a lesson with an AI that proposes.
+You decide.
+
+Bring your sources and a few answers. Silicus proposes objectives and drafts a plan; you accept, edit or drop each piece, and only you publish.
+
+Open the studio
+How it works
+
+The AI steps ask for a demo passcode. Ask the person who shared this link.
+
+✓ Brief
+2 Objectives
+3 Plan
+4 Publish
+Learning objectives
+1
+Students can explain how a plant makes its food.
+Accepted · from material: Lesson notes
+2
+Students can name the three things a plant needs.
+Reworded by you
+Proposals
+Students can label the parts of a leaf.
+Suggested by Silicus
+Accept
+Edit
+Drop
+Drafting more · 0:07
+The Objectives step: proposals wait under Proposals until you decide.
+Four steps, each one yours to confirm
+Brief
+
+Your sources and your own answers: the topic, who it’s for, what learners should be able to do.
+
+Objectives
+
+Silicus proposes; each proposal waits beside your list until you accept, edit or drop it.
+
+Plan
+
+Activities with minutes, each pointing to an objective you confirmed. One lesson per course for now.
+
+Publish
+
+A copy students use. It can’t change; your later edits become the next version.
+
+Three places
+The studio
+
+Where you build a course, step by step, with every decision recorded.
+
+Rehearse
+
+Ask what your students will ask, and check the helper refuses what it should.
+
+The student space
+
+What learners see: today’s goals, the activities, and a helper that answers f
+[debug] (no notice)
+FAIL  [narrow 380] the whole flow completed — Error: No element found for selector: a[href="#/live"]     at assert (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/util/assert.js:15:15)     at CdpFrame.click (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:753:17)
+PASS  [uploads 1440] uploads: the main entry chunk does not contain pdf.js (a lazy chunk does) — entry assets/index-BvhlCiqj.js (338632 bytes); lazy pdf.js chunk: pdf-q-5ow4VI.js
+PASS  [uploads 1440] uploads: mammoth and jszip are lazy chunks too, not in the entry — jszip.min-CBFutFRr.js, mammoth.browser.min-WTckL4F8.js
+[dump] #/live :: Silicus TA
+Open the studio
+
+A PROTOTYPE, FOR TEACHERS OF LEARNERS AGED 5–14
+
+Plan a lesson with an AI that proposes.
+You decide.
+
+Bring your sources and a few answers. Silicus proposes objectives and drafts a plan; you accept, edit or drop each piece, and only you publish.
+
+Open the studio
+How it works
+
+The AI steps ask for a demo passcode. Ask the person who shared this link.
+
+✓ Brief
+2 Objectives
+3 Plan
+4 Publish
+Learning objectives
+1
+Students can explain how a plant makes its food.
+Accepted · from material: Lesson notes
+2
+Students can name the three things a plant needs.
+Reworded by you
+Proposals
+Students can label the parts of a leaf.
+Suggested by Silicus
+Accept
+Edit
+Drop
+Drafting more · 0:07
+The Objectives step: proposals wait under Proposals until you decide.
+Four steps, each one yours to confirm
+Brief
+
+Your sources and your own answers: the topic, who it’s for, what learners should be able to do.
+
+Objectives
+
+Silicus proposes; each proposal waits beside your list until you accept, edit or drop it.
+
+Plan
+
+Activities with minutes, each pointing to an objective you confirmed. One lesson per course for now.
+
+Publish
+
+A copy students use. It can’t change; your later edits become the next version.
+
+Three places
+The studio
+
+Where you build a course, step by step, with every decision recorded.
+
+Rehearse
+
+Ask what your students will ask, and check the helper refuses what it should.
+
+The student space
+
+What learners see: today’s goals, the activities, and a helper that answers f
+FAIL  [uploads 1440] uploads: the whole upload flow completed — TimeoutError: Waiting for selector `button[aria-label="Close the tour"]` failed     at CSSQueryHandler.waitFor (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/common/QueryHandler.js:211:46)     at async CdpFrame.waitForSelector (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:546:21)
+PASS  [landing 1440] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 1440] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",175],["You decide.",287]]
+FAIL  [landing 1440] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, Classic view to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 1440] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 1440] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 1440] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440}
+PASS  [landing 1440] landing 1440: the drawing sits beside the copy, not over it — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440},{"left":168,"right":712,"top":137,"bottom":569}]
+PASS  [landing 1440] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 1440] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 1440] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 1440] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 1440] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/util/assert.js:15
+        throw new Error(message);
+              ^
+
+Error: No element found for selector: a[href="#/live"]
+    at assert (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/util/assert.js:15:15)
+    at CdpFrame.click (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:753:17)
+    at async file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/kv/tree/frontend/scripts/browser-mode-smoke.mjs:1162:3
+
+Node.js v22.22.3

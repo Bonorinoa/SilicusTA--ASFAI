@@ -1,0 +1,179 @@
+PASS  Silicus host is up
+PASS  built app is served
+PASS  Live tab reaches the host (not the offline notice)
+PASS  tour: opens on the first visit, before any course exists
+PASS  tour: closing it puts the cursor in the first question
+PASS  tour: does not open again on reload
+PASS  tour: 'How it works' reopens it on demand
+PASS  a course exists on the host after Start
+PASS  five checkpoint chips render
+PASS  materials confirmed IN THE HOST
+PASS  before consent the host refuses to call ASFAI (401 AUTH_REQUIRED)
+[/Users/bonorinoa/.hermes/node/bin/node] [asfai] callback received: params=code,state
+PASS  ASFAI consent completes through the host's own callback
+PASS  connected: ASFAI is recommended, and the host's own questions are live beside it
+PASS  the host called ASFAI and its questions surface in the UI, attributed to ASFAI
+PASS  an outline confirm is refused before the teacher answers — status=409 code=MISSING_DRAFT_AUTHORIZATION
+PASS  the host cannot ask ASFAI again before the teacher answers
+PASS  the teacher's answers are recorded on the host and arm the round
+PASS  ASFAI received exactly the teacher's words — ["mode","audience","topic","course","learningOutcomes"]
+PASS  outline confirmed IN THE HOST after the real intake round
+PASS  the host proposed 2 objectives, one per recorded outcome line
+PASS  stage: the objectives stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the objectives (decided) primary is inside the window when the stage opens — {"top":840,"bottom":884,"left":573,"right":884,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the objectives (decided) primary is inside the window when the stage opens — {"top":740,"bottom":784,"left":557,"right":868,"vh":800,"vw":1280,"count":1}
+PASS  one teacher decision recorded per derived objective — decisions=2
+PASS  objectives checkpoint auto-confirmed
+PASS  every decision cites a real teacher turn
+PASS  plan drafted on the host
+PASS  PlanCard renders the host's plan
+PASS  stage: the plan stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the plan primary is inside the window when the stage opens — {"top":844,"bottom":888,"left":718,"right":922,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the plan primary is inside the window when the stage opens — {"top":744,"bottom":788,"left":317,"right":520,"vh":800,"vw":1280,"count":1}
+PASS  workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary
+PASS  workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px — scrollY 700 -> 700
+PASS  stage: the lesson plan's text appears exactly once on the plan stage — count=1
+PASS  rail: a worker row names the drafting model after drafting, and ASFAI has its own lane when connected
+PASS  the plan shows suggested alignment from ASFAI's graph, labelled as a suggestion
+PASS  the publish preview does NOT show the suggestions (they are not in the package)
+PASS  plan confirmed IN THE HOST
+PASS  host arms publish once the plan is confirmed — no blockers
+PASS  stage: the publish stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the publish primary is inside the window when the stage opens — {"top":814,"bottom":858,"left":774,"right":1019,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the publish primary is inside the window when the stage opens — {"top":657,"bottom":701,"left":676,"right":920,"vh":800,"vw":1280,"count":1}
+PASS  stage: the lesson plan's text appears exactly once on the publish stage — count=1
+PASS  UI reflects the armed publish checkpoint
+PASS  seal confirm step appears
+PASS  seal confirm defaults to the safe choice — focused=Keep editing
+PASS  package sealed as version 1 on the host
+PASS  all five checkpoints confirmed after publish
+PASS  stage: the published stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the published primary is inside the window when the stage opens — {"top":788,"bottom":832,"left":333,"right":550,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the published primary is inside the window when the stage opens — {"top":688,"bottom":732,"left":317,"right":534,"vh":800,"vw":1280,"count":1}
+PASS  stage: the lesson plan's text appears exactly once on the published stage — count=1
+PASS  'Check a student question' puts the cursor in the student's question box
+PASS  export archived with a verified read-back digest — digest=79040acd4f8b
+PASS  the archived record reloads and re-verifies
+PASS  tamper-evident export carries one sealed version
+PASS  event-log hash chain verifies — events=14
+PASS  the sealed version is pinned on the device
+PASS  the host still blesses the rewritten chain (this is the ledger problem)
+PASS  THE PIN CATCHES IT: the device's copy differs from the rewritten record
+PASS  local: a second host, with no ASFAI credential, is up
+PASS  local: the host's own questions are live with ASFAI unconnected, and are not attributed to ASFAI
+PASS  local: ASFAI is recommended, not required (Connect ASFAI is offered beside the live questions)
+PASS  local: the outline is refused until the teacher has answered
+PASS  local: two of three answers do not open the outline
+PASS  local: outline confirmed IN THE HOST on the teacher's own answers
+PASS  local: proposals are the teacher's own sentences, labelled 'from your answer' (not 'to ASFAI')
+PASS  local: objectives confirmed through the gate
+PASS  rail (local): a worker row names the drafting model after drafting, and no ASFAI step is shown that never happened
+PASS  local: the plan is aligned from the ontology file alone, with no ASFAI
+PASS  local: seal confirm step appears
+PASS  local: all five checkpoints confirmed and sealed with no ASFAI
+PASS  local: the log verifies
+PASS  revise: the published course says version 1 is unchanged, and students keep reading it
+PASS  revise: opening the revision tools wrote nothing to the host
+PASS  revise: the host reads the record as drafting version 2, with the teacher's own objective added
+PASS  revise: while drafting, the page says a draft is never what students see
+PASS  revise: the UI says you are drafting version 2, and version 1 is still the only sealed version
+PASS  revise: the seal confirm step appears for version 2
+PASS  revise: version 2 is sealed by a teacher turn, linked to version 1, and version 1 is untouched
+PASS  revise: the log still verifies and the UI now reports version 2
+PASS  reword: the UI sent a reword and the host kept the objective's id, kind and status
+PASS  reword: the plan is still confirmed and publishable, and the host says it was written from the old wording
+PASS  reword: version 2 is byte-identical and the host reads the record as drafting version 3
+PASS  reword: the page says 'Reworded by you' with the original visible, and flags the plan without invalidating it
+PASS  reword: the log still verifies
+PASS  local: not one request reached ASFAI during the whole local story — before=9 after=9
+screenshot: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-live-WEP6kn/live-sealed.png
+
+PASS  Silicus host is up
+PASS  built app is served
+PASS  Live tab reaches the host (not the offline notice)
+PASS  tour: opens on the first visit, before any course exists
+PASS  tour: closing it puts the cursor in the first question
+PASS  tour: does not open again on reload
+PASS  tour: 'How it works' reopens it on demand
+PASS  a course exists on the host after Start
+PASS  five checkpoint chips render
+PASS  materials confirmed IN THE HOST
+PASS  before consent the host refuses to call ASFAI (401 AUTH_REQUIRED)
+PASS  ASFAI consent completes through the host's own callback
+PASS  connected: ASFAI is recommended, and the host's own questions are live beside it
+PASS  the host called ASFAI and its questions surface in the UI, attributed to ASFAI
+PASS  an outline confirm is refused before the teacher answers — status=409 code=MISSING_DRAFT_AUTHORIZATION
+PASS  the host cannot ask ASFAI again before the teacher answers
+PASS  the teacher's answers are recorded on the host and arm the round
+PASS  ASFAI received exactly the teacher's words — ["mode","audience","topic","course","learningOutcomes"]
+PASS  outline confirmed IN THE HOST after the real intake round
+PASS  the host proposed 2 objectives, one per recorded outcome line
+PASS  stage: the objectives stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the objectives (decided) primary is inside the window when the stage opens — {"top":840,"bottom":884,"left":573,"right":884,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the objectives (decided) primary is inside the window when the stage opens — {"top":740,"bottom":784,"left":557,"right":868,"vh":800,"vw":1280,"count":1}
+PASS  one teacher decision recorded per derived objective — decisions=2
+PASS  objectives checkpoint auto-confirmed
+PASS  every decision cites a real teacher turn
+PASS  plan drafted on the host
+PASS  PlanCard renders the host's plan
+PASS  stage: the plan stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the plan primary is inside the window when the stage opens — {"top":844,"bottom":888,"left":718,"right":922,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the plan primary is inside the window when the stage opens — {"top":744,"bottom":788,"left":317,"right":520,"vh":800,"vw":1280,"count":1}
+PASS  workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary
+PASS  workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px — scrollY 700 -> 700
+PASS  stage: the lesson plan's text appears exactly once on the plan stage — count=1
+PASS  rail: a worker row names the drafting model after drafting, and ASFAI has its own lane when connected
+PASS  the plan shows suggested alignment from ASFAI's graph, labelled as a suggestion
+PASS  the publish preview does NOT show the suggestions (they are not in the package)
+PASS  plan confirmed IN THE HOST
+PASS  host arms publish once the plan is confirmed — no blockers
+PASS  stage: the publish stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the publish primary is inside the window when the stage opens — {"top":814,"bottom":858,"left":774,"right":1019,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the publish primary is inside the window when the stage opens — {"top":657,"bottom":701,"left":676,"right":920,"vh":800,"vw":1280,"count":1}
+PASS  stage: the lesson plan's text appears exactly once on the publish stage — count=1
+PASS  UI reflects the armed publish checkpoint
+PASS  seal confirm step appears
+PASS  seal confirm defaults to the safe choice — focused=Keep editing
+PASS  package sealed as version 1 on the host
+PASS  all five checkpoints confirmed after publish
+PASS  stage: the published stage has exactly one primary action — primaries=1
+PASS  workspace 1440x900: the published primary is inside the window when the stage opens — {"top":788,"bottom":832,"left":333,"right":550,"vh":900,"vw":1440,"count":1}
+PASS  workspace 1280x800: the published primary is inside the window when the stage opens — {"top":688,"bottom":732,"left":317,"right":534,"vh":800,"vw":1280,"count":1}
+PASS  stage: the lesson plan's text appears exactly once on the published stage — count=1
+PASS  'Check a student question' puts the cursor in the student's question box
+PASS  export archived with a verified read-back digest — digest=79040acd4f8b
+PASS  the archived record reloads and re-verifies
+PASS  tamper-evident export carries one sealed version
+PASS  event-log hash chain verifies — events=14
+PASS  the sealed version is pinned on the device
+PASS  the host still blesses the rewritten chain (this is the ledger problem)
+PASS  THE PIN CATCHES IT: the device's copy differs from the rewritten record
+PASS  local: a second host, with no ASFAI credential, is up
+PASS  local: the host's own questions are live with ASFAI unconnected, and are not attributed to ASFAI
+PASS  local: ASFAI is recommended, not required (Connect ASFAI is offered beside the live questions)
+PASS  local: the outline is refused until the teacher has answered
+PASS  local: two of three answers do not open the outline
+PASS  local: outline confirmed IN THE HOST on the teacher's own answers
+PASS  local: proposals are the teacher's own sentences, labelled 'from your answer' (not 'to ASFAI')
+PASS  local: objectives confirmed through the gate
+PASS  rail (local): a worker row names the drafting model after drafting, and no ASFAI step is shown that never happened
+PASS  local: the plan is aligned from the ontology file alone, with no ASFAI
+PASS  local: seal confirm step appears
+PASS  local: all five checkpoints confirmed and sealed with no ASFAI
+PASS  local: the log verifies
+PASS  revise: the published course says version 1 is unchanged, and students keep reading it
+PASS  revise: opening the revision tools wrote nothing to the host
+PASS  revise: the host reads the record as drafting version 2, with the teacher's own objective added
+PASS  revise: while drafting, the page says a draft is never what students see
+PASS  revise: the UI says you are drafting version 2, and version 1 is still the only sealed version
+PASS  revise: the seal confirm step appears for version 2
+PASS  revise: version 2 is sealed by a teacher turn, linked to version 1, and version 1 is untouched
+PASS  revise: the log still verifies and the UI now reports version 2
+PASS  reword: the UI sent a reword and the host kept the objective's id, kind and status
+PASS  reword: the plan is still confirmed and publishable, and the host says it was written from the old wording
+PASS  reword: version 2 is byte-identical and the host reads the record as drafting version 3
+PASS  reword: the page says 'Reworded by you' with the original visible, and flags the plan without invalidating it
+PASS  reword: the log still verifies
+PASS  local: not one request reached ASFAI during the whole local story — before=9 after=9
+
+87/87 live acceptance checks passed

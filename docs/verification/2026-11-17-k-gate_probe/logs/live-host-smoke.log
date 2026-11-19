@@ -1,0 +1,51 @@
+PASS  Silicus host is up
+PASS  built app is served
+FAIL  flow completed without throwing — Waiting failed: 30000ms exceeded
+
+[FLOW ERROR] Waiting failed: 30000ms exceeded
+[DOM DUMP]
+Silicus TA
+Open the studio
+
+A PROTOTYPE, FOR TEACHERS OF LEARNERS AGED 5–14
+
+Plan a lesson with an AI that proposes.
+You decide.
+
+Bring your sources and a few answers. Silicus proposes objectives and drafts a plan; you accept, edit or drop each piece, and only you publish.
+
+Open the studio
+How it works
+✓ Brief
+2 Objectives
+3 Plan
+4 Publish
+Learning objectives
+1
+Students can explain how a plant makes its food.
+Accepted · from material: Lesson notes
+2
+Students can name the three things a plant needs.
+Reworded by you
+Proposals
+Students can label the parts of a leaf.
+Suggested by Silicus
+Accept
+Edit
+Drop
+Drafting more · 0:07
+The Objectives step: proposals wait under Proposals until you decide.
+Four steps, each one yours to confirm
+Brief
+
+Your sources and your own answers: the topic, who it’s for, what learners should be able to do.
+
+Objectives
+
+Silicus proposes; each proposal waits beside yo
+
+PASS  Silicus host is up
+PASS  built app is served
+FAIL  flow completed without throwing — Waiting failed: 30000ms exceeded
+
+2/3 live acceptance checks passed

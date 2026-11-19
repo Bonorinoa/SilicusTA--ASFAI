@@ -1,0 +1,39 @@
+r it; absent or empty leaves the prompt unchanged
+ok 428 - the course answer is in the plan prompt, with the line that makes the model honour it; absent or empty leaves the prompt unchanged
+  ---
+  duration_ms: 2.830083
+  type: 'test'
+  ...
+# Subtest: the course answer is untrusted: one line, bounded to 300 characters, cannot forge an objective line
+ok 429 - the course answer is untrusted: one line, bounded to 300 characters, cannot forge an objective line
+  ---
+  duration_ms: 0.773792
+  type: 'test'
+  ...
+# Subtest: the host hands the teacher's course answer to the worker when it drafts the plan
+ok 430 - the host hands the teacher's course answer to the worker when it drafts the plan
+  ---
+  duration_ms: 4.722625
+  type: 'test'
+  ...
+# Subtest: answerStudent: basis and refusal are normalised before the caller sees them (explanation kept; out of scope carries a known refusal)
+ok 431 - answerStudent: basis and refusal are normalised before the caller sees them (explanation kept; out of scope carries a known refusal)
+  ---
+  duration_ms: 5.438042
+  type: 'test'
+  ...
+# Subtest: suggestObjectives: a worker-side prompt of teacher words only; the reply is bare statements, at most 3, none a repeat
+ok 432 - suggestObjectives: a worker-side prompt of teacher words only; the reply is bare statements, at most 3, none a repeat
+  ---
+  duration_ms: 1.902334
+  type: 'test'
+  ...
+1..432
+# tests 432
+# suites 0
+# pass 432
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5896.146334

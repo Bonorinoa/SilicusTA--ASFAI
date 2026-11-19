@@ -1,0 +1,45 @@
+0 s function duration
+ok 52 - the default upstream deadline leaves 5 s of headroom under the 120 s function duration
+  ---
+  duration_ms: 0.145
+  type: 'test'
+  ...
+# Subtest: upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed
+ok 53 - upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed
+  ---
+  duration_ms: 0.301125
+  type: 'test'
+  ...
+# Subtest: upstream 401/429/500 -> 502 with the status; network failure -> 502 without echoing the error
+ok 54 - upstream 401/429/500 -> 502 with the status; network failure -> 502 without echoing the error
+  ---
+  duration_ms: 0.497417
+  type: 'test'
+  ...
+# Subtest: a 200 that is not JSON, or that would echo the key, is a 502
+ok 55 - a 200 that is not JSON, or that would echo the key, is a 502
+  ---
+  duration_ms: 0.291625
+  type: 'test'
+  ...
+# Subtest: the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr provider block) is accepted end-to-end
+ok 56 - the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr provider block) is accepted end-to-end
+  ---
+  duration_ms: 1.289291
+  type: 'test'
+  ...
+# Subtest: the route file exports a Web-standard POST bound to real globals (503 with no env)
+ok 57 - the route file exports a Web-standard POST bound to real globals (503 with no env)
+  ---
+  duration_ms: 0.513042
+  type: 'test'
+  ...
+1..57
+# tests 57
+# suites 0
+# pass 57
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 258.370792

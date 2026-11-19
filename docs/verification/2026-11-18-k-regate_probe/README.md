@@ -1,0 +1,4 @@
+Probes for docs/verification/2026-11-18-k-regate.md (verifier, KV2 re-gate on feat/k @ 98bd73b). Nothing here is product code.
+
+- `probe-landing-all-screens.mjs`, `probe-390-header.mjs`: copy into `frontend/scripts/` of a clean `git archive feat/k` export (after `npm ci` in `frontend/`, so `puppeteer-core` resolves) and run `node scripts/<name>` on Node 22. They build the browser-mode app, serve it with vercel.json's headers and a mock worker, and drive real Chrome. The first lists every visible link per studio screen at 1440 px and checks for "About Silicus -> #/" (14 checks). The second measures the top bar and the mobile step segments at 390 px.
+- `logs/summary.txt` is the exit table of the §3 suites for the export (each exit captured by the runner, not through a pipe). `*.tail.log` are the last 1,500 bytes of each suite log. `mut-*.log` is the C4 mutant run (base 8/8, mutant 7/8, restored 8/8).

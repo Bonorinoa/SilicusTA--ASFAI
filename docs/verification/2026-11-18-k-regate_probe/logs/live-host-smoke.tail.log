@@ -1,0 +1,17 @@
+ols wrote nothing to the host
+PASS  revise: the host accepts the teacher's own added objective on the published course — status=200
+PASS  revise: the host reads the record as drafting version 2, with the teacher's own objective added
+PASS  revise: while drafting, the page lists what changed since version 1 and offers to publish version 2
+PASS  revise: the UI says you are drafting version 2, and version 1 is still the only sealed version
+PASS  revise: the seal confirm step appears for version 2 — focused=Keep editing
+PASS  revise: version 2 is sealed by a teacher turn, linked to version 1, and version 1 is untouched
+PASS  revise: the log still verifies and the UI now reports version 2
+PASS  reword: the UI sent a reword and the host kept the objective's id, kind and status — {"s":"Students can explain what an algorithm is. with one example.","o":"Students can explain what an algorithm is."}
+PASS  reword: the plan is still confirmed and publishable, and the host says it was written from the old wording
+PASS  reword: version 2 is byte-identical and the host reads the record as drafting version 3
+PASS  reword: the page says 'Reworded by you' with the original visible, and flags the plan without invalidating it
+PASS  reword: the publish step flags the reworded objective without invalidating the plan — false
+PASS  reword: the log still verifies
+PASS  local: not one request reached ASFAI during the whole local story — before=10 after=10
+
+86/86 live acceptance checks passed

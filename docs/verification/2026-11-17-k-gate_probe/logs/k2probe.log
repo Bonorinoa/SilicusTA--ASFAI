@@ -1,0 +1,19 @@
+PASS disk store: reopened from files, lessonMinutes 90 90
+PASS record store: snapshot->load round trip, lessonMinutes 30 30
+PASS view reads lessonMinutes from the chained event, not editable meta 30
+PASS notes for sum 45 vs 45: expect 0 []
+PASS notes for sum 41 vs 45: expect 0 []
+PASS notes for sum 49 vs 45: expect 0 []
+PASS notes for sum 40 vs 45: expect 1 ["Activities add up to 40 min; you asked for 45. Lengthen or edit."]
+PASS notes for sum 50 vs 45: expect 1 ["Activities add up to 50 min; you asked for 45. Trim or edit."]
+PASS notes for sum 70 vs 45: expect 1 ["Activities add up to 70 min; you asked for 45. Trim or edit."]
+PASS notes for sum 20 vs 45: expect 1 ["Activities add up to 20 min; you asked for 45. Lengthen or edit."]
+PASS notes for sum 90 vs 90: expect 0 []
+PASS notes for sum 0 vs 45: expect 1 ["Activities add up to 0 min; you asked for 45. Lengthen or edit."]
+band 45 = {"low":41,"high":49} | none: []
+keys title,activities,notes
+PASS 40 activities in -> at most 8 out 8
+PASS every free-text field bounded (max length seen) 600
+notes: ["Activities add up to 40 min; you asked for 45. Lengthen or edit.","Kept the first 8 of 40 activities; a lesson plan holds at most 8."]
+PASS prompt carries the 8-activity bound At most 8 activities. Keep every text field short: a title under 120 characters, learnerDoes and teacherDoes under 600 each, every other text under 300. Write e
+schema maxItems in prompt: false

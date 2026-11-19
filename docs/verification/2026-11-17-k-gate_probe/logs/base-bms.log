@@ -1,0 +1,341 @@
+PASS  [setup] the app builds with VITE_SILICUS_MODE=browser
+PASS  [setup] the browser host is its own chunk in the browser build
+PASS  [setup] serving with vercel.json's strict CSP
+PASS  [setup] the built bundle names no server env variable or key
+PASS  [setup] the built bundle holds nothing key-shaped
+PASS  [wide 1440] the bare URL shows the landing, not the live course and not the demo decision card — Plan a lesson with an AI that proposes. You decide.
+PASS  [wide 1440] #/live (Classic view) opens the live course, not the demo decision card — Build a course, one decision at a time.
+PASS  [wide 1440] the app masthead's Silicus wordmark links back to the landing (#/) — #/
+PASS  [wide 1440] the page is titled as the product, with an inline SVG favicon — Silicus TA · course authoring, teacher in the loop
+PASS  [wide 1440] the header reads as the product, not 'design workbench · tokens-first' — Silicus TA |  | The AI proposes. You decide.
+PASS  [wide 1440] the component workbench stays reachable through a discreet footer 'Design system' link
+PASS  [wide 1440] tour: opens on the first visit, before any course exists
+PASS  [wide 1440] tour: closing it puts the cursor in the first question
+PASS  [wide 1440] tour: does not open again on reload
+PASS  [wide 1440] the Design system link opens the workbench, with a way back to the course
+PASS  [wide 1440] the course is recorded in IndexedDB (not on a server)
+PASS  [wide 1440] no /api/courses request ever left the page
+PASS  [wide 1440] workspace 1440x900: the confirm material list primary is inside the window when the stage opens — {"top":601,"bottom":645,"left":337,"right":543,"vh":900,"vw":1440,"label":"Confirm the material list","count":1}
+PASS  [wide 1440] workspace 1280x800: the confirm material list primary is inside the window when the stage opens — {"top":633,"bottom":677,"left":321,"right":527,"vh":800,"vw":1280,"label":"Confirm the material list","count":1}
+PASS  [wide 1440] materials confirmed on the record
+PASS  [wide 1440] workspace 1440x900: the intake primary is inside the window when the stage opens — {"top":856,"bottom":900,"left":337,"right":508,"vh":900,"vw":1440,"label":"Record this answer","count":1}
+PASS  [wide 1440] workspace 1280x800: the intake primary is inside the window when the stage opens — {"top":756,"bottom":800,"left":321,"right":492,"vh":800,"vw":1280,"label":"Record this answer","count":1}
+PASS  [wide 1440] ASFAI says plainly it needs the local app, with no Connect button
+PASS  [wide 1440] workspace 1440x900: the confirm brief primary is inside the window when the stage opens — {"top":586,"bottom":630,"left":333,"right":483,"vh":900,"vw":1440,"label":"Confirm the brief","count":1}
+PASS  [wide 1440] workspace 1280x800: the confirm brief primary is inside the window when the stage opens — {"top":599,"bottom":643,"left":317,"right":467,"vh":800,"vw":1280,"label":"Confirm the brief","count":1}
+PASS  [wide 1440] outline confirmed on the record
+PASS  [wide 1440] the material panel says YouTube needs the local app
+PASS  [wide 1440] zero-retention is claimed only because the site's status says zdr: true
+PASS  [wide 1440] workspace 1440x900: the material primary is inside the window when the stage opens — {"top":840,"bottom":884,"left":316,"right":620,"vh":900,"vw":1440,"label":"Propose objectives from my materials","count":1}
+PASS  [wide 1440] workspace 1280x800: the material primary is inside the window when the stage opens — {"top":740,"bottom":784,"left":300,"right":604,"vh":800,"vw":1280,"label":"Propose objectives from my materials","count":1}
+PASS  [wide 1440] an AI action asks for the demo passcode
+PASS  [wide 1440] while the passcode dialog is open the waiting card holds its clock and says why
+PASS  [wide 1440] proposing objectives ends with a true receipt: the proposals, none confirmed, what was read — Finished after 0 s. 3 proposals. None is confirmed until you decide. Drawn from 1 material (147 characters read). | DRAFT READY · NOTHING IS DECIDED YET | Proposed learning objectives from your 1 material | Took 0 s | 3 proposals. None is confirmed until you decide. | Drawn from 1 material (147 characters read). | What the model sees
+PASS  [wide 1440] workspace 1440x900: the objectives (proposed) primary is inside the window when the stage opens — {"top":840,"bottom":884,"left":573,"right":885,"vh":900,"vw":1440,"label":"Confirm 3 objectives — 3 decisions left","count":1}
+PASS  [wide 1440] workspace 1280x800: the objectives (proposed) primary is inside the window when the stage opens — {"top":740,"bottom":784,"left":557,"right":869,"vh":800,"vw":1280,"label":"Confirm 3 objectives — 3 decisions left","count":1}
+PASS  [wide 1440] polish objectives: a stuck bar is docked flush to the window's bottom edge (nothing shows under it) — {"stuck":true,"gap":0}
+PASS  [wide 1440] polish objectives: the stage's bar is a layer (sticky, opaque background, a shadow) — {"sticky":true,"opaque":true,"shadow":true,"barTop":26,"barHeight":113,"lastBottom":2,"hasLast":true}
+PASS  [wide 1440] polish objectives: scrolled to the bottom, the last content of the open stage is fully above the bar — {"sticky":true,"opaque":true,"shadow":true,"barTop":26,"barHeight":113,"lastBottom":2,"hasLast":true}
+PASS  [wide 1440] polish objectives: a control in the stage's last content, focused from the top, lands clear of the bar (scroll-margin >= bar + 16 px); the bar's own buttons keep none — {"ok":true,"margin":160,"ownMargin":0,"ctl":"Add objective","ctlTop":348,"ctlBottom":392,"barTop":416,"barBottom":529}
+PASS  [wide 1440] polish objectives: every block of the stage column, Record details and the browser notice included, ends at one right edge — {"rights":[1052,1052,1052,1052],"gaps":[20,20,20],"gapAboveDetails":20,"maxGap":20,"kids":4}
+PASS  [wide 1440] polish objectives: no dead band: no gap in the stage column is taller than 40 px, and Record details sits within 24 px of the stage — {"rights":[1052,1052,1052,1052],"gaps":[20,20,20],"gapAboveDetails":20,"maxGap":20,"kids":4}
+PASS  [wide 1440] the worker proposed objectives through /api/worker, with the passcode header
+PASS  [wide 1440] the passcode is in sessionStorage only
+PASS  [wide 1440] the material text went to the model once…
+PASS  [wide 1440] …and is in no IndexedDB value, localStorage or sessionStorage
+PASS  [wide 1440] one teacher decision recorded per proposal
+PASS  [wide 1440] workspace 1440x900: the objectives (decided) primary is inside the window when the stage opens — {"top":840,"bottom":884,"left":572,"right":864,"vh":900,"vw":1440,"label":"Confirm 3 objectives · build the plan","count":1}
+PASS  [wide 1440] workspace 1280x800: the objectives (decided) primary is inside the window when the stage opens — {"top":740,"bottom":784,"left":556,"right":848,"vh":800,"vw":1280,"label":"Confirm 3 objectives · build the plan","count":1}
+PASS  [wide 1440] stage: the objectives stage has exactly one primary action — primaries=1
+PASS  [wide 1440] three confirmed objectives are on the page to be sent — 3
+PASS  [wide 1440] the waiting experience says in plain words what is happening, with the real count
+PASS  [wide 1440] it states the typical range the documented defaults give: usually 10–60 seconds
+PASS  [wide 1440] exactly one polite aria-live region announces the start (not every second) — ["Drafting a lesson plan from your 3 confirmed objectives. Usually 10 to 60 seconds."]
+PASS  [wide 1440] there is no progress bar and no percentage
+PASS  [wide 1440] 'What the model sees' opens and lists the confirmed statements, the topic, the material names, and what it never sees
+PASS  [wide 1440] the elapsed readout is a real clock: it has advanced
+PASS  [wide 1440] before the high end there is no 'taking longer' line
+PASS  [wide 1440] drafting the plan ends with a true receipt computed from the resulting view (C-e: it no longer repeats "It stays a draft until you confirm it."; the stage bar and the DRAFT tag say it) — Finished after 2 s. Checked: 3 activities, each cites only objectives you confirmed (3 citations). | Drafted a lesson plan from your 3 confirmed objectives | Took 2 s | Checked: 3 activities, each cites only objectives you confirmed (3 citations). | What the model sees
+PASS  [wide 1440] it says how long the step took, and the live region announces the finish — Took 2 s | announced: Finished after 2 s. Checked: 3 activities, each cites only objectives you confirmed (3 citations).
+PASS  [wide 1440] what the model sees is what left the page: every statement, the topic and the material name were sent; the label was NOT
+PASS  [wide 1440] the plan is drafted (no second passcode prompt: it is kept for this tab)
+PASS  [wide 1440] workspace 1440x900: the plan primary is inside the window when the stage opens — {"top":844,"bottom":888,"left":484,"right":688,"vh":900,"vw":1440,"label":"Confirm the lesson plan","count":1}
+PASS  [wide 1440] workspace 1280x800: the plan primary is inside the window when the stage opens — {"top":744,"bottom":788,"left":468,"right":672,"vh":800,"vw":1280,"label":"Confirm the lesson plan","count":1}
+PASS  [wide 1440] polish plan: a stuck bar is docked flush to the window's bottom edge (nothing shows under it) — {"stuck":true,"gap":0}
+PASS  [wide 1440] polish plan: the stage's bar is a layer (sticky, opaque background, a shadow) — {"sticky":true,"opaque":true,"shadow":true,"barTop":361,"barHeight":101,"lastBottom":341,"hasLast":true}
+PASS  [wide 1440] polish plan: scrolled to the bottom, the last content of the open stage is fully above the bar — {"sticky":true,"opaque":true,"shadow":true,"barTop":361,"barHeight":101,"lastBottom":341,"hasLast":true}
+PASS  [wide 1440] polish plan: a control in the stage's last content, focused from the top, lands clear of the bar (scroll-margin >= bar + 16 px); the bar's own buttons keep none — {"ok":true,"margin":160,"ownMargin":0,"ctl":"What the model sees","ctlTop":348,"ctlBottom":392,"barTop":453,"barBottom":554}
+PASS  [wide 1440] polish plan: every block of the stage column, Record details and the browser notice included, ends at one right edge — {"rights":[1052,1052,1052,1052,1052],"gaps":[20,20,20,20],"gapAboveDetails":20,"maxGap":20,"kids":5}
+PASS  [wide 1440] polish plan: no dead band: no gap in the stage column is taller than 40 px, and Record details sits within 24 px of the stage — {"rights":[1052,1052,1052,1052,1052],"gaps":[20,20,20,20],"gapAboveDetails":20,"maxGap":20,"kids":5}
+PASS  [wide 1440] navigator plan: finished steps keep their numbers 1-5 and say they are finished — {"count":3,"numbers":["1","2","3","4","5"],"doneHaveChevron":true,"doneAreButtons":true,"cursor":"pointer","doneCheck":true}
+PASS  [wide 1440] navigator plan: finished steps look openable (a chevron, a pointer) — {"count":3,"numbers":["1","2","3","4","5"],"doneHaveChevron":true,"doneAreButtons":true,"cursor":"pointer","doneCheck":true}
+PASS  [wide 1440] navigator plan: a finished step has a hover state — rgba(0, 0, 0, 0) -> rgb(234, 227, 211)
+PASS  [wide 1440] navigator plan: the left column's course title is at the navigator's scale (at most 1.25x a step name), on one line, and no louder than the document title — {"titleFont":17,"stepFont":15,"titleLines":[3],"subLines":[2,4],"docFont":34,"colWidth":216}
+PASS  [wide 1440] navigator plan: the byline is two deliberate lines (who, then where it is kept) and leaves no word alone — {"titleFont":17,"stepFont":15,"titleLines":[3],"subLines":[2,4],"docFont":34,"colWidth":216}
+PASS  [wide 1440] draft-once plan: the navigator's plan line does not say "draft" (the tag and the bar do) — {"navPlan":"4 Plan 3 activities · 45 min","card":"Finished after 2 s. Checked: 3 activities, each cites only objectives you confirmed (3 citations). Drafted a lesson plan from your 3 confirmed objectives Took 2 s Checked: 3 activities, each cites only objectives you confirmed (3 citations). What the model sees","cardHeight":98,"barSaysDraft":true}
+PASS  [wide 1440] draft-once plan: the finished waiting card is a receipt: no "Draft ready" eyebrow, no "stays a draft" line, at most 130 px tall — {"navPlan":"4 Plan 3 activities · 45 min","card":"Finished after 2 s. Checked: 3 activities, each cites only objectives you confirmed (3 citations). Drafted a lesson plan from your 3 confirmed objectives Took 2 s Checked: 3 activities, each cites only objectives you confirmed (3 citations). What the model sees","cardHeight":98,"barSaysDraft":true}
+PASS  [wide 1440] rail plan: the header ("Behind the scenes" and the count) is on one line — {"headOneLine":true,"titleH":28,"metaH":18,"tags":["Plan","Objectives","Brief","Material"],"times":["16:07","16:06","16:06","16:06","16:06","16:06","16:06","16:06"],"timesCount":1,"timesBroken":false,"nowrap":true,"rows":8}
+PASS  [wide 1440] rail plan: every tag is a stage word (Material, Brief, Objectives, Plan, Version), never Outline, Record or Package — ["Plan","Objectives","Brief","Material"]
+PASS  [wide 1440] rail plan: rows do not all say "just now": the clock is shown instead — ["16:07","16:06","16:06","16:06","16:06","16:06","16:06","16:06"]
+PASS  [wide 1440] rail plan: " · 2 times" stays whole (no break inside it) — times spans: 1, nowrap true, broken false
+PASS  [wide 1440] stage: the plan stage has exactly one primary action — primaries=1
+PASS  [wide 1440] stage: the lesson plan's text appears exactly once on the plan stage — lines=3 (3 = once)
+PASS  [wide 1440] rail: a worker row after drafting, and no ASFAI lane in the online app
+PASS  [wide 1440] workspace: the plan page is tall enough to scroll, so the return check means something — scrollY 700
+PASS  [wide 1440] workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary
+PASS  [wide 1440] workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px — scrollY 700 -> 716
+PASS  [wide 1440] workspace: looking wrote nothing (still exactly the three objective decisions)
+PASS  [wide 1440] plan confirmed on the record
+PASS  [wide 1440] workspace 1440x900: the publish primary is inside the window when the stage opens — {"top":814,"bottom":858,"left":774,"right":1019,"vh":900,"vw":1440,"label":"Review & publish first version","count":1}
+PASS  [wide 1440] workspace 1280x800: the publish primary is inside the window when the stage opens — {"top":657,"bottom":701,"left":676,"right":920,"vh":800,"vw":1280,"label":"Review & publish first version","count":1}
+PASS  [wide 1440] polish publish: a stuck bar is docked flush to the window's bottom edge (nothing shows under it) — {"stuck":true,"gap":0}
+PASS  [wide 1440] polish publish: the stage's bar is a layer (sticky, opaque background, a shadow) — {"sticky":true,"opaque":true,"shadow":true,"barTop":308,"barHeight":129,"lastBottom":284,"hasLast":true}
+PASS  [wide 1440] polish publish: scrolled to the bottom, the last content of the open stage is fully above the bar — {"sticky":true,"opaque":true,"shadow":true,"barTop":308,"barHeight":129,"lastBottom":284,"hasLast":true}
+PASS  [wide 1440] polish publish: a control in the stage's last content, focused from the top, lands clear of the bar (scroll-margin >= bar + 16 px); the bar's own buttons keep none — {"ok":true,"why":"the last content holds no control"}
+PASS  [wide 1440] polish publish: every block of the stage column, Record details and the browser notice included, ends at one right edge — {"rights":[1052,1052,1052],"gaps":[20,20],"gapAboveDetails":20,"maxGap":20,"kids":3}
+PASS  [wide 1440] polish publish: no dead band: no gap in the stage column is taller than 40 px, and Record details sits within 24 px of the stage — {"rights":[1052,1052,1052],"gaps":[20,20],"gapAboveDetails":20,"maxGap":20,"kids":3}
+PASS  [wide 1440] stage: the publish stage has exactly one primary action — primaries=1
+PASS  [wide 1440] stage: the lesson plan's text appears exactly once on the publish stage — lines=3 (3 = once)
+PASS  [wide 1440] version 1 sealed, and pinned in this browser
+PASS  [wide 1440] workspace 1440x900: the published primary is inside the window when the stage opens — {"top":788,"bottom":832,"left":333,"right":550,"vh":900,"vw":1440,"label":"Check a student question","count":1}
+PASS  [wide 1440] workspace 1280x800: the published primary is inside the window when the stage opens — {"top":688,"bottom":732,"left":317,"right":534,"vh":800,"vw":1280,"label":"Check a student question","count":1}
+PASS  [wide 1440] stage: the published stage has exactly one primary action — primaries=1
+PASS  [wide 1440] stage: the lesson plan's text appears exactly once on the published stage — lines=3 (3 = once)
+PASS  [wide 1440] 'Check a student question' puts the cursor in the student's question box
+PASS  [wide 1440] a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–15 seconds — Looking for the answer in version 1 of this lesson. Usually 2 to 15 seconds. | Looking for the answer in version 1 of this lesson | 0 s elapsed · usually 2–15 seconds | What the model sees
+PASS  [wide 1440] under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation) — still / none
+PASS  [wide 1440] the student gets an answer that cites the published version
+PASS  [wide 1440] student chat wrote nothing (IndexedDB and web storage identical before and after)
+PASS  [wide 1440] the browser-written log verifies on the Node host's chain (node:crypto) — 13 events
+PASS  [wide 1440] after a reload the published course is still there
+PASS  [wide 1440] after a reload the record verifies
+PASS  [wide 1440] the course notice is shown exactly once, not echoed by every card — 1 cop(y|ies) on the page
+PASS  [wide 1440] an export file was downloaded — silicus-courses-2026-11-18.json
+PASS  [wide 1440] the export verifies in Node (envelope digest, chain, meta, replay)
+PASS  [wide 1440] the export holds no material text
+PASS  [wide 1440] delete all empties IndexedDB, the pins and the passcode
+PASS  [wide 1440] a tampered export is refused with a clear message, and nothing is written
+PASS  [wide 1440] import brings the course back, record intact
+PASS  [wide 1440] the imported course verifies in the app
+PASS  [wide 1440] 0 CSP violations
+PASS  [wide 1440] 0 console errors
+PASS  [wide 1440] 0 page errors
+PASS  [wide 1440] the only network calls were the site's functions — /api/worker/status, /api/worker
+PASS  [wide 1440] the whole flow completed
+PASS  [narrow 380] narrow landing (bare URL): the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow landing (bare URL): no element's right edge passes the viewport
+PASS  [narrow 380] narrow landing (bare URL): no element's content is clipped by its own box
+PASS  [narrow 380] the bare URL shows the landing, not the live course and not the demo decision card — Plan a lesson with an AI that proposes. You decide.
+PASS  [narrow 380] narrow live course, first visit: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow live course, first visit: no element's right edge passes the viewport
+PASS  [narrow 380] narrow live course, first visit: no element's content is clipped by its own box
+PASS  [narrow 380] #/live (Classic view) opens the live course, not the demo decision card — Build a course, one decision at a time.
+PASS  [narrow 380] the app masthead's Silicus wordmark links back to the landing (#/) — #/
+PASS  [narrow 380] the page is titled as the product, with an inline SVG favicon — Silicus TA · course authoring, teacher in the loop
+PASS  [narrow 380] the header reads as the product, not 'design workbench · tokens-first' — Silicus TA |  | The AI proposes. You decide.
+PASS  [narrow 380] the component workbench stays reachable through a discreet footer 'Design system' link
+PASS  [narrow 380] tour: opens on the first visit, before any course exists
+PASS  [narrow 380] narrow first-run tour: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow first-run tour: no element's right edge passes the viewport
+PASS  [narrow 380] narrow first-run tour: no element's content is clipped by its own box
+PASS  [narrow 380] tour: closing it puts the cursor in the first question
+PASS  [narrow 380] tour: does not open again on reload
+PASS  [narrow 380] the Design system link opens the workbench, with a way back to the course
+PASS  [narrow 380] narrow design system workbench: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow design system workbench: no element's right edge passes the viewport
+PASS  [narrow 380] narrow design system workbench: no element's content is clipped by its own box
+PASS  [narrow 380] narrow onboarding step 1: name the course: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow onboarding step 1: name the course: no element's right edge passes the viewport
+PASS  [narrow 380] narrow onboarding step 1: name the course: no element's content is clipped by its own box
+PASS  [narrow 380] narrow onboarding step 2: name the label: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow onboarding step 2: name the label: no element's right edge passes the viewport
+PASS  [narrow 380] narrow onboarding step 2: name the label: no element's content is clipped by its own box
+PASS  [narrow 380] narrow onboarding step 3: name the materials: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow onboarding step 3: name the materials: no element's right edge passes the viewport
+PASS  [narrow 380] narrow onboarding step 3: name the materials: no element's content is clipped by its own box
+PASS  [narrow 380] the course is recorded in IndexedDB (not on a server)
+PASS  [narrow 380] no /api/courses request ever left the page
+PASS  [narrow 380] narrow onboarding: confirm the material list: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow onboarding: confirm the material list: no element's right edge passes the viewport
+PASS  [narrow 380] narrow onboarding: confirm the material list: no element's content is clipped by its own box
+PASS  [narrow 380] materials confirmed on the record
+PASS  [narrow 380] narrow intake question 1: topic: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow intake question 1: topic: no element's right edge passes the viewport
+PASS  [narrow 380] narrow intake question 1: topic: no element's content is clipped by its own box
+PASS  [narrow 380] ASFAI says plainly it needs the local app, with no Connect button
+PASS  [narrow 380] narrow intake question 2: course: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow intake question 2: course: no element's right edge passes the viewport
+PASS  [narrow 380] narrow intake question 2: course: no element's content is clipped by its own box
+PASS  [narrow 380] narrow intake question 3: outcomes: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow intake question 3: outcomes: no element's right edge passes the viewport
+PASS  [narrow 380] narrow intake question 3: outcomes: no element's content is clipped by its own box
+PASS  [narrow 380] narrow brief confirm: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow brief confirm: no element's right edge passes the viewport
+PASS  [narrow 380] narrow brief confirm: no element's content is clipped by its own box
+PASS  [narrow 380] outline confirmed on the record
+PASS  [narrow 380] narrow material panel: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow material panel: no element's right edge passes the viewport
+PASS  [narrow 380] narrow material panel: no element's content is clipped by its own box
+PASS  [narrow 380] the material panel says YouTube needs the local app
+PASS  [narrow 380] zero-retention is claimed only because the site's status says zdr: true
+PASS  [narrow 380] an AI action asks for the demo passcode
+PASS  [narrow 380] while the passcode dialog is open the waiting card holds its clock and says why
+PASS  [narrow 380] narrow passcode pause, waiting card held: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow passcode pause, waiting card held: no element's right edge passes the viewport
+PASS  [narrow 380] narrow passcode pause, waiting card held: no element's content is clipped by its own box
+PASS  [narrow 380] narrow waiting card, proposing objectives: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow waiting card, proposing objectives: no element's right edge passes the viewport
+PASS  [narrow 380] narrow waiting card, proposing objectives: no element's content is clipped by its own box
+PASS  [narrow 380] proposing objectives ends with a true receipt: the proposals, none confirmed, what was read — Finished after 0 s. 3 proposals. None is confirmed until you decide. Drawn from 1 material (147 characters read). | DRAFT READY · NOTHING IS DECIDED YET | Proposed learning objectives from your 1 material | Took 0 s | 3 proposals. None is confirmed until you decide. | Drawn from 1 material (147 characters read). | What the model sees
+PASS  [narrow 380] the worker proposed objectives through /api/worker, with the passcode header
+PASS  [narrow 380] the passcode is in sessionStorage only
+PASS  [narrow 380] the material text went to the model once…
+PASS  [narrow 380] …and is in no IndexedDB value, localStorage or sessionStorage
+PASS  [narrow 380] narrow confirm bar, proposals undecided: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow confirm bar, proposals undecided: no element's right edge passes the viewport
+PASS  [narrow 380] narrow confirm bar, proposals undecided: no element's content is clipped by its own box
+PASS  [narrow 380] one teacher decision recorded per proposal
+PASS  [narrow 380] narrow confirmed objectives: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow confirmed objectives: no element's right edge passes the viewport
+PASS  [narrow 380] narrow confirmed objectives: no element's content is clipped by its own box
+PASS  [narrow 380] narrow confirmed objectives: the confirm button "Confirm 3 objectives · build the plan" shows its whole label — scrollWidth 152 vs clientWidth 152
+PASS  [narrow 380] stage: the objectives stage has exactly one primary action — primaries=1
+PASS  [narrow 380] three confirmed objectives are on the page to be sent — 3
+PASS  [narrow 380] narrow waiting card, drafting the plan: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow waiting card, drafting the plan: no element's right edge passes the viewport
+PASS  [narrow 380] narrow waiting card, drafting the plan: no element's content is clipped by its own box
+PASS  [narrow 380] narrow waiting card, drafting the plan: the confirm button "Confirm 3 objectives · build the plan" shows its whole label — scrollWidth 152 vs clientWidth 152
+PASS  [narrow 380] the waiting experience says in plain words what is happening, with the real count
+PASS  [narrow 380] it states the typical range the documented defaults give: usually 10–60 seconds
+PASS  [narrow 380] exactly one polite aria-live region announces the start (not every second) — ["Drafting a lesson plan from your 3 confirmed objectives. Usually 10 to 60 seconds."]
+PASS  [narrow 380] there is no progress bar and no percentage
+PASS  [narrow 380] 'What the model sees' opens and lists the confirmed statements, the topic, the material names, and what it never sees
+PASS  [narrow 380] the elapsed readout is a real clock: it has advanced
+PASS  [narrow 380] before the high end there is no 'taking longer' line
+PASS  [narrow 380] drafting the plan ends with a true receipt computed from the resulting view (C-e: it no longer repeats "It stays a draft until you confirm it."; the stage bar and the DRAFT tag say it) — Finished after 2 s. Checked: 3 activities, each cites only objectives you confirmed (3 citations). | Drafted a lesson plan from your 3 confirmed objectives | Took 2 s | Checked: 3 activities, each cites only objectives you confirmed (3 citations). | What the model sees
+PASS  [narrow 380] it says how long the step took, and the live region announces the finish — Took 2 s | announced: Finished after 2 s. Checked: 3 activities, each cites only objectives you confirmed (3 citations).
+PASS  [narrow 380] what the model sees is what left the page: every statement, the topic and the material name were sent; the label was NOT
+PASS  [narrow 380] the plan is drafted (no second passcode prompt: it is kept for this tab)
+PASS  [narrow 380] stage: the plan stage has exactly one primary action — primaries=1
+PASS  [narrow 380] stage: the lesson plan's text appears exactly once on the plan stage — lines=3 (3 = once)
+PASS  [narrow 380] rail: a worker row after drafting, and no ASFAI lane in the online app
+PASS  [narrow 380] narrow plan card, drafted: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow plan card, drafted: no element's right edge passes the viewport
+PASS  [narrow 380] narrow plan card, drafted: no element's content is clipped by its own box
+PASS  [narrow 380] plan confirmed on the record
+PASS  [narrow 380] narrow plan card: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow plan card: no element's right edge passes the viewport
+PASS  [narrow 380] narrow plan card: no element's content is clipped by its own box
+PASS  [narrow 380] narrow plan card: the confirm button "Review & publish first version" shows its whole label — scrollWidth 152 vs clientWidth 152
+PASS  [narrow 380] stage: the publish stage has exactly one primary action — primaries=1
+PASS  [narrow 380] stage: the lesson plan's text appears exactly once on the publish stage — lines=3 (3 = once)
+PASS  [narrow 380] narrow seal confirm step: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow seal confirm step: no element's right edge passes the viewport
+PASS  [narrow 380] narrow seal confirm step: no element's content is clipped by its own box
+PASS  [narrow 380] narrow seal confirm step: the confirm button "Review & publish first version" shows its whole label — scrollWidth 152 vs clientWidth 152
+PASS  [narrow 380] version 1 sealed, and pinned in this browser
+PASS  [narrow 380] narrow publish card, sealed: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow publish card, sealed: no element's right edge passes the viewport
+PASS  [narrow 380] narrow publish card, sealed: no element's content is clipped by its own box
+PASS  [narrow 380] stage: the published stage has exactly one primary action — primaries=1
+PASS  [narrow 380] stage: the lesson plan's text appears exactly once on the published stage — lines=3 (3 = once)
+PASS  [narrow 380] 'Check a student question' puts the cursor in the student's question box
+PASS  [narrow 380] narrow student answer, running: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow student answer, running: no element's right edge passes the viewport
+PASS  [narrow 380] narrow student answer, running: no element's content is clipped by its own box
+PASS  [narrow 380] a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–15 seconds — Looking for the answer in version 1 of this lesson. Usually 2 to 15 seconds. | Looking for the answer in version 1 of this lesson | 0 s elapsed · usually 2–15 seconds | What the model sees
+PASS  [narrow 380] under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation) — still / none
+PASS  [narrow 380] the student gets an answer that cites the published version
+PASS  [narrow 380] student chat wrote nothing (IndexedDB and web storage identical before and after)
+PASS  [narrow 380] the browser-written log verifies on the Node host's chain (node:crypto) — 13 events
+PASS  [narrow 380] after a reload the published course is still there
+PASS  [narrow 380] narrow post-reload event log: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow post-reload event log: no element's right edge passes the viewport
+PASS  [narrow 380] narrow post-reload event log: no element's content is clipped by its own box
+PASS  [narrow 380] after a reload the record verifies
+PASS  [narrow 380] the course notice is shown exactly once, not echoed by every card — 1 cop(y|ies) on the page
+PASS  [narrow 380] narrow published course: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow published course: no element's right edge passes the viewport
+PASS  [narrow 380] narrow published course: no element's content is clipped by its own box
+PASS  [narrow 380] narrow footer data controls: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow footer data controls: no element's right edge passes the viewport
+PASS  [narrow 380] narrow footer data controls: no element's content is clipped by its own box
+PASS  [narrow 380] an export file was downloaded — silicus-courses-2026-11-18.json
+PASS  [narrow 380] the export verifies in Node (envelope digest, chain, meta, replay)
+PASS  [narrow 380] the export holds no material text
+PASS  [narrow 380] narrow footer data controls, delete confirm: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow footer data controls, delete confirm: no element's right edge passes the viewport
+PASS  [narrow 380] narrow footer data controls, delete confirm: no element's content is clipped by its own box
+PASS  [narrow 380] delete all empties IndexedDB, the pins and the passcode
+PASS  [narrow 380] a tampered export is refused with a clear message, and nothing is written
+PASS  [narrow 380] import brings the course back, record intact
+PASS  [narrow 380] the imported course verifies in the app
+PASS  [narrow 380] 0 CSP violations
+PASS  [narrow 380] 0 console errors
+PASS  [narrow 380] 0 page errors
+PASS  [narrow 380] the only network calls were the site's functions — /api/worker/status, /api/worker
+PASS  [narrow 380] the whole flow completed
+PASS  [uploads 1440] uploads: the main entry chunk does not contain pdf.js (a lazy chunk does) — entry assets/index-CIgC5MEN.js (477747 bytes); lazy pdf.js chunk: pdf-q-5ow4VI.js
+PASS  [uploads 1440] uploads: mammoth and jszip are lazy chunks too, not in the entry — jszip.min-CBFutFRr.js, mammoth.browser.min-WTckL4F8.js
+PASS  [uploads 1440] uploads: the materials question offers 'Add files' with the PDF, DOCX and PPTX types
+PASS  [uploads 1440] uploads: each file shows its name, kind and character count before anything is sent — hello.pdf · PDF · 76 characters | Syllabus notes.docx · Word · 88 characters
+PASS  [uploads 1440] uploads: the PDF's character count is the length of its real text layer — 76
+PASS  [uploads 1440] uploads: the file names sit on their own lines beside the typed name — "Textbook chapter 3\nhello.pdf\nSyllabus notes.docx"
+PASS  [uploads 1440] uploads: nothing has left the page (no worker call, no /api/courses) while files are only chosen
+PASS  [uploads 1440] uploads: the record holds the file names as typed names, and not their text — {"kind":"course.created","courseId":"urn:uuid:9c154cd8-4ce8-4eb6-ac6c-ca1d3210d984","owner":"Ada Lovelace","title":"Photosynthesis from real files","description":"","materials":[{"name":"Textbook chap
+PASS  [uploads 1440] uploads: 'propose from my materials' finds the files already chosen in this tab (names and counts shown, no second upload) — hello.pdf · PDF · 76 characters | Syllabus notes.docx · Word · 88 characters
+PASS  [uploads 1440] uploads: after a reload the files are not offered (the text was never stored)
+PASS  [uploads 1440] uploads: and the panel says to add the file again, in the glossary's words
+PASS  [uploads 1440] uploads: the PDF's marker text is in no IndexedDB value, localStorage or sessionStorage
+PASS  [uploads 1440] uploads: an image-only PDF says it has no text layer, names the file, and makes no OCR claim — scan-only.pdf: This PDF has no text layer: it looks like a scan or photos. Silicus does not read text from pictures. Paste the text instead, or use a PDF whose text you can select.
+PASS  [uploads 1440] uploads: a legacy .doc says what to do instead — old.doc: Silicus reads PDF, Word (.docx), PowerPoint (.pptx) and text files. Save an older .doc or .ppt as .docx or .pptx, or paste the text.
+PASS  [uploads 1440] uploads: neither failed file was added to the list
+PASS  [uploads 1440] uploads: the files added again in the panel are listed with their character counts
+PASS  [uploads 1440] uploads: the proposal request carries the PDF's text and the DOCX's text, once each — 1 worker request(s)
+PASS  [uploads 1440] uploads: the receipt says the proposals were drawn from 2 materials
+PASS  [uploads 1440] uploads: after proposing, the PDF's marker is STILL in no IndexedDB value, localStorage or sessionStorage
+PASS  [uploads 1440] uploads: pdf.js's worker came from the bundle, same origin, as JavaScript — 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8
+PASS  [uploads 1440] uploads: no request left the page's own origin (no CDN)
+PASS  [uploads 1440] uploads: 0 CSP violations
+PASS  [uploads 1440] uploads: 0 console or page errors
+PASS  [uploads 1440] uploads: the whole upload flow completed
+PASS  [landing 1440] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 1440] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",175],["You decide.",287]]
+PASS  [landing 1440] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, Classic view to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 1440] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 1440] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 1440] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440}
+PASS  [landing 1440] landing 1440: the drawing sits beside the copy, not over it — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440},{"left":168,"right":712,"top":137,"bottom":569}]
+PASS  [landing 1440] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 1440] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 1440] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 1440] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 1440] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 1440] landing: Classic view opens the app at #/live
+PASS  [landing 1440] landing: the app's Silicus wordmark returns to the landing (#/)
+PASS  [landing 1440] landing: typing #/live opens the app, not the landing
+PASS  [landing 1440] landing: 0 CSP violations and 0 console errors
+PASS  [landing 380] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 380] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",157],["You decide.",235]]
+PASS  [landing 380] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, Classic view to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 380] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 380] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 380] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":348,"left":16,"right":364,"top":585,"bottom":1207,"vw":380}
+PASS  [landing 380] landing 380: the drawing sits below the copy, inside the viewport — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":348,"left":16,"right":364,"top":585,"bottom":1207,"vw":380},{"left":16,"right":364,"top":101,"bottom":549}]
+PASS  [landing 380] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 380] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 380] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 380] narrow landing page: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page: no element's content is clipped by its own box
+PASS  [landing 380] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 380] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 380] narrow landing page, Under the hood open: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page, Under the hood open: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page, Under the hood open: no element's content is clipped by its own box
+PASS  [landing 380] landing: Classic view opens the app at #/live
+PASS  [landing 380] landing: the app's Silicus wordmark returns to the landing (#/)
+PASS  [landing 380] landing: typing #/live opens the app, not the landing
+PASS  [landing 380] landing: 0 CSP violations and 0 console errors
+
+339/339 browser-mode checks passed

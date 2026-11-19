@@ -1,0 +1,18 @@
+larify listing the lesson's items
+PASS  K3 the clarify offers the lesson's items as buttons (1 to 3) — ["Say where a plant gets its water","Smart or not? Place your bet"]
+PASS  K3 'what is your name' gets the fixed introduction naming the lesson
+PASS  K3 tapping an offered item asks about it
+PASS  a returning teacher's wizard opens on step 1, without the welcome
+PASS  M1 ages 19–22: the consequence line says no map topics fit — From 15: learners may use the AI on their own · 0 of 1,912 map topics fit · one 45-minute plan
+PASS  M1 ages 19–22: the map step has nothing to rank, shows search with no error, and Continue waits
+PASS  a 200-character unbroken first line names the pasted source, and at 390 the wizard does not scroll sideways
+PASS  with a source and nothing written, proposing from sources is already chosen
+PASS  the AI check reads ready once the tab holds the passcode
+PASS  R7 the confirm lands on Objectives and starts proposing from the sources there
+PASS  R7 one live region on the step after the wizard — ["Your turn: accept, edit or drop each proposal"]
+PASS  G2b the second course is created with ages 19–22 and no anchor — {"ages":{"min":19,"max":22}}
+PASS  H2a ages 19–22: the objectives step says once, quietly, that there are no skill-map topics
+PASS  F1 at 390 the Objectives step does not scroll sideways with a 200-character source name in the provenance — sw=390 vw=390
+PASS  no console or page errors during the walk
+
+94/94 studio checks passed

@@ -10,7 +10,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import styles from "./PlanCard.module.css";
 import { AI_STATUS_LABEL, PHASE_LABEL } from "./design";
 
-export type EditKind = "text" | "long" | "minutes" | "phase" | "aiStatus";
+export type EditKind = "text" | "long" | "minutes" | "phase" | "aiStatus" | "evidence";
 export interface EditField {
   path: string;
   label: string;
@@ -94,6 +94,12 @@ export function EditForm({ what, fields, onSave, onCancel, disabled }: {
               <select id={fid} ref={ref} className={styles.editInput} value={draft[f.path]} onChange={(e) => set(e.target.value)}>
                 <option value="">No phase</option>
                 {([1, 2, 3, 4] as const).map((n) => <option key={n} value={String(n)}>{`${n} · ${PHASE_LABEL[n]}`}</option>)}
+              </select>
+            ) : f.kind === "evidence" ? (
+              <select id={fid} ref={ref} className={styles.editInput} value={draft[f.path]} onChange={(e) => set(e.target.value)}>
+                <option value="none">None collected in this activity</option>
+                <option value="observation">Teacher observation</option>
+                <option value="work-product">Learner work product</option>
               </select>
             ) : f.kind === "aiStatus" ? (
               <select id={fid} ref={ref} className={styles.editInput} value={draft[f.path]} onChange={(e) => set(e.target.value)}>

@@ -506,6 +506,7 @@ function activityFields(a: LessonPlanView["activities"][number], index: number, 
         hint: "Your choice stands. If it goes against the age rule, the plan says so." },
       { path: p("noAiAlternative"), label: "Without AI", kind: "long" as const, value: a.noAiAlternative ?? null, max: 300 },
     ] : []),
+    { path: p("evidenceIfAny"), label: "Evidence", kind: "evidence", value: a.evidenceIfAny },
     { path: p("notEvidence"), label: "Not evidence", kind: "long", value: a.notEvidence ?? null, max: 300 },
   ];
 }

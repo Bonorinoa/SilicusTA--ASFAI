@@ -43,8 +43,11 @@ const ACTIVITY_FIELDS = Object.freeze({
   decisionAfterHelp: { kind: "text", max: 300, label: "then they decide" },
   aiStatus: { kind: "aiStatus", label: "AI status" },
   noAiAlternative: { kind: "text", max: 300, label: "without AI" },
+  evidenceIfAny: { kind: "evidence", gate: true, label: "evidence" },
   notEvidence: { kind: "text", max: 300, gate: true, label: "not evidence" },
 });
+/** The gate's evidence kinds. Student chat is never one (the gate refuses it too). */
+const EVIDENCE = ["none", "observation", "work-product"];
 const SESSION_FIELDS = Object.freeze({
   whatLearnerProduces: { kind: "text", max: 400, required: true, label: "evidence for this session" },
 });
@@ -113,6 +116,9 @@ export function normalizeValue(parsed, value, { hasAges = false } = {}) {
     case "phase":
       if (value === null) return null;
       if (!Number.isInteger(value) || value < 1 || value > 4) throw new PlanEditError("BAD_EDIT", "a phase is a whole number from 1 to 4");
+      return value;
+    case "evidence":
+      if (!EVIDENCE.includes(value)) throw new PlanEditError("BAD_EDIT", "evidence is none, observation or work-product; student chat is not evidence");
       return value;
     case "aiStatus":
       if (!hasAges) throw new PlanEditError("BAD_EDIT", "this course has no ages, so its activities carry no AI status");

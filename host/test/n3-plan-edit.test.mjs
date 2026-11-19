@@ -140,6 +140,7 @@ test("N3: values go through the model's bounds; refusals record nothing; minutes
     [{ path: "aiPolicy", value: "x" }],
     [{ path: "activities.0.aiStatus", value: "sometimes" }],
     [{ path: "activities.0.phase", value: 7 }],
+    [{ path: "activities.0.evidenceIfAny", value: "chat" }],
     [{ path: "title", value: "a" }, { path: "title", value: "b" }],
   ];
   for (const edits of refusals) {
@@ -155,6 +156,8 @@ test("N3: values go through the model's bounds; refusals record nothing; minutes
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.ok(r.json.plan.title.length <= 160 && !/[\u2028\u202e]/.test(r.json.plan.title), r.json.plan.title);
   assert.ok(r.json.plan.activities[1].title.length <= 120);
+  const ev = await edit(t, c, [{ path: "activities.1.evidenceIfAny", value: "work-product" }]);
+  assert.equal(ev.json.plan.activities[1].evidenceIfAny, "work-product");
   // An optional field set to empty is removed, not stored as "".
   const cleared = await edit(t, c, [{ path: "activities.1.learnerFirst", value: "" }]);
   assert.equal("learnerFirst" in cleared.json.plan.activities[1], false);

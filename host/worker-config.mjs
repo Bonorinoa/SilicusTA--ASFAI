@@ -15,9 +15,9 @@ export function reasoningBody(value) {
 }
 
 /**
- * N1 (L1 finding 3): per-task reasoning and deadlines, the same on both hosts. Ranking the skill map and answering a
- * student are short, judged-afterwards outputs: reasoning OFF (the L1 ranking spent ~8,000 output tokens, mostly
- * reasoning, ~100 s). Objectives and the plan keep the configured default. A task not listed keeps the default.
+ * Per-task reasoning and deadlines, the same on both hosts. Ranking, student answers and plan drafting are
+ * judged-afterwards outputs, so reasoning is OFF. In the L2 reliability pass, plan reasoning consumed the full
+ * 16,000-token reply cap before any plan arrived. Tasks not listed keep the configured default.
  * On the site the SERVER applies this from the task name; a client still cannot send a reasoning value.
  */
 export const TASKS = Object.freeze(["rank", "answer", "answer_adult", "objectives", "suggest", "plan"]);
@@ -27,7 +27,7 @@ export const TASKS = Object.freeze(["rank", "answer", "answer_adult", "objective
  * reasoning OFF (with the clarify prompt rule). 18+: "answer_adult", reasoning LOW (every eval bar passed at low).
  * The host picks the task name from the course, never from a request field; both keep the 20 s deadline.
  */
-export const TASK_REASONING = Object.freeze({ rank: "off", answer: "off", answer_adult: "low" });
+export const TASK_REASONING = Object.freeze({ rank: "off", answer: "off", answer_adult: "low", plan: "off" });
 export const TASK_TIMEOUT_MS = Object.freeze({ rank: 25_000, answer: 20_000, answer_adult: 20_000 });
 
 /** N5: the helper's task name for a course: "answer_adult" only for a strict-true 18+ course. */

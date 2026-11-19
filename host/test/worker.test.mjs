@@ -256,13 +256,20 @@ test("the reply cap (H): 16,000 by default, an override applies, and the 32,000 
   assert.equal(mock.st.lastBody.max_tokens, 16000, "a junk override falls back to the default");
 });
 
-test("the OpenAI wire sends each reasoning option exactly; model-default omits it", async () => {
+test("the OpenAI wire sends each configured reasoning option on tasks without a fixed setting", async () => {
   for (const [reasoning, want] of [["low", { effort: "low" }], ["medium", { effort: "medium" }], ["high", { effort: "high" }], ["off", { enabled: false }], ["model-default", undefined]]) {
-    const mock = await startMockWorker({ reply: goodPlan() }); MOCKS.push(mock);
+    const mock = await startMockWorker({ reply: { objectives: [{ statement: "Students can compare two examples." }] } }); MOCKS.push(mock);
     const w = new PlanWorker({ url: mock.url, model: "m", reasoning });
-    await w.draft({ objectives: OBJECTIVES });
+    await w.suggestObjectives({ outcomes: ["Students can explain one example."] });
     assert.deepEqual(mock.st.lastBody.reasoning, want, reasoning);
   }
+});
+
+test("the plan task always sends reasoning off, even when the configured default is low", async () => {
+  const mock = await startMockWorker({ reply: goodPlan() }); MOCKS.push(mock);
+  const w = new PlanWorker({ url: mock.url, model: "m", reasoning: "low" });
+  await w.draft({ objectives: OBJECTIVES });
+  assert.deepEqual(mock.st.lastBody.reasoning, { enabled: false });
 });
 
 test("reasoning is never sent on the Anthropic wire", async () => {

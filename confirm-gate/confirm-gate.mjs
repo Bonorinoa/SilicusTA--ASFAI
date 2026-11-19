@@ -526,12 +526,12 @@ export class ConfirmGate {
   /* ------------------------- objectives (checkpoint 3) ------------------- */
 
   /**
-   * AI proposes objectives. Proposals are NEVER confirmed here — the returned
+   * Records objective proposals. Proposals are NEVER confirmed here — the returned
    * records hard-code `confirmedByEducator: false`. Each proposal (public or
    * local) gets its own stable local `urn:uuid:` id; `mt_*` ids are optional
    * references only and never a state key.
    *
-   * @param {readonly {kind: "public"|"local", publicId?: string, statement?: string, alignment?: AlignmentRef}[]} items
+   * @param {readonly {kind: "public"|"local", publicId?: string, statement?: string, alignment?: AlignmentRef, proposedBy?: "ai"|"teacher"}[]} items
    * @returns {readonly ObjectiveRecord[]}
    */
   proposeObjectives(items) {
@@ -539,9 +539,16 @@ export class ConfirmGate {
     if (!Array.isArray(items) || items.length === 0) {
       throw new ConfirmGateError("proposeObjectives requires a non-empty array of proposals", "BAD_INPUT");
     }
+    for (const item of items) {
+      const proposedBy = item?.proposedBy ?? "ai";
+      if (proposedBy !== "ai" && proposedBy !== "teacher") {
+        throw new ConfirmGateError(`proposedBy must be "ai" or "teacher", got: ${String(item?.proposedBy)}`, "BAD_INPUT");
+      }
+    }
     /** @type {ObjectiveRecord[]} */
     const created = [];
     for (const item of items) {
+      const proposedBy = item.proposedBy ?? "ai";
       const id = this.#idFactory();
       /** @type {ObjectiveRecord} */
       let record;
@@ -557,7 +564,7 @@ export class ConfirmGate {
           statement: item.statement ? requireText(item.statement, "statement") : undefined,
           alignment: normalizeAlignment(item.alignment, false),
           confirmedByEducator: false,
-          proposedBy: "ai",
+          proposedBy,
           proposedAt: this.#clock(),
         };
       } else if (item.kind === "local") {
@@ -567,7 +574,7 @@ export class ConfirmGate {
           statement: requireText(item.statement, "statement (kind: local)"),
           alignment: normalizeAlignment(item.alignment, false),
           confirmedByEducator: false,
-          proposedBy: "ai",
+          proposedBy,
           proposedAt: this.#clock(),
         };
       } else {

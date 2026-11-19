@@ -135,6 +135,40 @@ test("objectives checkpoint auto-confirms when every proposal is decided, reopen
   assert.equal(ctx.gate.publishStatus().canPublish, false);
 });
 
+test("objective proposals record their author, default to ai, and reject any other value", () => {
+  const ctx = makeCtx();
+  walkToPlan(ctx);
+
+  const [ai, teacher] = ctx.gate.proposeObjectives([
+    { kind: "local", statement: "Suggested outcome." },
+    { kind: "local", statement: "Teacher-typed outcome.", proposedBy: "teacher" },
+  ]);
+  assert.equal(ai.proposedBy, "ai");
+  assert.equal(teacher.proposedBy, "teacher");
+  assert.equal(teacher.confirmedByEducator, false, "authorship does not bypass the teacher decision");
+
+  assert.throws(
+    () => ctx.gate.proposeObjectives([{ kind: "local", statement: "Forged outcome.", proposedBy: "student" }]),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+
+  const atomic = makeCtx();
+  walkToPlan(atomic);
+  assert.throws(
+    () => atomic.gate.proposeObjectives([
+      { kind: "local", statement: "Must not be partly recorded." },
+      { kind: "local", statement: "Bad author.", proposedBy: "student" },
+    ]),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+  const [only] = atomic.gate.proposeObjectives([{ kind: "local", statement: "The only recorded proposal." }]);
+  atomic.gate.confirmObjectives({
+    provenance: atomic.say("Accept the only proposal.").prov,
+    decisions: [{ verb: "accept", proposalId: only.id }],
+  });
+  assert.equal(atomic.gate.checkpoints().objectives.status, "confirmed", "a bad batch records nothing");
+});
+
 /* --------------------------------- (ii) ----------------------------------- */
 
 test("(ii) publish is blocked while any objective in the plan is unconfirmed", () => {

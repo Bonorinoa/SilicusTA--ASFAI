@@ -45,6 +45,7 @@ export interface GateProposalInput {
   kind: "public" | "local";
   publicId?: string;
   statement?: string;
+  proposedBy?: "ai" | "teacher";
   alignment?: { publicId: string; relationship: "closeMatch" | "relatedTo" | "exactMatch" };
 }
 
@@ -142,6 +143,8 @@ export interface LedgerLike {
 
 export interface ProposalSpec {
   statement: string;
+  /** Who supplied the wording; omitted means an AI proposal. */
+  proposedBy?: "ai" | "teacher";
   /** Quiet provenance label, e.g. "from your slides p.4". */
   source?: string;
   /** Optional Marble alignment (garnish, never the headline). */
@@ -262,6 +265,7 @@ export class ConfirmGateHarness {
       items.map((item) => ({
         kind: item.publicId ? ("public" as const) : ("local" as const),
         statement: item.statement,
+        proposedBy: item.proposedBy,
         publicId: item.publicId,
         alignment: item.publicId
           ? { publicId: item.publicId, relationship: item.relationship ?? "closeMatch" }
@@ -500,11 +504,13 @@ export class ConfirmGateHarness {
     const decisions = this.gate.decisions();
     const rows: ProposalView[] = [];
     const seen = new Set<string>();
+    const addedIds = new Set(decisions.filter((d) => d.verb === "add" && d.targetId).map((d) => d.targetId));
 
-    // Proposal rows in the order the AI proposed them.
+    // Proposal rows in proposal order. This means "awaiting/carrying a decision", not "AI-generated":
+    // teacher-typed proposals still need the same teacher decision and therefore stay in this list.
     const proposals = [...this.#meta.keys()]
       .map((id) => this.gate.getProposal(id))
-      .filter((p): p is GateObjectiveRecord => p !== null && p.proposedBy === "ai");
+      .filter((p): p is GateObjectiveRecord => p !== null && !addedIds.has(p.id));
 
     for (const proposal of proposals) {
       seen.add(proposal.id);
@@ -529,7 +535,7 @@ export class ConfirmGateHarness {
               suggested: !alignmentSource.confirmedByEducator,
             }
           : null,
-        by: "ai",
+        by: proposal.proposedBy,
       });
     }
 
@@ -560,7 +566,8 @@ export class ConfirmGateHarness {
 
   summary(): HarnessSummary {
     const rows = this.views();
-    const proposals = rows.filter((r) => r.by === "ai");
+    // Summary counts proposal decisions, whatever their author; verb:add rows are already decided additions.
+    const proposals = rows.filter((r) => r.status !== "added");
     const decided = proposals.filter((r) => r.status !== "proposed").length;
     return {
       proposals: proposals.length,

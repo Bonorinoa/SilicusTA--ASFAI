@@ -93,6 +93,17 @@ describe("ConfirmGateHarness (UI ↔ confirm-gate binding)", () => {
     expect(summary.objectivesCheckpoint).toBe("confirmed"); // gate auto-confirmed checkpoint 3
   });
 
+  it("views() includes teacher-typed proposals because they still await a teacher decision", () => {
+    const harness = new ConfirmGateHarness();
+    const [proposal] = harness.propose([{ statement: "Teacher-typed outcome", proposedBy: "teacher" }]);
+
+    expect(proposal.proposedBy).toBe("teacher");
+    expect(harness.views()).toEqual([
+      expect.objectContaining({ id: proposal.id, statement: "Teacher-typed outcome", by: "teacher", status: "proposed" }),
+    ]);
+    expect(harness.summary()).toMatchObject({ proposals: 1, awaiting: 1, allDecided: false });
+  });
+
   it("the gate refuses fabricated provenance — nothing applies", () => {
     const harness = new ConfirmGateHarness();
     const [proposal] = harness.propose([{ statement: "Students can model one fraction." }]);

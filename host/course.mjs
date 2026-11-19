@@ -169,7 +169,7 @@ export class CourseSession {
   /** N3: plan ids the teacher produced by editing, and the trace of every saved plan edit (from the log). */
   #editedPlans = new Set();
   #planEdits = [];
-  /** @type {string[]} proposal ids in the order the AI proposed them */
+  /** @type {string[]} proposal ids in proposal order */
   #proposalIds = [];
   /** @type {Map<string, string>} quiet provenance labels (host metadata, not gate state) */
   #sources = new Map();
@@ -496,7 +496,7 @@ export class CourseSession {
         reason: "objectives have already been proposed for this course",
       };
     }
-    const items = objectivesFromAnswers(this.#intake.answers());
+    const items = objectivesFromAnswers(this.#intake.answers()).map((item) => ({ ...item, proposedBy: "teacher" }));
     if (items.length === 0) {
       return {
         ok: false,
@@ -891,7 +891,9 @@ export class CourseSession {
     const seen = new Set();
     for (const id of this.#proposalIds) {
       const proposal = this.#gate.getProposal(id);
-      if (!proposal || proposal.proposedBy !== "ai") continue;
+      // This list means proposals awaiting or carrying a decision, not "AI-generated".
+      // Teacher-typed lines are proposals too; authorship only changes the label, never the decision gate.
+      if (!proposal) continue;
       seen.add(id);
       const mine = decisions.filter((d) => d.verb !== "add" && d.proposalId === id);
       const status = mine.some((d) => d.verb === "drop")
@@ -916,7 +918,7 @@ export class CourseSession {
         alignment: alignmentSource
           ? { publicId: alignmentSource.publicId, relationship: alignmentSource.relationship, suggested: !alignmentSource.confirmedByEducator }
           : null,
-        by: "ai",
+        by: proposal.proposedBy,
         citedByPlan: cited.has(id),
       });
     }

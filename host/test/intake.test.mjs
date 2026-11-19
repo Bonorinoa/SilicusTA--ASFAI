@@ -197,3 +197,30 @@ test("an outline already confirmed locally stays confirmed if ASFAI is consulted
   s.observeIntake({ state: CLARIFY.state, questions: CLARIFY.questions, at: 3000 });
   assert.equal(s.view().checkpoints.outline.status, "confirmed", "a teacher's recorded confirmation is not retroactively revoked");
 });
+
+test("teacher-typed outcome proposals stay pending for a decision and record teacher authorship", () => {
+  const store = newStore();
+  const s = CourseSession.create(store, { owner: OWNER, title: "T" });
+  s.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  s.answerIntake({
+    text: "my answers",
+    answers: { topic: "t", course: "c", learning_outcomes: "Outcome one.\nOutcome two." },
+    at: 2000,
+  });
+  s.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 3000 });
+
+  const proposed = s.proposeObjectivesFromAnswers({ at: 4000 });
+  assert.equal(proposed.ok, true);
+  assert.deepEqual(proposed.proposals.map((p) => [p.statement, p.by, p.status]), [
+    ["Outcome one.", "teacher", "proposed"],
+    ["Outcome two.", "teacher", "proposed"],
+  ]);
+  assert.deepEqual(proposed.proposals.map((p) => s.view().proposals.find((r) => r.id === p.id)?.by), ["teacher", "teacher"]);
+
+  s.decideObjectives({
+    decisions: proposed.proposals.map((p) => ({ verb: "accept", proposalId: p.id })),
+    text: "Accept both.",
+    at: 5000,
+  });
+  assert.deepEqual(s.export().objectives.map((o) => o.proposedBy), ["teacher", "teacher"]);
+});

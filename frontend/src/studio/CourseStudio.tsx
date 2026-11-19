@@ -11,6 +11,7 @@ import { useAiStatus } from "./aiStatus";
 import { keepLinksForCourse, linksFor, takeProposeOnArrival, mapSourceFor } from "./links";
 import { explainRefusal } from "../lib/refusals";
 import { Refusal } from "./Refusal";
+import { RevisionNote } from "./RevisionNote";
 import { SourcesPanel } from "./SourcesPanel";
 import { StepStatus } from "./StepStatus";
 import { TopBar, href } from "./StudioApp";
@@ -202,6 +203,10 @@ export function CourseStudio({ courseId }: { courseId: string }) {
             <div className={s.backRow}>
               <Button variant="quiet" size="small" onClick={() => setLooking(prev.id === step ? null : prev.id)}>← Back to {prev.label}</Button>
             </div>
+          ) : null}
+          {/* K5: while a published course is being revised, every step says what students still read (classic RevisionPanel). */}
+          {published && view.revision && shown !== "publish" ? (
+            <div className={s.noticeRow}><RevisionNote revision={view.revision} workerConfigured={worker?.configured !== false} busy={c.busy} onDraftPlan={() => void c.actions.draftPlan()} /></div>
           ) : null}
           {shown === "brief" ? <BriefStep {...common} /> : null}
           {shown === "objectives" ? <ObjectivesStep {...common} links={links} /> : null}

@@ -32,7 +32,7 @@ import { activityOf } from "./activity.mjs";
 import { materialNames } from "./materials-core.mjs";
 import { agesError, stageForAges } from "./ages.mjs";
 import { lessonMinutesError } from "./lesson-length.mjs";
-import { PlanEditError, MAX_EDITS, applyEdits, editLabel, gateSpecOf, normalizeValue, parsePath, valueAt, valueSha } from "./plan-edit.mjs";
+import { PlanEditError, MAX_EDITS, applyEdits, editLabel, gateSpecOf, normalizeValue, parsePath, shapeIndexMap, valueAt, valueSha } from "./plan-edit.mjs";
 
 const CHANNEL = "silicus-ui";
 
@@ -323,16 +323,31 @@ export class CourseSession {
         const turnRef = this.#inbound(event.text, event.at);
         const edited = applyEdits(viewed, edits, { stage: this.#ages ? stageForAges(this.#ages) : null, ages: this.#ages ?? null, lessonMinutes: this.#lessonMinutes ?? null });
         const record = this.#gate.proposeLessonPlan(gateSpecOf(edited));
-        const citations = this.#citations.get(plan.id);
+        let citations = this.#citations.get(plan.id);
+        // N5: a shape change moves activity positions; citations that point at positions follow them.
+        const shape = edits.find((e) => e.parsed.scope === "shape");
+        if (citations && shape) {
+          const map = shapeIndexMap(shape.parsed, shape.value, viewed.activities.length);
+          citations = citations.map((c) => ({ ...c, activityIndexes: c.activityIndexes.map((i) => map[i] ?? -1).filter((i) => i >= 0) }))
+            .filter((c) => c.activityIndexes.length > 0);
+        }
         if (citations) this.#citations.set(record.id, citations);
         const design = planDesignOf(edited);
         if (design) this.#planDesign.set(record.id, design);
         this.#editedPlans.add(record.id);
-        const preview = (v) => (v === undefined || v === null ? null : String(v).slice(0, 160));
-        edits.forEach(({ parsed, value, before }, k) => this.#planEdits.push({
-          id: `plan-edit:${record.id}:${k}`, at: event.at, turnRef, path: parsed.path, label: editLabel(parsed),
-          before: preview(before), after: preview(value),
-        }));
+        const objectiveLabels = new Map(this.#gate.confirmedObjectives().map((o, i) => [o.id, `Objective ${i + 1}`]));
+        const preview = (v) => (v === undefined || v === null ? null
+          : Array.isArray(v) ? v.map((id) => objectiveLabels.get(id) ?? "an objective").join(", ").slice(0, 160)
+          : typeof v === "object" ? String(v.title ?? "").slice(0, 160) || null
+          : String(v).slice(0, 160));
+        edits.forEach(({ parsed, value, before }, k) => {
+          // N5: a shape change previews as titles and positions, never as an id list.
+          const [b, a] = parsed.scope !== "shape" ? [preview(before), preview(value)]
+            : parsed.op === "add" ? [null, preview(value)]
+            : parsed.op === "remove" ? [preview(before), null]
+            : [`position ${parsed.index + 1}`, `position ${value + 1}`];
+          this.#planEdits.push({ id: `plan-edit:${record.id}:${k}`, at: event.at, turnRef, path: parsed.path, label: editLabel(parsed, value), before: b, after: a });
+        });
         this.#planAt = event.at;
         return;
       }
@@ -806,13 +821,16 @@ export class CourseSession {
     const viewed = this.#withDesign(plan);
     const seen = new Set();
     const out = [];
+    const objectiveIds = this.#gate.confirmedObjectives().map((o) => o.id);
     for (const e of edits) {
       if (!e || typeof e !== "object" || Array.isArray(e)) throw new PlanEditError("BAD_EDIT", "each edit is {path, value}");
       const parsed = parsePath(e.path, viewed);
       if (seen.has(parsed.path)) throw new PlanEditError("BAD_EDIT", `${parsed.path} is edited twice`);
       seen.add(parsed.path);
-      const after = normalizeValue(parsed, e.value, { hasAges: !!this.#ages });
+      if (parsed.scope === "shape" && edits.length > 1) throw new PlanEditError("BAD_EDIT", "add, remove or move one activity per save");
+      const after = normalizeValue(parsed, e.value, { hasAges: !!this.#ages, objectiveIds, activityCount: viewed.activities.length });
       const before = valueAt(viewed, parsed);
+      if (parsed.op === "moveTo" && after === parsed.index) continue;
       if (JSON.stringify(before ?? null) === JSON.stringify(after)) continue;
       out.push({ path: parsed.path, beforeSha: valueSha(before), after });
     }

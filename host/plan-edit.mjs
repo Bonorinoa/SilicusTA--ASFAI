@@ -14,6 +14,16 @@
  *     course version; the sealed version keeps its own record. The teacher confirms the edited plan.
  *   - not a provenance claim from the client. The client sends {path, value}; the host computes the hash of
  *     the value it replaces and records only the cleaned value.
+ *
+ * N5 (C5, the rest of "editable"): a later review's timing (afterDays) and form; the objectives an activity cites
+ * (chosen from the CONFIRMED objectives only); and the plan's shape: add (`activities.add`), remove
+ * (`activities.N.remove`) and reorder (`activities.N.moveTo`) activities. A shape change rides in the same
+ * `plan.edited` event, alone in its Save (indexes would otherwise shift under the other edits), and the K2 minutes
+ * check re-runs. Activity ids survive a move; an added activity gets its id from the gate.
+ *
+ * Inventory, read-only on purpose: the skill-map "why" lines and thread names are guidance on a CHOICE (which part of
+ * the map to teach from), not lesson content, so they stay read-only. The teacher acts on them by choosing, not by
+ * rewording. See docs/design/editable-inventory.md.
  */
 import { clean } from "./worker.mjs";
 import { lengthNotes, TEXT_LIMITS } from "./lesson-length.mjs";
@@ -44,16 +54,32 @@ const ACTIVITY_FIELDS = Object.freeze({
   aiStatus: { kind: "aiStatus", label: "AI status" },
   noAiAlternative: { kind: "text", max: 300, label: "without AI" },
   evidenceIfAny: { kind: "evidence", gate: true, label: "evidence" },
+  // N5: the objectives this activity cites, chosen from the confirmed objectives.
+  objectiveIds: { kind: "objectives", gate: true, label: "objectives" },
   notEvidence: { kind: "text", max: 300, gate: true, label: "not evidence" },
 });
 /** The gate's evidence kinds. Student chat is never one (the gate refuses it too). */
 const EVIDENCE = ["none", "observation", "work-product"];
+/** N5: the forms a later review takes; the same list the model's output is checked against (worker.mjs). */
+export const REVIEW_FORMS = Object.freeze(["recall-without-support", "near-transfer", "far-transfer", "explain-to-absent"]);
+const MAX_REVIEW_DAYS = 365;
+/** N5: the most activities a plan carries after an add (the gate needs at least one). */
+export const MAX_ACTIVITIES = 12;
+/** N5: shape changes: one per Save. */
+const SHAPE = Object.freeze({
+  add: { kind: "addActivity", label: "added an activity" },
+  remove: { kind: "remove", label: "removed" },
+  moveTo: { kind: "moveTo", label: "moved" },
+});
 const SESSION_FIELDS = Object.freeze({
   whatLearnerProduces: { kind: "text", max: 400, required: true, label: "evidence for this session" },
 });
 const REVIEW_FIELDS = Object.freeze({
   whatChanges: { kind: "text", max: 300, required: true, label: "what changes" },
   prompt: { kind: "text", max: 400, required: true, label: "prompt" },
+  // N5: timing and form.
+  afterDays: { kind: "days", label: "timing" },
+  form: { kind: "reviewForm", label: "form" },
 });
 
 /** The field paths the UI offers, for tests and docs. */
@@ -62,7 +88,11 @@ export const EDITABLE_PATHS = Object.freeze([
   ...Object.keys(ACTIVITY_FIELDS).map((f) => `activities.N.${f}`),
   "sessions.N.evidence.whatLearnerProduces",
   ...Object.keys(REVIEW_FIELDS).map((f) => `spacedReviews.N.${f}`),
+  "activities.add", "activities.N.remove", "activities.N.moveTo",
 ]);
+
+/** N5: read-only on purpose (guidance on a choice, not content). For tests and the inventory. */
+export const READ_ONLY_GUIDANCE = Object.freeze(["skill map: why lines", "skill map: thread names"]);
 
 /**
  * A path the teacher may edit, parsed against the plan it would change. Throws BAD_EDIT for anything else.
@@ -70,10 +100,15 @@ export const EDITABLE_PATHS = Object.freeze([
  */
 export function parsePath(path, plan) {
   if (typeof path !== "string" || path.length > 80) throw new PlanEditError("BAD_EDIT", "an edit needs a field path");
+  if (path === "activities.add") return { path, scope: "shape", op: "add", index: plan.activities.length, field: "add", spec: SHAPE.add };
   if (path === "title") return { path, scope: "plan", index: null, field: "title", spec: { kind: "text", max: TEXT_LIMITS.planTitle, required: true, gate: true, label: "plan title" } };
   let m = /^activities\.(\d{1,2})\.([A-Za-z]+)$/.exec(path);
   if (m) {
     const index = Number(m[1]);
+    if (m[2] === "remove" || m[2] === "moveTo") {
+      if (index >= plan.activities.length) throw new PlanEditError("BAD_EDIT", `the plan has no activity ${index + 1}`);
+      return { path, scope: "shape", op: m[2], index, field: m[2], spec: SHAPE[m[2]] };
+    }
     const spec = Object.hasOwn(ACTIVITY_FIELDS, m[2]) ? ACTIVITY_FIELDS[m[2]] : null;
     if (!spec) throw new PlanEditError("BAD_EDIT", `an activity's ${m[2]} cannot be edited here`);
     if (index >= plan.activities.length) throw new PlanEditError("BAD_EDIT", `the plan has no activity ${index + 1}`);
@@ -97,9 +132,26 @@ export function parsePath(path, plan) {
 }
 
 /** The teacher's value, bounded exactly like model output. `null` removes an optional field. */
-export function normalizeValue(parsed, value, { hasAges = false } = {}) {
+export function normalizeValue(parsed, value, { hasAges = false, objectiveIds = [], activityCount = 0 } = {}) {
   const { spec } = parsed;
   switch (spec.kind) {
+    case "days":
+      if (!Number.isInteger(value) || value < 0 || value > MAX_REVIEW_DAYS) throw new PlanEditError("BAD_EDIT", `a later review comes after 0 to ${MAX_REVIEW_DAYS} whole days`);
+      return value;
+    case "reviewForm":
+      if (!REVIEW_FORMS.includes(value)) throw new PlanEditError("BAD_EDIT", `a later review's form is one of: ${REVIEW_FORMS.join(", ")}`);
+      return value;
+    case "objectives":
+      return objectiveList(value, objectiveIds);
+    case "remove":
+      if (value !== true) throw new PlanEditError("BAD_EDIT", "to remove an activity, send true");
+      if (activityCount <= 1) throw new PlanEditError("BAD_EDIT", "a lesson plan keeps at least one activity");
+      return true;
+    case "moveTo":
+      if (!Number.isInteger(value) || value < 0 || value >= activityCount) throw new PlanEditError("BAD_EDIT", `an activity moves to a position from 1 to ${activityCount}`);
+      return value;
+    case "addActivity":
+      return newActivity(value, { hasAges, objectiveIds, activityCount });
     case "text": {
       const v = typeof value === "string" ? clean(value, spec.max) : "";
       if (!v) {
@@ -129,8 +181,36 @@ export function normalizeValue(parsed, value, { hasAges = false } = {}) {
   }
 }
 
+/** N5: cited objectives, 1 or more, each one the teacher confirmed; duplicates collapse, order kept. */
+function objectiveList(value, objectiveIds) {
+  const allowed = new Set(objectiveIds);
+  if (!Array.isArray(value) || value.length === 0) throw new PlanEditError("BAD_EDIT", "an activity cites at least one objective");
+  const out = [];
+  for (const id of value) {
+    if (typeof id !== "string" || !allowed.has(id)) throw new PlanEditError("BAD_EDIT", "an activity cites only objectives you confirmed");
+    if (!out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
+/** N5: a teacher's new activity, every field bounded like an edit of that field. */
+function newActivity(value, { hasAges, objectiveIds, activityCount }) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new PlanEditError("BAD_EDIT", "a new activity is {title, minutes, objectiveIds, learnerDoes, teacherDoes, evidenceIfAny}");
+  if (activityCount >= MAX_ACTIVITIES) throw new PlanEditError("BAD_EDIT", `a lesson plan carries at most ${MAX_ACTIVITIES} activities`);
+  const out = {};
+  for (const [field, spec] of Object.entries(ACTIVITY_FIELDS)) {
+    const given = Object.hasOwn(value, field) ? value[field] : undefined;
+    if (given === undefined && !spec.required && spec.kind !== "minutes" && spec.kind !== "evidence" && spec.kind !== "objectives") continue;
+    const v = normalizeValue({ spec }, given, { hasAges, objectiveIds });
+    if (v !== null) out[field] = v;
+  }
+  return out;
+}
+
 /** The value a path holds now (undefined when absent). */
 export function valueAt(plan, parsed) {
+  // N5: a shape change replaces the activity order (add, move) or one activity (remove).
+  if (parsed.scope === "shape") return parsed.op === "remove" ? plan.activities[parsed.index] : plan.activities.map((a) => a.id ?? null);
   if (parsed.scope === "plan") return plan.title;
   if (parsed.scope === "activity") return plan.activities[parsed.index]?.[parsed.field];
   if (parsed.scope === "session") return plan.sessions?.[parsed.index]?.evidence?.whatLearnerProduces;
@@ -160,6 +240,12 @@ function copy(plan) {
 }
 
 function setAt(plan, parsed, v) {
+  if (parsed.scope === "shape") {
+    if (parsed.op === "add") plan.activities.push(v);
+    else if (parsed.op === "remove") plan.activities.splice(parsed.index, 1);
+    else plan.activities.splice(v, 0, ...plan.activities.splice(parsed.index, 1));
+    return;
+  }
   const put = (obj, key) => { if (v === null) delete obj[key]; else obj[key] = v; };
   if (parsed.scope === "plan") plan.title = v;
   else if (parsed.scope === "activity") put(plan.activities[parsed.index], parsed.field);
@@ -181,7 +267,17 @@ export function applyEdits(plan, edits, { stage = null, ages = null, lessonMinut
   const out = copy(plan);
   const notes = Array.isArray(out.notes) ? [...out.notes] : [];
   const missing = new Set(notes.map((n) => MISSING_NOTE.exec(n)).filter(Boolean).map((m) => Number(m[1]) - 1));
+  if (edits.some((e) => e.parsed.scope === "shape") && edits.length > 1) throw new PlanEditError("BAD_EDIT", "add, remove or move one activity per save");
   for (const { parsed, value } of edits) {
+    if (parsed.scope === "shape") {
+      // The missing-minutes marks follow their activities to the new positions.
+      const map = shapeIndexMap(parsed, value, out.activities.length);
+      const moved = new Set([...missing].map((i) => map[i]).filter((i) => i >= 0));
+      missing.clear(); for (const i of moved) missing.add(i);
+      setAt(out, parsed, value);
+      if (parsed.op === "add" && value.aiStatus) out.activities[out.activities.length - 1].aiStatusBy = "teacher";
+      continue;
+    }
     setAt(out, parsed, value);
     if (parsed.scope !== "activity") continue;
     const a = out.activities[parsed.index];
@@ -207,8 +303,26 @@ export function applyEdits(plan, edits, { stage = null, ages = null, lessonMinut
   return out;
 }
 
+/**
+ * N5: where each old activity index lands after a shape change (-1 = removed). Citations and marks that point at
+ * activity positions follow it.
+ */
+export function shapeIndexMap(parsed, value, count) {
+  const order = [...Array(count).keys()];
+  if (parsed.op === "remove") order.splice(parsed.index, 1);
+  else if (parsed.op === "moveTo") order.splice(value, 0, ...order.splice(parsed.index, 1));
+  const map = Array(count).fill(-1);
+  order.forEach((old, now) => { map[old] = now; });
+  return map;
+}
+
 /** The trace line for one edit: "Activity 3: then they decide", "Plan title", "Later review 1: prompt". */
-export function editLabel(parsed) {
+export function editLabel(parsed, value) {
+  if (parsed.scope === "shape") {
+    if (parsed.op === "add") return `Activities: added activity ${parsed.index + 1}`;
+    if (parsed.op === "remove") return `Activities: removed activity ${parsed.index + 1}`;
+    return `Activities: moved activity ${parsed.index + 1} to position ${Number(value) + 1}`;
+  }
   if (parsed.scope === "plan") return "Plan title";
   if (parsed.scope === "activity") return `Activity ${parsed.index + 1}: ${parsed.spec.label}`;
   if (parsed.scope === "session") return parsed.index === 0 ? "Evidence for this session" : `Session ${parsed.index + 1}: evidence`;

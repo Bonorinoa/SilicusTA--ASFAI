@@ -98,6 +98,26 @@ const consoleErrors = [];
 page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
 page.on("pageerror", (e) => consoleErrors.push("pageerror: " + e.message));
 
+// D2 (design review): viewport shots of each screen at 1280x800 and 390x844, scripted worker only. Off unless
+// D2_SHOTS names a folder, so a normal run is unchanged. The viewport and scroll position are restored after.
+const D2_DIR = process.env.D2_SHOTS ?? null;
+async function snap(name, prep) {
+  if (!D2_DIR) return;
+  const orig = page.viewport();
+  const y = await page.evaluate(() => window.scrollY);
+  for (const [width, height, deviceScaleFactor] of [[1280, 800, 1], [390, 844, 2]]) {
+    await page.setViewport({ width, height, deviceScaleFactor });
+    await sleep(400);
+    if (prep) await page.evaluate(prep).catch(() => undefined);
+    await sleep(150);
+    await page.screenshot({ path: `${D2_DIR}/browser-${name}-${width}.png` }).catch(() => undefined);
+    await page.screenshot({ path: `${D2_DIR}/full/browser-${name}-${width}.png`, fullPage: true }).catch(() => undefined);
+  }
+  await page.setViewport(orig);
+  await sleep(250);
+  await page.evaluate((y) => window.scrollTo(0, y), y);
+}
+
 const body = () => page.evaluate(() => document.body.innerText);
 const waitText = async (text, ms = 10000) => {
   const t0 = Date.now();
@@ -201,6 +221,8 @@ try {
   await page.waitForFunction(() => document.querySelector("h1") !== null);
   check("the landing's primary opens the studio (#/studio)", await page.evaluate(() => [...document.querySelectorAll("main a")].some((a) => a.textContent === "Open the studio" && a.getAttribute("href") === "#/studio")));
 
+  await snap("01-landing", () => window.scrollTo(0, 0));
+
   // K4 (B2): the landing link ("About Silicus" -> #/) on every studio screen, recorded per screen as the walk goes.
   const landing = {};
   const markLanding = async (screen) => { landing[screen] = await page.evaluate(() => [...document.querySelectorAll('a[href="#/"]')].some((a) => /About Silicus/.test(a.textContent ?? ""))); };
@@ -210,11 +232,13 @@ try {
   let t = await body();
   check("the studio home shows 'Your courses' and 'New course'", /Your courses/.test(t) && /New course/.test(t));
   await markLanding("Home");
+  await snap("02-studio-home");
 
   // ---- new course: the onboarding wizard (lane C, R7). The old one-sheet dialog with a source-NAMES field is gone.
   await clickBy("New course");
   check("the New course card opens the wizard, on its welcome at first run", await waitText("Let’s set up your course", 8000) && (await page.evaluate(() => location.hash)) === "#/studio/new");
   await markLanding("Wizard welcome");
+  await snap("03-wizard-welcome");
   await clickBy("Begin");
   await waitText("Your course and learners", 5000);
   const step1 = 'form[aria-label="Course and learners"] input';
@@ -238,6 +262,7 @@ try {
   await sleep(200);
   await setVal('form[aria-label="Course and learners"] textarea', "Grade 4 science, ages 9-10");
   await sleep(200);
+  await snap("04-wizard-1-course", () => window.scrollTo(0, 0));
   await clickBy("Continue");
   // ---- M1 · step 2, "On the skill map". No passcode in this tab yet, so the ranking call cannot run: the step
   // falls back to search, with no error, and Continue waits for an anchor or Skip.
@@ -271,12 +296,14 @@ try {
   check("M1 the map step still shows exactly one Marble credit with the lane drawn", (await mapCredits()) === 1, `${await mapCredits()}`);
   const notice = await page.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, text: (await r.text()).slice(0, 2000) }; }, pickerCredit?.attribution ?? "/missing");
   check("G1bV the attribution notice ships with the app and names the pinned upstream", notice.status === 200 && /Marble Skill Taxonomy/.test(notice.text) && /d4440e28d8fa0fb4a59b4accf3dd1cdde6297d63/.test(notice.text), `${notice.status}`);
+  await snap("05-wizard-2-map", () => window.scrollTo(0, 0));
   await clickPrimary("Continue");
   await waitText("Drop files here", 5000);
   t = await body();
   check("the sources step is one drop zone (files, paste, web page) with no source-name field", /Drop files here/.test(t) && /Or paste text, or a web page address/.test(t)
     && await page.evaluate(() => ![...document.querySelectorAll("label")].some((l) => /^\s*(Name|Source name|Sources)\b/.test(l.textContent ?? ""))));
   await markLanding("Wizard step 3 (sources)");
+  await snap("06-wizard-3-sources", () => window.scrollTo(0, 0));
   check("M1 with an anchor, 'Use the skill-map topics as a source' is the first source row, checked by default",
     await page.evaluate(() => document.querySelector('input[aria-label="Use the skill-map topics as a source"]')?.checked === true));
   // This walk keeps the no-sources path (the map source is covered by its own tests): untick it.
@@ -286,8 +313,10 @@ try {
   await waitText("Write a few", 5000);
   await setVal('section[aria-label="Your objectives"] textarea', "Explain how a plant makes its food\nName what a plant needs to make sugar");
   await sleep(200);
+  await snap("07-wizard-4-objectives", () => window.scrollTo(0, 0));
   await clickBy("Continue");
   check("the AI check names the missing passcode in plain words (online build)", await waitText("needs the demo passcode", 6000) && !/BAD_PASSCODE|WORKER_|passcodeRequired/.test(await body()));
+  await snap("08-wizard-5-ai-check", () => window.scrollTo(0, 0));
   // A REAL click on the primary (programmatic clicks keep focus on <body>; B5 below relies on real focus).
   await clickPrimary("Continue");
   await waitText("Review and confirm", 5000);
@@ -297,6 +326,7 @@ try {
   check("G2b the review shows ages, stage and the anchor", /Ages 5–12 · Early primary · AI stage 1 of 4/.test(t) && /AI in Daily Life/.test(t) && /Marble Skill Taxonomy/.test(t));
   await markLanding("Wizard review");
   check("the review shows everything that will be recorded", ["How plants eat", "Ada Lovelace", "How plants make food from sunlight", "Grade 4 science, ages 9-10", "Explain how a plant makes its food", "Name what a plant needs to make sugar"].every((x) => t.includes(x)));
+  await snap("09-wizard-6-review", () => window.scrollTo(0, 0));
   check("nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
   await clickPrimary("Confirm and create the course");
   await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
@@ -321,6 +351,7 @@ try {
   t = await body();
   check("the Brief step renders (Step 1 of 4), looked back at", /The brief/.test(t) && /step 1 of 4/i.test(t), t.slice(0, 120));
   await markLanding("Course Brief");
+  await snap("11-course-brief", () => window.scrollTo(0, 0));
   const nFields = await page.evaluate(() => document.querySelectorAll('section[aria-label="Questions"] input:not([type="checkbox"]), section[aria-label="Questions"] textarea').length);
   check("three question fields render, holding the wizard's answers", nFields === 3 && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Questions"] input')].some((i) => i.value.includes("Grade 4 science, ages 9-10"))), `found ${nFields}`);
   // ---- lane C · F5: the header's AI status opens the same diagnosis as the wizard's AI check
@@ -373,6 +404,7 @@ try {
   await waitText("Proposals", 8000);
   await sleep(500);
   const cards = await page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length);
+  await snap("12-course-objectives", () => window.scrollTo(0, 0));
   check("the proposals tray fills from the teacher's answers", cards >= 1, `${cards} proposal(s)`);
   await markLanding("Course Objectives");
   // ---- B1: the status line owns its row, and the proposals tray sits in the right column
@@ -501,6 +533,7 @@ try {
     /45 min lesson · activities 45 min/i.test(await body()) && !/Activities add up to/.test(await body()));
   check("P2ui the UI names no model or author it is not yet allowed to", !/SYNAPSE|Chardonnens/i.test(d2.text), String(planIdBefore));
 
+  await snap("13-course-plan-view", () => window.scrollTo(0, 0));
   // ---- N3: everything generated is editable. Keyboard to Edit, change three fields, Save; the trace, the K2
   // re-check and the stage-1 teacher override all show; then the minutes go back so the rest of the run is unchanged.
   {
@@ -524,6 +557,7 @@ try {
     const set = (await setField("activity 3", "Then they decide", "Each pair keeps or changes its sort, and says which card moved and why."))
       && (await setField("activity 3", "Minutes", "25")) && (await setField("activity 3", "AI status", "permitted"));
     check("N3 Enter on 'Edit activity 3' opens the inline form with focus inside it, and its fields take new values", opened && focusIn && set, JSON.stringify({ opened, focusIn, set }));
+    await snap("14-course-plan-edit", () => { document.querySelector('form[data-plan-edit-form]')?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
     if (process.env.N3_SHOTS) {
       await page.evaluate(() => { document.querySelector('form[data-plan-edit-form="activity 3"]')?.closest("li")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -90); });
       await page.screenshot({ path: `${process.env.N3_SHOTS}/n3-plan-edit-form.png` }).catch(() => {});
@@ -555,6 +589,7 @@ try {
     const back = await page.waitForFunction(() => /activities 45 min/i.test(document.body.innerText) && !/Activities add up to/.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false);
     check("N3 setting the minutes back clears the length note (the check re-runs again)", back);
 
+    await snap("15-course-plan-edited", () => { document.querySelector('[data-plan-edit-line]')?.scrollIntoView({ block: "center" }); window.scrollBy(0, -80); });
     // N5 (C5): the plan's shape in the real studio. Move activity 2 up, then back down (net: the plan as before), and
     // open the Add form (then cancel). Each move is a recorded edit on the trace.
     const titles = () => page.evaluate(() => [...document.querySelectorAll("li h2")].map((h) => h.textContent));
@@ -571,6 +606,7 @@ try {
     const addForm = await page.waitForSelector('form[data-plan-edit-form="a new activity"]', { timeout: 5000 }).then(() => true, () => false);
     const cites = await page.evaluate(() => document.querySelectorAll('form[data-plan-edit-form="a new activity"] [data-plan-edit-objectives] input[type=checkbox]').length);
     check("N5 Add an activity opens a form that cites only the confirmed objectives", addForm && cites >= 1, String(cites));
+    await snap("16-course-plan-add-activity", () => { document.querySelector('form[data-plan-edit-form]')?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
     if (process.env.N5_SHOTS) {
       await page.evaluate(() => { document.querySelector('form[data-plan-edit-form="a new activity"]')?.scrollIntoView({ block: "start" }); window.scrollBy(0, -120); });
       await page.screenshot({ path: `${process.env.N5_SHOTS}/n5-add-activity.png` }).catch(() => {});
@@ -603,6 +639,8 @@ try {
   check("K5 'Check my pinned copies' says version 1 matches the record", await waitText("Matches the record", 6000) && /Every pinned copy matches the record\./.test(await body()));
   check("K5 the browser build offers no archive (Node host only)", !/Archive a verified copy/.test(await body()));
   check("K5 the version comparison says there is nothing to compare yet", /Nothing to compare yet: this is version 1\./.test(await body()));
+  await snap("17-publish-record", () => { document.querySelector('section[aria-label="Your record"]')?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
+  await snap("17b-publish-top", () => window.scrollTo(0, 0));
   if (process.env.K5_SHOTS) {
     await page.evaluate(() => document.querySelector('section[aria-label="Your record"]')?.scrollIntoView({ block: "center" }));
     await sleep(200);
@@ -642,6 +680,7 @@ try {
   await clickBy("Ask");
   await enterPasscode();
   check("Rehearse refuses an off-topic question from the host's answer", await waitText("Refused", 8000));
+  await snap("18-rehearse", () => window.scrollTo(0, 0));
 
   // ---- learn
   await page.goto(`${APP}/#/learn/${id}`, { waitUntil: "networkidle0" });
@@ -677,6 +716,8 @@ try {
   const tapped = offers[offers.length - 1];
   check("K3 tapping an offered item asks about it; N4 an attempt-first activity gets the host's try-first reply naming it",
     await waitText(`This one is for you to try first: ${tapped}${/[.?!…]$/.test(tapped) ? "" : "."} Ask me after you've had a go.`, 8000), tapped);
+  await snap("19-learn-preview", () => window.scrollTo(0, document.documentElement.scrollHeight));
+  await snap("19b-learn-top", () => window.scrollTo(0, 0));
   if (process.env.K3_SHOTS) {
     await sleep(400);
     await page.screenshot({ path: `${process.env.K3_SHOTS}/n4-learn-attempt-first-desktop.png`, fullPage: true });

@@ -812,10 +812,10 @@
 .editInput:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .editButton:disabled { opacity: 0.45; cursor: default; }
 /* N5 (C5): cited objectives as checkboxes; the shape row (move, remove, add). */
-.editChoices { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
-.editChoice { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; }
-.shapeRow { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
-.addActivity { margin: 0.75rem 0 0; }
+.editChoices { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); }
+.editChoice { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); }
+.shapeRow { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.addActivity { margin: var(--space-3) 0 0; }
 .editForm {
   display: grid;
   gap: var(--space-3);
@@ -855,11 +855,13 @@ textarea.editInput { resize: vertical; line-height: var(--leading-sm); }
 .editActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 .editCancel,
 .editSave {
-  padding: 6px var(--space-3);
-  border-radius: 6px;
+  /* D2: the studio's control (ui.module.css .button): 44 px tall, 7 px radius, 15 px semibold. */
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: 7px;
   font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 .editCancel { border: 1px solid var(--color-border-control); background: var(--color-paper); color: var(--color-ink); }

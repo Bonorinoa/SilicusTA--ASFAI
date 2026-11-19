@@ -263,9 +263,11 @@ a.crumb:hover { color: var(--fn-ink); }
 .probeName { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .probeExpect { font-size: 0.75rem; color: var(--fn-ink-muted); }
 .typing { display: inline-flex; gap: 5px; padding: 14px; border-radius: 14px 14px 14px 4px; background: #f1ebdf; align-self: flex-start; }
-.typing span { width: 7px; height: 7px; border-radius: 999px; background: var(--fn-ink-muted); animation: fn-breathe 1.2s ease-in-out infinite; }
+.typing span:not([data-elapsed]) { width: 7px; height: 7px; border-radius: 999px; background: var(--fn-ink-muted); animation: fn-breathe 1.2s ease-in-out infinite; }
 .typing span:nth-child(2) { animation-delay: .15s; }
 .typing span:nth-child(3) { animation-delay: .3s; }
+/* D2: N1's seconds counter sits in the typing bubble; it is text, not a fourth dot. */
+.typing [data-elapsed] { align-self: center; margin-left: 4px; font-size: 0.8125rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--fn-ink-muted); }
 
 .learn { --learn-teal: #1f5f5b; --learn-gold: #f2b544; min-height: 100vh; background: #fff8ee; font-family: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif; color: #2a2420; }
 .learnRibbon { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; padding: 8px 16px; background: #fbe9c4; color: #5a3f10; font-size: 0.8125rem; }
@@ -329,5 +331,5 @@ a.crumb:hover { color: var(--fn-ink); }
 }
 
 /* N3: the plan's edit trace, one line per saved field. */
-.editTrace { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; font-size: var(--fn-text-sm, 0.875rem); }
+.editTrace { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; font-size: 0.9375rem; }
 .editTraceNow { color: var(--fn-ink-soft); }

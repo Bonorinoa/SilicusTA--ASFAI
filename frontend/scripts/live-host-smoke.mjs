@@ -164,6 +164,26 @@ if (!exe) throw new Error("no system chrome found");
 
 const browser = await puppeteer.launch({ executablePath: exe, headless: "new", args: ["--no-sandbox"] });
 const page = await browser.newPage();
+
+// D2 (design review): viewport shots of each screen at 1280x800 and 390x844, scripted worker only. Off unless
+// D2_SHOTS names a folder, so a normal run is unchanged. The viewport and scroll position are restored after.
+const D2_DIR = process.env.D2_SHOTS ?? null;
+async function snap(name, prep) {
+  if (!D2_DIR) return;
+  const orig = page.viewport();
+  const y = await page.evaluate(() => window.scrollY);
+  for (const [width, height, deviceScaleFactor] of [[1280, 800, 1], [390, 844, 2]]) {
+    await page.setViewport({ width, height, deviceScaleFactor });
+    await sleep(400);
+    if (prep) await page.evaluate(prep).catch(() => undefined);
+    await sleep(150);
+    await page.screenshot({ path: `${D2_DIR}/node-${name}-${width}.png` }).catch(() => undefined);
+    await page.screenshot({ path: `${D2_DIR}/full/node-${name}-${width}.png`, fullPage: true }).catch(() => undefined);
+  }
+  await page.setViewport(orig);
+  await sleep(250);
+  await page.evaluate((y) => window.scrollTo(0, y), y);
+}
 await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
 page.on("pageerror", (e) => console.log(`[pageerror] ${e.message}`));
 page.on("console", (m) => { if (m.type() === "error") console.log(`[console.error] ${m.text()}`); });
@@ -225,6 +245,8 @@ page.on("response", (r) => { if (r.url().includes("/api/knowledge/marble/rank"))
 async function runWizard({ title, owner, goal, outcomes }) {
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });
   await waitBody("Let’s set up your course", 8000);
+  const shoot = D2_DIR && !runWizard.shot; runWizard.shot = true;
+  if (shoot) await snap("03-wizard-welcome");
   await clickBtn("Begin");
   await waitBody("Your course and learners", 8000);
   const f = 'form[aria-label="Course and learners"]';
@@ -232,18 +254,24 @@ async function runWizard({ title, owner, goal, outcomes }) {
   await page.type(`${f} input[placeholder="Ms. Lovelace"]`, owner);
   await page.type(`${f} input[placeholder="Why leaves stay green, and what that tells us about light"]`, goal);
   await page.evaluate(() => [...document.querySelectorAll("label")].find((e) => (e.textContent ?? "").includes("Early primary"))?.click());
+  if (shoot) await snap("04-wizard-1-course", () => window.scrollTo(0, 0));
   await clickPrimary("Continue");
   await waitBody("On the skill map", 8000);
   await poll(() => page.evaluate(() => !!document.querySelector('button[data-skip-map="true"]')), 20000);
+  if (shoot) { await sleep(1500); await snap("05-wizard-2-map", () => window.scrollTo(0, 0)); }
   await page.evaluate(() => document.querySelector('button[data-skip-map="true"]').click());
   await waitBody("Drop files here", 8000);
+  if (shoot) await snap("06-wizard-3-sources", () => window.scrollTo(0, 0));
   await clickPrimary("Continue without sources");
   await waitBody("Write a few", 8000);
   await setVal('section[aria-label="Your objectives"] textarea', outcomes);
+  if (shoot) await snap("07-wizard-4-objectives", () => window.scrollTo(0, 0));
   await clickPrimary("Continue");
   await waitBody("AI drafting is ready.", 10000);
+  if (shoot) await snap("08-wizard-5-ai-check", () => window.scrollTo(0, 0));
   await clickPrimary("Continue");
   await waitBody("Review and confirm", 8000);
+  if (shoot) await snap("09-wizard-6-review", () => window.scrollTo(0, 0));
   await clickPrimary("Confirm and create the course");
   await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 15000 });
   return await idFromHash();
@@ -262,6 +290,14 @@ try {
 // ---------------------------------------------------------------- Phase 1: a teacher WITH ASFAI connected
 await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });
 await page.waitForFunction(() => document.querySelector("h1") !== null);
+await snap("02-studio-home");
+if (D2_DIR) {
+  await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
+  await sleep(800);
+  await snap("01-landing");
+  await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector("h1") !== null);
+}
 await waitBody("Your courses");
 check("studio home reaches the host (course list, not the offline notice)",
   (await hasText("New course")) && !(await bodyHas(page, "host isn’t reachable")) && !(await bodyHas(page, "isn’t reachable")));
@@ -319,6 +355,7 @@ await poll(() => page.evaluate(() => document.querySelectorAll('aside[aria-label
 check("stage: the objectives stage has exactly one primary action (Confirm objectives, held until every proposal is decided)",
   (await primaryCount()) === 1 && await page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].every((b) => b.textContent.trim() === "Confirm objectives" && b.disabled)), `primaries=${await primaryCount()}`);
 await primaryInViewport("objectives (decided)");
+await snap("12-course-objectives", () => window.scrollTo(0, 0));
 const decided = await acceptAll(courseId);
 check("one teacher decision recorded per derived objective", decided.decisions.length === 2, `decisions=${decided.decisions.length}`);
 check("objectives are NOT confirmed by accepting: the explicit course waits for the teacher's own confirm", decided.checkpoints.objectives.status !== "confirmed");
@@ -336,6 +373,14 @@ await waitBody(PLAN_TITLE);
 check("PlanCard renders the host's plan", true);
 check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
 await primaryInViewport("plan");
+await snap("13-course-plan-view", () => window.scrollTo(0, 0));
+if (D2_DIR && await page.evaluate(() => { const b = document.querySelector('button[aria-label="Edit activity 1"]'); b?.click(); return !!b; })) {
+  await sleep(500);
+  await snap("14-course-plan-edit", () => { document.querySelector("form[data-plan-edit-form]")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
+  await page.evaluate(() => [...document.querySelectorAll("form[data-plan-edit-form] button")].find((b) => b.textContent === "Cancel")?.click());
+  await sleep(300);
+  await page.evaluate(() => window.scrollTo(0, 0));
+}
 // C-a (workspace): edit the objectives from the plan and come back: two clicks, scrollY within 40 px.
 {
   const orig = page.viewport();
@@ -416,6 +461,23 @@ await waitBody("Version 1 is published");
     return !!b;
   }));
   check("the studio's 'Archive a verified copy' reports a read-back digest", ok === true && await poll(() => page.evaluate(() => document.body.innerText.includes("Archived and read back, digest"))));
+}
+await snap("17-publish-record", () => { document.querySelector('section[aria-label="Your record"]')?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
+await snap("17b-publish-top", () => window.scrollTo(0, 0));
+if (D2_DIR) {
+  await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}/rehearse`, { waitUntil: "networkidle0" });
+  await sleep(1500);
+  await snap("18-rehearse", () => window.scrollTo(0, 0));
+  await page.goto(`${APP}/#/learn/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });
+  await sleep(1500);
+  await snap("19b-learn-top", () => window.scrollTo(0, 0));
+  await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });
+  await sleep(1500);
+  await page.evaluate(() => [...document.querySelectorAll("a, button")].find((e) => (e.textContent ?? "").trim() === "Brief")?.click());
+  await sleep(1200);
+  await snap("11-course-brief", () => window.scrollTo(0, 0));
+  await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });
+  await waitBody("Version 1 is published");
 }
 // Sprint 2a: the export archives with an atomic write + read-back verified digest.
 const arch = await post(`/api/courses/${courseId}/archive`, {});

@@ -346,6 +346,24 @@ try {
     const m = await overflowIn('form[aria-label="Course and learners"] *');
     check(`G2b wizard step 1 does not overflow at ${w}px`, m.sw <= m.vw + 1 && m.past.length === 0, `scrollWidth ${m.sw} vw ${m.vw} ${m.past.slice(0, 4).join("; ")}`);
   }
+  // K5 (KV2 C3-C4): at 390 px the top bar keeps brand and the landing link on one row, and the wizard's step bar
+  // keeps every segment on one row.
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  await sleep(250);
+  const rows = await page.evaluate(() => {
+    const tops = (els) => [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))];
+    const segs = [...document.querySelectorAll('[class*="mobileSeg"]')];
+    const bar = document.querySelector("header");
+    const about = bar ? [...bar.querySelectorAll("a")].find((a) => a.getAttribute("aria-label") === "About Silicus") : null;
+    const mark = bar ? bar.querySelector("a") : null;
+    const mid = (e) => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); };
+    return { segs: segs.length, segTops: tops(segs), aboutText: about ? about.innerText.trim() : null,
+      sameRow: !!(about && mark && Math.abs(mid(about) - mid(mark)) <= 8) };
+  });
+  check("K5 at 390 px the wizard's step bar is one row", rows.segs >= 6 && rows.segTops.length === 1, JSON.stringify(rows));
+  check("K5 at 390 px the top bar keeps the brand and 'About' on one row", rows.sameRow && rows.aboutText === "About", JSON.stringify(rows));
+  if (process.env.K5_SHOTS) await page.screenshot({ path: `${process.env.K5_SHOTS}/k5-wizard-390.png` });
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   if (process.env.NARROW_SHELL_WIZARD_SHOTS) {
     await tall(1440, 1, "2026-11-17-wizard-step1-desktop.png");
     await tall(390, 2, "2026-11-17-wizard-step1-390.png");

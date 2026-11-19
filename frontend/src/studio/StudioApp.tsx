@@ -66,7 +66,7 @@ export function TopBar({ crumbs = [], center, right }: { crumbs?: { label: strin
       </nav>
       {center}
       {/* K4 (B2): every studio screen that uses the top bar carries one way out to the landing page. */}
-      <div className={s.topRight}>{right}<a className={s.crumb} href="#/">About Silicus</a></div>
+      <div className={s.topRight}>{right}<a className={`${s.crumb} ${s.about}`} href="#/" aria-label="About Silicus"><span className={s.aboutLong}>About Silicus</span><span className={s.aboutShort} aria-hidden="true">About</span></a></div>
       </div>
     </header>
   );

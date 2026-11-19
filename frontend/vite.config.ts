@@ -14,6 +14,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  * identical outputs (verified by src/gate/crypto-shim.test.ts). Everything
  * else — confirm-gate.mjs and host-guard.mjs — is bundled unmodified.
  */
+// K5: the host the /api proxy reaches. Default 127.0.0.1:8787; a smoke run on other ports sets SILICUS_API_TARGET.
+const API_TARGET = process.env.SILICUS_API_TARGET ?? "http://127.0.0.1:8787";
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -32,13 +35,13 @@ export default defineConfig({
     // The GUI is a sidecar: every real course action goes to the Silicus host,
     // same-origin, so the client never needs credentials or CORS.
     proxy: {
-      "/api": { target: "http://127.0.0.1:8787", changeOrigin: false },
+      "/api": { target: API_TARGET, changeOrigin: false },
     },
   },
   preview: {
     // The built app is served the same way: one origin, /api proxied to the host.
     proxy: {
-      "/api": { target: "http://127.0.0.1:8787", changeOrigin: false },
+      "/api": { target: API_TARGET, changeOrigin: false },
     },
   },
   test: {

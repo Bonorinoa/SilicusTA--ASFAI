@@ -1,0 +1,41 @@
+/* K5: the classic version comparison in the studio's tokens. Status in words first; colour only echoes it. */
+.panel { display: flex; flex-direction: column; gap: 0; padding-top: 14px; border-top: 1px solid var(--fn-line-soft); }
+.heading { margin: 0; font-size: 1rem; }
+.lede { margin: 4px 0 14px; font-size: 0.8125rem; color: var(--fn-ink-muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 12rem; flex: 1 1 12rem; }
+.label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fn-ink-muted); }
+.select { font: inherit; font-size: 0.9375rem; min-height: 44px; padding: 0 10px; color: var(--fn-ink); background: var(--fn-sheet); border: 1px solid var(--fn-line); border-radius: 8px; }
+.select:focus-visible, .summaryToggle:focus-visible { outline: 2px solid var(--fn-accent); outline-offset: 2px; }
+.range { margin: 0; font-family: var(--fn-serif); font-size: 1.0625rem; font-weight: 600; color: var(--fn-ink); }
+.summary { margin: 4px 0 14px; font-size: 0.9375rem; color: var(--fn-ink-soft); }
+.hint { margin: 4px 0 8px; font-size: 0.8125rem; color: var(--fn-ink-muted); font-weight: 400; }
+.empty { margin: 10px 0 0; padding: 10px 14px; background: var(--fn-tray); border-radius: 8px; font-size: 0.9375rem; color: var(--fn-ink-soft); }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sectionHead { margin: 18px 0 4px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fn-ink-muted); }
+.list, .changes, .inline { list-style: none; margin: 0; padding: 0; }
+.item { padding: 10px 0; border-top: 1px solid var(--fn-line-soft); }
+.item[data-status="unchanged"] .statement, .item[data-status="unchanged"] .itemName { color: var(--fn-ink-soft); }
+.itemHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.itemName { font-family: var(--fn-serif); font-size: 1rem; font-weight: 600; color: var(--fn-ink); overflow-wrap: anywhere; }
+.statement, .same { margin: 4px 0 0; font-family: var(--fn-serif); font-size: 1rem; color: var(--fn-ink); overflow-wrap: anywhere; white-space: pre-wrap; }
+.same { font-family: var(--fn-sans); font-size: 0.9375rem; color: var(--fn-ink-soft); }
+.sub { margin: 4px 0 0; font-size: 0.8125rem; color: var(--fn-ink-muted); overflow-wrap: anywhere; }
+.text { overflow-wrap: anywhere; white-space: pre-wrap; }
+.none { font-style: italic; color: var(--fn-ink-muted); }
+.badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.badge[data-status="added"] { color: var(--fn-done); background: var(--fn-done-wash); }
+.badge[data-status="removed"] { color: var(--fn-danger); background: transparent; }
+.badge[data-status="reworded"], .badge[data-status="changed"] { color: var(--fn-accent-strong); background: var(--fn-accent-wash); }
+.badge[data-status="unchanged"] { color: var(--fn-ink-muted); background: transparent; border-color: var(--fn-line); font-weight: 400; }
+.pair { margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 10px; }
+.side { margin: 0; padding: 8px 10px; background: var(--fn-tray); border-left: 2px solid var(--fn-line); border-radius: 4px; }
+.side dt { font-size: 0.75rem; font-weight: 600; color: var(--fn-ink-muted); }
+.side dd { margin: 4px 0 0; font-size: 0.9375rem; color: var(--fn-ink); }
+.changes { margin-top: 8px; }
+.change { padding: 6px 0 6px 10px; border-left: 2px solid var(--fn-accent); margin-bottom: 8px; }
+.fieldName { margin: 0; font-size: 0.75rem; font-weight: 600; color: var(--fn-ink-soft); }
+.inline { margin: 4px 0 0; font-size: 0.9375rem; color: var(--fn-ink); overflow-wrap: anywhere; }
+.inline li { margin: 0 0 4px; }
+.unchanged { margin-top: 8px; }
+.summaryToggle { font-size: 0.9375rem; color: var(--fn-ink-soft); cursor: pointer; min-height: 44px; display: flex; align-items: center; }

@@ -72,6 +72,20 @@ export function sourceKey(name: string): string {
   return dot > 0 && /^[a-z0-9]{1,5}$/.test(t.slice(dot + 1)) ? t.slice(0, dot) : t;
 }
 
+/**
+ * K5: the names the host's proposals credit ("from material: A, B"), minus any already known by name, key or link
+ * title. After a reload the tab has forgotten its file text, but the proposals still name the files they came from.
+ */
+export function namesFromProposals(proposals: readonly { source: string | null }[], known: readonly string[]): string[] {
+  const have = new Set(known.map(sourceKey));
+  const out: string[] = [];
+  for (const p of proposals) for (const n of namesInLabel(p.source)) {
+    const k = sourceKey(n);
+    if (!have.has(k)) { have.add(k); out.push(n); }
+  }
+  return out;
+}
+
 /** Record names this tab holds no text for. An attached file covers a legacy name ignoring case and extension. */
 export function legacyNames(names: readonly string[], held: readonly { name: string }[]): string[] {
   const have = new Set(held.map((h) => sourceKey(h.name)));

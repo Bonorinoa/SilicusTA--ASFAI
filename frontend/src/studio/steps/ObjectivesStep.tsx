@@ -156,7 +156,7 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
 
   const bar = confirmed && looking ? (
     <ActionBar text={<><strong>Objectives confirmed.</strong> Rewording keeps the plan. Removing one the plan uses means drafting a new plan.</>}>
-      <Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button>
+      <Button variant="primary" data-primary="true" onClick={() => onLook(null)}>Back to the current step</Button>
     </ActionBar>
   ) : offer.confirm.show && !drafting ? (
     <ActionBar text={<><strong>{offer.confirm.text[0]}</strong> {offer.confirm.text[1]}</>}>

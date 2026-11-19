@@ -507,6 +507,19 @@ try {
   const line = await statusLine();
   check("B2 the published screen stops asking to review and publish", line.text.includes("Version 1 is published") && !/Your turn: review and publish/.test(published), `status="${line.text}"`);
 
+  // ---- K5: "Your record" on the published version: the app's own pin check, no archive in the browser build,
+  // and the version comparison's honest empty state.
+  check("K5 the published step shows 'Your record' with version 1 pinned on this device", /Your record/.test(published) && /Pinned copies on this device/.test(published) && /Version 1/.test(published) && /Not checked yet/.test(published));
+  await clickBy("Check my pinned copies");
+  check("K5 'Check my pinned copies' says version 1 matches the record", await waitText("Matches the record", 6000) && /Every pinned copy matches the record\./.test(await body()));
+  check("K5 the browser build offers no archive (Node host only)", !/Archive a verified copy/.test(await body()));
+  check("K5 the version comparison says there is nothing to compare yet", /Nothing to compare yet: this is version 1\./.test(await body()));
+  if (process.env.K5_SHOTS) {
+    await page.evaluate(() => document.querySelector('section[aria-label="Your record"]')?.scrollIntoView({ block: "center" }));
+    await sleep(200);
+    await page.screenshot({ path: `${process.env.K5_SHOTS}/k5-record-card-desktop.png` });
+  }
+
   // ---- rehearse
   const id = (await page.evaluate(() => location.hash)).split("/")[2];
   await page.goto(`${APP}/#/studio/${id}/rehearse`, { waitUntil: "networkidle0" });

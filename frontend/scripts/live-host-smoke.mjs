@@ -14,6 +14,7 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,8 +43,16 @@ const echoingWorker = ({ prompt }) => {
 const MOCK = await startMockAsfai();   // the host calls this over real HTTP; no network, no real teacher data
 const WORKER = await startMockWorker({ reply: echoingWorker });   // the OSS plan drafter, stubbed
 const DATA = mkdtempSync(join(tmpdir(), "silicus-live-"));
-const HOST_PORT = 8787;
-const APP_PORT = 5173;
+// K5: overridable, and refused when taken. Another worktree's host on 8787 would otherwise receive this run's writes.
+const HOST_PORT = Number(process.env.SMOKE_HOST_PORT ?? 8787);
+const APP_PORT = Number(process.env.SMOKE_APP_PORT ?? 5173);
+for (const port of [HOST_PORT, APP_PORT]) {
+  const busy = await new Promise((res) => {
+    const srv = createServer().once("error", () => res(true)).once("listening", () => srv.close(() => res(false)));
+    srv.listen(port, "127.0.0.1");
+  });
+  if (busy) { console.error(`Port ${port} is already in use. Free it, or set SMOKE_HOST_PORT / SMOKE_APP_PORT.`); process.exit(2); }
+}
 const HOST = `http://127.0.0.1:${HOST_PORT}`;
 const APP = `http://127.0.0.1:${APP_PORT}`;
 
@@ -136,14 +145,14 @@ const bodyHas = (page, t) => page.evaluate((s) => document.body.innerText.toLowe
 const hostProc1 = bg(process.execPath, ["server.mjs"], {
   cwd: join(REPO, "host"),
   env: {
-    ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT),
+    ...process.env, SILICUS_HOST_DATA: DATA, SILICUS_HOST_PORT: String(HOST_PORT), SILICUS_ALLOWED_ORIGINS: APP,
     SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
     SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
     SILICUS_ONTOLOGY_FILE: join(REPO, "host", "fixtures", "ontology.example.json"),
   },
 });
 // Bind IPv4 explicitly: `localhost` can resolve to ::1 only, and this script (and the host proxy) talk to 127.0.0.1.
-bg("npm", ["run", "preview", "--", "--host", "127.0.0.1", "--port", String(APP_PORT), "--strictPort"], { cwd: HERE });
+bg("npm", ["run", "preview", "--", "--host", "127.0.0.1", "--port", String(APP_PORT), "--strictPort"], { cwd: HERE, env: { ...process.env, SILICUS_API_TARGET: HOST } });
 
 check("Silicus host is up", await waitHttp(`${HOST}/api/health`));
 check("built app is served", await waitHttp(`${APP}/`));
@@ -338,7 +347,8 @@ await primaryInViewport("plan");
   await clickBtn("Edit objectives"); // click 1
   await poll(async () => await bodyHas(page, "Back to the current step"));
   check("workspace: 'Edit objectives' opens the objectives, with 'Back to the current step' as the one way on (no competing primary)",
-    await page.evaluate(() => [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "Back to the current step").length === 1 && document.querySelectorAll('[data-primary="true"]').length === 0));
+    // K5 (K4-reported): the one way on is now the page's one primary, so exactly one data-primary, and it is that button.
+    await page.evaluate(() => { const back = [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "Back to the current step"); const prim = [...document.querySelectorAll('[data-primary="true"]')]; return back.length === 1 && prim.length === 1 && prim[0] === back[0]; }));
   await clickBtn("Back to the current step"); // click 2
   await poll(async () => await bodyHas(page, "Confirm the lesson plan"));
   await waitMs(250);
@@ -399,6 +409,15 @@ check("'Open the student space' opens the student preview, with the question box
 await page.goto(`${APP}/#/studio/${encodeURIComponent(courseId)}`, { waitUntil: "networkidle0" });
 await waitBody("Version 1 is published");
 
+// K5: the studio's own "Archive a verified copy" (Node host only) shows the read-back digest.
+{
+  const ok = await poll(() => page.evaluate(() => {
+    const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === "Archive a verified copy" && !x.disabled);
+    if (b) b.click();
+    return !!b;
+  }));
+  check("the studio's 'Archive a verified copy' reports a read-back digest", ok === true && await poll(() => page.evaluate(() => document.body.innerText.includes("Archived and read back, digest"))));
+}
 // Sprint 2a: the export archives with an atomic write + read-back verified digest.
 const arch = await post(`/api/courses/${courseId}/archive`, {});
 check("export archived with a verified read-back digest", arch.status === 200 && arch.json.verified === true, `digest=${String(arch.json.digest ?? "").slice(0, 12)}`);
@@ -411,8 +430,13 @@ const ver = await (await fetch(`${HOST}/api/courses/${encodeURIComponent(courseI
 check("event-log hash chain verifies", ver.ok === true, `events=${ver.events}`);
 
 // ---- the PIN (the trust anchor): the teacher's device holds a reference the host cannot reach ----
-// The studio pins on publish (useCourse publish -> pinVersion). No studio control runs the comparison, so the script reads the pin
-// from the page's storage and applies gate/pin.ts's comparePin rule to the host's own anchor.
+// The studio pins on publish (useCourse publish -> pinVersion). K5: the comparison is the APP's own action, "Check my pinned
+// copies" on the Publish step (studio/RecordCard.tsx -> gate/pin.ts comparePin). The script clicks it and reads the verdict.
+const clickButton = (label) => page.evaluate((l) => {
+  const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === l && !x.disabled);
+  if (b) b.click();
+  return !!b;
+}, label);
 const pinKey = `silicus.pin.${courseId}.1`;
 const readPin = () => page.evaluate((k) => { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : null; }, pinKey);
 const pin = await poll(readPin);
@@ -437,11 +461,16 @@ const verAfter = await get(`/api/courses/${encodeURIComponent(courseId)}/verify`
 check("the host still blesses the rewritten chain (this is the ledger problem)", verAfter.json.ok === true);
 
 await page.reload({ waitUntil: "networkidle0" });
+await waitBody("Version 1 is published");
 const pinAfter = await readPin();
 const nowAnchor = (await get(`/api/courses/${encodeURIComponent(courseId)}/anchor/1`)).json.anchor;
-// gate/pin.ts comparePin: a different versionDigest, or a shorter record, is "changed".
-const changed = !nowAnchor || nowAnchor.versionDigest !== pinAfter.versionDigest || nowAnchor.events < pinAfter.events;
-check("THE PIN CATCHES IT: the device's copy differs from the rewritten record", changed === true,
+const clicked = await poll(() => clickButton("Check my pinned copies"));
+const verdict = clicked ? await poll(() => page.evaluate(() => {
+  const row = [...document.querySelectorAll("li")].find((li) => li.textContent.startsWith("Version 1") && !li.textContent.includes("Not checked yet"));
+  return row ? row.textContent : null;
+})) : null;
+check("THE PIN CATCHES IT: the app's 'Check my pinned copies' says the record differs from the device's copy",
+  clicked === true && typeof verdict === "string" && verdict.includes("Differs from the record: the record may have been changed"),
   `pinned=${String(pinAfter.versionDigest).slice(0, 10)} host=${String(nowAnchor?.versionDigest).slice(0, 10)}`);
 
 
@@ -454,7 +483,7 @@ const DATA2 = mkdtempSync(join(tmpdir(), "silicus-live2-"));
 bg(process.execPath, ["server.mjs"], {
   cwd: join(REPO, "host"),
   env: {
-    ...process.env, SILICUS_HOST_DATA: DATA2, SILICUS_HOST_PORT: String(HOST_PORT),
+    ...process.env, SILICUS_HOST_DATA: DATA2, SILICUS_HOST_PORT: String(HOST_PORT), SILICUS_ALLOWED_ORIGINS: APP,
     SILICUS_ASFAI_MCP_URL: MOCK.mcpUrl, SILICUS_ASFAI_PRM_URL: MOCK.prmUrl, SILICUS_ASFAI_ALLOW_INSECURE: "1",
     SILICUS_WORKER_URL: WORKER.url, SILICUS_WORKER_MODEL: "test-model",
     SILICUS_ONTOLOGY_FILE: join(REPO, "host", "fixtures", "ontology.example.json"),

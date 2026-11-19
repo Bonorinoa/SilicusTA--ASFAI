@@ -1,0 +1,19 @@
+/* K5: "Your record" on the Publish step. Studio tokens only. */
+.block { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--fn-line-soft); }
+.head { font-size: 1rem; }
+.pins { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pin {
+  display: grid; grid-template-columns: auto auto 1fr; gap: 2px 12px; align-items: baseline;
+  padding: 10px 12px; border: 1px solid var(--fn-line); border-left-width: 4px; border-radius: 8px; background: var(--fn-sheet);
+}
+.pin[data-status="ok"] { border-left-color: var(--fn-done); }
+.pin[data-status="changed"], .pin[data-status="error"] { border-left-color: var(--fn-danger); }
+.pinVersion { font-weight: 600; }
+.digest { font-family: ui-monospace, Menlo, monospace; font-size: 0.8125rem; color: var(--fn-ink-muted); }
+.verdict { font-weight: 600; }
+.pin[data-status="changed"] .verdict, .pin[data-status="error"] .verdict { color: var(--fn-danger); }
+.pin[data-status="ok"] .verdict { color: var(--fn-done); }
+.pin[data-status="unchecked"] .verdict { color: var(--fn-ink-muted); font-weight: 400; }
+.detail { grid-column: 1 / -1; font-size: 0.8125rem; color: var(--fn-ink-soft); }
+@media (max-width: 480px) { .pin { grid-template-columns: auto 1fr; } .verdict { grid-column: 1 / -1; } }
+.detail::first-letter { text-transform: uppercase; }

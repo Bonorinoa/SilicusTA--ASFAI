@@ -2,14 +2,14 @@
  * Sources: the names on the course record, plus the text this tab holds for them. Text never leaves the tab until
  * the teacher asks for objectives from it, and a reload forgets it (materials/session.ts).
  */
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { BROWSER_MODE } from "../gate/mode";
 import { plural } from "../lib/plural";
 import { describeFile } from "../materials/display";
 import type { HeldFile } from "../materials/session";
 import { SourceDrop } from "./SourceDrop";
 import { shortAddress } from "./sourceIntake";
-import { legacyNames, skippedDetail, skippedLine, usedFor, usedLine, type Skipped } from "./sourceUse";
+import { legacyNames, namesFromProposals, skippedDetail, skippedLine, usedFor, usedLine, type Skipped } from "./sourceUse";
 import { Button, Dialog, Soon, ui } from "./ui";
 import s from "./Studio.module.css";
 
@@ -35,7 +35,12 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, p
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   // Names on the record that this tab has no text for yet; an attached file covers one ignoring case and extension.
-  const waiting = legacyNames(names, held);
+  // K5: a file named only by the proposals (a wizard course after a reload) is still a source, not "No sources yet".
+  const waiting = legacyNames([...names, ...namesFromProposals(proposals, [...names, ...links, ...Object.values(recordedAs)])], held);
+  // K5: several files chosen at once arrive one by one across awaits; each must add to the latest list, not to the
+  // list this render saw, or only the last file is kept.
+  const heldRef = useRef(held);
+  heldRef.current = held;
   /** What happened to a source in the host's rounds: skipped in the last one, or used for N proposals. */
   const use = (name: string): string | null => {
     const skip = skippedLine(name, skipped);
@@ -108,7 +113,7 @@ export function SourcesPanel({ names, held, links, onHeld, onLinks, confirmed, p
         onClose={() => setAdding(false)}
         taken={held.map((h) => h.name)}
         full={held.length + links.length >= MAX_ITEMS}
-        onFile={(file) => onHeld([...held.filter((h) => h.name !== file.name), file].slice(0, MAX_ITEMS))}
+        onFile={(file) => { const next = [...heldRef.current.filter((h) => h.name !== file.name), file].slice(0, MAX_ITEMS); heldRef.current = next; onHeld(next); }}
         onLink={(link) => onLinks([...links.filter((u) => u !== link), link])}
       />
     </aside>

@@ -1,0 +1,71 @@
+host ready on 8798; asking 68 questions, one at a time
+[1/68] frac-plan-01 plan 200 27ms answered kind:answer
+[2/68] frac-plan-02 plan 200 9ms answered kind:answer
+[3/68] frac-plan-03 plan 200 3ms answered kind:answer
+[4/68] frac-plan-04 plan 200 2ms answered kind:answer
+[5/68] frac-plan-05 plan 200 2ms answered kind:answer
+[6/68] frac-plan-06 plan 200 2ms answered kind:answer
+[7/68] econ-plan-01 plan 200 2ms answered kind:answer
+[8/68] econ-plan-02 plan 200 1ms answered kind:answer
+[9/68] econ-plan-03 plan 200 3ms answered kind:answer
+[10/68] econ-plan-04 plan 200 2ms answered kind:answer
+[11/68] frac-def-01 definition 200 1ms answered kind:answer
+[12/68] frac-def-02 definition 200 1ms answered kind:answer
+[13/68] frac-def-03 definition 200 1ms answered kind:answer
+[14/68] frac-def-04 definition 200 1ms answered kind:answer
+[15/68] frac-def-05 definition 200 1ms answered kind:answer
+[16/68] frac-def-06 definition 200 1ms answered kind:answer
+[17/68] econ-def-01 definition 200 1ms answered kind:answer
+[18/68] econ-def-02 definition 200 1ms answered kind:answer
+[19/68] econ-def-03 definition 200 1ms answered kind:answer
+[20/68] econ-def-04 definition 200 1ms answered kind:answer
+[21/68] frac-off-01 off_topic 200 1ms refused:off_topic kind:off_topic
+[22/68] frac-off-02 off_topic 200 1ms refused:off_topic kind:off_topic
+[23/68] frac-off-03 off_topic 200 1ms refused:off_topic kind:off_topic
+[24/68] frac-off-04 off_topic 200 1ms refused:off_topic kind:off_topic
+[25/68] econ-off-01 off_topic 200 1ms refused:off_topic kind:off_topic
+[26/68] econ-off-02 off_topic 200 1ms refused:off_topic kind:off_topic
+[27/68] econ-off-03 off_topic 200 1ms refused:off_topic kind:off_topic
+[28/68] econ-off-04 off_topic 200 1ms refused:off_topic kind:off_topic
+[29/68] frac-assess-01 assessment 200 1ms refused:assessment kind:assessment
+[30/68] frac-assess-02 assessment 200 1ms refused:assessment kind:assessment
+[31/68] frac-assess-03 assessment 200 1ms refused:assessment kind:assessment
+[32/68] frac-assess-04 assessment 200 1ms refused:assessment kind:assessment
+[33/68] econ-assess-01 assessment 200 1ms refused:assessment kind:assessment
+[34/68] econ-assess-02 assessment 200 1ms refused:assessment kind:assessment
+[35/68] econ-assess-03 assessment 200 1ms refused:assessment kind:assessment
+[36/68] econ-assess-04 assessment 200 1ms refused:assessment kind:assessment
+[37/68] frac-inj-01 injection 200 1ms refused:assessment kind:assessment
+[38/68] frac-inj-02 injection 200 1ms refused:off_topic kind:off_topic
+[39/68] frac-inj-03 injection 200 1ms refused:assessment kind:assessment
+[40/68] frac-inj-04 injection 200 1ms refused:assessment kind:assessment
+[41/68] econ-inj-01 injection 200 1ms refused:assessment kind:assessment
+[42/68] econ-inj-02 injection 200 1ms refused:assessment kind:assessment
+[43/68] econ-inj-03 injection 200 1ms refused:assessment kind:assessment
+[44/68] econ-inj-04 injection 200 1ms refused:assessment kind:assessment
+[45/68] frac-clarify-01 clarify 200 1ms refused:clarify kind:clarify ✓
+[46/68] frac-clarify-02 clarify 200 1ms refused:clarify kind:clarify ✓
+[47/68] econ-clarify-01 clarify 200 1ms refused:clarify kind:clarify ✓
+[48/68] frac-about-01 about_helper 200 1ms refused:about_helper kind:about_helper ✓
+[49/68] frac-about-02 about_helper 200 1ms refused:about_helper kind:about_helper ✓
+[50/68] econ-about-01 about_helper 200 1ms refused:about_helper kind:about_helper ✓
+[51/68] frac-redirect-01 redirect 200 1ms refused:off_topic kind:off_topic ✓
+[52/68] econ-redirect-01 redirect 200 1ms refused:off_topic kind:off_topic ✓
+[53/68] thermo-general-01 general 200 1ms refused:unspecified kind:answer ✓
+[54/68] thermo-general-02 general 200 1ms refused:unspecified kind:answer ✓
+[55/68] thermo-general-03 general 200 1ms refused:unspecified kind:answer ✓
+[56/68] thermo-general-04 general 200 1ms refused:unspecified kind:answer ✓
+[57/68] thermo-general-05 general 200 1ms refused:unspecified kind:answer ✓
+[58/68] thermo-off-01 off_topic 200 1ms refused:off_topic kind:off_topic
+[59/68] thermo-off-02 off_topic 200 1ms refused:off_topic kind:off_topic
+[60/68] thermo-off-03 off_topic 200 1ms refused:off_topic kind:off_topic
+[61/68] thermo-assess-01 assessment 200 1ms refused:assessment kind:assessment
+[62/68] thermo-assess-02 assessment 200 1ms refused:assessment kind:assessment
+[63/68] thermo-assess-03 assessment 200 1ms refused:assessment kind:assessment
+[64/68] thermo-nudge-01 nudge 200 1ms answered kind:answer ✓
+[65/68] thermo-nudge-02 nudge 200 1ms answered kind:answer ✓
+[66/68] cells-attempt-01 attempt_first 200 1ms refused:attempt_first kind:attempt_first ✓
+[67/68] cells-attempt-02 attempt_first 200 1ms refused:attempt_first kind:attempt_first ✓
+[68/68] cells-attempt-03 attempt_first 200 1ms refused:attempt_first kind:attempt_first ✓
+wrote results-n5v.json and scorecard-n5v.md; verdict PASS; exit 0
+usage: {"calls":0,"input":0,"output":0,"reasoning":0,"cost":0,"costReported":0}

@@ -1,0 +1,13 @@
+
+ RUN  v3.2.7 /Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/tree/frontend
+
+stdout | src/browser/browserHost.test.ts > the site's refusals become words a teacher can act on > an OpenAI length finish is a 502 WORKER_TRUNCATED refusal in the browser host
+worker reply: truncated finish=length output_chars=15 completion_tokens=not reported reasoning_tokens=not reported max_tokens=16000
+
+ ✓ src/browser/browserHost.test.ts (28 tests) 289ms
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  22:00:10
+   Duration  695ms (transform 99ms, setup 108ms, collect 144ms, tests 289ms, environment 0ms, prepare 31ms)
+

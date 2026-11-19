@@ -1,0 +1,53 @@
+ested alignment holds exactly one Marble credit, inside the fold, with ODbL, CC BY-SA and attribution links; collapsed it shows its count — {"credits":1,"inside":true,"summary":"Suggested alignment4 references","rows":4}
+PASS  P2ui a v1 plan shows no policy line, phase chip, evidence line, Later section or adjusted list — {"policy":[],"evidence":[],"phases":[],"later":[],"adjusted":[],"first":0,"tags":0,"plan":"SILICUS · LESSON PLAN\n\nDRAF
+PASS  P2ui the v2 plan shows the stage-1 policy line once, in plain words — ["AI Children don’t use AI in this lesson. You may use it to prepare."]
+PASS  P2ui stage 1-2: no per-activity AI tag beside the policy line — tags=0
+PASS  P2ui phase chips on the activities — ["1 Notice and guess","2 Try and fix","3 Check own work · also 4 Keep and reuse"]
+PASS  P2ui exactly one 'Evidence for this session' line — ["Evidence for this session Each pair's sorted card strip, with one written or drawn reason for the hardest card."]
+PASS  P2ui the Later section lists each review with its offset — ["In 2 daysRecall without help. What changes: no cards on the table this time“Name two things at home that decide someth
+PASS  H2b the scripted v2 plan fits the course: 'Learners first' on all three activities, nothing under 'Silicus adjusted', no plants in the plan's title or activities (this smoke course's own title and objectives stay the plants ones) — {"first":3,"adjusted":[],"head":"SILICUS · LESSON PLAN\n\nDRAFT\n\nSpotting AI in daily life\nEdit\n\nAGES 5–12 · 45 MIN
+PASS  K2 the plan header reads '45 min lesson · activities 45 min' (the scripted minutes add up), with no length note
+PASS  P2ui the UI names no model or author it is not yet allowed to — 2393
+PASS  N3 the draft plan offers Edit on the title, every activity and every later review — ["Edit the plan title","Edit activity 1","Edit activity 2","Edit activity 3","Edit later review 1","Edit later review 2"
+PASS  N3 Enter on 'Edit activity 3' opens the inline form with focus inside it, and its fields take new values — {"opened":true,"focusIn":true,"set":true}
+PASS  N3 Save records the edit: the trace says 'You edited Activity 3: then they decide' (and minutes, AI status), the form closes, the draft says 'edited by you' — {"trace":["You edited Activity 3: minutes · now “25”","You edited Activity 3: then they decide · now “Each pair keeps or
+PASS  N3 the teacher's AI status stands and is marked against the age rule (never re-clamped) — Teacher override: AI permitted for ages 5–12 (the rule says forbidden)
+PASS  N3 the K2 minutes check re-runs after the edit: 55 of 45 shows the length note
+PASS  N3 setting the minutes back clears the length note (the check re-runs again)
+PASS  N5 Move up reorders the activities and the trace says so — ["Sort the AI around us","Smart or not? Place your bet","Patterns, not magic"]
+PASS  N5 Move down puts it back (same ids, same order as before)
+PASS  N5 Add an activity opens a form that cites only the confirmed objectives — 4
+PASS  confirming the plan moves to Publish (Step 4 of 4)
+PASS  publishing asks for a second, explicit confirm
+PASS  K2 the published moment names the lesson length
+PASS  the published moment renders with the student and Rehearse links
+PASS  B2 the published screen stops asking to review and publish — status="Version 1 is published. Preview it or revise."
+PASS  K5 the published step shows 'Your record' with version 1 pinned on this device
+PASS  K5 'Check my pinned copies' says version 1 matches the record
+PASS  K5 the browser build offers no archive (Node host only)
+PASS  K5 the version comparison says there is nothing to compare yet
+PASS  Rehearse renders the simulator and the guardrail probes
+PASS  G4 20 cancelled passcodes in Rehearse keep the question and return focus, both routes — 20/20
+PASS  Rehearse refuses an off-topic question from the host's answer
+PASS  the student space is labelled a preview on this device
+PASS  K4 B2 every studio screen has the "About Silicus" link to #/ (12 screens: wizard, four course tabs, Rehearse, Home, Learn) — ["Home","Wizard welcome","Wizard step 1","Wizard step 2 (map)","Wizard step 3 (sources)","Wizard review","Course Brief",
+PASS  the student space shows the published title and goals
+PASS  the student helper answers from the published package
+PASS  K3 a one-word question gets the host's clarify listing the lesson's items
+PASS  K3 the clarify offers the lesson's items as buttons (1 to 3) — ["Say where a plant gets its water","Smart or not? Place your bet"]
+PASS  K3 'what is your name' gets the fixed introduction naming the lesson
+PASS  K3 tapping an offered item asks about it; N4 an attempt-first activity gets the host's try-first reply naming it — Smart or not? Place your bet
+PASS  a returning teacher's wizard opens on step 1, without the welcome
+PASS  M1 ages 19–22: the consequence line says no map topics fit — From 15: learners may use the AI on their own · 0 of 1,912 map topics fit · one 45-minute plan
+PASS  M1 ages 19–22: the map step has nothing to rank, shows search with no error, and Continue waits
+PASS  a 200-character unbroken first line names the pasted source, and at 390 the wizard does not scroll sideways
+PASS  with a source and nothing written, proposing from sources is already chosen
+PASS  the AI check reads ready once the tab holds the passcode
+PASS  R7 the confirm lands on Objectives and starts proposing from the sources there
+PASS  R7 one live region on the step after the wizard — ["Your turn: accept, edit or drop each proposal"]
+PASS  G2b the second course is created with ages 19–22 and no anchor — {"ages":{"min":19,"max":22}}
+PASS  H2a ages 19–22: the objectives step says once, quietly, that there are no skill-map topics
+PASS  F1 at 390 the Objectives step does not scroll sideways with a 200-character source name in the provenance — sw=390 vw=390
+PASS  no console or page errors during the walk
+
+108/108 studio checks passed

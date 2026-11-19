@@ -1,0 +1,215 @@
+{
+ "res": [
+  {
+   "step": "0 start",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 1",
+    "Activity 2"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 40 MIN",
+   "lengthNote": "Activities add up to 40 min; you asked for 45.",
+   "trace": []
+  },
+  {
+   "step": "1 add 40-minute activity",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 1",
+    "Activity 2",
+    "N5V extra check"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 80 MIN",
+   "lengthNote": "Activities add up to 80 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”"
+   ],
+   "filled": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "step": "2 move the new one up",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 1",
+    "N5V extra check",
+    "Activity 2"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 80 MIN",
+   "lengthNote": "Activities add up to 80 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”",
+    "You edited Activities: moved activity 3 to position 2 · now “position 2”"
+   ],
+   "ok": true
+  },
+  {
+   "step": "3 move it back down",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 1",
+    "Activity 2",
+    "N5V extra check"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 80 MIN",
+   "lengthNote": "Activities add up to 80 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”",
+    "You edited Activities: moved activity 3 to position 2 · now “position 2”",
+    "You edited Activities: moved activity 2 to position 3 · now “position 3”"
+   ],
+   "ok": true
+  },
+  {
+   "step": "4 remove it again",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 1",
+    "Activity 2"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 40 MIN",
+   "lengthNote": "Activities add up to 40 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”",
+    "You edited Activities: moved activity 3 to position 2 · now “position 2”",
+    "You edited Activities: moved activity 2 to position 3 · now “position 3”",
+    "You edited Activities: removed activity 3"
+   ],
+   "ok": true
+  },
+  {
+   "step": "5 remove then Keep: nothing changes",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 1",
+    "Activity 2"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 40 MIN",
+   "lengthNote": "Activities add up to 40 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”",
+    "You edited Activities: moved activity 3 to position 2 · now “position 2”",
+    "You edited Activities: moved activity 2 to position 3 · now “position 3”",
+    "You edited Activities: removed activity 3"
+   ],
+   "ok": true
+  },
+  {
+   "step": "6 remove original activity 1",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 2"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 20 MIN",
+   "lengthNote": "Activities add up to 20 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”",
+    "You edited Activities: moved activity 3 to position 2 · now “position 2”",
+    "You edited Activities: moved activity 2 to position 3 · now “position 3”",
+    "You edited Activities: removed activity 3",
+    "You edited Activities: removed activity 1"
+   ],
+   "ok": true
+  },
+  {
+   "step": "7-8 skipped: one activity left",
+   "hash": "#/studio/urn%3Auuid%3A9fcd123a-c8d8-4024-97f0-bf095644f9cb",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Activity 2"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 20 MIN",
+   "lengthNote": "Activities add up to 20 min; you asked for 45.",
+   "trace": [
+    "You edited Activities: added activity 3 · now “N5V extra check”",
+    "You edited Activities: moved activity 3 to position 2 · now “position 2”",
+    "You edited Activities: moved activity 2 to position 3 · now “position 3”",
+    "You edited Activities: removed activity 3",
+    "You edited Activities: removed activity 1"
+   ],
+   "ok": true,
+   "moveDisabled": [
+    "Move activity 1 up (disabled)",
+    "Move activity 1 down (disabled)"
+   ]
+  },
+  {
+   "step": "9 button state",
+   "removeDisabled": [
+    true
+   ]
+  },
+  {
+   "step": "press log",
+   "pressLog": [
+    {
+     "sel": "[data-plan-add] button",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Move activity 3 up\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Move activity 2 down\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Remove activity 3\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Remove activity 1\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Remove activity 1\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    }
+   ]
+  }
+ ],
+ "events": [
+  "{\"seq\":1,\"prev\":\"genesis\",\"digest\":\"bf34dcca9a4638464de673d6a48bd3dfdc4ec3a3473a4a5871a6dafbb2a5a65a\",\"event\":{\"kind\":\"course.created\",\"courseId\":\"urn:uuid:9fcd123a-c8d8-4024-97f0-bf095644f9cb\",\"owner\":\"Ada Lovelace\",\"title\":\"Lesson 3 · AI literacy\",\"description\":\"\",\"materials\":[],\"seed\":\"urn:uuid:cba5591d-12ff-4c3b-864d-391fb3cb0a36\",\"objectivesConfirm\":\"explicit\",\"ages\":{\"min\":4,\"max\":8},\"lessonMinutes\":45,\"at\":1795064354900}}",
+  "{\"seq\":2,\"prev\":\"bf34dcca9a4638464de673d6a48bd3dfdc4ec3a3473a4a5871a6dafbb2a5a65a\",\"digest\":\"83b7c2739386d93880e660af5214ad0469bff9f3c7ee58e519e09526b084c360\",\"event\":{\"kind\":\"intake.answered\",\"text\":\"How AI answers are built\\nEarly primary, ages 4–8\\nStudents can explain what an algorithm is.\\nLearners can find the claim in an AI answer.\",\"answers\":{\"topic\":\"How AI answers are built\",\"course\":\"Early primary, ages 4–8\",\"learning_outcomes\":\"Students can explain what an algorithm is.\\nLearners can find the claim in an AI answer.\"},\"at\":1795064354946}}",
+  "{\"seq\":3,\"prev\":\"83b7c2739386d93880e660af5214ad0469bff9f3c7ee58e519e09526b084c360\",\"digest\":\"716729b1c93db99ed6ee975d9ee20876709f25b7e8a83923cfbc0e863b52277d\",\"event\":{\"kind\":\"checkpoint.confirmed\",\"id\":\"files\",\"note\":null,\"text\":\"Confirm the source list.\",\"at\":1795064354948}}",
+  "{\"seq\":4,\"prev\":\"716729b1c93db99ed6ee975d9ee20876709f25b7e8a83923cfbc0e863b52277d\",\"digest\":\"c8242df872fed2fa2fd7807928dcef83ecda6d4b1cebe2d8d3e7616b8a7bdb17\",\"event\":{\"kind\":\"checkpoint.confirmed\",\"id\":\"outline\",\"note\":null,\"text\":\"Confirm the brief.\",\"at\":1795064354950}}",
+  "{\"seq\":5,\"prev\":\"c8242df872fed2fa2fd7807928dcef83ecda6d4b1cebe2d8d3e7616b8a7bdb17\",\"digest\":\"00b17fe809804f797600f70c3df2cf8cfd9d91f3cdbd581c8ccf7444f9e327fc\",\"event\":{\"kind\":\"objectives.proposed\",\"items\":[{\"kind\":\"local\",\"statement\":\"Students can explain what an algorithm is.\"},{\"kind\":\"local\",\"statement\":\"Learners can find the claim in an AI answer.\"}],\"sources\":[\"from your answer\",\"from your answer\"],\"assistantText\":null,\"at\":1795064354952}}",
+  "{\"seq\":6,\"prev\":\"00b17fe809804f797600f70c3df2cf8cfd9d91f3cdbd581c8ccf7444f9e327fc\",\"digest\":\"7b4f1593e22998d1a4dc52f7151ecd73c04f02a969ae7d70bee2d853ee4c4c46\",\"event\":{\"kind\":\"intake.observed\",\"state\":\"clarifying\",\"questions\":[{\"id\":\"topic\",\"prompt\":\"What topic should this lesson cover?\",\"kind\":\"open\",\"reason\":\"The outline needs a subject.\"},{\"id\":\"course\",\"prompt\":\"Which course is this part of?\",\"kind\":\"open\",\"reason\":\"Course context sets scope and sequencing.\"},{\"id\":\"learning_outcomes\",\"prompt\":\"What should learners be able to do by the end?\",\"kind\":\"open\",\"reason\":\"An observable outcome anchors the outline.\"}],\"draftAuthorization\":null,\"receipt\":null,\"sent\":[],\"at\":1795064355032}}",
+  "{\"seq\":7,\"prev\":\"7b4f1593e22998d1a4dc52f7151ecd73c04f02a969ae7d70bee2d853ee4c4c46\",\"digest\":\"8e13c50349ca57df0dd4ca8b9a6a804e79c0d65536d6f176faf3551b4734e981\",\"event\":{\"kind\":\"intake.answered\",\"text\":\"My answers, as recorded in the brief.\",\"answers\":{\"topic\":\"How AI answers are built\",\"course\":\"Early primary, ages 4–8\",\"learning_outcomes\":\"Students can explain what an algorithm is.\\nLearners can find the claim in an AI answer.\"},\"at\":1795064355035}}",
+  "{\"seq\":8,\"prev\":\"8e13c50349ca57df0dd4ca8b9a6a804e79c0d65536d6f176faf3551b4734e981\",\"digest\":\"9cb749ed56d6e14b53d9e74f069455130a1270bf40789b83a91b0077fc43985e\",\"event\":{\"kind\":\"intake.observed\",\"state\":\"ready_to_draft\",\"questions\":[],\"draftAuthorization\":null,\"receipt\":null,\"sent\":[\"topic\",\"course\",\"learningOutcomes\"],\"at\":1795064355037}}",
+  "{\"seq\":9,\"prev\":\"9cb749ed56d6e14b53d9e74f069455130a1270bf40789b83a91b0077fc43985e\",\"digest\":\"7e29a02d1053e3d45298409ddc1f576f6ee522d07a5fcd66470cef76d158ad35\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"accept\",\"proposalId\":\"urn:uuid:73708de9-4a02-eea8-6da9-e871996f475a\"}],\"text\":\"Accept objective (proposal urn:uuid:73708de9-4a02-eea8-6da9-e871996f475a).\",\"at\":1795064355479}}",
+  "{\"seq\":10,\"prev\":\"7e29a02d1053e3d45298409ddc1f576f6ee522d07a5fcd66470cef76d158ad35\",\"digest\":\"8f56893cc62396d9b2646849d4cf3b6f5f1775a5d4bacee501fa644d938f85d7\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"accept\",\"proposalId\":\"urn:uuid:2e07da14-78ac-cbf3-39c9-04baf3e3027f\"}],\"text\":\"Accept objective (proposal urn:uuid:2e07da14-78ac-cbf3-39c9-04baf3e3027f).\",\"at\":1795064356036}}",
+  "{\"seq\":11,\"prev\":\"8f56893cc62396d9b2646849d4cf3b6f5f1775a5d4bacee501fa644d938f85d7\",\"digest\":\"23352288d9c7345ec2c2ec4ab0d0a6e8b358b777d53ee58d5cd5766fa199ce78\",\"event\":{\"kind\":\"checkpoint.confirmed\",\"id\":\"objectives\",\"text\":\"Confirm the objectives.\",\"at\":1795064356594}}",
+  "{\"seq\":12,\"prev\":\"23352288d9c7345ec2c2ec4ab0d0a6e8b358b777d53ee58d5cd5766fa199ce78\",\"digest\":\"82c358e6f6edceacd921530d7b795a497c1087323c8a88b4f14775040b79a8b4\",\"event\":{\"kind\":\"plan.proposed\",\"spec\":{\"title\":\"Seeing the claim: how AI answers are built\",\"audience\":{\"ageRangeStart\":8,\"ageRangeEnd\":10},\"activities\":[{\"title\":\"Activity 1\",\"minutes\":20,\"objectiveIds\":[\"urn:uuid:73708de9-4a02-eea8-6da9-e871996f475a\"],\"learnerDoes\":\"Mark the claim.\",\"teacherDoes\":\"Ask about evidence.\",\"evidenceIfAny\":\"observation\"},{\"title\":\"Activity 2\",\"minutes\":20,\"objectiveIds\":[\"urn:uuid:2e07da14-78ac-cbf3-39c9-04baf3e3027f\"],\"learnerDoes\":\"Mark the claim.\",\"teacherDoes\":\"Ask about evidence.\",\"evidenceIfAny\":\"observation\"}],\"notes\":[\"Activities add up to 40 min; you asked for 45. Lengthen or edit.\"]},\"assistantText\":\"Drafted a lesson plan from your confirmed objectives.\",\"citations\":[{\"ref\":\"asfai:mt_0007\",\"label\":\"Following Steps (ages 8–10)\",\"source\":\"asfai-graph\",\"activityIndexes\":[0],\"verified\":true},{\"ref\":\"asfai:mt_0042\",\"label\":\"Finding the Claim (ages 9–11)\",\"source\":\"asfai-graph\",\"activityIndexes\":[1],\"verified\":true}],\"at\":1795064356769}}",
+  "{\"seq\":13,\"prev\":\"82c358e6f6edceacd921530d7b795a497c1087323c8a88b4f14775040b79a8b4\",\"digest\":\"d7ae90b45a46bf36d778a228ad3bf81c927a36e774f5c5f7ce84994bae10b1b0\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:e4f64dff-3990-daa2-508d-ecac8568520a\",\"edits\":[{\"path\":\"activities.add\",\"beforeSha\":\"4eda48e70494984069597004ac3f3722cf55fe14b07a2b85a72810b840315c57\",\"after\":{\"title\":\"N5V extra check\",\"minutes\":40,\"learnerDoes\":\"Pairs compare two drawings.\",\"teacherDoes\":\"Asks what changed.\",\"evidenceIfAny\":\"none\",\"objectiveIds\":[\"urn:uuid:73708de9-4a02-eea8-6da9-e871996f475a\"]}}],\"text\":\"Edit the plan: add activity 3.\",\"at\":1795064358213}}",
+  "{\"seq\":14,\"prev\":\"d7ae90b45a46bf36d778a228ad3bf81c927a36e774f5c5f7ce84994bae10b1b0\",\"digest\":\"c8f9d3ad424a4530869323d3a6a3ab3afcdff4e6d03e4782243b82127cd33c95\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:a9a42b8f-66df-3b2a-a33d-a68417c70399\",\"edits\":[{\"path\":\"activities.2.moveTo\",\"beforeSha\":\"9e6a5a321523d54c182732aa10466139747cfac604b906a57e28c258f89ad094\",\"after\":1}],\"text\":\"Move activity 3 up.\",\"at\":1795064358552}}",
+  "{\"seq\":15,\"prev\":\"c8f9d3ad424a4530869323d3a6a3ab3afcdff4e6d03e4782243b82127cd33c95\",\"digest\":\"a06214ee39a7fd4e5e2a0a7721cff19549e3309b8be603a9660605a6988b5371\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:1d271eee-5940-6dcf-a76d-95c0e10626a7\",\"edits\":[{\"path\":\"activities.1.moveTo\",\"beforeSha\":\"f33fa0d98e8abbd450e4fc9856e2daeec9df1f1c24233ccbd583625b61359381\",\"after\":2}],\"text\":\"Move activity 2 down.\",\"at\":1795064358903}}",
+  "{\"seq\":16,\"prev\":\"a06214ee39a7fd4e5e2a0a7721cff19549e3309b8be603a9660605a6988b5371\",\"digest\":\"d333b3ff45bbf15268f4b6c1637ae88fd153df456a3f881cb312da4f0602021b\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:52ec409d-5cbc-7684-faf6-12d69ea9864d\",\"edits\":[{\"path\":\"activities.2.remove\",\"beforeSha\":\"35508647df5829e51543df07db6548bf452ff7ed147185b83c9b4be0b7ec548e\",\"after\":true}],\"text\":\"Remove activity 3.\",\"at\":1795064359389}}",
+  "{\"seq\":17,\"prev\":\"d333b3ff45bbf15268f4b6c1637ae88fd153df456a3f881cb312da4f0602021b\",\"digest\":\"4b9a4b816d6f5f0dfd5777e82a3e7c5cbaabb5351d95943a91ca1a4b4437ef2d\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:6bfae26c-a695-5f89-3ae9-277c55fdefa1\",\"edits\":[{\"path\":\"activities.0.remove\",\"beforeSha\":\"241eb90e42b771073753c3611e9c09146509c0702107fa8492909d7b9821c596\",\"after\":true}],\"text\":\"Remove activity 1.\",\"at\":1795064360314}}"
+ ]
+}

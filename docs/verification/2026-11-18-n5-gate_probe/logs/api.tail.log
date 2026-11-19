@@ -1,0 +1,164 @@
+ded upstream
+  ---
+  duration_ms: 0.1435
+  type: 'test'
+  ...
+# Subtest: 413 TOO_LARGE by content-length, without reading the body
+ok 35 - 413 TOO_LARGE by content-length, without reading the body
+  ---
+  duration_ms: 0.259042
+  type: 'test'
+  ...
+# Subtest: 413 TOO_LARGE by streamed bytes when content-length is absent or lies; reading stops at the cap
+ok 36 - 413 TOO_LARGE by streamed bytes when content-length is absent or lies; reading stops at the cap
+  ---
+  duration_ms: 0.348625
+  type: 'test'
+  ...
+# Subtest: a body just under 512 KB is accepted
+ok 37 - a body just under 512 KB is accepted
+  ---
+  duration_ms: 3.124458
+  type: 'test'
+  ...
+# Subtest: 400 on non-JSON, a non-object, or no messages array
+ok 38 - 400 on non-JSON, a non-object, or no messages array
+  ---
+  duration_ms: 0.512042
+  type: 'test'
+  ...
+# Subtest: client model/provider/tools/stream/etc are stripped and the env model is forced
+ok 39 - client model/provider/tools/stream/etc are stripped and the env model is forced
+  ---
+  duration_ms: 0.183125
+  type: 'test'
+  ...
+# Subtest: message objects are rebuilt to {role, content}: extra per-message keys never go upstream
+ok 40 - message objects are rebuilt to {role, content}: extra per-message keys never go upstream
+  ---
+  duration_ms: 0.180167
+  type: 'test'
+  ...
+# Subtest: reasoning is server-decided: low by default, every supported env value maps exactly
+ok 41 - reasoning is server-decided: low by default, every supported env value maps exactly
+  ---
+  duration_ms: 0.623083
+  type: 'test'
+  ...
+# Subtest: a client reasoning field is stripped; the server's low setting wins
+ok 42 - a client reasoning field is stripped; the server's low setting wins
+  ---
+  duration_ms: 0.108666
+  type: 'test'
+  ...
+# Subtest: ZDR provider block is present by default and for any SILICUS_WORKER_ZDR value except "0"
+ok 43 - ZDR provider block is present by default and for any SILICUS_WORKER_ZDR value except "0"
+  ---
+  duration_ms: 0.566917
+  type: 'test'
+  ...
+# Subtest: ZDR provider block is absent only with SILICUS_WORKER_ZDR=0 (and the client cannot add one)
+ok 44 - ZDR provider block is absent only with SILICUS_WORKER_ZDR=0 (and the client cannot add one)
+  ---
+  duration_ms: 0.10625
+  type: 'test'
+  ...
+# Subtest: ZDR fails closed: one upstream attempt, never a retry, when the ZDR route is refused
+ok 45 - ZDR fails closed: one upstream attempt, never a retry, when the ZDR route is refused
+  ---
+  duration_ms: 0.104833
+  type: 'test'
+  ...
+# Subtest: max_tokens is server-decided: the env cap (16,000 by default, 32,000 ceiling) and nothing the client sends
+ok 46 - max_tokens is server-decided: the env cap (16,000 by default, 32,000 ceiling) and nothing the client sends
+  ---
+  duration_ms: 1.018792
+  type: 'test'
+  ...
+# Subtest: 429 RATE_LIMITED after 20 requests per 10 minutes from one IP, with retry-after; another IP is unaffected
+ok 47 - 429 RATE_LIMITED after 20 requests per 10 minutes from one IP, with retry-after; another IP is unaffected
+  ---
+  duration_ms: 2.307333
+  type: 'test'
+  ...
+# Subtest: failed passcode attempts count toward the per-IP limit (no free brute force)
+ok 48 - failed passcode attempts count toward the per-IP limit (no free brute force)
+  ---
+  duration_ms: 0.805833
+  type: 'test'
+  ...
+# Subtest: 429 RATE_LIMITED at the per-instance daily cap (SILICUS_DAILY_CAP), reset the next UTC day
+ok 49 - 429 RATE_LIMITED at the per-instance daily cap (SILICUS_DAILY_CAP), reset the next UTC day
+  ---
+  duration_ms: 0.406875
+  type: 'test'
+  ...
+# Subtest: the daily cap defaults to 300
+ok 50 - the daily cap defaults to 300
+  ---
+  duration_ms: 21.592625
+  type: 'test'
+  ...
+# Subtest: upstream that never answers -> 504 UPSTREAM_TIMEOUT at the deadline
+ok 51 - upstream that never answers -> 504 UPSTREAM_TIMEOUT at the deadline
+  ---
+  duration_ms: 49.871916
+  type: 'test'
+  ...
+# Subtest: upstream that ignores the abort signal still yields 504 at the deadline
+ok 52 - upstream that ignores the abort signal still yields 504 at the deadline
+  ---
+  duration_ms: 50.734959
+  type: 'test'
+  ...
+# Subtest: the default upstream deadline leaves 5 s of headroom under the 120 s function duration
+ok 53 - the default upstream deadline leaves 5 s of headroom under the 120 s function duration
+  ---
+  duration_ms: 0.182583
+  type: 'test'
+  ...
+# Subtest: upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed
+ok 54 - upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed
+  ---
+  duration_ms: 0.332458
+  type: 'test'
+  ...
+# Subtest: upstream 401/429/500 -> 502 with the status; network failure -> 502 without echoing the error
+ok 55 - upstream 401/429/500 -> 502 with the status; network failure -> 502 without echoing the error
+  ---
+  duration_ms: 0.553708
+  type: 'test'
+  ...
+# Subtest: a 200 that is not JSON, or that would echo the key, is a 502
+ok 56 - a 200 that is not JSON, or that would echo the key, is a 502
+  ---
+  duration_ms: 0.31125
+  type: 'test'
+  ...
+# Subtest: the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr provider block) is accepted end-to-end
+ok 57 - the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr provider block) is accepted end-to-end
+  ---
+  duration_ms: 1.610792
+  type: 'test'
+  ...
+# Subtest: the route file exports a Web-standard POST bound to real globals (503 with no env)
+ok 58 - the route file exports a Web-standard POST bound to real globals (503 with no env)
+  ---
+  duration_ms: 0.618709
+  type: 'test'
+  ...
+# Subtest: N1: the server sets reasoning per task NAME (rank, answer: off; others: the configured default); a client reasoning is still dropped
+ok 59 - N1: the server sets reasoning per task NAME (rank, answer: off; others: the configured default); a client reasoning is still dropped
+  ---
+  duration_ms: 0.128292
+  type: 'test'
+  ...
+1..59
+# tests 59
+# suites 0
+# pass 59
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 266.679833

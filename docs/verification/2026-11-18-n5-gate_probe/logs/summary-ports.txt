@@ -1,0 +1,4 @@
+v22.22.3
+e2e-restart EXIT=0
+live-host-smoke EXIT=0
+DONE

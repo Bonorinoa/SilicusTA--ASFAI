@@ -14,10 +14,11 @@ import type { DecisionIntent, TypicalSeconds } from "../gate/types";
 import { onPasscodeAsking } from "../browser/passcode";
 import { MESSAGES } from "../browser/site";
 import { plural } from "../lib/plural";
+import { sourcesPhrase } from "./sourceCount";
 import { heldFor, keepForCourse, type HeldFile } from "../materials/session";
 import { explainRefusal, type Act, type Explained } from "../lib/refusals";
 import { recordedNames, type Skipped } from "./sourceUse";
-import { markSourcesRead, sourceKeyOf, sourcesReadFor } from "./links";
+import { keysReadAfterRound, markSourcesRead, sourcesReadFor } from "./links";
 
 export type WaitKind = "objectives" | "suggest" | "plan";
 /**
@@ -81,6 +82,8 @@ export function useCourse(courseId: string) {
   const [recordedAs, setRecordedAs] = useState<Record<string, string>>({});
   // K1: the sources Silicus has read in this tab (the ones not skipped), so a new round sends only new ones.
   const [readKeys, setReadKeys] = useState<ReadonlySet<string>>(() => sourcesReadFor(courseId));
+  /** N2: what the current round from sources sends, for the status line's count. */
+  const reading = useRef<{ count: number; map: boolean } | null>(null);
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
 
@@ -112,7 +115,11 @@ export function useCourse(courseId: string) {
   const waitingWhat = (kind: WaitKind): string => {
     if (kind === "plan") return `drafting from ${plural(view?.objectives.length ?? 0, "confirmed objective")}`;
     if (kind === "suggest") return "finding objectives that round out yours";
-    return sources.length > 0 ? `reading ${plural(sources.length, "source")}` : "reading your sources";
+    // N2: the round's own count (files and web pages sent; the skill-map topics named, not counted), the same
+    // rule as the Sources panel and the wizard.
+    const r = reading.current;
+    const what = r ? sourcesPhrase(r.count, r.map) : "";
+    return what ? `reading ${what}` : "reading your sources";
   };
 
   // B1: in the online build the passcode prompt is awaited inside the worker fetch. While a prompt is open
@@ -160,8 +167,9 @@ export function useCourse(courseId: string) {
         await host.confirmCheckpoint(courseId, { id: "outline", text: "Confirm the brief." });
       }, "brief"),
     proposeFromAnswers: () => run(() => host.proposeObjectives(courseId), "propose"),
-    proposeFromSources: (materials: MaterialInput[]) =>
-      runAi("objectives", async () => {
+    proposeFromSources: (materials: MaterialInput[]) => {
+      reading.current = { count: materials.length, map: mapSourceFor(courseId) };
+      return runAi("objectives", async () => {
         const useMap = mapSourceFor(courseId);
         const r = await host.proposeFromMaterials(courseId, { materials, ...(useMap ? { useMap: true } : {}) });
         if (useMap) markMapSourceRead(courseId);
@@ -170,10 +178,10 @@ export function useCourse(courseId: string) {
         const named = recordedNames(materials as { name?: string; url?: string }[], r.skipped, r.materials ?? []);
         setRecordedAs((prev) => ({ ...prev, ...named }));
         const gone = new Set(r.skipped.map((x) => x.name));
-        const keys = (materials as { name?: string; url?: string }[]).map(sourceKeyOf).filter((k) => k && !gone.has(k) && !gone.has(k.slice(0, 120)));
-        setReadKeys(markSourcesRead(courseId, keys));
+        setReadKeys(markSourcesRead(courseId, keysReadAfterRound(materials as { name?: string; url?: string }[], gone)));
         if (r.skipped.length) setNotice(`${plural(r.skipped.length, "source was", "sources were")} skipped. Each one says why under Sources.`);
-      }, "propose"),
+      }, "propose");
+    },
     suggestMore: () => runAi("suggest", () => host.suggestObjectives(courseId), "suggest"),
     /** R4: the teacher's own close of the objectives on an explicit course. The host refuses it while one waits. */
     confirmObjectives: () => run(() => host.confirmObjectives(courseId, { text: "Confirm the objectives." }), "confirm"),

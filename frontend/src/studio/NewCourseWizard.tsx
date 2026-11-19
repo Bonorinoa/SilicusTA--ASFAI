@@ -21,6 +21,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { explainRefusal } from "../lib/refusals";
 import { host } from "../gate/transport";
 import { plural } from "../lib/plural";
+import { sourcesFootLine, sourcesPhrase } from "./sourceCount";
 import { describeFile } from "../materials/display";
 import { keepForCourse, type HeldFile } from "../materials/session";
 import { AiCheck } from "./AiCheck";
@@ -324,7 +325,7 @@ export function NewCourseWizard() {
     const note = anchor ? <>Anchor <strong>{anchor.name}</strong>{mapChoice.connected ? <>{SEP}connected <strong>{mapChoice.connected.name}</strong></> : null}</> : "Anchor a topic, or skip the map.";
     body = (
       <section className={`${w.sheet} ${w.sheetWide}`} aria-label="On the skill map">
-        {head(kicker("map"), "On the skill map", "Where your lesson sits among topics children learn. Silicus suggests; you anchor one.")}
+        {head(kicker("map"), "On the skill map", "Where your lesson sits among the topics learners meet. Silicus suggests; you anchor one.")}
         <MapStep title={a.title} goal={a.topic} ages={aud.ages} choice={mapChoice} onChoice={setMapChoice} />
         {foot(<>
           <Button variant="quiet" onClick={() => { setMapChoice({ anchor: null, connected: null, skipped: true }); next(); }} data-skip-map="true">Skip the map</Button>
@@ -377,7 +378,7 @@ export function NewCourseWizard() {
           </ul>
         ) : null}
         {foot(<Button variant="primary" data-primary="true" onClick={next}>{sourcesIn ? "Continue" : "Continue without sources"}</Button>,
-          sourcesIn ? `${plural(sourcesIn, "source")} ready.` : null)}
+          sourcesFootLine(files.length, links.length, !!mapSource))}
       </section>
     );
   } else if (step === "objectives") {
@@ -449,7 +450,7 @@ export function NewCourseWizard() {
           {row("Objectives", (
             <>
               {written.length ? <ul className={w.summaryList}>{written.map((o) => <li key={o}>{o}</li>)}</ul> : null}
-              {proposing ? <p style={{ marginTop: written.length ? 6 : 0 }}>Silicus proposes objectives from {plural(sourcesIn, "source")}{written.length ? ", to sit alongside yours" : ""}.</p> : null}
+              {proposing ? <p style={{ marginTop: written.length ? 6 : 0 }}>Silicus proposes objectives from {sourcesPhrase(count, !!mapSource)}{written.length ? ", to sit alongside yours" : ""}.</p> : null}
             </>
           ), "objectives")}
           {row("AI", ai.diagnosis.sentence, "ai", "Check")}

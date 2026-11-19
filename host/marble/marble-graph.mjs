@@ -208,12 +208,16 @@ export class MarbleGraph {
     const dependents = [];
     // Dedupe PER DIRECTION: a topic that is both a prerequisite and a dependent of the anchor
     // (a cycle in the map) must still appear once on each side, not vanish from one.
-    const seenPrereq = new Set();
-    const seenDependent = new Set();
+    // N2 (L1): a topic never lists itself. A cycle walked two hops (A needs B, B needs A) would bring the
+    // anchor back as its own prerequisite, and a duplicate node under another id with the same name reads
+    // the same to a teacher, so both are skipped.
+    const seenPrereq = new Set([id]);
+    const seenDependent = new Set([id]);
+    const sameName = (n) => String(n ?? "").trim().toLowerCase() === String(t.name ?? "").trim().toLowerCase();
     const push = (list, seen, topicId, strength, reason, hops) => {
       if (seen.has(topicId)) return;
       const row = rowOf(topicId, strength, reason, hops);
-      if (!row) return;
+      if (!row || sameName(row.name)) return;
       seen.add(topicId);
       list.push(row);
     };

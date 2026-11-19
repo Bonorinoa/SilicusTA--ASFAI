@@ -54,3 +54,15 @@ export function markSourcesRead(courseId: string, keys: readonly string[]): Read
 
 /** The tab's key for a source: a file's name or a link's address. */
 export const sourceKeyOf = (m: { name?: string; url?: string }): string => m.name ?? m.url ?? "";
+
+/**
+ * N2 (L1): the keys a round from sources has now read. A skipped web page counts as read (it was tried, and the
+ * same address gives the same answer), so it is not "new since Silicus last read" next time. A skipped FILE stays
+ * unread, so attaching a fixed copy under the same name is read again. `skipped` holds the host's skipped names.
+ */
+export function keysReadAfterRound(materials: readonly { name?: string; url?: string }[], skipped: ReadonlySet<string>): string[] {
+  return materials
+    .filter((m) => !!m.url || !(skipped.has(sourceKeyOf(m)) || skipped.has(sourceKeyOf(m).slice(0, 120))))
+    .map(sourceKeyOf)
+    .filter(Boolean);
+}

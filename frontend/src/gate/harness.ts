@@ -118,7 +118,7 @@ export interface GateLike {
       notEvidence?: string;
     }[];
   }): LessonPlanView;
-  confirmLessonPlan(spec: { planId?: string; provenance: GateProvenance }): LessonPlanView;
+  confirmLessonPlan(spec: { planId?: string; provenance: GateProvenance; teacherEditCount?: number }): LessonPlanView;
   currentPlan(): LessonPlanView | null;
   /** Cited objectives reworded since the plan was drafted/confirmed (the plan stays valid; see the gate). */
   rewordedSincePlan(planId?: string): readonly { objectiveId: string; before: string | null; after: string; decisionId: string }[];

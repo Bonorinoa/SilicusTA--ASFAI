@@ -68,6 +68,7 @@ function logText(dir) {
   return out.join("\n");
 }
 const editEvents = (dir) => logText(dir).split("\n").filter((l) => l.includes('"plan.edited"')).map((l) => JSON.parse(l));
+const confirmEvents = (dir) => logText(dir).split("\n").filter((l) => l.includes('"plan.confirmed"')).map((l) => JSON.parse(l));
 
 async function drafted(t) {
   const { json: { courseId } } = await t.post("/api/courses", { owner: "teacher:n3", title: "Plants", ages: { min: 4, max: 10 }, lessonMinutes: 45 });
@@ -94,6 +95,7 @@ test("N3: an edit is a recorded plan.edited event; the edited plan is a new draf
   assert.notEqual(p.id, plan.id, "an edit re-proposes the plan: a new plan id");
   assert.deepEqual(p.activities.map((a) => a.id), plan.activities.map((a) => a.id), "the activities keep their ids");
   assert.equal(p.status, "draft");
+  assert.equal(p.proposedBy, "ai", "the edited draft keeps its AI origin");
   assert.equal(p.editedByTeacher, true);
   assert.equal(p.activities[2].decisionAfterHelp, "Each child says which guess they keep, and why.");
   assert.equal(p.activities[0].decisionAfterHelp, plan.activities[0].decisionAfterHelp, "other activities unchanged");
@@ -122,6 +124,12 @@ test("N3: an edit is a recorded plan.edited event; the edited plan is a new draf
   assert.equal(editEvents(dir).length, 1);
   const conf = await t.post(`${c}/plan/confirm`, { text: "Confirm this lesson plan." });
   assert.equal(conf.json.status, "confirmed");
+  assert.equal(conf.json.proposedBy, "ai");
+  assert.equal(conf.json.editedByTeacher, true);
+  assert.equal(conf.json.teacherEditCount, 1);
+  assert.equal((confirmEvents(dir).at(-1).event ?? confirmEvents(dir).at(-1)).teacherEditCount, 1);
+  const exported = (await t.get(`${c}/export`)).json;
+  assert.equal(exported.plan.teacherEditCount, 1);
   await t.stop();
 });
 

@@ -528,6 +528,46 @@ test("confirm calls are idempotent; conflicting re-decisions are rejected", () =
   assert.equal(ctx.gate.versions().length, 1);
 });
 
+test("a confirmed edited plan records teacher authorship and the edit-operation count", () => {
+  const ctx = makeCtx();
+  walkToPlan(ctx);
+  const [p] = ctx.gate.proposeObjectives([{ kind: "local", statement: "Outcome A." }]);
+  ctx.gate.confirmObjectives({
+    provenance: ctx.say("Accept A.").prov,
+    decisions: [{ verb: "accept", proposalId: p.id }],
+  });
+  const draft = ctx.gate.proposeLessonPlan({ title: "Lesson 1", activities: [activity([p.id])] });
+  assert.equal(draft.proposedBy, "ai");
+  assert.equal(draft.editedByTeacher, undefined);
+  assert.equal(draft.teacherEditCount, undefined);
+  assert.throws(
+    () => ctx.gate.confirmLessonPlan({ provenance: ctx.say("Bad zero count.").prov, teacherEditCount: 0 }),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+  assert.throws(
+    () => ctx.gate.confirmLessonPlan({ provenance: ctx.say("Bad fractional count.").prov, teacherEditCount: 1.5 }),
+    (e) => e instanceof ConfirmGateError && e.code === "BAD_INPUT",
+  );
+  assert.equal(ctx.gate.currentPlan().status, "draft");
+
+  const confirmed = ctx.gate.confirmLessonPlan({
+    provenance: ctx.say("Confirm my edited plan.").prov,
+    teacherEditCount: 2,
+  });
+  assert.equal(confirmed.proposedBy, "ai", "the draft's origin remains the AI");
+  assert.equal(confirmed.editedByTeacher, true);
+  assert.equal(confirmed.teacherEditCount, 2);
+
+  const old = makeCtx();
+  walkToPlan(old);
+  const [oldP] = old.gate.proposeObjectives([{ kind: "local", statement: "Old outcome." }]);
+  old.gate.confirmObjectives({ provenance: old.say("Accept.").prov, decisions: [{ verb: "accept", proposalId: oldP.id }] });
+  old.gate.proposeLessonPlan({ title: "Old plan", activities: [activity([oldP.id])] });
+  const oldConfirmed = old.gate.confirmLessonPlan({ provenance: old.say("Confirm old plan.").prov });
+  assert.equal(oldConfirmed.editedByTeacher, undefined);
+  assert.equal(oldConfirmed.teacherEditCount, undefined);
+});
+
 /* ------------------------- version binding (contract) --------------------- */
 
 test("confirmations bind to CoursePackage versions; publishes bump and never overwrite", () => {

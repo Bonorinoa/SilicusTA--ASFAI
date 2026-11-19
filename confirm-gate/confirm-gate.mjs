@@ -126,6 +126,8 @@ import { TurnLedger } from "./host-guard.mjs";
  * @property {readonly Activity[]} activities
  * @property {"ai"} proposedBy
  * @property {number} proposedAt
+ * @property {true} [editedByTeacher]  Present on confirmation when the host recorded teacher edits.
+ * @property {number} [teacherEditCount]  Number of recorded edit operations in that plan's lineage.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -1093,15 +1095,18 @@ export class ConfirmGate {
    * `confirm_lesson_plan`). Idempotent per (plan, turnRef); a later teacher
    * turn may re-confirm (e.g. after an invalidation + fix).
    *
-   * @param {{planId?: string, provenance: TeacherProvenance}} spec
+   * @param {{planId?: string, provenance: TeacherProvenance, teacherEditCount?: number}} spec
    * @returns {Readonly<LessonPlanRecord>}
    */
-  confirmLessonPlan({ planId, provenance }) {
+  confirmLessonPlan({ planId, provenance, teacherEditCount }) {
     this.#requirePriorCheckpoints("plan");
     const id = planId ?? this.#latestPlanId;
     if (!id) throw new ConfirmGateError("no lesson plan has been proposed yet", "UNKNOWN_PLAN");
     const entry = this.#plans.get(id);
     if (!entry) throw new ConfirmGateError(`unknown lesson plan: ${id}`, "UNKNOWN_PLAN");
+    if (teacherEditCount !== undefined && (!Number.isInteger(teacherEditCount) || teacherEditCount < 1)) {
+      throw new ConfirmGateError("teacherEditCount must be a positive integer", "BAD_INPUT");
+    }
     const prov = this.#requireTeacherProvenance(provenance, { notBefore: entry.record.proposedAt });
 
     const key = `confirm-plan:${id}:${prov.turnRef}`;
@@ -1109,6 +1114,10 @@ export class ConfirmGate {
       return Object.freeze({ ...entry.record }); // idempotent replay.
     }
     entry.record.status = "confirmed";
+    if (teacherEditCount !== undefined) {
+      entry.record.editedByTeacher = true;
+      entry.record.teacherEditCount = teacherEditCount;
+    }
     entry.invalidationReason = null;
     entry.confirmation = { key, provenance: prov, decisionId: this.#idFactory(), boundCourseVersion: this.#nextVersion };
     entry.wordingMark = this.#rewords.length; // a deliberate re-confirmation is made with any reword notice in view

@@ -1,0 +1,92 @@
+PASS  the app builds with VITE_SILICUS_MODE=browser
+PASS  serving with vercel.json's strict CSP
+PASS  an old #/live link lands on the landing page
+
+  landing + onboarding @ 320px — page scrollWidth 320 vs clientWidth 320 (no sideways scroll)
+    mine: 0 overflowing  |  other agent's surfaces: 0
+
+  landing + onboarding @ 380px — page scrollWidth 380 vs clientWidth 380 (no sideways scroll)
+    mine: 0 overflowing  |  other agent's surfaces: 0
+
+  landing + onboarding @ 480px — page scrollWidth 480 vs clientWidth 480 (no sideways scroll)
+    mine: 0 overflowing  |  other agent's surfaces: 0
+
+  landing + onboarding @ 768px — page scrollWidth 768 vs clientWidth 768 (no sideways scroll)
+    mine: 0 overflowing  |  other agent's surfaces: 0
+
+  landing + onboarding @ 1440px — page scrollWidth 1440 vs clientWidth 1440 (no sideways scroll)
+    mine: 0 overflowing  |  other agent's surfaces: 0
+PASS  M1 the wizard's step 1 is complete (Continue enabled, no anchor picker)
+PASS  G2b wizard step 1 does not overflow at 320px — scrollWidth 320 vw 320 
+PASS  G2b wizard step 1 does not overflow at 380px — scrollWidth 380 vw 380 
+PASS  G2b wizard step 1 does not overflow at 390px — scrollWidth 390 vw 390 
+PASS  G2b wizard step 1 does not overflow at 480px — scrollWidth 480 vw 480 
+PASS  G2b wizard step 1 does not overflow at 768px — scrollWidth 768 vw 768 
+PASS  G2b wizard step 1 does not overflow at 1440px — scrollWidth 1440 vw 1440 
+PASS  K5 at 390 px the wizard's step bar is one row — {"segs":6,"segTops":[77],"aboutText":"About","sameRow":true}
+PASS  K5 at 390 px the top bar keeps the brand and 'About' on one row — {"segs":6,"segTops":[77],"aboutText":"About","sameRow":true}
+PASS  M1 the map step renders after step 1 and Continue waits for an anchor or Skip
+PASS  M1 anchoring a search result shows 'Your pick' and enables Continue
+PASS  M1 the map step ('Your pick') does not overflow at 320px — scrollWidth 320 vw 320 
+PASS  M1 the map step ('Your pick') does not overflow at 380px — scrollWidth 380 vw 380 
+PASS  M1 the map step ('Your pick') does not overflow at 390px — scrollWidth 390 vw 390 
+PASS  M1 the map step ('Your pick') does not overflow at 480px — scrollWidth 480 vw 480 
+PASS  M1 the map step ('Your pick') does not overflow at 768px — scrollWidth 768 vw 768 
+PASS  M1 the map step ('Your pick') does not overflow at 1440px — scrollWidth 1440 vw 1440 
+PASS  M1 the sources step's map row is checked by default when an anchor exists
+PASS  M1 the anchored course opens on objectives with the suggestions and the 'On the map' line, and no map
+PASS  G2c objectives step (suggestions + neighbourhood) does not overflow at 320px (view: null) — scrollWidth 320 vw 320 
+PASS  G2c objectives step (suggestions + neighbourhood) does not overflow at 380px (view: null) — scrollWidth 380 vw 380 
+PASS  G2c objectives step (suggestions + neighbourhood) does not overflow at 390px (view: null) — scrollWidth 390 vw 390 
+PASS  G2c objectives step (suggestions + neighbourhood) does not overflow at 480px (view: null) — scrollWidth 480 vw 480 
+PASS  G2c objectives step (suggestions + neighbourhood) does not overflow at 768px (view: null) — scrollWidth 768 vw 768 
+PASS  G2c objectives step (suggestions + neighbourhood) does not overflow at 1440px (view: null) — scrollWidth 1440 vw 1440 
+PASS  G2c confirming reaches the plan step, which opens on the prerequisite strip
+PASS  G2c plan step (strip + neighbourhood open) does not overflow at 320px (view: narrow) — scrollWidth 320 vw 320 
+PASS  G2c plan step (strip + neighbourhood open) does not overflow at 380px (view: narrow) — scrollWidth 380 vw 380 
+PASS  G2c plan step (strip + neighbourhood open) does not overflow at 390px (view: narrow) — scrollWidth 390 vw 390 
+PASS  G2c plan step (strip + neighbourhood open) does not overflow at 480px (view: narrow) — scrollWidth 480 vw 480 
+PASS  G2c plan step (strip + neighbourhood open) does not overflow at 768px (view: wide) — scrollWidth 768 vw 768 
+PASS  G2c plan step (strip + neighbourhood open) does not overflow at 1440px (view: wide) — scrollWidth 1440 vw 1440 
+PASS  P2ui the anchored course's v2 plan shows the evidence line and the Later section
+PASS  P2ui no learning-design element crosses the edge at 320–1440 px and at 390 px
+PASS  P2ui at 390 px the Later rows stack (offset above the prompt)
+PASS  P2ui print media keeps the learning design (policy line, evidence line, phase chips, Later)
+PASS  H2b the 5–12 scripted plan fits its course: no 'Silicus adjusted', no plants story
+PASS  M1 the scripted ranking draws 1–3 threads with numbered suggestions in five columns, nothing anchored, one credit — {"threads":2,"anchored":0,"credits":1,"badges":4,"cols":"Earlier·Comes before·Best fit·Leads to·Later"}
+PASS  M1 suggestion 1 is selected, not anchored: Continue stays disabled
+PASS  M1 'Anchor here' anchors the selected topic and enables Continue
+PASS  M1 Connect marks a topic from the other thread; status and Undo are separate controls
+PASS  M1 the ranked map does not overflow at 320px — scrollWidth 320 vw 320 
+PASS  M1 the ranked map does not overflow at 380px — scrollWidth 380 vw 380 
+PASS  M1 the ranked map does not overflow at 390px — scrollWidth 390 vw 390 
+PASS  M1 the ranked map does not overflow at 480px — scrollWidth 480 vw 480 
+PASS  M1 the ranked map does not overflow at 768px — scrollWidth 768 vw 768 
+PASS  M1 the ranked map does not overflow at 1440px — scrollWidth 1440 vw 1440 
+PASS  M1 at 390 px the lanes are a list (no column header, no arcs)
+PASS  K4 C6 at 1440 px every two-word topic name in the map columns sits on one line — [{"name":"Reflecting Light","lines":1}]
+PASS  K4 C6 no ' · ' in a map node or the step spine can break (non-breaking joins; the state word is its own line) — {"breakable":[],"states":2}
+PASS  K4 C6 the skip arc has a key when an arc is drawn — {"arcs":1,"legend":"Arc over a row: must come first (skips a step)"}
+PASS  H2b the stage-3 plan shows the host's clamp under 'Silicus adjusted' — {"s3Walk":[true,true,true,true,true],"s3Notes":["AI use \"permitted\" clamped to \"forbidden\" in activity 3 \"Explain it in your own words\": at this stage AI may follow only an attempt the teacher has watched."]}
+FAIL  N2 K5V C1 at 390 px the revision note's 'Draft a new lesson plan' button stays inside its card, and the page does not scroll sideways — {"rv":[true,true,true,true,true,true],"card":true,"btn":true,"cardLeft":16,"cardRight":374,"btnLeft":39,"btnRight":461.53125,"sw":462,"cw":390}
+PASS  0 console errors
+PASS  the only network calls were the site's functions
+PASS  no overflow on the shell, landing or intake surfaces at 320px
+PASS  no overflow on the shell, landing or intake surfaces at 380px
+PASS  no overflow on the shell, landing or intake surfaces at 480px
+PASS  no overflow on the shell, landing or intake surfaces at 768px
+PASS  no overflow on the shell, landing or intake surfaces at 1440px
+PASS  the landing does not scroll sideways at 320px — scrollWidth 320
+PASS  the landing does not scroll sideways at 380px — scrollWidth 380
+PASS  the landing does not scroll sideways at 480px — scrollWidth 480
+PASS  the landing does not scroll sideways at 768px — scrollWidth 768
+PASS  the landing does not scroll sideways at 1440px — scrollWidth 1440
+
+--- surface widths (how wide each surface wants to be) ---
+   320px  landing + onboarding scrollWidth  320  widest surface: course page (shell) 0→320
+   380px  landing + onboarding scrollWidth  380  widest surface: course page (shell) 0→380
+   480px  landing + onboarding scrollWidth  480  widest surface: course page (shell) 0→480
+   768px  landing + onboarding scrollWidth  768  widest surface: course page (shell) 0→768
+  1440px  landing + onboarding scrollWidth 1440  widest surface: course page (shell) 0→1440
+
+67/68 narrow-shell checks passed

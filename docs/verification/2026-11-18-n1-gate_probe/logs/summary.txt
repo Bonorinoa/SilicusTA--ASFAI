@@ -1,0 +1,11 @@
+v22.22.3
+confirm-gate EXIT=0
+api EXIT=0
+host EXIT=0
+e2e-restart EXIT=0
+frontend-test EXIT=0
+frontend-build EXIT=0
+browser-mode-smoke EXIT=0
+studio-smoke EXIT=0
+narrow-shell EXIT=0
+DONE

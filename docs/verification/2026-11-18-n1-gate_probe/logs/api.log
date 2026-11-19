@@ -1,0 +1,364 @@
+TAP version 13
+# Subtest: vercel.json: maxDuration 120 for api/**, /api gets cache-control no-store, the original CSP block is intact
+ok 1 - vercel.json: maxDuration 120 for api/**, /api gets cache-control no-store, the original CSP block is intact
+  ---
+  duration_ms: 3.267959
+  type: 'test'
+  ...
+# Subtest: .vercelignore keeps api/test out of the deployment (it would otherwise become routes)
+ok 2 - .vercelignore keeps api/test out of the deployment (it would otherwise become routes)
+  ---
+  duration_ms: 1.678416
+  type: 'test'
+  ...
+# Subtest: the functions never log (no console.*), and every route file is .mjs
+ok 3 - the functions never log (no console.*), and every route file is .mjs
+  ---
+  duration_ms: 0.842709
+  type: 'test'
+  ...
+# Subtest: clientIp: first x-forwarded-for hop, then x-real-ip, else 'unknown'
+ok 4 - clientIp: first x-forwarded-for hop, then x-real-ip, else 'unknown'
+  ---
+  duration_ms: 8.50525
+  type: 'test'
+  ...
+# Subtest: rate limiter memory is bounded: old IPs are evicted past maxKeys
+ok 5 - rate limiter memory is bounded: old IPs are evicted past maxKeys
+  ---
+  duration_ms: 0.869917
+  type: 'test'
+  ...
+# Subtest: passcode env unset -> 503 NOT_CONFIGURED; wrong/missing -> 401 BAD_PASSCODE; nothing fetched
+ok 6 - passcode env unset -> 503 NOT_CONFIGURED; wrong/missing -> 401 BAD_PASSCODE; nothing fetched
+  ---
+  duration_ms: 4.614375
+  type: 'test'
+  ...
+# Subtest: fetch works with only the passcode configured (it needs no model key)
+ok 7 - fetch works with only the passcode configured (it needs no model key)
+  ---
+  duration_ms: 5.030375
+  type: 'test'
+  ...
+# Subtest: success -> 200 {name, text, chars, digest}, name from the page title
+ok 8 - success -> 200 {name, text, chars, digest}, name from the page title
+  ---
+  duration_ms: 2.487375
+  type: 'test'
+  ...
+# Subtest: a page with no title is named by its hostname; plain text is read as text
+ok 9 - a page with no title is named by its hostname; plain text is read as text
+  ---
+  duration_ms: 1.221167
+  type: 'test'
+  ...
+# Subtest: text is clipped to the host's per-material limit
+ok 10 - text is clipped to the host's per-material limit
+  ---
+  duration_ms: 2.369208
+  type: 'test'
+  ...
+# Subtest: a public redirect is followed
+ok 11 - a public redirect is followed
+  ---
+  duration_ms: 0.408208
+  type: 'test'
+  ...
+# Subtest: private, loopback and metadata addresses are refused with 422 URL_REFUSED and never fetched
+ok 12 - private, loopback and metadata addresses are refused with 422 URL_REFUSED and never fetched
+  ---
+  duration_ms: 1.591959
+  type: 'test'
+  ...
+# Subtest: non-https, credentials in the URL and odd ports are refused
+ok 13 - non-https, credentials in the URL and odd ports are refused
+  ---
+  duration_ms: 0.706625
+  type: 'test'
+  ...
+# Subtest: a redirect to a private address is refused at the hop, before it is fetched
+ok 14 - a redirect to a private address is refused at the hop, before it is fetched
+  ---
+  duration_ms: 0.809167
+  type: 'test'
+  ...
+# Subtest: guard refusals other than the address keep their MaterialError code (422)
+ok 15 - guard refusals other than the address keep their MaterialError code (422)
+  ---
+  duration_ms: 0.444541
+  type: 'test'
+  ...
+# Subtest: YouTube links -> 422 YOUTUBE_LOCAL_ONLY, never fetched
+ok 16 - YouTube links -> 422 YOUTUBE_LOCAL_ONLY, never fetched
+  ---
+  duration_ms: 0.438
+  type: 'test'
+  ...
+# Subtest: body over 4 KB -> 413 TOO_LARGE (by content-length and by bytes)
+ok 17 - body over 4 KB -> 413 TOO_LARGE (by content-length and by bytes)
+  ---
+  duration_ms: 0.271583
+  type: 'test'
+  ...
+# Subtest: 400 on non-JSON or no url string
+ok 18 - 400 on non-JSON or no url string
+  ---
+  duration_ms: 0.323958
+  type: 'test'
+  ...
+# Subtest: the whole fetch has a deadline: a hanging site -> 504 UPSTREAM_TIMEOUT
+ok 19 - the whole fetch has a deadline: a hanging site -> 504 UPSTREAM_TIMEOUT
+  ---
+  duration_ms: 50.828625
+  type: 'test'
+  ...
+# Subtest: the same rate limiter applies: 429 after 20 per 10 minutes from one IP
+ok 20 - the same rate limiter applies: 429 after 20 per 10 minutes from one IP
+  ---
+  duration_ms: 3.02275
+  type: 'test'
+  ...
+# Subtest: the route file exports a Web-standard POST bound to real globals (503 with no env)
+ok 21 - the route file exports a Web-standard POST bound to real globals (503 with no env)
+  ---
+  duration_ms: 0.511875
+  type: 'test'
+  ...
+# Subtest: N1: /api/fetch shares the host's address check: 192.0.66.161 (science.nasa.gov) is read, 169.254.169.254 is refused
+ok 22 - N1: /api/fetch shares the host's address check: 192.0.66.161 (science.nasa.gov) is read, 169.254.169.254 is refused
+  ---
+  duration_ms: 0.982959
+  type: 'test'
+  ...
+# Subtest: status shape: configured, zdr, provider openrouter, passcodeRequired, model; nothing else
+ok 23 - status shape: configured, zdr, provider openrouter, passcodeRequired, model; nothing else
+  ---
+  duration_ms: 0.244
+  type: 'test'
+  ...
+# Subtest: configured needs the key AND the model AND the passcode
+ok 24 - configured needs the key AND the model AND the passcode
+  ---
+  duration_ms: 0.29775
+  type: 'test'
+  ...
+# Subtest: zdr is reported exactly as configured: false only with SILICUS_WORKER_ZDR=0
+ok 25 - zdr is reported exactly as configured: false only with SILICUS_WORKER_ZDR=0
+  ---
+  duration_ms: 0.217583
+  type: 'test'
+  ...
+# Subtest: typicalSeconds defaults per task, accepts per-task JSON overrides, and ignores invalid JSON
+ok 26 - typicalSeconds defaults per task, accepts per-task JSON overrides, and ignores invalid JSON
+  ---
+  duration_ms: 0.250667
+  type: 'test'
+  ...
+# Subtest: status needs no passcode and never reveals the key, even with nothing configured
+ok 27 - status needs no passcode and never reveals the key, even with nothing configured
+  ---
+  duration_ms: 0.098333
+  type: 'test'
+  ...
+# Subtest: the route file exports a Web-standard GET
+ok 28 - the route file exports a Web-standard GET
+  ---
+  duration_ms: 0.261666
+  type: 'test'
+  ...
+# Subtest: passcode env unset -> 503 NOT_CONFIGURED, never an open proxy
+ok 29 - passcode env unset -> 503 NOT_CONFIGURED, never an open proxy
+  ---
+  duration_ms: 0.274792
+  type: 'test'
+  ...
+# Subtest: key or model unset -> 503 NOT_CONFIGURED
+ok 30 - key or model unset -> 503 NOT_CONFIGURED
+  ---
+  duration_ms: 0.091125
+  type: 'test'
+  ...
+# Subtest: wrong or missing passcode -> 401 BAD_PASSCODE and nothing goes upstream
+ok 31 - wrong or missing passcode -> 401 BAD_PASSCODE and nothing goes upstream
+  ---
+  duration_ms: 0.232958
+  type: 'test'
+  ...
+# Subtest: right passcode -> 200 with the upstream JSON, key sent only upstream as Bearer
+ok 32 - right passcode -> 200 with the upstream JSON, key sent only upstream as Bearer
+  ---
+  duration_ms: 0.294834
+  type: 'test'
+  ...
+# Subtest: the passcode is compared in constant time (timingSafeEqual on equal-length digests)
+ok 33 - the passcode is compared in constant time (timingSafeEqual on equal-length digests)
+  ---
+  duration_ms: 0.299166
+  type: 'test'
+  ...
+# Subtest: client headers (its own authorization) are never forwarded upstream
+ok 34 - client headers (its own authorization) are never forwarded upstream
+  ---
+  duration_ms: 0.1215
+  type: 'test'
+  ...
+# Subtest: 413 TOO_LARGE by content-length, without reading the body
+ok 35 - 413 TOO_LARGE by content-length, without reading the body
+  ---
+  duration_ms: 0.205917
+  type: 'test'
+  ...
+# Subtest: 413 TOO_LARGE by streamed bytes when content-length is absent or lies; reading stops at the cap
+ok 36 - 413 TOO_LARGE by streamed bytes when content-length is absent or lies; reading stops at the cap
+  ---
+  duration_ms: 0.2765
+  type: 'test'
+  ...
+# Subtest: a body just under 512 KB is accepted
+ok 37 - a body just under 512 KB is accepted
+  ---
+  duration_ms: 2.961958
+  type: 'test'
+  ...
+# Subtest: 400 on non-JSON, a non-object, or no messages array
+ok 38 - 400 on non-JSON, a non-object, or no messages array
+  ---
+  duration_ms: 0.465625
+  type: 'test'
+  ...
+# Subtest: client model/provider/tools/stream/etc are stripped and the env model is forced
+ok 39 - client model/provider/tools/stream/etc are stripped and the env model is forced
+  ---
+  duration_ms: 0.158958
+  type: 'test'
+  ...
+# Subtest: message objects are rebuilt to {role, content}: extra per-message keys never go upstream
+ok 40 - message objects are rebuilt to {role, content}: extra per-message keys never go upstream
+  ---
+  duration_ms: 0.152917
+  type: 'test'
+  ...
+# Subtest: reasoning is server-decided: low by default, every supported env value maps exactly
+ok 41 - reasoning is server-decided: low by default, every supported env value maps exactly
+  ---
+  duration_ms: 0.81825
+  type: 'test'
+  ...
+# Subtest: a client reasoning field is stripped; the server's low setting wins
+ok 42 - a client reasoning field is stripped; the server's low setting wins
+  ---
+  duration_ms: 0.18225
+  type: 'test'
+  ...
+# Subtest: ZDR provider block is present by default and for any SILICUS_WORKER_ZDR value except "0"
+ok 43 - ZDR provider block is present by default and for any SILICUS_WORKER_ZDR value except "0"
+  ---
+  duration_ms: 0.648834
+  type: 'test'
+  ...
+# Subtest: ZDR provider block is absent only with SILICUS_WORKER_ZDR=0 (and the client cannot add one)
+ok 44 - ZDR provider block is absent only with SILICUS_WORKER_ZDR=0 (and the client cannot add one)
+  ---
+  duration_ms: 0.102541
+  type: 'test'
+  ...
+# Subtest: ZDR fails closed: one upstream attempt, never a retry, when the ZDR route is refused
+ok 45 - ZDR fails closed: one upstream attempt, never a retry, when the ZDR route is refused
+  ---
+  duration_ms: 0.126333
+  type: 'test'
+  ...
+# Subtest: max_tokens is server-decided: the env cap (16,000 by default, 32,000 ceiling) and nothing the client sends
+ok 46 - max_tokens is server-decided: the env cap (16,000 by default, 32,000 ceiling) and nothing the client sends
+  ---
+  duration_ms: 0.902042
+  type: 'test'
+  ...
+# Subtest: 429 RATE_LIMITED after 20 requests per 10 minutes from one IP, with retry-after; another IP is unaffected
+ok 47 - 429 RATE_LIMITED after 20 requests per 10 minutes from one IP, with retry-after; another IP is unaffected
+  ---
+  duration_ms: 2.437792
+  type: 'test'
+  ...
+# Subtest: failed passcode attempts count toward the per-IP limit (no free brute force)
+ok 48 - failed passcode attempts count toward the per-IP limit (no free brute force)
+  ---
+  duration_ms: 0.670792
+  type: 'test'
+  ...
+# Subtest: 429 RATE_LIMITED at the per-instance daily cap (SILICUS_DAILY_CAP), reset the next UTC day
+ok 49 - 429 RATE_LIMITED at the per-instance daily cap (SILICUS_DAILY_CAP), reset the next UTC day
+  ---
+  duration_ms: 0.379208
+  type: 'test'
+  ...
+# Subtest: the daily cap defaults to 300
+ok 50 - the daily cap defaults to 300
+  ---
+  duration_ms: 21.760875
+  type: 'test'
+  ...
+# Subtest: upstream that never answers -> 504 UPSTREAM_TIMEOUT at the deadline
+ok 51 - upstream that never answers -> 504 UPSTREAM_TIMEOUT at the deadline
+  ---
+  duration_ms: 51.268583
+  type: 'test'
+  ...
+# Subtest: upstream that ignores the abort signal still yields 504 at the deadline
+ok 52 - upstream that ignores the abort signal still yields 504 at the deadline
+  ---
+  duration_ms: 50.576
+  type: 'test'
+  ...
+# Subtest: the default upstream deadline leaves 5 s of headroom under the 120 s function duration
+ok 53 - the default upstream deadline leaves 5 s of headroom under the 120 s function duration
+  ---
+  duration_ms: 0.120042
+  type: 'test'
+  ...
+# Subtest: upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed
+ok 54 - upstream 402 -> 502 UPSTREAM_ERROR with status 402, and the upstream body is never echoed
+  ---
+  duration_ms: 0.249125
+  type: 'test'
+  ...
+# Subtest: upstream 401/429/500 -> 502 with the status; network failure -> 502 without echoing the error
+ok 55 - upstream 401/429/500 -> 502 with the status; network failure -> 502 without echoing the error
+  ---
+  duration_ms: 0.542125
+  type: 'test'
+  ...
+# Subtest: a 200 that is not JSON, or that would echo the key, is a 502
+ok 56 - a 200 that is not JSON, or that would echo the key, is a 502
+  ---
+  duration_ms: 0.212791
+  type: 'test'
+  ...
+# Subtest: the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr provider block) is accepted end-to-end
+ok 57 - the exact body host/worker.mjs PlanWorker sends (placeholder model, zdr provider block) is accepted end-to-end
+  ---
+  duration_ms: 1.014958
+  type: 'test'
+  ...
+# Subtest: the route file exports a Web-standard POST bound to real globals (503 with no env)
+ok 58 - the route file exports a Web-standard POST bound to real globals (503 with no env)
+  ---
+  duration_ms: 0.437292
+  type: 'test'
+  ...
+# Subtest: N1: the server sets reasoning per task NAME (rank, answer: off; others: the configured default); a client reasoning is still dropped
+ok 59 - N1: the server sets reasoning per task NAME (rank, answer: off; others: the configured default); a client reasoning is still dropped
+  ---
+  duration_ms: 0.087542
+  type: 'test'
+  ...
+1..59
+# tests 59
+# suites 0
+# pass 59
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 269.695375

@@ -1,0 +1,334 @@
+PASS  [setup] the app builds with VITE_SILICUS_MODE=browser
+PASS  [setup] the browser host is its own chunk in the browser build
+PASS  [setup] serving with vercel.json's strict CSP
+PASS  [setup] the built bundle names no server env variable or key
+PASS  [setup] the built bundle holds nothing key-shaped
+PASS  [wide 1440] the bare URL shows the landing, not the studio and not the demo decision card — Plan a lesson with an AI that proposes. You decide.
+PASS  [wide 1440] #/studio (the landing's primary) opens the studio home: 'Your courses' with a 'New course' card and no course yet — true links=1 hash=#/studio
+PASS  [wide 1440] the page is titled as the product, with an inline SVG favicon — Silicus TA · course authoring, teacher in the loop
+PASS  [wide 1440] the studio header reads as the product, not 'design workbench · tokens-first' — Silicus | About Silicus
+PASS  [wide 1440] a typed #/decision still opens the component workbench (it is no longer linked from the app)
+PASS  [wide 1440] wizard: a first run opens on the welcome (#/studio/new)
+PASS  [wide 1440] wizard: the ranking call asks for the demo passcode first (browser host)
+PASS  [wide 1440] nothing is recorded in IndexedDB before the review's confirm, and no /api/courses request left the page
+PASS  [wide 1440] the sources step says YouTube needs the local app (online), and will not add it
+PASS  [wide 1440] wizard: with a source and nothing written, proposing from the sources is already chosen
+PASS  [wide 1440] wizard: the AI check says in plain words that the demo passcode is needed (online build)
+PASS  [wide 1440] the review lists the course, the label, the topic and the source by its name; no source text
+PASS  [wide 1440] nothing is recorded before the review's confirm (still IndexedDB-empty)
+PASS  [wide 1440] the course is recorded in IndexedDB (not on a server)
+PASS  [wide 1440] no /api/courses request ever left the page
+PASS  [wide 1440] the review's confirm records the materials list and the outline as confirmed (files, then outline)
+PASS  [wide 1440] the course record keeps the label as the owner, and no material text — {"kind":"course.created","courseId":"urn:uuid:6bad1893-de56-4335-93d1-058f811e68fa","owner":"Ada Lovelace","title":"How plants eat","description":"","materials"
+PASS  [wide 1440] an AI action asks for the demo passcode
+PASS  [wide 1440] while the passcode dialog is open the status line holds its clock and says why — Waiting for your passcode
+PASS  [wide 1440] one polite live region on the step after the wizard — ["Waiting for your passcode"]
+PASS  [wide 1440] proposing says in plain words what is happening, with the real count, and the usual range — Silicus is reading 1 source · 0:00 · usually 2–10 s
+PASS  [wide 1440] zero-retention is claimed only because the site's status says zdr: true (the AI status says the text is not kept by the provider)
+PASS  [wide 1440] proposing ends with the proposals on the page, none accepted (3 waiting, 'Not yours until you accept')
+PASS  [wide 1440] the worker proposed objectives through /api/worker, with the passcode header
+PASS  [wide 1440] the passcode is in sessionStorage only
+PASS  [wide 1440] the material text went to the model once…
+PASS  [wide 1440] …and is in no IndexedDB value, localStorage or sessionStorage
+PASS  [wide 1440] workspace 1440x900: the objectives (proposed) primary is inside the window when the stage opens — {"top":493,"bottom":537,"left":785,"right":955,"vh":900,"vw":1440,"label":"Confirm objectives","count":1}
+PASS  [wide 1440] workspace 1280x800: the objectives (proposed) primary is inside the window when the stage opens — {"top":493,"bottom":537,"left":705,"right":875,"vh":800,"vw":1280,"label":"Confirm objectives","count":1}
+PASS  [wide 1440] one teacher decision recorded per proposal
+PASS  [wide 1440] three accepted objectives are on the page to be sent — 3 li, 3 statements
+PASS  [wide 1440] workspace 1440x900: the objectives (decided) primary is inside the window when the stage opens — {"top":823,"bottom":867,"left":785,"right":955,"vh":900,"vw":1440,"label":"Confirm objectives","count":1}
+PASS  [wide 1440] workspace 1280x800: the objectives (decided) primary is inside the window when the stage opens — {"top":723,"bottom":767,"left":705,"right":875,"vh":800,"vw":1280,"label":"Confirm objectives","count":1}
+PASS  [wide 1440] stage: the objectives step has exactly one primary action — primaries=1
+PASS  [wide 1440] workspace 1440x900: the plan (before drafting) primary is inside the window when the stage opens — {"top":583,"bottom":627,"left":842,"right":1027,"vh":900,"vw":1440,"label":"Draft the lesson plan","count":1}
+PASS  [wide 1440] workspace 1280x800: the plan (before drafting) primary is inside the window when the stage opens — {"top":583,"bottom":627,"left":762,"right":947,"vh":800,"vw":1280,"label":"Draft the lesson plan","count":1}
+PASS  [wide 1440] the waiting experience says in plain words what is happening, with the real count — Silicus is drafting from 3 confirmed objectives · 0:00 · usually 10–60 s
+PASS  [wide 1440] it states the typical range the documented defaults give: usually 10–60 s — Silicus is drafting from 3 confirmed objectives · 0:00 · usually 10–60 s
+PASS  [wide 1440] exactly one polite live region announces the start, without the ticking clock (the clock is aria-hidden) — ["Silicus is drafting from 3 confirmed objectives"]
+PASS  [wide 1440] there is no progress bar and no percentage
+PASS  [wide 1440] the elapsed readout is a real clock: it has advanced
+PASS  [wide 1440] before the late mark there is no 'still drafting' line
+PASS  [wide 1440] when the plan arrives the status line leaves the waiting state and the clock goes — Your turn: read the plan, then confirm it
+PASS  [wide 1440] what left the page: every accepted statement and the topic were sent; the label and the material text were NOT — statements=true topic=true label=false secret=false
+PASS  [wide 1440] the plan is drafted (no second passcode prompt: it is kept for this tab)
+PASS  [wide 1440] workspace 1440x900: the plan primary is inside the window when the stage opens — {"top":823,"bottom":867,"left":822,"right":1027,"vh":900,"vw":1440,"label":"Confirm the lesson plan","count":1}
+PASS  [wide 1440] workspace 1280x800: the plan primary is inside the window when the stage opens — {"top":723,"bottom":767,"left":742,"right":947,"vh":800,"vw":1280,"label":"Confirm the lesson plan","count":1}
+PASS  [wide 1440] stage: the plan step has exactly one primary action — primaries=1
+PASS  [wide 1440] stage: the lesson plan's text appears exactly once on the plan step — lines=3 (3 = once)
+PASS  [wide 1440] rail plan: the header ("Behind the scenes" and the count) is on one line — {"headOneLine":true,"titleH":28,"metaH":18,"tags":["Plan","Objectives","Brief","Material"],"times":["20:13:44","20:13:41","20:13:40","20:13:39","20:13:38","20:13:38","20:13:38","20:13:38"],"timesCount":0,"timesBroken":false,"nowrap":true,"rows":8,"worker":true,"asfaiLane":false}
+PASS  [wide 1440] rail plan: every tag is a stage word (Material, Brief, Objectives, Plan, Version), never Outline, Record or Package — ["Plan","Objectives","Brief","Material"]
+PASS  [wide 1440] rail plan: rows do not all say "just now": the clock is shown instead — ["20:13:44","20:13:41","20:13:40","20:13:39","20:13:38","20:13:38","20:13:38","20:13:38"]
+PASS  [wide 1440] rail plan: " · 2 times" stays whole (no break inside it) — times spans: 0, nowrap true, broken false
+PASS  [wide 1440] rail plan: a worker row after drafting, and no ASFAI lane in the online app — {"headOneLine":true,"titleH":28,"metaH":18,"tags":["Plan","Objectives","Brief","Material"],"times":["20:13:44","20:13:41","20:13:40","20:13:39","20:13:38","20:13:38","20:13:38","20:13:38"],"timesCount":0,"timesBroken":false,"nowrap":true,"rows":8,"worker":true,"asfaiLane":false}
+PASS  [wide 1440] 'Edit objectives' opens the objectives, looking back, with 'Back to the current step' as the way out
+PASS  [wide 1440] back from editing the objectives lands on the plan, to confirm
+PASS  [wide 1440] looking wrote nothing (still exactly the three objective decisions)
+PASS  [wide 1440] plan confirmed on the record
+PASS  [wide 1440] workspace 1440x900: the publish primary is inside the window when the stage opens — {"top":823,"bottom":867,"left":859,"right":1027,"vh":900,"vw":1440,"label":"Publish version 1…","count":1}
+PASS  [wide 1440] workspace 1280x800: the publish primary is inside the window when the stage opens — {"top":723,"bottom":767,"left":779,"right":947,"vh":800,"vw":1280,"label":"Publish version 1…","count":1}
+PASS  [wide 1440] stage: the publish step has exactly one primary action — primaries=1
+PASS  [wide 1440] stage: the lesson plan's text appears exactly once on the publish step — lines=3 (3 = once)
+PASS  [wide 1440] version 1 sealed, and pinned in this browser
+PASS  [wide 1440] the student space is a preview on this device and shows the published title
+PASS  [wide 1440] a student's wait shows the 'Silicus is thinking' indicator — {"n":3,"anim":"none"}
+PASS  [wide 1440] under prefers-reduced-motion the indicator is still (no CSS animation) — none
+PASS  [wide 1440] the student gets an answer that cites the published lesson
+PASS  [wide 1440] student chat wrote nothing (IndexedDB and web storage identical before and after)
+PASS  [wide 1440] Rehearse answers from the published version and writes nothing
+PASS  [wide 1440] the browser-written log verifies on the Node host's chain (node:crypto) — 12 events
+PASS  [wide 1440] after a reload the published course is still there
+PASS  [wide 1440] after a reload the record verifies
+PASS  [wide 1440] the record notice is shown exactly once — 1 cop(y|ies) on the page
+PASS  [wide 1440] an export file was downloaded — silicus-courses-2026-11-19.json
+PASS  [wide 1440] the export verifies in Node (envelope digest, chain, meta, replay)
+PASS  [wide 1440] the export holds no material text
+PASS  [wide 1440] delete all empties IndexedDB, the pins and the passcode
+PASS  [wide 1440] delete all says so, and the home lists no course
+PASS  [wide 1440] a tampered export is refused with a clear message, and nothing is written
+PASS  [wide 1440] import brings the course back, record intact
+PASS  [wide 1440] the imported course is listed as published on the home
+PASS  [wide 1440] the imported course verifies in the app
+PASS  [wide 1440] 0 CSP violations
+PASS  [wide 1440] 0 console errors
+PASS  [wide 1440] 0 page errors
+PASS  [wide 1440] the only network calls were the site's functions — /api/worker/status, /api/worker
+PASS  [wide 1440] the whole flow completed
+PASS  [narrow 380] narrow landing (bare URL): the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow landing (bare URL): no element's right edge passes the viewport
+PASS  [narrow 380] narrow landing (bare URL): no element's content is clipped by its own box
+PASS  [narrow 380] the bare URL shows the landing, not the studio and not the demo decision card — Plan a lesson with an AI that proposes. You decide.
+PASS  [narrow 380] narrow studio home, first visit: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow studio home, first visit: no element's right edge passes the viewport
+PASS  [narrow 380] narrow studio home, first visit: no element's content is clipped by its own box
+PASS  [narrow 380] #/studio (the landing's primary) opens the studio home: 'Your courses' with a 'New course' card and no course yet — true links=1 hash=#/studio
+PASS  [narrow 380] the page is titled as the product, with an inline SVG favicon — Silicus TA · course authoring, teacher in the loop
+PASS  [narrow 380] the studio header reads as the product, not 'design workbench · tokens-first' — Silicus | About
+PASS  [narrow 380] a typed #/decision still opens the component workbench (it is no longer linked from the app)
+PASS  [narrow 380] narrow design system workbench: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow design system workbench: no element's right edge passes the viewport
+PASS  [narrow 380] narrow design system workbench: no element's content is clipped by its own box
+PASS  [narrow 380] wizard: a first run opens on the welcome (#/studio/new)
+PASS  [narrow 380] narrow wizard welcome: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard welcome: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard welcome: no element's content is clipped by its own box
+PASS  [narrow 380] narrow wizard step 1: course and learners: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard step 1: course and learners: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard step 1: course and learners: no element's content is clipped by its own box
+PASS  [narrow 380] wizard: the ranking call asks for the demo passcode first (browser host)
+PASS  [narrow 380] narrow wizard step 2: the skill map: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard step 2: the skill map: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard step 2: the skill map: no element's content is clipped by its own box
+PASS  [narrow 380] narrow wizard step 3: sources: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard step 3: sources: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard step 3: sources: no element's content is clipped by its own box
+PASS  [narrow 380] nothing is recorded in IndexedDB before the review's confirm, and no /api/courses request left the page
+PASS  [narrow 380] the sources step says YouTube needs the local app (online), and will not add it
+PASS  [narrow 380] narrow wizard step 4: your objectives: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard step 4: your objectives: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard step 4: your objectives: no element's content is clipped by its own box
+PASS  [narrow 380] wizard: with a source and nothing written, proposing from the sources is already chosen
+PASS  [narrow 380] wizard: the AI check says in plain words that the demo passcode is needed (online build)
+PASS  [narrow 380] narrow wizard step 5: the AI check: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard step 5: the AI check: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard step 5: the AI check: no element's content is clipped by its own box
+PASS  [narrow 380] narrow wizard step 6: review and confirm: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow wizard step 6: review and confirm: no element's right edge passes the viewport
+PASS  [narrow 380] narrow wizard step 6: review and confirm: no element's content is clipped by its own box
+PASS  [narrow 380] the review lists the course, the label, the topic and the source by its name; no source text
+PASS  [narrow 380] nothing is recorded before the review's confirm (still IndexedDB-empty)
+PASS  [narrow 380] the course is recorded in IndexedDB (not on a server)
+PASS  [narrow 380] no /api/courses request ever left the page
+PASS  [narrow 380] the review's confirm records the materials list and the outline as confirmed (files, then outline)
+PASS  [narrow 380] the course record keeps the label as the owner, and no material text — {"kind":"course.created","courseId":"urn:uuid:61ce2b20-837e-4f8c-9836-449b5039c022","owner":"Ada Lovelace","title":"How plants eat","description":"","materials"
+PASS  [narrow 380] an AI action asks for the demo passcode
+PASS  [narrow 380] while the passcode dialog is open the status line holds its clock and says why — Waiting for your passcode
+PASS  [narrow 380] one polite live region on the step after the wizard — ["Waiting for your passcode"]
+PASS  [narrow 380] narrow passcode pause, status line held: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow passcode pause, status line held: no element's right edge passes the viewport
+PASS  [narrow 380] narrow passcode pause, status line held: no element's content is clipped by its own box
+PASS  [narrow 380] proposing says in plain words what is happening, with the real count, and the usual range — Silicus is reading 1 source · 0:00 · usually 2–10 s
+PASS  [narrow 380] narrow status line, proposing objectives: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow status line, proposing objectives: no element's right edge passes the viewport
+PASS  [narrow 380] narrow status line, proposing objectives: no element's content is clipped by its own box
+PASS  [narrow 380] zero-retention is claimed only because the site's status says zdr: true (the AI status says the text is not kept by the provider)
+PASS  [narrow 380] proposing ends with the proposals on the page, none accepted (3 waiting, 'Not yours until you accept')
+PASS  [narrow 380] the worker proposed objectives through /api/worker, with the passcode header
+PASS  [narrow 380] the passcode is in sessionStorage only
+PASS  [narrow 380] the material text went to the model once…
+PASS  [narrow 380] …and is in no IndexedDB value, localStorage or sessionStorage
+PASS  [narrow 380] narrow proposals, undecided: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow proposals, undecided: no element's right edge passes the viewport
+PASS  [narrow 380] narrow proposals, undecided: no element's content is clipped by its own box
+PASS  [narrow 380] narrow proposals, undecided: the confirm button "Confirm objectives" shows its whole label — scrollWidth 168 vs clientWidth 168
+PASS  [narrow 380] one teacher decision recorded per proposal
+PASS  [narrow 380] three accepted objectives are on the page to be sent — 3 li, 3 statements
+PASS  [narrow 380] narrow accepted objectives: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow accepted objectives: no element's right edge passes the viewport
+PASS  [narrow 380] narrow accepted objectives: no element's content is clipped by its own box
+PASS  [narrow 380] narrow accepted objectives: the confirm button "Confirm objectives" shows its whole label — scrollWidth 168 vs clientWidth 168
+PASS  [narrow 380] stage: the objectives step has exactly one primary action — primaries=1
+PASS  [narrow 380] the waiting experience says in plain words what is happening, with the real count — Silicus is drafting from 3 confirmed objectives · 0:00 · usually 10–60 s
+PASS  [narrow 380] it states the typical range the documented defaults give: usually 10–60 s — Silicus is drafting from 3 confirmed objectives · 0:00 · usually 10–60 s
+PASS  [narrow 380] narrow status line, drafting the plan: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow status line, drafting the plan: no element's right edge passes the viewport
+PASS  [narrow 380] narrow status line, drafting the plan: no element's content is clipped by its own box
+PASS  [narrow 380] exactly one polite live region announces the start, without the ticking clock (the clock is aria-hidden) — ["Silicus is drafting from 3 confirmed objectives"]
+PASS  [narrow 380] there is no progress bar and no percentage
+PASS  [narrow 380] the elapsed readout is a real clock: it has advanced
+PASS  [narrow 380] before the late mark there is no 'still drafting' line
+PASS  [narrow 380] when the plan arrives the status line leaves the waiting state and the clock goes — Your turn: read the plan, then confirm it
+PASS  [narrow 380] what left the page: every accepted statement and the topic were sent; the label and the material text were NOT — statements=true topic=true label=false secret=false
+PASS  [narrow 380] the plan is drafted (no second passcode prompt: it is kept for this tab)
+PASS  [narrow 380] stage: the plan step has exactly one primary action — primaries=1
+PASS  [narrow 380] stage: the lesson plan's text appears exactly once on the plan step — lines=3 (3 = once)
+PASS  [narrow 380] 'Edit objectives' opens the objectives, looking back, with 'Back to the current step' as the way out
+PASS  [narrow 380] back from editing the objectives lands on the plan, to confirm
+PASS  [narrow 380] looking wrote nothing (still exactly the three objective decisions)
+PASS  [narrow 380] narrow plan, drafted: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow plan, drafted: no element's right edge passes the viewport
+PASS  [narrow 380] narrow plan, drafted: no element's content is clipped by its own box
+PASS  [narrow 380] narrow plan, drafted: the confirm button "Confirm the lesson plan" shows its whole label — scrollWidth 203 vs clientWidth 203
+PASS  [narrow 380] plan confirmed on the record
+PASS  [narrow 380] stage: the publish step has exactly one primary action — primaries=1
+PASS  [narrow 380] stage: the lesson plan's text appears exactly once on the publish step — lines=3 (3 = once)
+PASS  [narrow 380] narrow review and publish: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow review and publish: no element's right edge passes the viewport
+PASS  [narrow 380] narrow review and publish: no element's content is clipped by its own box
+PASS  [narrow 380] narrow review and publish: the confirm button "Publish version 1…" shows its whole label — scrollWidth 166 vs clientWidth 166
+PASS  [narrow 380] narrow publish confirm step: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow publish confirm step: no element's right edge passes the viewport
+PASS  [narrow 380] narrow publish confirm step: no element's content is clipped by its own box
+PASS  [narrow 380] narrow publish confirm step: the confirm button "Publish version 1" shows its whole label — scrollWidth 153 vs clientWidth 153
+PASS  [narrow 380] version 1 sealed, and pinned in this browser
+PASS  [narrow 380] narrow published: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow published: no element's right edge passes the viewport
+PASS  [narrow 380] narrow published: no element's content is clipped by its own box
+PASS  [narrow 380] the student space is a preview on this device and shows the published title
+PASS  [narrow 380] narrow student space: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow student space: no element's right edge passes the viewport
+PASS  [narrow 380] narrow student space: no element's content is clipped by its own box
+PASS  [narrow 380] narrow student answer, thinking: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow student answer, thinking: no element's right edge passes the viewport
+PASS  [narrow 380] narrow student answer, thinking: no element's content is clipped by its own box
+PASS  [narrow 380] a student's wait shows the 'Silicus is thinking' indicator — {"n":3,"anim":"none"}
+PASS  [narrow 380] under prefers-reduced-motion the indicator is still (no CSS animation) — none
+PASS  [narrow 380] the student gets an answer that cites the published lesson
+PASS  [narrow 380] student chat wrote nothing (IndexedDB and web storage identical before and after)
+PASS  [narrow 380] narrow rehearse: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow rehearse: no element's right edge passes the viewport
+PASS  [narrow 380] narrow rehearse: no element's content is clipped by its own box
+PASS  [narrow 380] Rehearse answers from the published version and writes nothing
+PASS  [narrow 380] the browser-written log verifies on the Node host's chain (node:crypto) — 12 events
+PASS  [narrow 380] after a reload the published course is still there
+PASS  [narrow 380] narrow history drawer, record checked: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow history drawer, record checked: no element's right edge passes the viewport
+PASS  [narrow 380] narrow history drawer, record checked: no element's content is clipped by its own box
+PASS  [narrow 380] after a reload the record verifies
+PASS  [narrow 380] the record notice is shown exactly once — 1 cop(y|ies) on the page
+PASS  [narrow 380] narrow published course: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow published course: no element's right edge passes the viewport
+PASS  [narrow 380] narrow published course: no element's content is clipped by its own box
+PASS  [narrow 380] narrow home, the record section: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow home, the record section: no element's right edge passes the viewport
+PASS  [narrow 380] narrow home, the record section: no element's content is clipped by its own box
+PASS  [narrow 380] an export file was downloaded — silicus-courses-2026-11-19.json
+PASS  [narrow 380] the export verifies in Node (envelope digest, chain, meta, replay)
+PASS  [narrow 380] the export holds no material text
+PASS  [narrow 380] narrow home, delete confirm: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [narrow 380] narrow home, delete confirm: no element's right edge passes the viewport
+PASS  [narrow 380] narrow home, delete confirm: no element's content is clipped by its own box
+PASS  [narrow 380] delete all empties IndexedDB, the pins and the passcode
+PASS  [narrow 380] delete all says so, and the home lists no course
+PASS  [narrow 380] a tampered export is refused with a clear message, and nothing is written
+PASS  [narrow 380] import brings the course back, record intact
+PASS  [narrow 380] the imported course is listed as published on the home
+PASS  [narrow 380] the imported course verifies in the app
+PASS  [narrow 380] 0 CSP violations
+PASS  [narrow 380] 0 console errors
+PASS  [narrow 380] 0 page errors
+PASS  [narrow 380] the only network calls were the site's functions — /api/worker/status, /api/worker
+PASS  [narrow 380] the whole flow completed
+PASS  [uploads 1440] uploads: the main entry chunk does not contain pdf.js (a lazy chunk does) — entry assets/index-C4F4uCgd.js (345514 bytes); lazy pdf.js chunk: pdf-q-5ow4VI.js
+PASS  [uploads 1440] uploads: mammoth and jszip are lazy chunks too, not in the entry — jszip.min-CBFutFRr.js, mammoth.browser.min-WTckL4F8.js
+PASS  [uploads 1440] wizard: a first run opens on the welcome (#/studio/new)
+PASS  [uploads 1440] wizard: the ranking call asks for the demo passcode first (browser host)
+PASS  [uploads 1440] uploads: the sources step offers 'Choose files' with the PDF, DOCX and PPTX types, several at once
+PASS  [uploads 1440] uploads: each file shows its name, kind and character count before anything is sent — PDFhello.pdf✓ Read in this tab · PDF · 76 charactersRemove | DOCSyllabus notes.docx✓ Read in this tab · Word · 88 charactersRemove
+PASS  [uploads 1440] uploads: the PDF's character count is the length of its real text layer — 76
+PASS  [uploads 1440] uploads: nothing has left the page (no worker call, no /api/courses) while files are only chosen
+PASS  [uploads 1440] wizard: with a source and nothing written, proposing from the sources is already chosen
+PASS  [uploads 1440] wizard: the AI check says in plain words that the demo passcode is needed (online build)
+PASS  [uploads 1440] uploads: the review names the two files and says they are read in this tab; none of their text
+PASS  [uploads 1440] uploads: nothing is recorded before the review's confirm
+PASS  [uploads 1440] uploads: the record holds the file names, and not their text — [{"kind":"course.created","courseId":"urn:uuid:30b3dca7-279d-4bbf-b392-4953ad34f6cc","owner":"Ada Lovelace","title":"Photosynthesis from real files","description":"","materials":[],"seed":"urn:uuid:5c
+PASS  [uploads 1440] uploads: the proposal request carries the PDF's text and the DOCX's text, once each — 1 worker request(s)
+PASS  [uploads 1440] uploads: the proposals say which materials they were drawn from (both files named)
+PASS  [uploads 1440] uploads: the sources panel lists both files, read in this tab, and says what they were used for
+PASS  [uploads 1440] uploads: after proposing, the PDF's marker is STILL in no IndexedDB value, localStorage or sessionStorage
+PASS  [uploads 1440] uploads: after a reload the files are not held any more (the text was never stored)
+PASS  [uploads 1440] uploads: after a reload the files the proposals name are listed as named only, with no text held
+PASS  [uploads 1440] uploads: and the panel says in its own words that text is forgotten on reload (add the file again to use it)
+PASS  [uploads 1440] uploads: the PDF's marker text is in no IndexedDB value, localStorage or sessionStorage after the reload
+PASS  [uploads 1440] uploads: an image-only PDF says it has no text layer, and makes no OCR claim — Add a source
+
+Drop files here
+
+PDF, Word, PowerPoint or text. Read here in the tab; the file itself isn’t uploaded or kept.
+
+Choose files
+
+This PDF has no text layer: it looks like a scan or photos. S
+PASS  [uploads 1440] uploads: a legacy .doc says what to do instead (save as .docx) — Add a source
+
+Drop files here
+
+PDF, Word, PowerPoint or text. Read here in the tab; the file itself isn’t uploaded or kept.
+
+Choose files
+
+Silicus reads PDF, Word (.docx), PowerPoint (.pptx) and text 
+PASS  [uploads 1440] uploads: neither failed file was added to the list
+PASS  [uploads 1440] uploads: the files added again in the panel are listed with their character counts
+PASS  [uploads 1440] uploads: adding them again records nothing and their text is still in no stored value
+PASS  [uploads 1440] uploads: pdf.js's worker came from the bundle, same origin, as JavaScript — 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8 | 200 text/javascript; charset=utf-8
+PASS  [uploads 1440] uploads: no request left the page's own origin (no CDN)
+PASS  [uploads 1440] uploads: 0 CSP violations
+PASS  [uploads 1440] uploads: 0 console or page errors
+PASS  [uploads 1440] uploads: the whole upload flow completed
+PASS  [landing 1440] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 1440] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",175],["You decide.",287]]
+PASS  [landing 1440] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, no 'Classic view' link and no link to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 1440] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 1440] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 1440] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440}
+PASS  [landing 1440] landing 1440: the drawing sits beside the copy, not over it — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440},{"left":168,"right":712,"top":137,"bottom":569}]
+PASS  [landing 1440] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 1440] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 1440] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 1440] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 1440] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 1440] landing: Open the studio opens the studio home at #/studio
+PASS  [landing 1440] landing: the studio's 'About Silicus' link returns to the landing (#/)
+PASS  [landing 1440] landing: an old typed #/live lands on the landing (the classic view is gone)
+PASS  [landing 1440] landing: 0 CSP violations and 0 console errors
+PASS  [landing 380] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 380] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",157],["You decide.",235]]
+PASS  [landing 380] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, no 'Classic view' link and no link to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 380] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 380] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 380] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":348,"left":16,"right":364,"top":585,"bottom":1207,"vw":380}
+PASS  [landing 380] landing 380: the drawing sits below the copy, inside the viewport — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":348,"left":16,"right":364,"top":585,"bottom":1207,"vw":380},{"left":16,"right":364,"top":101,"bottom":549}]
+PASS  [landing 380] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 380] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 380] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 380] narrow landing page: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page: no element's content is clipped by its own box
+PASS  [landing 380] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 380] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 380] narrow landing page, Under the hood open: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page, Under the hood open: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page, Under the hood open: no element's content is clipped by its own box
+PASS  [landing 380] landing: Open the studio opens the studio home at #/studio
+PASS  [landing 380] landing: the studio's 'About Silicus' link returns to the landing (#/)
+PASS  [landing 380] landing: an old typed #/live lands on the landing (the classic view is gone)
+PASS  [landing 380] landing: 0 CSP violations and 0 console errors
+
+316/316 browser-mode checks passed

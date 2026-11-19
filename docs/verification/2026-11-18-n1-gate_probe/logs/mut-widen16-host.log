@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: address table: exact special-purpose ranges, both directions
+not ok 1 - address table: exact special-purpose ranges, both directions
+  ---
+  duration_ms: 0.700333
+  type: 'test'
+  location: '/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-mut/host/test/n1-address-policy.test.mjs:64:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    192.0.66.161: science.nasa.gov (L1): public, inside 192.0.0.0/16 but outside every special range
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-mut/host/test/n1-address-policy.test.mjs:65:50)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: a name resolving to 192.0.66.161 is allowed; to 169.254.169.254 it is refused, and the reason names the address
+not ok 2 - a name resolving to 192.0.66.161 is allowed; to 169.254.169.254 it is refused, and the reason names the address
+  ---
+  duration_ms: 2.381167
+  type: 'test'
+  location: '/private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-mut/host/test/n1-address-policy.test.mjs:68:1'
+  failureType: 'testCodeFailure'
+  error: 'science.nasa.gov resolves to 192.0.66.161, which is not a public address'
+  code: 'URL_REFUSED'
+  name: 'MaterialError'
+  stack: |-
+    assertPublicUrl (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-mut/host/materials.mjs:136:18)
+    async TestContext.<anonymous> (file:///private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/nv-mut/host/test/n1-address-policy.test.mjs:70:13)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 42.132042

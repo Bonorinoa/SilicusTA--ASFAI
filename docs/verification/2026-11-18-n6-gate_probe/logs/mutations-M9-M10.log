@@ -1,0 +1,6 @@
+M9 ObjectivesStep tray condition reverted (teacher-typed proposals no longer open the decision tray)
+    frontend:npx.. exit=1 failed=3 ["src/studio/CourseStudio.auto-advance.test.tsx > the studio's one status line and the announced auto-advance > announces 'Objectives confirmed. On to the plan.' once and moves focus to the plan heading", 'src/studio/CourseStudio.live-region.test.tsx > D1: the step status line is the only polite live region > has exactly one polite live region at every step, with no notice up', 'src/studio/CourseStudio.live-region.test.tsx > D2: the transition sentence is spoken once and cleared by the next act > shows the transition after the brief is confirmed, then clears it on the next act, never to return']
+    .:node.. exit=1 failed=? []
+M10 objectivesOffer: wizard lines count as a proposal round again
+    frontend:npx.. exit=0 failed=0 []
+CONTROL (no mutation): ['confirm-gate exit=0', 'frontend exit=0']

@@ -1,0 +1,24 @@
+PASS 437f053-era: replays in N6 tree, hash chain verifies {"ok":true,"events":9}
+PASS 437f053-era: N6-tree export deepEquals the export the OLD code served 
+PASS 437f053-era: anchor v1 deepEquals old anchor 
+PASS 437f053-era: comparePin(old pin, replayed anchor) = ok ok
+PASS 437f053-era: no event in the old log mentions proposedBy/teacherEditCount 
+PASS 437f053-era: replayed plan has no teacherEditCount; objectives still read by:"ai" for wizard lines plan.editedByTeacher=undefined proposals.by=["ai"]
+PASS d4258aa(pre-N6, with plan edit): replays in N6 tree, hash chain verifies {"ok":true,"events":10}
+PASS d4258aa(pre-N6, with plan edit): N6-tree export deepEquals the export the OLD code served 
+PASS d4258aa(pre-N6, with plan edit): anchor v1 deepEquals old anchor 
+PASS d4258aa(pre-N6, with plan edit): comparePin(old pin, replayed anchor) = ok ok
+PASS d4258aa(pre-N6, with plan edit): no event in the old log mentions proposedBy/teacherEditCount 
+PASS d4258aa(pre-N6, with plan edit): replayed plan has no teacherEditCount; objectives still read by:"ai" for wizard lines plan.editedByTeacher=true proposals.by=["ai"]
+
+line-by-line, pre-N6 vs N6 (same script): 10 vs 10
+line 5: kind=objectives.proposed added=["event.items.0.proposedBy"] changed=[] removed=[]
+line 6: kind=objectives.decided added=[] changed=[] removed=[]
+line 7: kind=plan.proposed added=[] changed=[] removed=[]
+line 8: kind=plan.edited added=[] changed=[] removed=[]
+line 9: kind=plan.confirmed added=["event.teacherEditCount"] changed=[] removed=[]
+line 10: kind=package.published added=[] changed=[] removed=[]
+differing lines: 6 of 10
+export keys added in N6: ["plan.teacherEditCount","versions.0.lessonPlan.editedByTeacher","versions.0.lessonPlan.teacherEditCount"]
+export keys removed in N6: []
+export values changed (excluding hashes): ["objectives.0.proposedBy","versions.0.objectiveRefs.0.proposedBy"]

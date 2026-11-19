@@ -1,0 +1,12 @@
+npmci EXIT=0
+api EXIT=0
+host EXIT=0
+e2e EXIT=0
+vitest EXIT=0
+build EXIT=0
+browsersmoke EXIT=0
+studio EXIT=0
+livehost EXIT=0
+narrow EXIT=0
+DONE
+confirm-gate EXIT=0 (clean export, run first; 52/52)

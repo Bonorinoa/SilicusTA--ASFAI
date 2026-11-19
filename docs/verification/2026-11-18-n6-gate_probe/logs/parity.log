@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /private/var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/n6mut/frontend
+
+ ✓ src/browser/n6v_parity.test.ts (1 test) 97ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  22:49:16
+   Duration  402ms (transform 82ms, setup 52ms, collect 116ms, tests 97ms, environment 0ms, prepare 22ms)
+

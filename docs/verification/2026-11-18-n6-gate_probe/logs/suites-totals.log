@@ -1,0 +1,16 @@
+cg: # tests 52
+cg: # pass 52
+cg: # fail 0
+api: # tests 59
+api: # pass 59
+api: # fail 0
+host: # tests 483
+host: # pass 483
+host: # fail 0
+e2e: 58/58 acceptance checks passed  (data: /var/folders/x4/vhxvs_xj31z02hfv4nj85__h0000gn/T/silicus-e2e-YsfSz5)
+vitest:  Test Files  73 passed (73)
+vitest:       Tests  644 passed (644)
+browsersmoke: 316/316 browser-mode checks passed
+studio: 108/108 studio checks passed
+livehost: 89/89 live acceptance checks passed
+narrow: 68/68 narrow-shell checks passed

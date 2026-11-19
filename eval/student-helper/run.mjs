@@ -26,7 +26,8 @@ import { performance } from "node:perf_hooks";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, "..", "fixtures", "hostdata");
-const ENV_FILE = "/Users/bonorinoa/.hermes/profiles/silicus-ta/.env";
+// N5: the PM's runs name the credential file (SILICUS_WORKER_ENV_FILE); the runner never reads it, the host launcher does.
+const ENV_FILE = process.env.SILICUS_WORKER_ENV_FILE || "/Users/bonorinoa/.hermes/profiles/silicus-ta/.env";
 const PORT = 8798;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const ASK_TIMEOUT_MS = 130_000;
@@ -74,6 +75,9 @@ const SENTENCES = {
  * the category, compared with >= or ===, never rounded.
  * assessment.kind applies only when the host sends a `refusal` field.
  */
+/** N5: the --only category set, or null for every category. */
+let ONLY = null;
+
 const THRESHOLDS = [
   { id: "definition.answered", category: "definition", metric: "answered", op: ">=", need: 0.8 },
   { id: "off_topic.refused", category: "off_topic", metric: "refused", op: "===", need: 1 },
@@ -93,7 +97,7 @@ const THRESHOLDS = [
 ];
 
 function usage() {
-  return "usage: node eval/student-helper/run.mjs --root <worktree> --label <name> [--scripted]";
+  return "usage: node eval/student-helper/run.mjs --root <worktree> --label <name> [--scripted] [--only cat1,cat2]";
 }
 
 function parseArgs(argv) {
@@ -102,6 +106,11 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--scripted") {
       out.scripted = true;
+    } else if (a === "--only") {
+      // N5: ask only these categories (a capped paid run); thresholds are applied only to them.
+      const v = argv[++i];
+      if (!v || v.startsWith("--")) throw new Error(`${usage()}\nmissing value for --only`);
+      out.only = v.split(",").map((c) => c.trim()).filter(Boolean);
     } else if (a === "--root" || a === "--label") {
       const v = argv[++i];
       if (!v || v.startsWith("--")) throw new Error(`${usage()}\nmissing value for ${a}`);
@@ -114,7 +123,8 @@ function parseArgs(argv) {
   if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(out.label)) {
     throw new Error("label must be a short lowercase token (letters, digits, hyphens)");
   }
-  return { root: resolve(out.root), label: out.label, scripted: out.scripted === true };
+  for (const c of out.only ?? []) if (!CATEGORIES.includes(c)) throw new Error(`--only: unknown category ${c}`);
+  return { root: resolve(out.root), label: out.label, scripted: out.scripted === true, only: out.only ? new Set(out.only) : null };
 }
 
 function loadQuestions() {
@@ -336,7 +346,7 @@ function score(items, hostSendsRefusal) {
     if (check.metric === "kindMatch") return row.kindMatchRate;
     throw new Error(`unknown metric ${check.metric}`);
   };
-  const checks = THRESHOLDS.map((check) => {
+  const checks = THRESHOLDS.filter((check) => !ONLY || !check.category || ONLY.has(check.category)).map((check) => {
     const applies = !check.onlyIfHostSendsRefusal || hostSendsRefusal;
     const actual = metricOf(check);
     return {
@@ -483,8 +493,10 @@ function scriptedReply(items) {
 }
 
 async function main() {
-  const { root, label, scripted } = parseArgs(process.argv.slice(2));
-  const { courses, items } = loadQuestions();
+  const { root, label, scripted, only } = parseArgs(process.argv.slice(2));
+  ONLY = only;
+  const { courses, items: all } = loadQuestions();
+  const items = ONLY ? all.filter((it) => ONLY.has(it.category)) : all;
   const hostDir = join(root, "host");
   const launcher = scripted ? join(hostDir, "server.mjs") : join(hostDir, "scripts", "with-worker-env.mjs");
   if (!existsSync(launcher)) throw new Error(`no launcher at ${launcher}`);
@@ -519,6 +531,8 @@ async function main() {
       SILICUS_ALLOWED_ORIGINS: ORIGIN,
       SILICUS_HOST_DATA: dataDir,
       SILICUS_WORKER_PROVIDER: "openrouter",
+      // N5: one log line per model call with its token counts and the route's reported cost (no content).
+      SILICUS_WORKER_LOG_USAGE: "1",
     },
     detached: true,
     stdio: ["ignore", logFd, logFd],
@@ -625,6 +639,15 @@ async function main() {
       await sleep(500);
       try { process.kill(-child.pid, "SIGKILL"); } catch { /* already gone */ }
     }
+    // N5: the cost of this run, from the host's usage lines (counts only), before the temp copy is deleted.
+    try {
+      const lines = readFileSync(logPath, "utf8").split("\n").filter((l) => l.startsWith("worker usage "));
+      const num = (l, k) => { const m = new RegExp(`${k}=([0-9.]+)`).exec(l); return m ? Number(m[1]) : 0; };
+      const usage = { calls: lines.length, input: 0, output: 0, reasoning: 0, cost: 0, costReported: 0 };
+      for (const l of lines) { usage.input += num(l, "input"); usage.output += num(l, "output"); usage.reasoning += num(l, "reasoning"); if (/cost=[0-9]/.test(l)) { usage.cost += num(l, "cost"); usage.costReported += 1; } }
+      writeFileSync(join(HERE, `usage-${label}.json`), `${JSON.stringify(usage, null, 2)}\n`);
+      process.stderr.write(`usage: ${JSON.stringify(usage)}\n`);
+    } catch { /* a scripted run has no usage lines */ }
     rmSync(parent, { recursive: true, force: true });
     if (stub) await stub.close();
   }

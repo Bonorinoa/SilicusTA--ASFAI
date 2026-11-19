@@ -68,6 +68,9 @@ export class PlanWorker {
   #provider;
   #configHint;
   #reasoning;
+  /** N5: per-task reasoning overrides from the Node host operator, for tuning runs. */
+  #taskReasoning = {};
+  #logUsage = false;
   #sendTask;
 
   /**
@@ -85,7 +88,7 @@ export class PlanWorker {
    * "anthropic" (the native Messages API). Zero-data-retention routing is an OpenRouter feature, so asking
    * for it on the Anthropic wire is a configuration error: the host must never CLAIM a guarantee it cannot make.
    */
-  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", sendTask = false, configHint = "", log = (line) => console.info(line) } = {}) {
+  constructor({ url = null, model = null, apiKey = null, fetchImpl = null, zdr = false, maxTokens = DEFAULT_MAX_TOKENS, timeoutMs = DEFAULT_WORKER_TIMEOUT_MS, provider = "openai", reasoning = "model-default", taskReasoningOverride = {}, logUsage = false, sendTask = false, configHint = "", log = (line) => console.info(line) } = {}) {
     this.#log = typeof log === "function" ? log : () => {};
     // How to configure this worker is the TRANSPORT's business (the Node host passes its env-variable hint); this module
     // is shared with the browser bundle, so it names no server setting itself.
@@ -103,6 +106,8 @@ export class PlanWorker {
     this.#fetch = fetchImpl ?? fetch;
     this.#zdr = zdr === true;
     this.#reasoning = normalizeReasoning(reasoning);
+    for (const [t, v] of Object.entries(taskReasoningOverride ?? {})) if (TASKS.includes(t) && v) this.#taskReasoning[t] = normalizeReasoning(v);
+    this.#logUsage = logUsage === true;
     // N1: true only for the site proxy (/api/worker), which reads the task NAME and decides reasoning itself.
     this.#sendTask = sendTask === true;
     this.#maxTokens = Math.min(Number.isInteger(maxTokens) && maxTokens > 0 ? maxTokens : DEFAULT_MAX_TOKENS, MAX_TOKENS_CEILING);
@@ -180,7 +185,7 @@ export class PlanWorker {
       ...(this.#zdr ? { provider: { zdr: true, data_collection: "deny" } } : {}),
     };
     // N1: per-task reasoning (rank and answer: off). On the site the server applies the same rule from `task`.
-    const reasoning = anthropic ? undefined : reasoningBody(taskReasoning(known, this.#reasoning));
+    const reasoning = anthropic ? undefined : reasoningBody(known && Object.hasOwn(this.#taskReasoning, known) ? this.#taskReasoning[known] : taskReasoning(known, this.#reasoning));
     if (reasoning) body.reasoning = reasoning;
     if (this.#sendTask && known) body.task = known;
     const headers = { "content-type": "application/json" };
@@ -229,6 +234,14 @@ export class PlanWorker {
       const input = Number(u.prompt_tokens ?? u.input_tokens);
       const output = Number(u.completion_tokens ?? u.output_tokens);
       meta.usage = Number.isFinite(input) || Number.isFinite(output) ? { input: Number.isFinite(input) ? input : null, output: Number.isFinite(output) ? output : null } : null;
+    }
+    // N5 (opt-in, the Node host sets it for tuning runs): counts and the route's reported cost, never content.
+    if (this.#logUsage) {
+      try {
+        const u = payload?.usage ?? {};
+        const r = u.completion_tokens_details?.reasoning_tokens ?? u.reasoning_tokens;
+        this.#log(`worker usage task=${known ?? "-"} model=${this.#model} input=${u.prompt_tokens ?? u.input_tokens ?? "?"} output=${u.completion_tokens ?? u.output_tokens ?? "?"} reasoning=${r ?? "?"} cost=${u.cost ?? "?"}`);
+      } catch { /* logging never breaks a reply */ }
     }
     try {
       return JSON.parse(stripFence(content));

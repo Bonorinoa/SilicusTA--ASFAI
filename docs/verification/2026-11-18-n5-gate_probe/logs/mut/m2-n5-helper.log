@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: N5 1. C1: N1V's probe — a question naming activity 2 gets attempt_first even when the model cites objective:1
+not ok 1 - N5 1. C1: N1V's probe — a question naming activity 2 gets attempt_first even when the model cites objective:1
+  ---
+  duration_ms: 11.081958
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/mut/mut2/host/test/n5-helper.test.mjs:34:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'answer'
+    - 'attempt_first'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'attempt_first'
+  actual: 'answer'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/mut/mut2/host/test/n5-helper.test.mjs:37:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: N5 2. C1: every way of naming the try-first activity, by number or by title
+not ok 2 - N5 2. C1: every way of naming the try-first activity, by number or by title
+  ---
+  duration_ms: 5.019666
+  type: 'test'
+  location: '/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/mut/mut2/host/test/n5-helper.test.mjs:42:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    How do I do activity 2?
+    + actual - expected
+    
+    + 'answer'
+    - 'attempt_first'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'attempt_first'
+  actual: 'answer'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/mut/mut2/host/test/n5-helper.test.mjs:47:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: N5 3. C1 false positives: a shared common word, another activity's number, or 18+ — still answered
+ok 3 - N5 3. C1 false positives: a shared common word, another activity's number, or 18+ — still answered
+  ---
+  duration_ms: 0.826
+  type: 'test'
+  ...
+# Subtest: N5 4. C2: the model's answer is checked at every age and on every basis; a verdict is withheld
+ok 4 - N5 4. C2: the model's answer is checked at every age and on every basis; a verdict is withheld
+  ---
+  duration_ms: 0.359041
+  type: 'test'
+  ...
+# Subtest: N5 5. C2: judging phrasings caught; explanations that only mention right answers pass
+ok 5 - N5 5. C2: judging phrasings caught; explanations that only mention right answers pass
+  ---
+  duration_ms: 0.21225
+  type: 'test'
+  ...
+# Subtest: N5 6. C2: N1V's 16 grading phrasings on the 18+ fixture with a grading model: 16/16 stopped; the three leaks hit the question net
+ok 6 - N5 6. C2: N1V's 16 grading phrasings on the 18+ fixture with a grading model: 16/16 stopped; the three leaks hit the question net
+  ---
+  duration_ms: 53.39675
+  type: 'test'
+  ...
+# Subtest: N5 7. question net: the leak phrasings are caught, near-misses about content are not
+ok 7 - N5 7. question net: the leak phrasings are caught, near-misses about content are not
+  ---
+  duration_ms: 0.220875
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 5
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.364167

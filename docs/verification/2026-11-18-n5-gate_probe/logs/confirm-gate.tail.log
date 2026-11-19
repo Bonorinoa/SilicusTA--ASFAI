@@ -1,0 +1,159 @@
+ant turn never unblocks the residual rule
+ok 26 - (i) an assistant turn never unblocks the residual rule
+  ---
+  duration_ms: 0.122292
+  type: 'test'
+  ...
+# Subtest: (i) the guard re-blocks on a later clarifying round (the rule is per round)
+ok 27 - (i) the guard re-blocks on a later clarifying round (the rule is per round)
+  ---
+  duration_ms: 0.092125
+  type: 'test'
+  ...
+# Subtest: a receipt is single-use once echoed on a call
+ok 28 - a receipt is single-use once echoed on a call
+  ---
+  duration_ms: 0.10975
+  type: 'test'
+  ...
+# Subtest: teacher turns can only be recorded through a TeacherChannel of this ledger
+ok 29 - teacher turns can only be recorded through a TeacherChannel of this ledger
+  ---
+  duration_ms: 0.223125
+  type: 'test'
+  ...
+# Subtest: ledger enforces roles: only TeacherChannel.say produces a teacher turn
+ok 30 - ledger enforces roles: only TeacherChannel.say produces a teacher turn
+  ---
+  duration_ms: 0.1285
+  type: 'test'
+  ...
+# Subtest: guard snapshot is a portable frozen decision trace
+ok 31 - guard snapshot is a portable frozen decision trace
+  ---
+  duration_ms: 0.150916
+  type: 'test'
+  ...
+# Subtest: deterministic id factory yields identical ids across independent runs
+ok 32 - deterministic id factory yields identical ids across independent runs
+  ---
+  duration_ms: 2.39725
+  type: 'test'
+  ...
+# Subtest: replaying an event log reproduces gate state byte-for-byte
+ok 33 - replaying an event log reproduces gate state byte-for-byte
+  ---
+  duration_ms: 0.790209
+  type: 'test'
+  ...
+# Subtest: a replayed course reaches the same sealed version with the same objectives
+ok 34 - a replayed course reaches the same sealed version with the same objectives
+  ---
+  duration_ms: 0.1955
+  type: 'test'
+  ...
+# Subtest: falsification: the same log replayed with RANDOM ids fails loudly
+ok 35 - falsification: the same log replayed with RANDOM ids fails loudly
+  ---
+  duration_ms: 0.396833
+  type: 'test'
+  ...
+# Subtest: reword is a decision verb
+ok 36 - reword is a decision verb
+  ---
+  duration_ms: 0.792167
+  type: 'test'
+  ...
+# Subtest: reword keeps id and kind, takes the teacher's statement, and records before/after + provenance
+ok 37 - reword keeps id and kind, takes the teacher's statement, and records before/after + provenance
+  ---
+  duration_ms: 1.4345
+  type: 'test'
+  ...
+# Subtest: the original proposal record is never mutated, and the objective remembers its original wording
+ok 38 - the original proposal record is never mutated, and the objective remembers its original wording
+  ---
+  duration_ms: 0.326458
+  type: 'test'
+  ...
+# Subtest: a public-kind objective keeps its kind and Marble reference; only the teacher's statement changes
+ok 39 - a public-kind objective keeps its kind and Marble reference; only the teacher's statement changes
+  ---
+  duration_ms: 0.141875
+  type: 'test'
+  ...
+# Subtest: only a confirmed objective can be reworded: proposed, dropped and unknown ids are refused with their own codes
+ok 40 - only a confirmed objective can be reworded: proposed, dropped and unknown ids are refused with their own codes
+  ---
+  duration_ms: 0.466083
+  type: 'test'
+  ...
+# Subtest: rewording to the same statement is a no-op refusal; empty text is refused; a reword never needs the old wording back
+ok 41 - rewording to the same statement is a no-op refusal; empty text is refused; a reword never needs the old wording back
+  ---
+  duration_ms: 0.409834
+  type: 'test'
+  ...
+# Subtest: a reword needs a REAL teacher turn: no provenance, an assistant turn and a forged turn ref are refused
+ok 42 - a reword needs a REAL teacher turn: no provenance, an assistant turn and a forged turn ref are refused
+  ---
+  duration_ms: 0.259375
+  type: 'test'
+  ...
+# Subtest: replaying the same call is idempotent; A→B→A in one turn applies every step in order
+ok 43 - replaying the same call is idempotent; A→B→A in one turn applies every step in order
+  ---
+  duration_ms: 0.261667
+  type: 'test'
+  ...
+# Subtest: rename of a confirmed objective is STILL terminal (reword is the new path, not a loosened rename)
+ok 44 - rename of a confirmed objective is STILL terminal (reword is the new path, not a loosened rename)
+  ---
+  duration_ms: 0.299125
+  type: 'test'
+  ...
+# Subtest: RULE: the confirmed plan survives a reword and stays publishable, but the gate says its objectives were reworded since
+ok 45 - RULE: the confirmed plan survives a reword and stays publishable, but the gate says its objectives were reworded since
+  ---
+  duration_ms: 0.751666
+  type: 'test'
+  ...
+# Subtest: RULE: a new draft clears the flag; so does a teacher re-confirmation made after the reword; neither is automatic
+ok 46 - RULE: a new draft clears the flag; so does a teacher re-confirmation made after the reword; neither is automatic
+  ---
+  duration_ms: 0.263
+  type: 'test'
+  ...
+# Subtest: dropping a reworded objective still invalidates the plan that cites it, and it can no longer be reworded
+ok 47 - dropping a reworded objective still invalidates the plan that cites it, and it can no longer be reworded
+  ---
+  duration_ms: 0.169208
+  type: 'test'
+  ...
+# Subtest: a sealed version never changes; publishing after a reword seals v2 with the new wording
+ok 48 - a sealed version never changes; publishing after a reword seals v2 with the new wording
+  ---
+  duration_ms: 0.489208
+  type: 'test'
+  ...
+# Subtest: a published plan's citations survive: every cited id still resolves to a confirmed objective
+ok 49 - a published plan's citations survive: every cited id still resolves to a confirmed objective
+  ---
+  duration_ms: 0.1675
+  type: 'test'
+  ...
+# Subtest: replay: the same operations over a fresh deterministic gate reproduce every record byte for byte
+ok 50 - replay: the same operations over a fresh deterministic gate reproduce every record byte for byte
+  ---
+  duration_ms: 0.307417
+  type: 'test'
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 54.048

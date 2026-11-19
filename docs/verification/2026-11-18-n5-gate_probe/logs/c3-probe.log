@@ -1,0 +1,13 @@
+REFUSED  https://169.254.169.254/latest/meta-data -> code=URL_REFUSED message="169.254.169.254 is a link-local address, not a public one" details=null
+REFUSED  http://127.0.0.1:8787/ -> code=URL_REFUSED message="only https links can be read" details=null
+REFUSED  https://[::1]/ -> code=URL_REFUSED message="::1 is a loopback address, not a public one" details=null
+REFUSED  https://[::ffff:127.0.0.1]/ -> code=URL_REFUSED message="::ffff:7f00:1 is a reserved address, not a public one" details=null
+REFUSED  http://10.0.0.5/x -> code=URL_REFUSED message="only https links can be read" details=null
+REFUSED  https://192.168.1.1/ -> code=URL_REFUSED message="192.168.1.1 is a private network address, not a public one" details=null
+REFUSED  https://[fd00::1]/ -> code=URL_REFUSED message="fd00::1 is a private network (unique local) address, not a public one" details=null
+REFUSED  https://100.64.0.1/ -> code=URL_REFUSED message="100.64.0.1 is a shared (carrier-grade NAT) address, not a public one" details=null
+REFUSED  https://192.0.2.1/ -> code=URL_REFUSED message="192.0.2.1 is a reserved address, not a public one" details=null
+ALLOWED  https://192.0.66.161/
+REFUSED  http://2130706433/ -> code=URL_REFUSED message="only https links can be read" details=null
+REFUSED  https://localhost/ -> code=URL_REFUSED message="that address is not a public one" details=null
+REFUSED  https://meta.example/ -> code=URL_UNREACHABLE message="that address could not be found" details=null

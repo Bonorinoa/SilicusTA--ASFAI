@@ -1,0 +1,10 @@
+OK   Node host, 18+ course (Thermodynamics): task=answer_adult reasoning={"effort":"low"} (expected task=answer_adult reasoning={"effort":"low"}) kind=answer
+OK   Node host, under-18 course (13-15): task=answer reasoning={"enabled":false} (expected task=answer reasoning={"enabled":false}) kind=answer
+(no-ages course: not built here, the fixtures are hash-chained and have recorded ages; covered by the producer's unit test n5-reasoning-by-age 'no recorded ages counts as under 18', run in the 480)
+OK   site function, task=answer: reasoning={"enabled":false} (expected {"enabled":false}) task forwarded upstream: false
+OK   site function, task=answer_adult: reasoning={"effort":"low"} (expected {"effort":"low"}) task forwarded upstream: false
+OK   site function, task=answer + client reasoning high: reasoning={"enabled":false} (expected {"enabled":false}) task forwarded upstream: false
+OK   site function, task=answer_adult + client reasoning off: reasoning={"effort":"low"} (expected {"effort":"low"}) task forwarded upstream: false
+OK   site function, task=ANSWER_ADULT (case): unknown name, the configured default (low): reasoning={"effort":"low"} (expected {"effort":"low"}) task forwarded upstream: false
+OK   site function, task=__proto__: unknown name, the configured default (low): reasoning={"effort":"low"} (expected {"effort":"low"}) task forwarded upstream: false
+ALL OK

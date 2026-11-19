@@ -1,0 +1,316 @@
+{
+ "res": [
+  {
+   "step": "0 start",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Smart or not? Place your bet",
+    "Sort the AI around us",
+    "Patterns, not magic"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 45 MIN",
+   "lengthNote": null,
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”"
+   ]
+  },
+  {
+   "step": "1 add 40-minute activity",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Smart or not? Place your bet",
+    "Sort the AI around us",
+    "Patterns, not magic",
+    "N5V extra check"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 85 MIN",
+   "lengthNote": "Activities add up to 85 min; you asked for 45.",
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”"
+   ],
+   "filled": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "step": "2 move the new one up",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Smart or not? Place your bet",
+    "Sort the AI around us",
+    "N5V extra check",
+    "Patterns, not magic"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 85 MIN",
+   "lengthNote": "Activities add up to 85 min; you asked for 45.",
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”"
+   ],
+   "ok": true
+  },
+  {
+   "step": "3 move it back down",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Smart or not? Place your bet",
+    "Sort the AI around us",
+    "Patterns, not magic",
+    "N5V extra check"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 85 MIN",
+   "lengthNote": "Activities add up to 85 min; you asked for 45.",
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”",
+    "You edited Activities: moved activity 3 to position 4 · now “position 4”"
+   ],
+   "ok": true
+  },
+  {
+   "step": "4 remove it again",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Smart or not? Place your bet",
+    "Sort the AI around us",
+    "Patterns, not magic"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 45 MIN",
+   "lengthNote": null,
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”",
+    "You edited Activities: moved activity 3 to position 4 · now “position 4”",
+    "You edited Activities: removed activity 4"
+   ],
+   "ok": true
+  },
+  {
+   "step": "5 remove then Keep: nothing changes",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Smart or not? Place your bet",
+    "Sort the AI around us",
+    "Patterns, not magic"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 45 MIN",
+   "lengthNote": null,
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”",
+    "You edited Activities: moved activity 3 to position 4 · now “position 4”",
+    "You edited Activities: removed activity 4"
+   ],
+   "ok": true
+  },
+  {
+   "step": "6 remove original activity 1",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Sort the AI around us",
+    "Patterns, not magic"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 35 MIN",
+   "lengthNote": "Activities add up to 35 min; you asked for 45.",
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”",
+    "You edited Activities: moved activity 3 to position 4 · now “position 4”",
+    "You edited Activities: removed activity 4",
+    "You edited Activities: removed activity 1"
+   ],
+   "ok": true
+  },
+  {
+   "step": "7 move 1 down",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Patterns, not magic",
+    "Sort the AI around us"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 35 MIN",
+   "lengthNote": "Activities add up to 35 min; you asked for 45.",
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”",
+    "You edited Activities: moved activity 3 to position 4 · now “position 4”",
+    "You edited Activities: removed activity 4",
+    "You edited Activities: removed activity 1",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”"
+   ],
+   "ok": true
+  },
+  {
+   "step": "8 move 2 up (back to the order of step 6)",
+   "hash": "#/studio/urn%3Auuid%3A664c47c6-03e4-4d0a-830e-79cf9303e376",
+   "stepLine": "STEP 3 OF 4",
+   "titles": [
+    "Sort the AI around us",
+    "Patterns, not magic"
+   ],
+   "header": "45 MIN LESSON · ACTIVITIES 35 MIN",
+   "lengthNote": "Activities add up to 35 min; you asked for 45.",
+   "trace": [
+    "You edited Activity 3: minutes · now “25”",
+    "You edited Activity 3: then they decide · now “Each pair keeps or changes its sort, and says which card moved and why.”",
+    "You edited Activity 3: AI status · now “permitted”",
+    "You edited Activity 3: minutes · now “15”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: added activity 4 · now “N5V extra check”",
+    "You edited Activities: moved activity 4 to position 3 · now “position 3”",
+    "You edited Activities: moved activity 3 to position 4 · now “position 4”",
+    "You edited Activities: removed activity 4",
+    "You edited Activities: removed activity 1",
+    "You edited Activities: moved activity 1 to position 2 · now “position 2”",
+    "You edited Activities: moved activity 2 to position 1 · now “position 1”"
+   ],
+   "ok": true
+  },
+  {
+   "step": "9 button state",
+   "removeDisabled": [
+    false,
+    false
+   ]
+  },
+  {
+   "step": "press log",
+   "pressLog": [
+    {
+     "sel": "[data-plan-add] button",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Move activity 4 up\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Move activity 3 down\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Remove activity 4\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Remove activity 1\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Remove activity 1\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Move activity 1 down\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    },
+    {
+     "sel": "button[aria-label=\"Move activity 2 up\"]",
+     "found": true,
+     "disabled": false,
+     "hit": "self"
+    }
+   ]
+  }
+ ],
+ "events": [
+  "{\"seq\":1,\"prev\":\"genesis\",\"digest\":\"09ac43e8c1d70cc7f125fc68f121c6fa535380f195008abcfc48c99ace991520\",\"event\":{\"kind\":\"course.created\",\"courseId\":\"urn:uuid:664c47c6-03e4-4d0a-830e-79cf9303e376\",\"owner\":\"Ada Lovelace\",\"title\":\"How plants eat\",\"description\":\"\",\"materials\":[],\"seed\":\"urn:uuid:72a1ae5f-f0cb-40de-bb45-f2059395a93f\",\"objectivesConfirm\":\"explicit\",\"ages\":{\"min\":5,\"max\":12},\"marbleAnchor\":\"mt_AzTrT5ySCx\",\"lessonMinutes\":45,\"at\":1795064253830}}",
+  "{\"seq\":2,\"prev\":\"09ac43e8c1d70cc7f125fc68f121c6fa535380f195008abcfc48c99ace991520\",\"digest\":\"e923274688f0d28ed18316c85cb2754af8df3a51f96ee6d38c005d6f6f2d04a7\",\"event\":{\"kind\":\"intake.answered\",\"text\":\"How plants make food from sunlight\\nEarly primary, ages 5–12. Grade 4 science, ages 9-10\\nExplain how a plant makes its food\\nName what a plant needs to make sugar\",\"answers\":{\"topic\":\"How plants make food from sunlight\",\"course\":\"Early primary, ages 5–12. Grade 4 science, ages 9-10\",\"learning_outcomes\":\"Explain how a plant makes its food\\nName what a plant needs to make sugar\"},\"at\":1795064253833}}",
+  "{\"seq\":3,\"prev\":\"e923274688f0d28ed18316c85cb2754af8df3a51f96ee6d38c005d6f6f2d04a7\",\"digest\":\"b1fd2beb761dea105d068256d1f25d64a094bb9fe7a1892274d576f635b7ad05\",\"event\":{\"kind\":\"checkpoint.confirmed\",\"id\":\"files\",\"note\":null,\"text\":\"Confirm the source list.\",\"at\":1795064253834}}",
+  "{\"seq\":4,\"prev\":\"b1fd2beb761dea105d068256d1f25d64a094bb9fe7a1892274d576f635b7ad05\",\"digest\":\"33c20f2f3c10585c5b0c6053a6f17172a2f37b07c23c94aae11362bf3d323b97\",\"event\":{\"kind\":\"checkpoint.confirmed\",\"id\":\"outline\",\"note\":null,\"text\":\"Confirm the brief.\",\"at\":1795064253834}}",
+  "{\"seq\":5,\"prev\":\"33c20f2f3c10585c5b0c6053a6f17172a2f37b07c23c94aae11362bf3d323b97\",\"digest\":\"8f087c22dfdbe149571efdfec118b71c36bf138995e751ebfa68da2136013cba\",\"event\":{\"kind\":\"objectives.proposed\",\"items\":[{\"kind\":\"local\",\"statement\":\"Explain how a plant makes its food\"},{\"kind\":\"local\",\"statement\":\"Name what a plant needs to make sugar\"}],\"sources\":[\"from your answer\",\"from your answer\"],\"assistantText\":null,\"at\":1795064253835}}",
+  "{\"seq\":6,\"prev\":\"8f087c22dfdbe149571efdfec118b71c36bf138995e751ebfa68da2136013cba\",\"digest\":\"6367c2debe36e2c179eb9852fdd4a7b1a91dc3ca31eb72ea04d287232b25075f\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"add\",\"statement\":\"Students can say where a plant gets its water.\"}],\"text\":\"Add objective: Students can say where a plant gets its water.\",\"at\":1795064261769}}",
+  "{\"seq\":7,\"prev\":\"6367c2debe36e2c179eb9852fdd4a7b1a91dc3ca31eb72ea04d287232b25075f\",\"digest\":\"4475283b9117a335f0d129531f118fe36cb74a285ec0ffd7c5b4d4d35a9506ce\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"add\",\"statement\":\"Students can identify at least five examples of AI in their daily life. Name two you use at home.\"}],\"text\":\"Add objective: Students can identify at least five examples of AI in their daily life. Name two you use at home.\",\"at\":1795064264049}}",
+  "{\"seq\":8,\"prev\":\"4475283b9117a335f0d129531f118fe36cb74a285ec0ffd7c5b4d4d35a9506ce\",\"digest\":\"ec32e27d816ca85e98c721423d6bb60b1650f607b9e83d80c3065a29c1e1a4af\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"add\",\"statement\":\"Students can explain why leaves are green.\"}],\"text\":\"Add objective: Students can explain why leaves are green.\",\"at\":1795064267410}}",
+  "{\"seq\":9,\"prev\":\"ec32e27d816ca85e98c721423d6bb60b1650f607b9e83d80c3065a29c1e1a4af\",\"digest\":\"c4dfcf9116d889abfdc014e8c188d7f71165cdfa091ad19b16a0c730586f180d\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"accept\",\"proposalId\":\"urn:uuid:bc49415b-d0fc-eeac-4110-b69b869836da\"}],\"text\":\"Accept objective (proposal urn:uuid:bc49415b-d0fc-eeac-4110-b69b869836da).\",\"at\":1795064268615}}",
+  "{\"seq\":10,\"prev\":\"c4dfcf9116d889abfdc014e8c188d7f71165cdfa091ad19b16a0c730586f180d\",\"digest\":\"8cb66d05a35305af24128860013f25f0015ab0f0930f8b8cdd9ae040d7d4de8c\",\"event\":{\"kind\":\"objectives.decided\",\"decisions\":[{\"verb\":\"drop\",\"proposalId\":\"urn:uuid:6460cafb-1051-7320-e360-78766e0b2968\"}],\"text\":\"Drop objective (proposal urn:uuid:6460cafb-1051-7320-e360-78766e0b2968).\",\"at\":1795064269830}}",
+  "{\"seq\":11,\"prev\":\"8cb66d05a35305af24128860013f25f0015ab0f0930f8b8cdd9ae040d7d4de8c\",\"digest\":\"1fdd7dc0277e3818af777494061adf196be636d3bfc288cd79cfabd55317b2f5\",\"event\":{\"kind\":\"checkpoint.confirmed\",\"id\":\"objectives\",\"text\":\"Confirm the objectives.\",\"at\":1795064270900}}",
+  "{\"seq\":12,\"prev\":\"1fdd7dc0277e3818af777494061adf196be636d3bfc288cd79cfabd55317b2f5\",\"digest\":\"1908279748761f34a7a1fb3e73e0b101adbaf24605dbb710d49da29af6f6c969\",\"event\":{\"kind\":\"plan.proposed\",\"spec\":{\"title\":\"How plants eat\",\"audience\":{\"ageRangeStart\":8,\"ageRangeEnd\":10},\"activities\":[{\"title\":\"Activity 1\",\"minutes\":12,\"objectiveIds\":[\"urn:uuid:db00f3a6-3d1b-ebed-edf2-7319a239ac75\"],\"learnerDoes\":\"Look at a leaf.\",\"teacherDoes\":\"Ask what it needs.\",\"evidenceIfAny\":\"observation\"},{\"title\":\"Activity 2\",\"minutes\":11,\"objectiveIds\":[\"urn:uuid:48607af8-fec4-6cf1-f7fd-2d6d76dbd88e\"],\"learnerDoes\":\"Look at a leaf.\",\"teacherDoes\":\"Ask what it needs.\",\"evidenceIfAny\":\"observation\"},{\"title\":\"Activity 3\",\"minutes\":11,\"objectiveIds\":[\"urn:uuid:05d9c950-beac-2c22-f43d-3bc2295761bf\"],\"learnerDoes\":\"Look at a leaf.\",\"teacherDoes\":\"Ask what it needs.\",\"evidenceIfAny\":\"observation\"},{\"title\":\"Activity 4\",\"minutes\":11,\"objectiveIds\":[\"urn:uuid:bc49415b-d0fc-eeac-4110-b69b869836da\"],\"learnerDoes\":\"Look at a leaf.\",\"teacherDoes\":\"Ask what it needs.\",\"evidenceIfAny\":\"observation\"}]},\"assistantText\":\"Drafted a lesson plan from your confirmed objectives.\",\"citations\":[{\"ref\":\"marble:mt_AzTrT5ySCx\",\"label\":\"AI in Daily Life (ages 5–12)\",\"source\":\"marble\",\"activityIndexes\":[0],\"verified\":true},{\"ref\":\"marble:mt_WRRv1ABECC\",\"label\":\"Smart Versus Not-Smart Devices (ages 5–8)\",\"source\":\"marble\",\"activityIndexes\":[1],\"verified\":true},{\"ref\":\"marble:mt_u6SYiVx7FX\",\"label\":\"Voice Assistants and How They Work (ages 5–8)\",\"source\":\"marble\",\"activityIndexes\":[2],\"verified\":true},{\"ref\":\"marble:mt_kH1DzOPsXG\",\"label\":\"Data and Information for Computers (ages 5–10)\",\"source\":\"marble\",\"activityIndexes\":[3],\"verified\":true}],\"at\":1795064309714}}",
+  "{\"seq\":13,\"prev\":\"1908279748761f34a7a1fb3e73e0b101adbaf24605dbb710d49da29af6f6c969\",\"digest\":\"b11085fe9412152d704372f19e6108019f811ee8b3e062845596e39a53b8feec\",\"event\":{\"kind\":\"plan.proposed\",\"spec\":{\"title\":\"Spotting AI in daily life\",\"audience\":{\"ageRangeStart\":5,\"ageRangeEnd\":12},\"sessions\":[{\"session\":1,\"evidence\":{\"kind\":\"work-product\",\"whatLearnerProduces\":\"Each pair's sorted card strip, with one written or drawn reason for the hardest card.\"}}],\"spacedReviews\":[{\"afterDays\":2,\"form\":\"recall-without-support\",\"whatChanges\":\"no cards on the table this time\",\"prompt\":\"Name two things at home that decide something by themselves, and one that only follows a switch.\"},{\"afterDays\":7,\"form\":\"far-transfer\",\"whatChanges\":\"a picture of a shop instead of the lesson's cards\",\"prompt\":\"Spot the AI in this shop picture and say how you know.\"}],\"aiPolicy\":\"AI in this course: learners do not use AI at all; nothing a child produces enters a tool. The teacher may use AI to prepare.\",\"activities\":[{\"title\":\"Smart or not? Place your bet\",\"minutes\":10,\"objectiveIds\":[\"urn:uuid:db00f3a6-3d1b-ebed-edf2-7319a239ac75\",\"urn:uuid:bc49415b-d0fc-eeac-4110-b69b869836da\"],\"learnerDoes\":\"Opening bet on the hard prerequisite, Smart Versus Not-Smart Devices. Each child looks at four picture cards (a lamp, a toaster, a talking speaker, a tablet) and bets for each: does it decide something by itself, or only do what a switch tells it?\",\"teacherDoes\":\"Writes the bets on the board without saying who is right, then shows what each device really does.\",\"evidenceIfAny\":\"observation\",\"phase\":1,\"targetOperation\":\"tell a device that decides from one that only follows a switch\",\"operationDoneBy\":\"learner\",\"learnerFirst\":\"Each child bets smart or not-smart for every card and gives one reason.\",\"helpAfter\":\"teacher\",\"aiStatus\":\"forbidden\",\"decisionAfterHelp\":\"Each child keeps or changes each bet after the demonstration and says why.\",\"channels\":[\"speaking\",\"handling\"],\"session\":1},{\"title\":\"Sort the AI around us\",\"minutes\":20,\"objectiveIds\":[\"urn:uuid:48607af8-fec4-6cf1-f7fd-2d6d76dbd88e\"],\"learnerDoes\":\"Pairs sort twelve picture cards of things at home and at school into 'uses AI' and 'does not', then sort a second set in which one detail on each card has changed.\",\"teacherDoes\":\"Walks a worked example of one card aloud, then asks each pair which card was hardest.\",\"evidenceIfAny\":\"work-product\",\"phase\":2,\"targetOperation\":\"sort everyday things by whether they use AI\",\"operationDoneBy\":\"learner\",\"learnerFirst\":\"Each pair sorts the first set alone before the worked example.\",\"helpAfter\":\"worked-example\",\"aiStatus\":\"forbidden\",\"decisionAfterHelp\":\"Each pair keeps or moves each card after the class check and says why.\",\"channels\":[\"handling\",\"writing\",\"discussion\"],\"session\":1},{\"title\":\"Patterns, not magic\",\"minutes\":15,\"objectiveIds\":[\"urn:uuid:05d9c950-beac-2c22-f43d-3bc2295761bf\"],\"learnerDoes\":\"Each child explains to a partner how one AI they found learns from patterns in data, then draws that example for the class wall with a one-line caption.\",\"teacherDoes\":\"Listens to three pairs and asks each 'how could it get this wrong?'\",\"evidenceIfAny\":\"work-product\",\"phase\":3,\"supportingPhase\":4,\"targetOperation\":\"explain that AI uses patterns and data, not magic\",\"operationDoneBy\":\"learner\",\"learnerFirst\":\"Each child draws or writes their own explanation before hearing a partner's.\",\"helpAfter\":\"peer\",\"aiStatus\":\"forbidden\",\"decisionAfterHelp\":\"Each child keeps or improves the explanation after the partner's question and says what changed.\",\"channels\":[\"speaking\",\"drawing\"],\"session\":1}]},\"assistantText\":\"Drafted a lesson plan from your confirmed objectives.\",\"citations\":[{\"ref\":\"marble:mt_AzTrT5ySCx\",\"label\":\"AI in Daily Life (ages 5–12)\",\"source\":\"marble\",\"activityIndexes\":[0],\"verified\":true},{\"ref\":\"marble:mt_WRRv1ABECC\",\"label\":\"Smart Versus Not-Smart Devices (ages 5–8)\",\"source\":\"marble\",\"activityIndexes\":[1],\"verified\":true},{\"ref\":\"marble:mt_u6SYiVx7FX\",\"label\":\"Voice Assistants and How They Work (ages 5–8)\",\"source\":\"marble\",\"activityIndexes\":[2],\"verified\":true}],\"at\":1795064310634}}",
+  "{\"seq\":14,\"prev\":\"b11085fe9412152d704372f19e6108019f811ee8b3e062845596e39a53b8feec\",\"digest\":\"f359ebee9a18083b3342e23eb6c059b4c8d267f9553d790c18f02004691f9acd\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:34d0b67f-c6f2-abd1-5433-05676c3c9423\",\"edits\":[{\"path\":\"activities.2.minutes\",\"beforeSha\":\"e629fa6598d732768f7c726b4b621285f9c3b85303900aa912017db7617d8bdb\",\"after\":25},{\"path\":\"activities.2.decisionAfterHelp\",\"beforeSha\":\"4286cbf1582154755101da96969b400de80e9bab23d5c7f8b471405da7a24c91\",\"after\":\"Each pair keeps or changes its sort, and says which card moved and why.\"},{\"path\":\"activities.2.aiStatus\",\"beforeSha\":\"d049d3c38e9b1c0f1b2eb82353d5a9c2b29172b63c4a62aaf2cebdb09eb434c8\",\"after\":\"permitted\"}],\"text\":\"Edit activity 3: minutes, then they decide, ai status.\",\"at\":1795064310753}}",
+  "{\"seq\":15,\"prev\":\"f359ebee9a18083b3342e23eb6c059b4c8d267f9553d790c18f02004691f9acd\",\"digest\":\"9ef94f48464f3a29035f9305c86b2b776c0e670845bde86e197ddacda2b44621\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:86affe27-f121-5710-75f8-141c33d35c15\",\"edits\":[{\"path\":\"activities.2.minutes\",\"beforeSha\":\"b7a56873cd771f2c446d369b649430b65a756ba278ff97ec81bb6f55b2e73569\",\"after\":15}],\"text\":\"Edit activity 3: minutes.\",\"at\":1795064311026}}",
+  "{\"seq\":16,\"prev\":\"9ef94f48464f3a29035f9305c86b2b776c0e670845bde86e197ddacda2b44621\",\"digest\":\"09ecc5127bc1d43930383015e6819dd9d460b63d092ac64cc12f2c67f97f4c4c\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:34cb2ef7-71e5-080a-2681-0c297c511c6f\",\"edits\":[{\"path\":\"activities.1.moveTo\",\"beforeSha\":\"fd59c06e558c76fc739238ec12024a38cccf1ee849517070dd98432844c5097b\",\"after\":0}],\"text\":\"Move activity 2 up.\",\"at\":1795064311239}}",
+  "{\"seq\":17,\"prev\":\"09ecc5127bc1d43930383015e6819dd9d460b63d092ac64cc12f2c67f97f4c4c\",\"digest\":\"3ef4c28c5a6be5b773007e91e3def43ceb2f47bb019850caeb0facf2d6cdb6d2\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:d338b454-49f7-a7a0-91ef-cf6a9670d285\",\"edits\":[{\"path\":\"activities.0.moveTo\",\"beforeSha\":\"877bc58ba90af108e1970bda71d1372dcf7a12f1f488b590d3b374e54c37bc8d\",\"after\":1}],\"text\":\"Move activity 1 down.\",\"at\":1795064311479}}",
+  "{\"seq\":18,\"prev\":\"3ef4c28c5a6be5b773007e91e3def43ceb2f47bb019850caeb0facf2d6cdb6d2\",\"digest\":\"a10d6150dc558e8b3140e81d5a6b804b072db9c948665f88787fafaf0e7624fd\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:c3d61146-fc28-a1e3-789b-14fe346fe780\",\"edits\":[{\"path\":\"activities.add\",\"beforeSha\":\"fd59c06e558c76fc739238ec12024a38cccf1ee849517070dd98432844c5097b\",\"after\":{\"title\":\"N5V extra check\",\"minutes\":40,\"learnerDoes\":\"Pairs compare two drawings.\",\"teacherDoes\":\"Asks what changed.\",\"evidenceIfAny\":\"none\",\"objectiveIds\":[\"urn:uuid:db00f3a6-3d1b-ebed-edf2-7319a239ac75\"]}}],\"text\":\"Edit the plan: add activity 4.\",\"at\":1795064311979}}",
+  "{\"seq\":19,\"prev\":\"a10d6150dc558e8b3140e81d5a6b804b072db9c948665f88787fafaf0e7624fd\",\"digest\":\"6047979d403c44346da540716a8fcc5e6ccd4c1fc85a4ba101d19829ce495eea\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:6dc8558c-d6ad-ea15-f06b-5024fe8b45bb\",\"edits\":[{\"path\":\"activities.3.moveTo\",\"beforeSha\":\"72a48f857bf6fd7b1df243d23711e4477419496876bb25f2824830fb1e9fa89b\",\"after\":2}],\"text\":\"Move activity 4 up.\",\"at\":1795064312422}}",
+  "{\"seq\":20,\"prev\":\"6047979d403c44346da540716a8fcc5e6ccd4c1fc85a4ba101d19829ce495eea\",\"digest\":\"f39811d93a078fa786c2ec3beb37259a1872c6f36080c2f7cde758e401b497b7\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:f74e229c-483a-e0d8-eeb1-922d137b1e71\",\"edits\":[{\"path\":\"activities.2.moveTo\",\"beforeSha\":\"3c61deb82e92ac3b5addebcde502fac6b1c0e00f1b9a439ab8086a642bbf79c2\",\"after\":3}],\"text\":\"Move activity 3 down.\",\"at\":1795064312903}}",
+  "{\"seq\":21,\"prev\":\"f39811d93a078fa786c2ec3beb37259a1872c6f36080c2f7cde758e401b497b7\",\"digest\":\"67c9ebd5824a96bbb98238dc980c09966f5b92bfcae3510402bf810e72bde46e\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:0dfe4ccb-457f-b459-f593-9fa36c364c49\",\"edits\":[{\"path\":\"activities.3.remove\",\"beforeSha\":\"481edbe2a915c7c70bc20c1bc6ea4cc8e0787d3794338e084fb0d932dbba894b\",\"after\":true}],\"text\":\"Remove activity 4.\",\"at\":1795064313269}}",
+  "{\"seq\":22,\"prev\":\"67c9ebd5824a96bbb98238dc980c09966f5b92bfcae3510402bf810e72bde46e\",\"digest\":\"79798c32b4f8eba958f4116da89945a1900546db1095109fc4e818fad478e428\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:53c4bad5-0854-c8f2-0c71-9c02cdd62c18\",\"edits\":[{\"path\":\"activities.0.remove\",\"beforeSha\":\"b701ebbd1ddea625499881fed6af6fe811e1190b383850cf18fed9e482ddb0ab\",\"after\":true}],\"text\":\"Remove activity 1.\",\"at\":1795064314249}}",
+  "{\"seq\":23,\"prev\":\"79798c32b4f8eba958f4116da89945a1900546db1095109fc4e818fad478e428\",\"digest\":\"bc5e2337b4d9f264729ac36c1af026ea3ecb30d2fe21c5cc19832004d318d6c0\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:ac2ebb5c-23f7-1d9d-257b-5f6a5e91adf0\",\"edits\":[{\"path\":\"activities.0.moveTo\",\"beforeSha\":\"3c856fd4d74608d07aeee6119836ee2d48c349bcead732d6a9c4dc28e82bc29c\",\"after\":1}],\"text\":\"Move activity 1 down.\",\"at\":1795064314719}}",
+  "{\"seq\":24,\"prev\":\"bc5e2337b4d9f264729ac36c1af026ea3ecb30d2fe21c5cc19832004d318d6c0\",\"digest\":\"2c333c5488013ca6e9b5aa81f1cb0add2922e545fd528d21f86b5f5e4b22c959\",\"event\":{\"kind\":\"plan.edited\",\"planId\":\"urn:uuid:96951915-69d4-461e-a7f9-095b05022a9c\",\"edits\":[{\"path\":\"activities.1.moveTo\",\"beforeSha\":\"e6732504072f9f4d4712abf815ab9f968cd881a6332f29f50e3cf53f22348216\",\"after\":0}],\"text\":\"Move activity 2 up.\",\"at\":1795064315097}}"
+ ]
+}

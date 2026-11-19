@@ -1,0 +1,45 @@
+200 text/javascript; charset=utf-8
+PASS  [uploads 1440] uploads: no request left the page's own origin (no CDN)
+PASS  [uploads 1440] uploads: 0 CSP violations
+PASS  [uploads 1440] uploads: 0 console or page errors
+PASS  [uploads 1440] uploads: the whole upload flow completed
+PASS  [landing 1440] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 1440] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",175],["You decide.",287]]
+PASS  [landing 1440] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, no 'Classic view' link and no link to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 1440] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 1440] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 1440] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440}
+PASS  [landing 1440] landing 1440: the drawing sits beside the copy, not over it — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":504,"left":768,"right":1272,"top":170,"bottom":536,"vw":1440},{"left":168,"right":712,"top":137,"bottom":569}]
+PASS  [landing 1440] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 1440] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 1440] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 1440] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 1440] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 1440] landing: Open the studio opens the studio home at #/studio
+PASS  [landing 1440] landing: the studio's 'About Silicus' link returns to the landing (#/)
+PASS  [landing 1440] landing: an old typed #/live lands on the landing (the classic view is gone)
+PASS  [landing 1440] landing: 0 CSP violations and 0 console errors
+PASS  [landing 380] landing: the bare URL shows one h1, one banner, one main and one footer — Plan a lesson with an AI that proposes. You decide.
+PASS  [landing 380] landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.') — [["Plan a lesson with an AI that proposes.",157],["You decide.",235]]
+PASS  [landing 380] landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, no 'Classic view' link and no link to #/live, no controls and no sign-in — Brief,Objectives,Plan,Publish :: Never decides for you|Never keeps your files|Never grades students
+PASS  [landing 380] landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval
+PASS  [landing 380] landing: 'decide' appears at most three times; no retention promise — 3
+PASS  [landing 380] landing: no screenshot; the hero is a drawing of the Objectives step with a caption — {"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":348,"left":16,"right":364,"top":585,"bottom":1207,"vw":380}
+PASS  [landing 380] landing 380: the drawing sits below the copy, inside the viewport — [{"loaded":true,"alt":"The Objectives step: proposals wait under Proposals until you decide.","w":348,"left":16,"right":364,"top":585,"bottom":1207,"vw":380},{"left":16,"right":364,"top":101,"bottom":549}]
+PASS  [landing 380] landing: the technical detail is one collapsed 'Under the hood' disclosure, last on the page, and its text is hidden until opened — {"open":false,"title":"Under the hood","last":true}
+PASS  [landing 380] landing: ASFAI is defined as a protocol where it first appears — 2522
+PASS  [landing 380] landing: the page does not scroll sideways — overflow 0px
+PASS  [landing 380] narrow landing page: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page: no element's content is clipped by its own box
+PASS  [landing 380] landing: How it works stays on the landing (hash unchanged) and moves focus to the steps heading — {"hash":"","focus":"Four steps, each one yours to confirm","h1":true}
+PASS  [landing 380] landing: opening Under the hood shows the setup steps, with no sideways scroll — {"open":true,"shown":true,"sideways":0}
+PASS  [landing 380] narrow landing page, Under the hood open: the page does not scroll sideways — scrollWidth 380 vs clientWidth 380
+PASS  [landing 380] narrow landing page, Under the hood open: no element's right edge passes the viewport
+PASS  [landing 380] narrow landing page, Under the hood open: no element's content is clipped by its own box
+PASS  [landing 380] landing: Open the studio opens the studio home at #/studio
+PASS  [landing 380] landing: the studio's 'About Silicus' link returns to the landing (#/)
+PASS  [landing 380] landing: an old typed #/live lands on the landing (the classic view is gone)
+PASS  [landing 380] landing: 0 CSP violations and 0 console errors
+
+316/316 browser-mode checks passed

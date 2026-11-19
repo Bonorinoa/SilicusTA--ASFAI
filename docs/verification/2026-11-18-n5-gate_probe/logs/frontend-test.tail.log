@@ -1,0 +1,78 @@
+pl._dispatch (/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/tree/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at fireAnEvent (/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/tree/frontend/node_modules/jsdom/lib/jsdom/living/helpers/events.js:18:36)
+    at SessionHistory._fireEvents (/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/tree/frontend/node_modules/jsdom/lib/jsdom/living/window/SessionHistory.js:148:7)
+    at fireEvents (/Users/bonorinoa/.hermes/profiles/verifier/cache/scratch/n5v/tree/frontend/node_modules/jsdom/lib/jsdom/living/window/SessionHistory.js:133:35) [90mundefined[39m
+
+ ✓ src/components/PlanCard/PlanCard.edit.test.tsx (7 tests) 442ms
+ ✓ src/lib/refusals.test.ts (29 tests) 6ms
+ ✓ src/browser/BrowserMode.test.tsx (4 tests) 661ms
+   ✓ browser mode > the studio home says this browser keeps the record, never the developer host text; delete-all asks first  413ms
+ ✓ src/workbench/Workbench.test.tsx (7 tests) 578ms
+ ✓ src/components/PlanCard/PlanCard.shape.test.tsx (6 tests) 421ms
+ ✓ src/studio/Learn.test.tsx (6 tests) 864ms
+ ✓ src/studio/passcode-cancel.test.tsx (1 test) 177ms
+ ✓ src/studio/StudentKinds.test.tsx (4 tests) 1014ms
+   ✓ K3 · student preview (Learn) > a clarify reply offers the lesson's items as buttons, and tapping one asks about it  324ms
+   ✓ K3 · Rehearse names the kind in the trace > clarify, about_helper and the redirect each get their own label and trace  404ms
+ ✓ src/components/TimelineCard/TimelineCard.test.tsx (5 tests) 160ms
+ ✓ src/studio/useCourse.status.test.ts (6 tests) 2ms
+ ✓ src/studio/CourseStudio.auto-advance.test.tsx (1 test) 764ms
+   ✓ the studio's one status line and the announced auto-advance > announces 'Objectives confirmed. On to the plan.' once and moves focus to the plan heading  762ms
+ ✓ src/studio/PasscodeNote.test.tsx (6 tests) 246ms
+ ✓ src/browser/passcode.seam.test.ts (4 tests) 18ms
+ ✓ src/studio/RecordCard.test.tsx (6 tests) 164ms
+ ✓ src/components/ActivityRail/host-contract.test.ts (3 tests) 10ms
+ ✓ src/studio/useCourse.brief-chain.test.tsx (4 tests) 206ms
+ ✓ src/components/PlanCard/design.test.ts (8 tests) 5ms
+ ✓ src/lib/fetchFailure.test.ts (5 tests) 2ms
+ ✓ src/live/reasonText.test.ts (16 tests) 14ms
+ ✓ src/studio/sourceUse.test.ts (10 tests) 11ms
+ ✓ src/gate/reword-flow.test.ts (2 tests) 9ms
+ ✓ src/live/handout.test.ts (5 tests) 2ms
+ ✓ src/studio/N1.waits.test.tsx (4 tests) 74ms
+ ✓ src/studio/StudentAge.test.tsx (2 tests) 1166ms
+   ✓ N4 · student preview (Learn) > attempt_first reads as the host wrote it; a general answer carries the plain label; a nudge cites the activity  633ms
+   ✓ N4 · Rehearse names the kind in the trace > attempt_first, the general explanation and the nudge each get their own label and trace  532ms
+ ✓ src/studio/CourseStudio.decisions.test.tsx (7 tests) 10ms
+ ✓ src/studio/Learners.bands.test.tsx (4 tests) 22ms
+ ✓ src/studio/Rehearse.test.tsx (3 tests) 911ms
+   ✓ G4: cancelling the passcode in Rehearse keeps the question and returns focus > 'Not now' keeps the typed question and focuses the Ask button  450ms
+ ✓ src/studio/K5.polish.test.tsx (5 tests) 240ms
+ ✓ src/gate/pin.test.ts (8 tests) 3ms
+ ✓ src/browser/BrowserRecord.test.tsx (3 tests) 75ms
+ ✓ src/studio/audience.test.ts (6 tests) 16ms
+ ✓ src/design/tokens.test.ts (4 tests) 11ms
+ ✓ src/live/suggest.test.ts (12 tests) 3ms
+ ✓ src/studio/SourcesPanel.test.tsx (4 tests) 164ms
+ ✓ src/studio/aiStatus.test.ts (9 tests) 2ms
+ ✓ src/studio/RevisionNote.test.tsx (5 tests) 76ms
+ ✓ src/materials/session.test.ts (6 tests) 9ms
+ ✓ src/browser/PasscodeDialog.focus.test.tsx (1 test) 109ms
+ ✓ src/gate/crypto-shim.test.ts (3 tests) 7ms
+ ✓ src/studio/mapLines.test.ts (2 tests) 24ms
+ ✓ src/browser/site.dialog-failure.test.ts (1 test) 8ms
+ ✓ src/studio/CourseStudio.back.test.tsx (2 tests) 504ms
+   ✓ Back in the course steps > on the Objectives step, Back shows the Brief; on the Brief there is no Back  502ms
+ ✓ src/studio/versionDiff.reword.test.ts (1 test) 4ms
+ ✓ src/lib/retired-words.test.ts (3 tests) 3ms
+ ✓ src/studio/layout-copy.test.ts (2 tests) 2ms
+ ✓ src/studio/Refusal.test.tsx (1 test) 34ms
+ ✓ src/studio/sourceCount.test.ts (2 tests) 9ms
+ ✓ src/studio/links.n2.test.ts (2 tests) 1ms
+ ✓ src/studio/TopBar.landing.test.tsx (2 tests) 89ms
+ ✓ src/studio/NewCourseWizard.test.tsx (12 tests) 7418ms
+   ✓ NewCourseWizard > first run opens on the welcome, and nothing is recorded while moving through the steps  847ms
+   ✓ NewCourseWizard > Back at the first step is disabled: it goes to the previous step, never jumps to the welcome  631ms
+   ✓ NewCourseWizard > the review's confirm sends create (no materials), answers, files, outline — in that order — and lands on the course  1075ms
+   ✓ NewCourseWizard > N1: typed objectives with no sources become proposals: after the outline, the wizard asks the host to derive them  1127ms
+   ✓ NewCourseWizard > when the host asks questions the wizard did not show, it records the answers it has and confirms nothing  737ms
+   ✓ NewCourseWizard > objectives need either written ones or sources to propose from  709ms
+   ✓ NewCourseWizard step 1 (G2b): learners, skill map, consequences > M1 condensed: one quiet consequence line (AI rule · map topics that fit · one N-minute plan); no histogram strip  1197ms
+   ✓ NewCourseWizard step 1 (K2): How long is the lesson? > five chips, 45 by default; picking 60 shows on the review and is sent as lessonMinutes  495ms
+   ✓ NewCourseWizard step 2 (M1): the skill map > nothing is pre-anchored; anchor + connect from another thread; the map source is on by default; confirm sends both pointers  441ms
+
+ Test Files  73 passed (73)
+      Tests  640 passed (640)
+   Start at  21:25:14
+   Duration  9.30s (transform 2.19s, setup 8.08s, collect 8.52s, tests 29.39s, environment 24.52s, prepare 3.09s)
+

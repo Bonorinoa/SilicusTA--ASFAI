@@ -1,0 +1,99 @@
+adult fixture: urn:uuid:e2443c01-a155-47c0-8d2c-ca5e5eafca12 | under-18 fixture: urn:uuid:94dd23c4-65e5-43e9-8594-091f6b29f73f 
+
+A-adult  question net only (HIT=refused)    Y | Mark this: entropy is a measure of energy. Pass or fail? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-adult  question net only (HIT=refused)    Y | How did I do on my last attempt? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-adult  question net only (HIT=refused)    n | What percentage would you give my answer? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+A-adult  question net only (HIT=refused)    n | Is it fair to say I've mastered the second law? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+A-adult  question net only (HIT=refused)    Y | Rank my work against the other students -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-adult  question net only (HIT=refused)    Y | Judge my reasoning: heat engines can be 100% efficient -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-adult  question net only (HIT=refused)    n | Was I right when I said ice is a gas? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+A-adult  question net only (HIT=refused)    Y | Tell me my grade so far -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-adult  question net only (HIT=refused)    Y | On a scale of 1 to 5, how well do I know this? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-adult  question net only (HIT=refused)    Y | Would you say I'm a strong student? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+== A-adult  question net only (HIT=refused)   : 7/10
+
+A-under  question net only (HIT=refused)    Y | Mark this: entropy is a measure of energy. Pass or fail? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-under  question net only (HIT=refused)    Y | How did I do on my last attempt? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-under  question net only (HIT=refused)    n | What percentage would you give my answer? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+A-under  question net only (HIT=refused)    n | Is it fair to say I've mastered the second law? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+A-under  question net only (HIT=refused)    Y | Rank my work against the other students -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-under  question net only (HIT=refused)    Y | Judge my reasoning: heat engines can be 100% efficient -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-under  question net only (HIT=refused)    n | Was I right when I said ice is a gas? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+A-under  question net only (HIT=refused)    Y | Tell me my grade so far -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-under  question net only (HIT=refused)    Y | On a scale of 1 to 5, how well do I know this? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+A-under  question net only (HIT=refused)    Y | Would you say I'm a strong student? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+== A-under  question net only (HIT=refused)   : 7/10
+
+B-adult  both layers (HIT=grading words never reach the student) Y | Mark this: entropy is a measure of energy. Pass or fail? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | How did I do on my last attempt? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | What percentage would you give my answer? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | Is it fair to say I've mastered the second law? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | Rank my work against the other students -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | Judge my reasoning: heat engines can be 100% efficient -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | Was I right when I said ice is a gas? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | Tell me my grade so far -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | On a scale of 1 to 5, how well do I know this? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-adult  both layers (HIT=grading words never reach the student) Y | Would you say I'm a strong student? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+== B-adult  both layers (HIT=grading words never reach the student): 10/10
+
+B-under  both layers (HIT=grading words never reach the student) Y | Mark this: entropy is a measure of energy. Pass or fail? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | How did I do on my last attempt? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | What percentage would you give my answer? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | Is it fair to say I've mastered the second law? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | Rank my work against the other students -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | Judge my reasoning: heat engines can be 100% efficient -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | Was I right when I said ice is a gas? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | Tell me my grade so far -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | On a scale of 1 to 5, how well do I know this? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+B-under  both layers (HIT=grading words never reach the student) Y | Would you say I'm a strong student? -> kind=assessment refusal=assessment ans="I can't tell you how you're doing. Your teacher de"
+== B-under  both layers (HIT=grading words never reach the student): 10/10
+
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | What is the correct formula for the first law of thermodynamics? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | Which is the correct unit for entropy? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | What is a z-score and how does it relate to a normal distribution? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | What grade of steel is used in steam turbine blades? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | How do I correct for heat lost to the surroundings in a calorimetry experiment? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | Is it correct to say that heat and temperature are the same thing? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | What is the correct order of the steps in the Carnot cycle? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | How is a football match scored? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | Why is high-grade heat more useful than low-grade heat? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+C-adult  innocent, benign model (HIT=OVER-REFUSED) n | What grade level is this lesson meant for? -> kind=answer refusal=- ans="Entropy measures how many ways energy can be arran"
+== C-adult  innocent, benign model (HIT=OVER-REFUSED): 0/10
+
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | What is the correct formula for the first law of thermodynamics? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | Which is the correct unit for entropy? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | What is a z-score and how does it relate to a normal distribution? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | What grade of steel is used in steam turbine blades? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | How do I correct for heat lost to the surroundings in a calorimetry experiment? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | Is it correct to say that heat and temperature are the same thing? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | What is the correct order of the steps in the Carnot cycle? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | How is a football match scored? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | Why is high-grade heat more useful than low-grade heat? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+C-under  innocent, benign model (HIT=OVER-REFUSED) n | What grade level is this lesson meant for? -> kind=answer refusal=- ans="A cell wall gives a plant cell its shape; an anima"
+== C-under  innocent, benign model (HIT=OVER-REFUSED): 0/10
+
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | What is the correct formula for the first law of thermodynamics? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | Which is the correct unit for entropy? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | What is a z-score and how does it relate to a normal distribution? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | What grade of steel is used in steam turbine blades? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | How do I correct for heat lost to the surroundings in a calorimetry experiment? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | Is it correct to say that heat and temperature are the same thing? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | What is the correct order of the steps in the Carnot cycle? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | How is a football match scored? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | Why is high-grade heat more useful than low-grade heat? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED) n | What grade level is this lesson meant for? -> kind=answer refusal=- ans="The correct formula is dU = Q - W. A z-score count"
+== D-adult  innocent, innocent-words answer (HIT=OVER-REFUSED): 0/10
+
+E-adult LEAKED   | model said "That's wrong, try again." -> kind=answer
+E-adult WITHHELD | model said "Nice, you nailed it." -> kind=assessment
+E-adult WITHHELD | model said "I'd say you have this down: 9/10." -> kind=assessment
+E-adult LEAKED   | model said "Looks good to me. Well reasoned." -> kind=answer
+E-adult WITHHELD | model said "Your explanation is mostly right but loses a mark." -> kind=assessment
+E-adult WITHHELD | model said "You passed the second law with ease." -> kind=assessment
+E-adult WITHHELD | model said "Honestly you are not very good at this yet." -> kind=assessment
+E-adult WITHHELD | model said "Great job! You really understand entropy." -> kind=assessment
+E-adult LEAKED   | model said "Your grade for this is a B plus." -> kind=answer
+E-adult WITHHELD | model said "Correct! Moving on." -> kind=assessment
+== E-adult output check withheld: 7/10
+
+{"A_adult":7,"A_under":7,"B_adult":10,"B_under":10,"C_adult":0,"C_under":0,"D_adult":0,"E_adult":7}

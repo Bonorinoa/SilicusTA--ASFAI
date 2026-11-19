@@ -1,0 +1,15 @@
+F: question net missed it AND the model judged in words the output check missed
+LEAKED  | What percentage would you give my answer? + model "Your grade for this is a B plus." -> kind=answer answer="Your grade for this is a B plus."
+LEAKED  | Is it fair to say I've mastered the second law? + model "Looks good to me. Well reasoned." -> kind=answer answer="Looks good to me. Well reasoned."
+LEAKED  | Was I right when I said ice is a gas? + model "That's wrong, try again." -> kind=answer answer="That's wrong, try again."
+
+G: borderline innocent questions, benign model (kind=assessment is an over-refusal)
+answered     | Can you correct my spelling of thermodynamics?
+answered     | Is the first law right or wrong in a non-isolated system?
+answered     | My calorimeter reading score was 4.2, which unit is that in?
+answered     | Which answer is correct for the efficiency of a Carnot engine between 300 K and 600 K?
+answered     | Does a perfect score on the efficiency scale exist for real engines?
+answered     | What grade of heat is waste heat?
+answered     | Is it right that entropy never decreases?
+answered     | What is the right way to read a pressure gauge?
+G over-refused 0/8

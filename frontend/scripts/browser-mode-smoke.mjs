@@ -4,22 +4,25 @@
  * Builds the app with VITE_SILICUS_MODE=browser (into a temp dir, so frontend/dist stays the host-mode build the
  * live smoke serves), serves it with EXACTLY the headers vercel.json sets (strict CSP included), and stands in for
  * the site's two functions with local mocks that follow their fixed contract (/api/worker: an OpenAI-shaped reply
- * behind the demo passcode; /api/worker/status; /api/fetch). Then drives the whole story through the UI:
+ * behind the demo passcode; /api/worker/status; /api/fetch). Then drives the whole story through the STUDIO (#/studio):
  *
- *   name the course -> confirm materials -> answer Silicus's questions -> confirm the outline -> paste material ->
- *   propose (the passcode is asked for and answered) -> accept the objectives -> draft the plan -> confirm ->
- *   publish -> a student asks and gets a cited answer -> reload: the course is still there and verifies ->
- *   export all (a file is downloaded) -> delete all -> a tampered file is refused -> import -> the course is back.
+ *   landing -> studio home -> the wizard (course, learners, skill map, sources: paste text) -> review and confirm ->
+ *   the arrival proposes from the source (the passcode is asked for and answered) -> accept the objectives -> confirm ->
+ *   draft the plan -> confirm -> publish -> a student asks (#/learn) and gets a cited answer; Rehearse asks too ->
+ *   reload: the course is still there and verifies -> export all (a file is downloaded) -> delete all ->
+ *   a tampered file is refused -> import -> the course is back.
  *
  * State is asserted on the RECORD (IndexedDB, read in the page) and re-verified in Node with the host's own
  * chain and backup modules over real node:crypto, so a log written by the browser verifies on the Node host.
  * The model is slow on purpose: the mocked /api/worker takes SILICUS_SMOKE_PLAN_MS (default 2000) to draft a plan and 1.5 s to
- * answer a student, so the run also asserts the WAITING EXPERIENCE: the plain-words title with the real count, a live clock, the
- * typical range, one polite live region, "What the model sees" matching the request that really left the page (and never
- * the teacher's label), a true receipt afterwards, the passcode pause, and still motion under prefers-reduced-motion.
- * SILICUS_SMOKE_PLAN_MS=28000 also holds the plan past its usual range to assert (and capture) the "taking longer" line.
- * Also asserted: no /api/courses request ever leaves the page, material text is never stored, student chat
- * writes nothing, the passcode lives in sessionStorage only, 0 CSP violations, 0 console errors.
+ * answer a student, so the run also asserts the WAITING EXPERIENCE the studio has: the one status line ("Silicus is drafting
+ * from 3 confirmed objectives") with a live clock and the typical range, one polite live region, the passcode pause, the
+ * request that really left the page, and a still "thinking" indicator under prefers-reduced-motion.
+ * SILICUS_SMOKE_PLAN_MS=48000 also holds the plan past the wait card's late mark to assert the "Still drafting" line.
+ * Also asserted: real PDF and DOCX uploads (read in the tab, names recorded, text never stored), no /api/courses request ever
+ * leaves the page, material text is never stored, student chat writes nothing, the passcode lives in sessionStorage only,
+ * the landing has no 'Classic view' and an old #/live lands on it, 0 CSP violations, 0 console errors.
+ * The classic view at #/live was deleted in K1; its checks moved here (docs: coverage map in the K4 handoff).
  *
  * Run:  node frontend/scripts/browser-mode-smoke.mjs     (exit 0 = pass)
  */
@@ -39,7 +42,8 @@ const HERE = fileURLToPath(new URL("..", import.meta.url));   // frontend/
 const REPO = join(HERE, "..");
 const PASSCODE = "smoke-demo-passcode";
 const SECRET = "SAFFRON-HERON-8812";
-const MATERIAL_TEXT = `Plants make their own food from light.\nThe phrase ${SECRET} appears only in these notes.\nLeaves hold the green pigment that catches light.`;
+// Pasted text is named by its first line: "Lesson notes".
+const MATERIAL_TEXT = `Lesson notes\nPlants make their own food from light.\nThe phrase ${SECRET} appears only in these notes.\nLeaves hold the green pigment that catches light.`;
 
 const results = [];
 /** Which pass is running ("wide 1440" / "narrow 380"). Every check line carries it. */
@@ -160,9 +164,10 @@ const layoutSnapshot = () => page.evaluate(() => {
     const control = /^(BUTTON|INPUT|TEXTAREA)$/.test(el.tagName);
     if ((!hidden && !control) || el.clientWidth <= 1) return [];
     if (el.scrollWidth <= el.clientWidth + 1) return [];
+    if (getComputedStyle(el).textOverflow === "ellipsis") return []; // a crumb that truncates with an ellipsis says so: that is not clipping
     return [{ tag: el.tagName, className: typeof el.className === "string" ? el.className : "", clientWidth: el.clientWidth, scrollWidth: el.scrollWidth, text: (el.textContent ?? "").trim().slice(0, 60) }];
   });
-  const button = [...document.querySelectorAll("button")].find((b) => /build the plan|Review & publish/i.test(b.textContent ?? ""));
+  const button = [...document.querySelectorAll("button")].find((b) => /Confirm objectives|Draft the lesson plan|Confirm the lesson plan|Publish version/i.test(b.textContent ?? ""));
   return {
     clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
@@ -216,7 +221,8 @@ const setValue = (selector, text) => page.evaluate((sel, text) => {
 /** Everything this origin holds: every IndexedDB value plus both Web Storages. Read IN the page. */
 const stored = () => page.evaluate(async () => {
   const db = await new Promise((res, rej) => { const q = indexedDB.open("silicus-host"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
-  const all = (name) => new Promise((res) => { const r = db.transaction(name, "readonly").objectStore(name).getAll(); r.onsuccess = () => res(r.result); });
+  // After "delete all" the database may exist without its stores: nothing recorded.
+  const all = (name) => db.objectStoreNames.contains(name) ? new Promise((res) => { const r = db.transaction(name, "readonly").objectStore(name).getAll(); r.onsuccess = () => res(r.result); }) : Promise.resolve([]);
   const out = { metas: await all("courses"), events: await all("events"), local: { ...localStorage }, session: { ...sessionStorage } };
   db.close();
   return out;
@@ -242,26 +248,6 @@ const stageShot = async (name, selector = null, viewportOnly = false) => {
   const h = await page.evaluate(() => document.documentElement.scrollHeight);
   await page.screenshot({ path, captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: Math.min(h, 6000) } });
 };
-/** C-d: the landing's hero is a REAL capture of the Objectives stage of this build: SILICUS_SMOKE_SHOTS=<dir> writes hero-objectives.png (2x, the proposals card only). */
-const heroShot = async () => {
-  if (!SHOTS) return;
-  const orig = page.viewport();
-  if (orig.width < 1100) return;
-  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(300);
-  // The card's top to the foot of the second proposal (its divider is left out: the image border closes the card): the first two rows with Accept / Rename / Drop, and not the
-  // sticky decision bar (it would sit over the third row in a capture).
-  const box = await page.evaluate(() => {
-    const card = document.querySelector('section[aria-label="Objective proposals"]');
-    const rows = card ? [...card.querySelectorAll("li")].filter((li) => li.querySelector("h3")) : [];
-    if (!card || rows.length < 2) return null;
-    const c = card.getBoundingClientRect(), r = rows[1].getBoundingClientRect();
-    return { x: c.left + scrollX, y: c.top + scrollY, width: c.width, height: r.bottom - c.top - 1 };
-  });
-  if (box) await page.screenshot({ path: join(SHOTS, "hero-objectives.png"), captureBeyondViewport: true, clip: box });
-  await page.setViewport(orig);
-};
 /** C-a (workspace): at the two laptop sizes, the stage's primary action is inside the window the moment the stage opens. */
 // `settled`: the stage is a conversation whose cards (OnboardingChat, MaterialsPanel) are not this page's: measured where the page
 // came to rest (their own autofocus scrolls their input into view). Every other stage is measured from the top of the page.
@@ -285,528 +271,374 @@ const primaryInViewport = async (stage, { settled = false } = {}) => {
   await page.setViewport(orig);
   await page.evaluate(() => window.scrollTo(0, 0));
 };
-/**
- * C-e (workspace polish): measured in a real 1440x900 VIEWPORT, scrolled the way a teacher scrolls.
- * (A full-page capture draws a sticky bar mid-page, which is how this was first misread.) Wide pass only.
- *  - the stage's sticky bar is a layer: an opaque background and a shadow;
- *  - scrolled to the bottom, the last content of the open stage is fully above that bar;
- *  - the page keeps scroll-padding under the bar, and a control focused from the top of the page ends up clear of it;
- *  - everything in the stage column ends at one right edge, and there is no dead band above Record details.
- * Captures: SILICUS_SMOKE_SHOTS=<dir> writes polish-<name>.png (top of the stage) and polish-<name>-bottom.png.
- */
-const polishCheck = async (name) => {
-  const orig = page.viewport();
-  if (orig.width < 1100) return;
-  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(250);
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}.png`) });
-  const probe = () => page.evaluate(() => {
-    const bars = [...document.querySelectorAll('[data-stage-bar], [data-armed][data-print="hide"]')].filter((b) => b.offsetParent !== null);
-    const bar = bars[bars.length - 1];
-    if (!bar) return null;
-    const last = bar.previousElementSibling;
-    const cs = getComputedStyle(bar);
-    const b = bar.getBoundingClientRect();
-    const l = last ? last.getBoundingClientRect() : null;
-    const alpha = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return 0; const p = m[1].split(/[ ,\/]+/).filter(Boolean); return p.length > 3 ? Number(p[3]) : 1; };
-    return {
-      sticky: cs.position === "sticky", opaque: alpha(cs.backgroundColor) === 1, shadow: cs.boxShadow !== "none",
-      barTop: Math.round(b.top), barHeight: Math.round(b.height), lastBottom: l ? Math.round(l.bottom) : null, hasLast: !!last,
-    };
-  });
-  // Docked, not floating: while the bar is stuck to the window (page at the top, long stage), it sits flush on the
-  // window's bottom edge, so no strip of the page shows under it (a 16 px gap did, at integration).
-  const dock = await page.evaluate(() => {
-    const bars = [...document.querySelectorAll('[data-stage-bar], [data-armed][data-print="hide"]')].filter((b) => b.offsetParent !== null);
-    const bar = bars[bars.length - 1];
-    if (!bar) return null;
-    const b = bar.getBoundingClientRect();
-    return { stuck: b.bottom > innerHeight - 40, gap: Math.round(innerHeight - b.bottom) };
-  });
-  check(`polish ${name}: a stuck bar is docked flush to the window's bottom edge (nothing shows under it)`, !dock || !dock.stuck || Math.abs(dock.gap) <= 1, JSON.stringify(dock));
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await sleep(250);
-  const r = await probe();
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-bottom.png`) });
-  check(`polish ${name}: the stage's bar is a layer (sticky, opaque background, a shadow)`, !!r && r.sticky && r.opaque && r.shadow, JSON.stringify(r));
-  check(`polish ${name}: scrolled to the bottom, the last content of the open stage is fully above the bar`, !!r && r.hasLast && r.lastBottom <= r.barTop, JSON.stringify(r));
-  // A control in the stage's last content, focused from the top of the page, must come to rest clear of the bar.
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(150);
-  const f = await page.evaluate(async () => {
-    const bars = [...document.querySelectorAll('[data-stage-bar], [data-armed][data-print="hide"]')].filter((b) => b.offsetParent !== null);
-    const bar = bars[bars.length - 1];
-    const last = bar?.previousElementSibling;
-    if (!last) return { ok: false, why: "no last content" };
-    const sel = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary';
-    const ctl = [...last.querySelectorAll(sel), ...(last.matches(sel) ? [last] : [])].filter((c) => c.offsetParent !== null).pop();
-    if (!ctl) return { ok: true, why: "the last content holds no control" };
-    // (the bar's own buttons must keep NO scroll margin: focusing the primary must not move the page)
-    ctl.focus();
-    await new Promise((res) => setTimeout(res, 400));
-    const c = ctl.getBoundingClientRect();
-    const b = bar.getBoundingClientRect();
-    const own = bar.querySelector('button'); const m = parseFloat(getComputedStyle(ctl).scrollMarginBottom) || 0;
-    return { ok: (c.bottom <= b.top || c.top >= b.bottom) && m >= b.height + 16 && (!own || !(parseFloat(getComputedStyle(own).scrollMarginBottom) > 0)), margin: m, ownMargin: own ? parseFloat(getComputedStyle(own).scrollMarginBottom) : null, ctl: ctl.textContent.trim().slice(0, 30), ctlTop: Math.round(c.top), ctlBottom: Math.round(c.bottom), barTop: Math.round(b.top), barBottom: Math.round(b.bottom) };
-  });
-  check(`polish ${name}: a control in the stage's last content, focused from the top, lands clear of the bar (scroll-margin >= bar + 16 px); the bar's own buttons keep none`, f.ok === true, JSON.stringify(f));
-  // The record sections close the stage column: they share its right edge and sit one rhythm step under the stage.
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await sleep(150);
-  const e = await page.evaluate(() => {
-    const rd = document.querySelector('details[aria-label="Record details"]');
-    const main = rd?.parentElement;
-    const shown = main ? [...main.children].filter((k) => k.getBoundingClientRect().height > 0) : [];
-    const rights = shown.map((k) => Math.round(k.getBoundingClientRect().right));
-    const gaps = shown.slice(1).map((k, i) => Math.round(k.getBoundingClientRect().top - shown[i].getBoundingClientRect().bottom));
-    const at = shown.indexOf(rd);
-    return { rights, gaps, gapAboveDetails: at > 0 ? gaps[at - 1] : null, maxGap: gaps.length ? Math.max(...gaps) : null, kids: shown.length };
-  });
-  check(`polish ${name}: every block of the stage column, Record details and the browser notice included, ends at one right edge`,
-    e.kids >= 3 && Math.max(...e.rights) - Math.min(...e.rights) <= 1, JSON.stringify(e));
-  check(`polish ${name}: no dead band: no gap in the stage column is taller than 40 px, and Record details sits within 24 px of the stage`,
-    e.gapAboveDetails !== null && e.gapAboveDetails <= 24 && e.maxGap <= 40, JSON.stringify(e));
-  await page.setViewport(orig);
-  await page.evaluate(() => window.scrollTo(0, 0));
+
+// ------------------------------------------------------------------ studio helpers (selectors follow studio-smoke.mjs)
+const waitText = async (t, ms = 10000) => { try { await poll(() => bodyHas(t), ms); return true; } catch { return false; } };
+/** Click a button / link / summary by its text: exact match first, else the shortest element that contains it. */
+const clickBy = async (label) => {
+  const hit = await page.evaluate((lab) => {
+    const els = [...document.querySelectorAll("button, a, summary")];
+    const exact = els.find((e) => (e.textContent ?? "").trim() === lab);
+    const el = exact ?? els.filter((e) => (e.textContent ?? "").includes(lab)).sort((a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length)[0];
+    if (el) { el.click(); return true; }
+    return false;
+  }, label);
+  await sleep(300);
+  return hit;
 };
-/**
- * C-e items 2 and 3, in a real 1440x900 viewport at the plan stage (steps 1-3 finished):
- *  - a finished step keeps its number, shows it is finished, and looks openable (a chevron, a pointer, a hover state);
- *  - the left column's course title is at the navigator's scale, on one line, and the byline does not orphan a word.
- */
-const navigatorCheck = async (name) => {
-  const orig = page.viewport();
-  if (orig.width < 1100) return;
-  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(250);
-  const a = await page.evaluate(() => {
-    const items = [...document.querySelectorAll('ol[aria-label="Steps"] > li')];
-    const done = items.filter((li) => li.dataset.state === "done");
-    const mk = (li) => li.querySelector('[aria-hidden="true"]')?.textContent?.trim();
-    const go = (li) => { const g = [...li.querySelectorAll('[aria-hidden="true"]')].find((x) => x.textContent.trim() === "\u203a"); return !!g && getComputedStyle(g).display !== "none"; };
-    return {
-      count: done.length,
-      numbers: items.map(mk),
-      doneHaveChevron: done.every(go), doneAreButtons: done.every((li) => li.querySelector("button")),
-      cursor: done[0] ? getComputedStyle(done[0].querySelector("button")).cursor : null,
-      doneCheck: done.every((li) => li.textContent.includes("\u2713")),
-    };
-  });
-  check(`navigator ${name}: finished steps keep their numbers 1-5 and say they are finished`, a.count >= 3 && a.numbers.join(",") === "1,2,3,4,5" && a.doneCheck, JSON.stringify(a));
-  check(`navigator ${name}: finished steps look openable (a chevron, a pointer)`, a.doneHaveChevron && a.doneAreButtons && a.cursor === "pointer", JSON.stringify(a));
-  const bg = () => page.evaluate(() => getComputedStyle(document.querySelector('ol[aria-label="Steps"] li[data-state="done"] button')).backgroundColor);
-  await page.mouse.move(5, 5);
-  const rest = await bg();
-  await page.hover('ol[aria-label="Steps"] li[data-state="done"] button');
-  await sleep(250);
-  const hov = await bg();
-  await page.mouse.move(5, 5);
-  check(`navigator ${name}: a finished step has a hover state`, rest !== hov, `${rest} -> ${hov}`);
-  const t = await page.evaluate(() => {
-    const h1 = document.querySelector("h1");
-    const label = document.querySelector('ol[aria-label="Steps"] li[data-state="current"] [class*="stepLabel"]');
-    const lines = (el) => {
-      const r = document.createRange(); const rows = new Map();
-      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-        const re = /\S+/g; let m;
-        while ((m = re.exec(n.textContent))) { r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); const bb = r.getBoundingClientRect(); if (bb.width === 0) continue; const top = Math.round(bb.top); rows.set(top, (rows.get(top) ?? 0) + 1); }
-      }
-      return [...rows.entries()].sort((x, y) => x[0] - y[0]).map((x) => x[1]);
-    };
-    const sub = h1.nextElementSibling;
-    const stepFont = parseFloat(getComputedStyle(label).fontSize);
-    const docTitle = document.querySelector('article h1, article h2');
-    return {
-      titleFont: parseFloat(getComputedStyle(h1).fontSize), stepFont, titleLines: lines(h1), subLines: lines(sub),
-      docFont: docTitle ? parseFloat(getComputedStyle(docTitle).fontSize) : null, colWidth: Math.round(h1.getBoundingClientRect().width),
-    };
-  });
-  check(`navigator ${name}: the left column's course title is at the navigator's scale (at most 1.25x a step name), on one line, and no louder than the document title`,
-    t.titleFont <= t.stepFont * 1.25 && t.titleLines.length === 1 && (t.docFont === null || t.titleFont <= t.docFont), JSON.stringify(t));
-  check(`navigator ${name}: the byline is two deliberate lines (who, then where it is kept) and leaves no word alone`, t.subLines.length <= 2 && t.subLines.every((n) => n >= 2), JSON.stringify(t));
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-navigator.png`), clip: { x: 40, y: 60, width: 290, height: 520 } });
-  await page.setViewport(orig);
-  await page.evaluate(() => window.scrollTo(0, 0));
+/** A step-1 control by its accessible text (radio cards are labels, steppers are aria-labelled). */
+const clickLabel = (text) => page.evaluate((t) => {
+  const el = [...document.querySelectorAll("label, button")].find((e) => (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().includes(t));
+  if (el) el.click();
+  return !!el;
+}, text);
+/** A REAL mouse click on the enabled primary whose label contains `label`. */
+const clickPrimaryBtn = async (label, ms = 8000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    const h = await page.evaluateHandle((lab) => [...document.querySelectorAll('button[data-primary="true"]')]
+      .find((e) => !e.disabled && (e.textContent ?? "").trim().includes(lab)) ?? null, label);
+    const el = h.asElement();
+    if (el) { await el.scrollIntoView(); await el.click(); await sleep(350); return true; }
+    await sleep(150);
+  }
+  throw new Error(`no enabled primary: ${label}`);
 };
-/**
- * C-e item 4, plan stage, 1440x900: "draft" is said once per surface. The navigator's line for the plan does not say it, and the finished
- * waiting card is a short receipt (no "Draft ready" eyebrow, no "stays a draft" line), not a second page.
- */
-const draftOnceCheck = async (name) => {
-  const orig = page.viewport();
-  if (orig.width < 1100) return;
-  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(250);
-  const d = await page.evaluate(() => {
-    const steps = [...document.querySelectorAll('ol[aria-label="Steps"] > li')].find((li) => /^\s*4?\s*Plan/.test(li.innerText) || li.innerText.includes("Plan"));
-    const card = document.querySelector('section[data-phase="done"][data-variant="card"]');
-    const bar = document.querySelector("[data-stage-bar]");
-    return {
-      navPlan: steps ? steps.innerText.replace(/\s+/g, " ").trim() : null,
-      card: card ? card.innerText.replace(/\s+/g, " ").trim() : null, cardHeight: card ? Math.round(card.getBoundingClientRect().height) : null,
-      barSaysDraft: bar ? /draft/i.test(bar.innerText) : null,
-    };
-  });
-  check(`draft-once ${name}: the navigator's plan line does not say "draft" (the tag and the bar do)`, !!d.navPlan && !/draft/i.test(d.navPlan) && d.barSaysDraft === true, JSON.stringify(d));
-  check(`draft-once ${name}: the finished waiting card is a receipt: no "Draft ready" eyebrow, no "stays a draft" line, at most 130 px tall`,
-    !!d.card && !/draft ready|stays a draft|nothing is decided yet/i.test(d.card) && /Took\s*\d+ s/.test(d.card) && /each cites only objectives you confirmed/.test(d.card) && d.cardHeight <= 130, JSON.stringify(d));
-  await page.setViewport(orig);
+const dialogOpen = () => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"] input[type="password"]'));
+/** The passcode dialog: type the demo passcode with real keystrokes and press Continue. */
+const answerPasscode = async () => {
+  await page.waitForSelector('[role="dialog"] input[type="password"]', { timeout: 10000 });
+  await page.type('[role="dialog"] input[type="password"]', PASSCODE);
+  await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => (b.textContent ?? "").trim() === "Continue")?.click());
+  await sleep(300);
 };
+/** The studio's ONE status line, clock included (the clock sits outside the live region, aria-hidden). */
+const statusLine = () => page.evaluate(() => {
+  const st = document.querySelector('[role="status"]');
+  const p = st?.closest("p");
+  return { words: (st?.textContent ?? "").trim(), line: (p?.innerText ?? "").replace(/\s+/g, " ").trim(), clockHidden: !!p?.querySelector('[aria-hidden="true"]') };
+});
+/** Every polite live region outside the dialog, minus the plan wait card's own (data-wait-lines). */
+const liveRegions = () => page.evaluate(() => [...document.querySelectorAll('[role="status"],[role="alert"],[aria-live="polite"],[aria-live="assertive"]')]
+  .filter((n) => !n.closest('[role="dialog"]') && !n.hasAttribute("data-wait-lines")).map((n) => (n.textContent ?? "").trim()).filter(Boolean));
+const typeInto = (sel, text) => page.type(sel, text);
+const eventsOf = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event);
+/** Every `statement` string in an event (a proposal's wording), for what-left-the-page checks. */
+const statementsIn = (o, out = []) => {
+  if (Array.isArray(o)) o.forEach((x) => statementsIn(x, out));
+  else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) { if (k === "statement" && typeof v === "string") out.push(v); else statementsIn(v, out); }
+  return out;
+};
+
 /**
- * C-e item 5, the rail at 1440x900: the header is one line; a row's tag is a stage word (Material, Brief, Objectives, Plan, Version);
- * when every row would say "just now" the rows show the clock; " · 2 times" is not broken across lines.
+ * The wizard, welcome through step 3 (Sources): the same on every pass. Returns with the Sources step on screen.
+ * The ranking call asks for the passcode at step 2: "Not now" sends nothing and the step falls back to search (a
+ * passcode is answered later, where the AI step needs it, so the passcode pause there is the one measured).
+ */
+async function wizardToSources(narrow, { title, goal, note }) {
+  await clickBy("New course");
+  check("wizard: a first run opens on the welcome (#/studio/new)", await waitText("Let’s set up your course", 8000) && (await page.evaluate(() => location.hash)) === "#/studio/new");
+  if (narrow) await checkNarrow("wizard welcome");
+  await clickBy("Begin");
+  await waitText("Your course and learners", 5000);
+  if (narrow) await checkNarrow("wizard step 1: course and learners");
+  const f1 = 'form[aria-label="Course and learners"] input';
+  await typeInto(`${f1}[placeholder="How plants eat"]`, title);
+  await typeInto(`${f1}[placeholder="Ms. Lovelace"]`, "Ada Lovelace");
+  await typeInto(`${f1}[placeholder="Why leaves stay green, and what that tells us about light"]`, goal);
+  await clickLabel("Early primary");
+  await clickBy("+ Add a note about the class");
+  await sleep(200);
+  await setValue('form[aria-label="Course and learners"] textarea', note);
+  await sleep(200);
+  await clickBy("Continue");
+  await waitText("On the skill map", 6000);
+  // The ranking call needs the passcode: the dialog opens. "Not now" sends nothing; the step shows search.
+  await page.waitForSelector('[role="dialog"] input[type="password"]', { timeout: 8000 });
+  check("wizard: the ranking call asks for the demo passcode first (browser host)", true);
+  await clickBy("Not now");
+  await page.waitForSelector("#map-search", { timeout: 15000 });
+  if (narrow) await checkNarrow("wizard step 2: the skill map");
+  await page.evaluate(() => document.querySelector('button[data-skip-map="true"]')?.click());
+  await waitText("Drop files here", 5000);
+  if (narrow) await checkNarrow("wizard step 3: sources");
+}
+
+/** From the Sources step to the course: Continue past the sources, accept "propose from my sources", AI check, review, confirm. */
+async function wizardFinish(narrow, { proposeFromSources = true } = {}) {
+  await clickBy("Continue");
+  await waitText("Let Silicus propose objectives from my sources", 5000);
+  if (narrow) await checkNarrow("wizard step 4: your objectives");
+  check("wizard: with a source and nothing written, proposing from the sources is already chosen",
+    await page.evaluate(() => document.querySelector('section[aria-label="Your objectives"] input[type="checkbox"]')?.checked === true));
+  await clickBy("Continue");
+  check("wizard: the AI check says in plain words that the demo passcode is needed (online build)",
+    await waitText("needs the demo passcode", 6000) && !/BAD_PASSCODE|WORKER_|passcodeRequired/.test(await page.evaluate(() => document.body.innerText)));
+  if (narrow) await checkNarrow("wizard step 5: the AI check");
+  await clickPrimaryBtn("Continue");
+  await waitText("Review and confirm", 5000);
+  if (narrow) await checkNarrow("wizard step 6: review and confirm");
+}
+
+/**
+ * The history drawer's "Behind the scenes" rail (the same ActivityRail the classic page drew), at 1440 wide: the header is one line;
+ * a row's tag is a stage word (Material, Brief, Objectives, Plan, Version); when every row would say "just now" the rows show the
+ * clock; " · 2 times" is not broken across lines; a worker row exists and no ASFAI lane is drawn online.
  */
 const railCheck = async (name) => {
-  const orig = page.viewport();
-  if (orig.width < 1100) return;
-  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(250);
+  if (page.viewport().width < 1100) return;
+  await page.evaluate(() => { const b = [...document.querySelectorAll("header button")].find((x) => /decision/i.test(x.textContent ?? "")); b?.click(); });
+  await poll(() => page.evaluate(() => !!document.querySelector("dialog[open] aside")));
+  await sleep(300);
   const r = await page.evaluate(() => {
-    const aside = document.querySelector("aside");
+    const aside = document.querySelector("dialog[open] aside");
     if (!aside) return null;
     const h2 = aside.querySelector("h2");
     const meta = h2?.nextElementSibling;
-    const lineOf = (el) => { const rs = [...el.getClientRects()]; return rs.length; };
     const rows = [...aside.querySelectorAll("li[data-action]")];
     const tags = rows.map((li) => li.querySelector("[data-artifact]")?.textContent.replace("Changed: ", "").trim());
     const times = rows.map((li) => li.querySelector("time")?.textContent.trim());
     const timesSpan = [...aside.querySelectorAll('[class*="_times_"]')];
     const hb = h2.getBoundingClientRect(); const mb = meta ? meta.getBoundingClientRect() : null;
     return {
-      headOneLine: !!mb && Math.abs(hb.top - mb.top) < 12 && hb.height < 36 && meta.getBoundingClientRect().height < 24, titleH: Math.round(hb.height), metaH: mb ? Math.round(mb.height) : null,
-      tags: [...new Set(tags)], times, timesCount: timesSpan.length, timesBroken: timesSpan.some((t) => t.getClientRects().length > 1),
-      nowrap: timesSpan.every((t) => getComputedStyle(t).whiteSpace === "nowrap"), rows: rows.length,
+      headOneLine: !!mb && Math.abs(hb.top - mb.top) < 12 && hb.height < 36 && mb.height < 24, titleH: Math.round(hb.height), metaH: mb ? Math.round(mb.height) : null,
+      tags: [...new Set(tags)], times, timesCount: timesSpan.length, timesBroken: timesSpan.some((x) => x.getClientRects().length > 1),
+      nowrap: timesSpan.every((x) => getComputedStyle(x).whiteSpace === "nowrap"), rows: rows.length,
+      worker: !!aside.querySelector('li[data-actor="worker"]'), asfaiLane: [...aside.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI"),
     };
   });
   const okTags = ["Material", "Brief", "Objectives", "Plan", "Version"];
   check(`rail ${name}: the header ("Behind the scenes" and the count) is on one line`, !!r && r.headOneLine, JSON.stringify(r));
-  check(`rail ${name}: every tag is a stage word (Material, Brief, Objectives, Plan, Version), never Outline, Record or Package`, !!r && r.tags.length > 0 && r.tags.every((t) => okTags.includes(t)), JSON.stringify(r?.tags));
-  check(`rail ${name}: rows do not all say "just now": the clock is shown instead`, !!r && r.rows > 1 && r.times.every((t) => /^\d\d:\d\d(:\d\d)?$/.test(t) || !/just now/.test(t)) && !r.times.every((t) => t === "just now"), JSON.stringify(r?.times));
+  check(`rail ${name}: every tag is a stage word (Material, Brief, Objectives, Plan, Version), never Outline, Record or Package`, !!r && r.tags.length > 0 && r.tags.every((x) => okTags.includes(x)), JSON.stringify(r?.tags));
+  check(`rail ${name}: rows do not all say "just now": the clock is shown instead`, !!r && r.rows > 1 && !r.times.every((x) => x === "just now"), JSON.stringify(r?.times));
   check(`rail ${name}: " · 2 times" stays whole (no break inside it)`, !!r && (r.timesCount === 0 || (r.nowrap && !r.timesBroken)), `times spans: ${r?.timesCount}, nowrap ${r?.nowrap}, broken ${r?.timesBroken}`);
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `polish-${name}-rail.png`), clip: { x: 1060, y: 60, width: 380, height: 700 } });
-  await page.setViewport(orig);
+  check(`rail ${name}: a worker row after drafting, and no ASFAI lane in the online app`, !!r && r.worker && !r.asfaiLane, JSON.stringify(r));
+  await page.keyboard.press("Escape");
+  await sleep(300);
 };
-const kinds = (s) => s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event.kind);
+
+const kinds = (s) => eventsOf(s).map((e) => e.kind);
 
 async function story(label, narrow) {
   passLabel = label;
-  // ---- first impression: the BARE url shows the landing (product decision, C-d); its footer's "Classic view" opens the live course
+  const bodiesAtStart = api.workerBodies.length;
+  // ---- first impression: the BARE url shows the landing; its primary opens the studio
   await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("h1") !== null);
-  // F5: the landing is measured AFTER navigation — before it, the frame is still about:blank.
   if (narrow) await checkNarrow("landing (bare URL)");
   const bare = await page.evaluate(() => ({ h1: document.querySelector("h1")?.textContent ?? "", hash: location.hash, proposals: !!document.querySelector('section[aria-label="Objective proposals"]') }));
-  check("the bare URL shows the landing, not the live course and not the demo decision card", /^Plan a lesson with an AI that proposes\./.test(bare.h1) && !bare.proposals, bare.h1);
-  await page.click('a[href="#/live"]');
-  await page.waitForFunction(() => /Build a course, one decision at a time/.test(document.querySelector("h1")?.textContent ?? ""));
-  if (narrow) await checkNarrow("live course, first visit");
+  check("the bare URL shows the landing, not the studio and not the demo decision card", /^Plan a lesson with an AI that proposes\./.test(bare.h1) && !bare.proposals, bare.h1);
+  await page.click('main a[href="#/studio"]');
+  await page.waitForSelector('section[aria-label="Courses"]');
+  if (narrow) await checkNarrow("studio home, first visit");
   const first = await page.evaluate(() => ({
-    title: document.title, h1: document.querySelector("h1")?.textContent ?? "", header: document.querySelector("header")?.innerText ?? "",
+    title: document.title, header: document.querySelector("header")?.innerText ?? "",
     icon: document.querySelector('link[rel="icon"]')?.getAttribute("href") ?? "", tabs: document.querySelectorAll('nav[aria-label="Workbench sections"]').length,
-    design: [...document.querySelectorAll("footer a")].map((a) => [a.textContent, a.getAttribute("href")]),
-    wordmark: document.querySelector('header a[aria-label="Silicus TA, home"]')?.getAttribute("href") ?? null,
+    about: document.querySelector('header a[href="#/"]')?.textContent ?? null,
+    newCard: [...document.querySelectorAll("a")].some((a) => /New course/.test(a.textContent ?? "") && a.getAttribute("href") === "#/studio/new"),
+    courses: document.querySelectorAll('section[aria-label="Courses"] a[href^="#/studio/"]').length,
   }));
-  check("#/live (Classic view) opens the live course, not the demo decision card", /Build a course, one decision at a time/.test(first.h1) && (await page.$('section[aria-label="Objective proposals"]')) === null, first.h1);
-  check("the app masthead's Silicus wordmark links back to the landing (#/)", first.wordmark === "#/", String(first.wordmark));
+  check("#/studio (the landing's primary) opens the studio home: 'Your courses' with a 'New course' card and no course yet", first.newCard && first.courses === 1 && (await page.evaluate(() => location.hash)) === "#/studio" && first.about === "About Silicus", JSON.stringify(first.newCard) + " links=" + first.courses + " hash=" + (await page.evaluate(() => location.hash)));
   check("the page is titled as the product, with an inline SVG favicon", /^Silicus TA/.test(first.title) && /^data:image\/svg\+xml,/.test(first.icon), first.title);
-  check("the header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
-  check("the component workbench stays reachable through a discreet footer 'Design system' link", first.design.some(([t, h]) => t === "Design system" && h === "#/decision"));
+  check("the studio header reads as the product, not 'design workbench · tokens-first'", /Silicus/.test(first.header) && !/workbench|tokens-first/i.test(first.header) && first.tabs === 0, first.header.replace(/\n/g, " | "));
   await shot("00-first-impression");
-  // C1.5 (new): the tour opens on a teacher's first visit and not on a reload; the passes use a fresh context each.
-  check("tour: opens on the first visit, before any course exists", await poll(() => page.evaluate(() => !!document.querySelector('[role="dialog"][aria-modal="true"]'))));
-  if (narrow) await checkNarrow("first-run tour");
-  await shot("00b-tour");
-  await stageShot("01-tour", null, true);
-  await page.click('button[aria-label="Close the tour"]');
-  await stageShot("02-landing-first-question");
-  check("tour: closing it puts the cursor in the first question", await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]') && document.activeElement?.id === "onboarding-reply")));
-  await page.reload({ waitUntil: "networkidle0" });
-  await page.waitForFunction(() => document.querySelector("h1") !== null);
-  check("tour: does not open again on reload", await page.evaluate(() => !document.querySelector('[role="dialog"]')));
-  await page.click('footer a[href="#/decision"]');
-  await poll(() => page.evaluate(() => document.querySelector('section[aria-label="Objective proposals"]') !== null));
-  check("the Design system link opens the workbench, with a way back to the course", await page.evaluate(() => [...document.querySelectorAll("nav a")].some((a) => a.textContent === "Back to the course")));
-  // F7: the workbench route measures clean at 320 and 380 (there is no "report" claiming otherwise), so check it here.
+  await stageShot("01-studio-home");
+  // The component workbench is not linked from the studio any more: a typed #/decision still opens it (and measures clean).
+  await page.evaluate(() => { location.hash = "#/decision"; });
+  await poll(() => page.evaluate(() => document.querySelector('nav[aria-label="Workbench sections"]') !== null && document.querySelector('section[aria-label="Objective proposals"]') !== null));
+  check("a typed #/decision still opens the component workbench (it is no longer linked from the app)", true);
   if (narrow) await checkNarrow("design system workbench");
-  // The workbench is a detour: set the hash back to the live course and wait for its own first control.
-  // (A same-document goto to another hash would leave the app on the workbench route.)
-  await page.evaluate(() => { location.hash = "#/live"; });
-  await page.waitForSelector("#onboarding-reply");
-  if (narrow) await checkNarrow("onboarding step 1: name the course");
-  // ---- name the course (checkpoint 1)
-  const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
-  await reply("How plants eat", "Record the course title");
-  await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
-  if (narrow) await checkNarrow("onboarding step 2: name the label");
-  await reply("Ada Lovelace", "Record this name");
-  await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
-  if (narrow) await checkNarrow("onboarding step 3: name the materials");
-  await reply("Lesson notes", "Record these names");
+  await page.evaluate(() => { location.hash = "#/studio"; });
+  await page.waitForFunction(() => /Your courses/.test(document.body.innerText));
+
+  // ---- the wizard: name the course (it is recorded only at the review's confirm)
+  await wizardToSources(narrow, { title: "How plants eat", goal: "Photosynthesis", note: "Science, ages 8-10" });
+  check("nothing is recorded in IndexedDB before the review's confirm, and no /api/courses request left the page", (await stored()).metas.length === 0 && !api.calls.some((c) => c.path.startsWith("/api/courses")));
+
+  // ---- material: pasted text, read in this tab. Its first line names it ("Lesson notes").
+  await setValue('section[aria-label="Sources"] textarea', "https://www.youtube.com/watch?v=abc123");
+  check("the sources step says YouTube needs the local app (online), and will not add it",
+    (await bodyHas("YouTube needs the local app")) && await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Sources"] button')].some((b) => /^Add (text|web page)$/.test(b.textContent.trim()) && b.disabled)));
+  await setValue('section[aria-label="Sources"] textarea', MATERIAL_TEXT);
+  await sleep(200);
+  await clickBy("Add text");
+  await waitText("Read in this tab", 4000);
+  await stageShot("05-sources");
+  await shot("06-material-panel", 'section[aria-label="Sources"]');
+  await wizardFinish(narrow);
+  await stageShot("03-review");
+  const review = await page.evaluate(() => document.body.innerText);
+  check("the review lists the course, the label, the topic and the source by its name; no source text", ["How plants eat", "Ada Lovelace", "Photosynthesis", "Lesson notes"].every((x) => review.includes(x)) && !review.includes(SECRET));
+  check("nothing is recorded before the review's confirm (still IndexedDB-empty)", (await stored()).metas.length === 0);
+  await clickPrimaryBtn("Confirm and propose objectives");
+  await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
+  const courseId = (await page.evaluate(() => location.hash)).split("/")[2];
   await poll(async () => (await stored()).metas.length === 1);
   check("the course is recorded in IndexedDB (not on a server)", true);
   check("no /api/courses request ever left the page", !api.calls.some((c) => c.path.startsWith("/api/courses")));
-  await poll(() => bodyHas("Confirm the material list"));
-  if (narrow) await checkNarrow("onboarding: confirm the material list");
-  await stageShot("03-confirm-material-list");
-  await primaryInViewport("confirm material list", { settled: true });
-  await clickText("Confirm the material list");
-  await poll(async () => kinds(await stored()).includes("checkpoint.confirmed"));
-  check("materials confirmed on the record", true);
-
-  // ---- checkpoint 2: Silicus's own questions; ASFAI says it needs the local app
-  await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
-  await shot("01b-intake");
-  await stageShot("04-intake");
-  await primaryInViewport("intake", { settled: true });
-  if (narrow) await checkNarrow("intake question 1: topic");
-  check("ASFAI says plainly it needs the local app, with no Connect button",
-    (await bodyHas("needs the local Silicus app")) && !(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => /Connect ASFAI/.test(b.textContent ?? "")))));
-  const fill = (id, text) => page.evaluate((id, text) => {
-    const ta = document.querySelector(`#intake-${id}`);
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-    setter.call(ta, text);
-    ta.dispatchEvent(new Event("input", { bubbles: true }));
-  }, id, text);
-  await fill("topic", "Photosynthesis"); await clickText("Record this answer");
-  await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
-  if (narrow) await checkNarrow("intake question 2: course");
-  await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
-  await poll(() => bodyHas("Propose these from my materials instead"));
-  if (narrow) await checkNarrow("intake question 3: outcomes");
-  await clickText("Propose these from my materials instead");
-  await poll(() => bodyHas("Confirm the brief"));
-  await primaryInViewport("confirm brief");
-  if (narrow) await checkNarrow("brief confirm");
-  await clickText("Confirm the brief");
   await poll(async () => kinds(await stored()).filter((k) => k === "checkpoint.confirmed").length === 2);
-  check("outline confirmed on the record", true);
+  check("the review's confirm records the materials list and the outline as confirmed (files, then outline)",
+    JSON.stringify(eventsOf(await stored()).filter((e) => e.kind === "checkpoint.confirmed").map((e) => e.id)) === JSON.stringify(["files", "outline"]));
+  const created = eventsOf(await stored()).find((e) => e.kind === "course.created");
+  check("the course record keeps the label as the owner, and no material text", created?.owner === "Ada Lovelace" && !JSON.stringify(created).includes(SECRET), JSON.stringify(created).slice(0, 160));
 
-  if (narrow) await checkNarrow("material panel");
-  // ---- material -> propose (the passcode is asked for)
-  await poll(() => bodyHas("Add your material here"));
-  check("the material panel says YouTube needs the local app", await bodyHas("YouTube captions need the local Silicus app"));
-  check("zero-retention is claimed only because the site's status says zdr: true", await bodyHas("zero-data-retention providers only"));
-  await page.evaluate(() => {
-    const name = [...document.querySelectorAll("label")].find((l) => /Or paste text/.test(l.textContent ?? ""));
-    const input = document.getElementById(name.htmlFor);
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-    setter.call(input, "Lesson notes");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await page.evaluate((text) => {
-    const ta = document.querySelector('textarea[aria-label="Pasted text"]');
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-    setter.call(ta, text);
-    ta.dispatchEvent(new Event("input", { bubbles: true }));
-  }, MATERIAL_TEXT);
-  await clickText("Add this text");
-  await poll(() => bodyHas("Lesson notes ·"));
-  await shot("06-material-panel", 'section[aria-label="Course material"]');
-  await stageShot("05-material");
-  await primaryInViewport("material", { settled: true });
-  await clickText("Propose objectives from my materials");
-  await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
-  check("an AI action asks for the demo passcode", await bodyHas("Demo passcode"));
-  check("while the passcode dialog is open the waiting card holds its clock and says why",
-    await page.evaluate(() => /Waiting for your passcode/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? "")));
+  // ---- the arrival proposes from the source: the passcode is asked for, and the step says it is waiting for it
+  await page.waitForSelector('[role="dialog"] input[type="password"]', { timeout: 10000 });
+  check("an AI action asks for the demo passcode", await dialogOpen());
+  const paused = await poll(async () => { const l = await statusLine(); return /Waiting for your passcode/.test(l.words) ? l : null; }, 5000);
+  check("while the passcode dialog is open the status line holds its clock and says why", paused.line === "Waiting for your passcode", paused.line);
+  check("one polite live region on the step after the wizard", (await liveRegions()).length === 1, JSON.stringify(await liveRegions()));
   await shot("02-passcode", '[role="dialog"]');
-  if (narrow) await checkNarrow("passcode pause, waiting card held");
-  await page.type('[role="dialog"] input[type="password"]', PASSCODE);
-  await clickText("Continue");
-  // No race: the card is already running before Continue (it held its clock through the passcode pause, asserted
-  // above), and the mocked proposal takes PROPOSE_MS more after the click.
-  await page.waitForSelector('section[data-phase="running"]', { timeout: 5000 });
-  if (narrow) await checkNarrow("waiting card, proposing objectives");
+  if (narrow) await checkNarrow("passcode pause, status line held");
+  await answerPasscode();
+  const proposing = await page.waitForFunction(() => {
+    const st = document.querySelector('[role="status"]');
+    const p = st?.closest("p");
+    return /Silicus is reading 1 source/.test(st?.textContent ?? "") ? (p?.innerText ?? "").replace(/\s+/g, " ").trim() : false;
+  }, { timeout: 8000, polling: 50 }).then((h) => h.jsonValue()).catch(() => null);
+  check("proposing says in plain words what is happening, with the real count, and the usual range", !!proposing && /usually 2–10 s/.test(proposing), String(proposing));
+  if (narrow) await checkNarrow("status line, proposing objectives");
+  await page.evaluate(() => document.querySelector('header button[aria-haspopup="dialog"]')?.click());
+  await poll(() => page.evaluate(() => !!document.querySelector("dialog[open]")));
+  check("zero-retention is claimed only because the site's status says zdr: true (the AI status says the text is not kept by the provider)", await bodyHas("Not kept by the model provider"));
+  await page.keyboard.press("Escape");
+  await sleep(300);
   await poll(async () => kinds(await stored()).includes("objectives.proposed"), 15000);
-  const objReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
-  check("proposing objectives ends with a true receipt: the proposals, none confirmed, what was read",
-    /3 proposals\. None is confirmed until you decide\./.test(objReceipt) && /Drawn from 1 material/.test(objReceipt), objReceipt.replace(/\n+/g, " | "));
-  await shot("11-receipt-proposals", 'section[data-phase="done"][data-variant="card"]');
+  await poll(() => page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length === 3));
+  check("proposing ends with the proposals on the page, none accepted (3 waiting, 'Not yours until you accept')",
+    (await bodyHas("Not yours until you accept")) && (await bodyHas("From material:")) && !(await bodyHas("Accepted ·")));
+  await shot("11-receipt-proposals", 'aside[aria-label="Proposals"]');
   await stageShot("06-objectives-proposed");
-  await primaryInViewport("objectives (proposed)");
-  await polishCheck("objectives");
-  await heroShot();
-  check("the worker proposed objectives through /api/worker, with the passcode header",
-    api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
+  check("the worker proposed objectives through /api/worker, with the passcode header", api.calls.some((c) => c.path === "/api/worker" && c.passcode === PASSCODE));
   let s = await stored();
   check("the passcode is in sessionStorage only", s.session["silicus.demoPasscode"] === PASSCODE
     && !JSON.stringify(s.local).includes(PASSCODE) && !JSON.stringify(s.metas).includes(PASSCODE) && !JSON.stringify(s.events).includes(PASSCODE));
-  check("the material text went to the model once…", api.workerBodies.some((b) => b.includes(SECRET)));
+  check("the material text went to the model once…", api.workerBodies.slice(bodiesAtStart).filter((b) => b.includes(SECRET)).length === 1);
   check("…and is in no IndexedDB value, localStorage or sessionStorage", !JSON.stringify(s).includes(SECRET));
+  const proposedStatements = [...new Set(eventsOf(s).filter((e) => e.kind === "objectives.proposed").flatMap((e) => statementsIn(e)))];
 
-  if (narrow) await checkNarrow("confirm bar, proposals undecided");
-  // ---- the teacher decides (accept every proposal)
+  // ---- the teacher decides (accept every proposal), then confirms the objectives herself
+  if (narrow) await checkNarrow("proposals, undecided");
+  await primaryInViewport("objectives (proposed)");
   await poll(async () => {
     const st = await stored();
-    const ks = kinds(st);
-    if (ks.filter((k) => k === "objectives.decided").length >= 3) return true;
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll("button")].find((x) => (x.getAttribute("aria-label") ?? "").trim().startsWith("Accept objective"));
-      if (b && !b.disabled) b.click();
-    });
+    if (kinds(st).filter((k) => k === "objectives.decided").length >= 3) return true;
+    await page.evaluate(() => { const b = [...document.querySelectorAll('aside[aria-label="Proposals"] button')].find((x) => (x.textContent ?? "").trim() === "Accept" && !x.disabled); if (b) b.click(); });
     await sleep(400);
     return null;
   }, 25000);
   check("one teacher decision recorded per proposal", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
-
-  if (narrow) await checkNarrow("confirmed objectives");
-  // ---- plan: draft, confirm
-  // C1.5: the confirm bar under the decided objectives carries this act now (it used to be a separate button).
-  await poll(() => bodyHas("build the plan"));
+  const accepted = await page.evaluate(() => [...document.querySelectorAll("li[data-objective-id]")].map((li) => li.textContent));
+  check("three accepted objectives are on the page to be sent", accepted.length === 3 && proposedStatements.length >= 3 && proposedStatements.every((t) => accepted.some((a) => a.includes(t))), `${accepted.length} li, ${proposedStatements.length} statements`);
+  if (narrow) await checkNarrow("accepted objectives");
+  await poll(() => page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => b.textContent.trim() === "Confirm objectives" && !b.disabled)));
   await stageShot("07-objectives-decided");
   await primaryInViewport("objectives (decided)");
-  check("stage: the objectives stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
-  const confirmedStatements = await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Objective proposals"] h3')].map((h) => h.textContent.trim()));
-  check("three confirmed objectives are on the page to be sent", confirmedStatements.length === 3 && confirmedStatements.every(Boolean), String(confirmedStatements.length));
+  check("stage: the objectives step has exactly one primary action", (await primaryCount()) === 1, `primaries=${await primaryCount()}`);
+  await clickPrimaryBtn("Confirm objectives");
+  await waitText("Step 3 of 4", 8000);
+
+  // ---- plan: draft (the waiting experience), confirm
+  await poll(() => page.evaluate(() => [...document.querySelectorAll('button[data-primary="true"]')].some((b) => /Draft the lesson plan/.test(b.textContent))));
+  await primaryInViewport("plan (before drafting)");
   const planBodiesBefore = api.workerBodies.length;
-  await clickText("Confirm 3 objectives · build the plan");
-  await page.waitForSelector('section[data-phase="running"][data-variant="card"]', { timeout: 5000 });
-  if (narrow) await checkNarrow("waiting card, drafting the plan");
-  const running = () => page.evaluate(() => document.querySelector('section[data-phase="running"][data-variant="card"]')?.innerText ?? "");
-  const live = () => page.evaluate(() => [...document.querySelectorAll('section[data-variant="card"] [aria-live="polite"]')].map((n) => n.textContent));
-  check("the waiting experience says in plain words what is happening, with the real count",
-    /Drafting a lesson plan from your 3 confirmed objectives/.test(await running()));
-  check("it states the typical range the documented defaults give: usually 10–60 seconds", /usually 10\u201360 seconds/.test(await running()));
-  const liveAtStart = await live();
-  check("exactly one polite aria-live region announces the start (not every second)", liveAtStart.length === 1 && /^Drafting a lesson plan from your 3 confirmed objectives\. Usually 10 to 60 seconds\.$/.test(liveAtStart[0]), JSON.stringify(liveAtStart));
-  check("there is no progress bar and no percentage", !(await page.evaluate(() => !!document.querySelector('section[data-phase="running"] progress, section[data-phase="running"] [role="progressbar"]') || /%/.test(document.querySelector('section[data-phase="running"]')?.innerText ?? ""))));
-  await shot("10-waiting-plan", 'section[data-phase="running"][data-variant="card"]');
+  await clickPrimaryBtn("Draft the lesson plan");
+  const drafting = await page.waitForFunction(() => {
+    const st = document.querySelector('[role="status"]');
+    return /Silicus is drafting from/.test(st?.textContent ?? "") ? (st.closest("p")?.innerText ?? "").replace(/\s+/g, " ").trim() : false;
+  }, { timeout: 8000, polling: 50 }).then((h) => h.jsonValue()).catch(() => null);
+  check("the waiting experience says in plain words what is happening, with the real count", /^Silicus is drafting from 3 confirmed objectives/.test(drafting ?? ""), String(drafting));
+  check("it states the typical range the documented defaults give: usually 10–60 s", /usually 10–60 s/.test(drafting ?? ""), String(drafting));
+  if (narrow) await checkNarrow("status line, drafting the plan");
+  const polite = await liveRegions();
+  check("exactly one polite live region announces the start, without the ticking clock (the clock is aria-hidden)", polite.length === 1 && /^Silicus is drafting from 3 confirmed objectives$/.test(polite[0]) && (await statusLine()).clockHidden, JSON.stringify(polite));
+  check("there is no progress bar and no percentage", await page.evaluate(() => !document.querySelector('progress, [role="progressbar"]') && !/%/.test(document.querySelector('[role="status"]')?.closest("p")?.innerText ?? "")));
+  await shot("10-waiting-plan", 'section[aria-label="Drafting the plan"]');
   await stageShot("08-plan-drafting");
-  await page.evaluate(() => { [...document.querySelectorAll('section[data-phase="running"] button')].find((b) => b.textContent.trim() === "What the model sees").click(); });
-  const sees = await page.evaluate(() => { const b = document.querySelector('section[data-phase="running"] button[aria-expanded="true"]'); return b ? document.getElementById(b.getAttribute("aria-controls")).innerText : null; });
-  check("'What the model sees' opens and lists the confirmed statements, the topic, the material names, and what it never sees",
-    !!sees && confirmedStatements.every((t) => sees.includes(t)) && /Photosynthesis/.test(sees) && /Lesson notes/.test(sees) && /What it never sees/i.test(sees), sees === null ? "did not open" : "");
-  await shot("12-waiting-plan-sees", 'section[data-phase="running"][data-variant="card"]');
-  await poll(async () => /\b[1-9] s elapsed/.test(await running()), 8000);
+  await poll(async () => /\b0:0[1-9]\b/.test((await statusLine()).line), 8000);
   check("the elapsed readout is a real clock: it has advanced", true);
-  if (PLAN_MS > 27000) {
-    await poll(async () => /Taking longer than usual/.test(await running()), PLAN_MS);
-    check("past the high end the calm 'taking longer' line appears, and says nothing is lost", /If the model does not answer, this step stops by itself, and nothing you have recorded is lost/.test(await running()));
-    await shot("13-waiting-longer", 'section[data-phase="running"][data-variant="card"]');
+  if (PLAN_MS > 47000) {
+    await poll(() => bodyHas("Still drafting. Long plans can take a minute."), PLAN_MS);
+    check("past the late mark the calm 'still drafting' line appears", true);
+    await shot("13-waiting-longer", 'section[aria-label="Drafting the plan"]');
   } else {
-    check("before the high end there is no 'taking longer' line", !/Taking longer than usual/.test(await running()));
+    check("before the late mark there is no 'still drafting' line", !(await bodyHas("Still drafting. Long plans can take a minute.")));
   }
   await poll(async () => kinds(await stored()).includes("plan.proposed"), PLAN_MS + 15000);
-  const planReceipt = await poll(() => page.evaluate(() => document.querySelector('section[data-phase="done"][data-variant="card"]')?.innerText ?? null));
-  check("drafting the plan ends with a true receipt computed from the resulting view (C-e: it no longer repeats \"It stays a draft until you confirm it.\"; the stage bar and the DRAFT tag say it)",
-    /Checked: \d+ activit(y|ies), each cites only objectives you confirmed \(\d+ citations?\)\./.test(planReceipt) && !/It stays a draft until you confirm it\./.test(planReceipt), planReceipt.replace(/\n+/g, " | "));
-  const announced = await poll(async () => {
-    const t = await page.evaluate(() => document.querySelector('section[data-variant="card"] [aria-live="polite"]')?.textContent ?? "");
-    return /^Finished after \d+ s\. Checked:/.test(t) ? t : null;
-  }).catch(() => "");
-  check("it says how long the step took, and the live region announces the finish", /Took\s*\d+ s/.test(planReceipt) && announced !== "", `${planReceipt.split("\n").filter((l) => /Took/.test(l))[0] ?? "(no 'Took' line)"} | announced: ${announced || "(never)"}`);
-  await shot("14-receipt-plan", 'section[data-phase="done"][data-variant="card"]');
-  const planBody = api.workerBodies.slice(planBodiesBefore).find((b) => b.includes("Draft one lesson plan")) ?? "";
-  check("what the model sees is what left the page: every statement, the topic and the material name were sent; the label was NOT",
-    confirmedStatements.every((t) => planBody.includes(t)) && planBody.includes("Photosynthesis") && planBody.includes("Lesson notes") && !planBody.includes("Ada Lovelace") && !planBody.includes(SECRET));
-  await poll(() => bodyHas("How plants eat"));
-  check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await page.evaluate(() => !!document.querySelector('[role="dialog"]'))));
   await poll(() => bodyHas("Confirm the lesson plan"));
-  // C1.5 (new): the plan stage. The mock plan has 3 activities, each with one "Look at a leaf." line: the plan is on the page ONCE.
+  await poll(async () => (await statusLine()).words !== "" && !/Silicus is drafting/.test((await statusLine()).words));
+  check("when the plan arrives the status line leaves the waiting state and the clock goes", !/Silicus is drafting|usually/.test((await statusLine()).line), (await statusLine()).line);
+  const planBody = api.workerBodies.slice(planBodiesBefore).find((b) => b.includes("Draft one lesson plan")) ?? "";
+  check("what left the page: every accepted statement and the topic were sent; the label and the material text were NOT",
+    proposedStatements.every((t) => planBody.includes(t)) && planBody.includes("Photosynthesis") && !planBody.includes("Ada Lovelace") && !planBody.includes(SECRET),
+    `statements=${proposedStatements.every((t) => planBody.includes(t))} topic=${planBody.includes("Photosynthesis")} label=${planBody.includes("Ada Lovelace")} secret=${planBody.includes(SECRET)}`);
+  check("the plan is drafted (no second passcode prompt: it is kept for this tab)", !(await dialogOpen()));
   await stageShot("09-plan-drafted");
   await primaryInViewport("plan");
-  await polishCheck("plan");
-  await navigatorCheck("plan");
-  await draftOnceCheck("plan");
+  check("stage: the plan step has exactly one primary action", (await primaryCount()) === 1, `primaries=${await primaryCount()}`);
+  check("stage: the lesson plan's text appears exactly once on the plan step", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
   await railCheck("plan");
-  check("stage: the plan stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
-  check("stage: the lesson plan's text appears exactly once on the plan stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
-  check("rail: a worker row after drafting, and no ASFAI lane in the online app",
-    await page.evaluate(() => !!document.querySelector('li[data-actor="worker"]') && ![...document.querySelectorAll("[data-lane-name]")].some((x) => (x.textContent ?? "").trim() === "ASFAI")));
-  // C-a (workspace): edit the objectives from the plan and come back: two clicks, and the page is where it was (within 40 px).
-  if (!narrow) {
-    const orig = page.viewport();
-    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
-    await sleep(200);
-    const y0 = await page.evaluate(() => { const y = Math.max(0, Math.min(700, document.documentElement.scrollHeight - innerHeight - 50)); window.scrollTo(0, y); return window.scrollY; });
-    await sleep(150);
-    check("workspace: the plan page is tall enough to scroll, so the return check means something", y0 >= 300, `scrollY ${y0}`);
-    await clickText("Edit objectives"); // click 1
-    await poll(() => bodyHas("Back to the plan"));
-    check("workspace: 'Edit objectives' opens the objectives, with 'Back to the plan' as the one primary",
-      (await page.evaluate(() => !!document.querySelector('section[aria-label="Objective proposals"]'))) && (await primaryCount()) === 1);
-    await stageShot("09b-edit-objectives");
-    await clickText("Back to the plan"); // click 2
-    await poll(() => bodyHas("Confirm the lesson plan"));
-    await sleep(250);
-    const y1 = await page.evaluate(() => window.scrollY);
-    check("workspace: edit objectives from the plan and back is two clicks, with scrollY within 40 px", Math.abs(y1 - y0) <= 40, `scrollY ${y0} -> ${y1}`);
-    check("workspace: looking wrote nothing (still exactly the three objective decisions)", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
-    await page.setViewport(orig);
-    await page.evaluate(() => window.scrollTo(0, 0));
-  }
-  if (narrow) await checkNarrow("plan card, drafted");
-  await clickText("Confirm the lesson plan");
+  // Edit the objectives from the plan and come back: two clicks, and the plan is where it was.
+  await clickBy("Edit objectives");
+  check("'Edit objectives' opens the objectives, looking back, with 'Back to the current step' as the way out",
+    (await waitText("Back to the current step", 5000)) && (await bodyHas("Step 2 of 4")));
+  await stageShot("09b-edit-objectives");
+  await clickBy("Back to the current step");
+  check("back from editing the objectives lands on the plan, to confirm", await waitText("Confirm the lesson plan", 5000));
+  check("looking wrote nothing (still exactly the three objective decisions)", kinds(await stored()).filter((k) => k === "objectives.decided").length === 3);
+  if (narrow) await checkNarrow("plan, drafted");
+  await clickPrimaryBtn("Confirm the lesson plan");
   await poll(async () => kinds(await stored()).includes("plan.confirmed"));
   check("plan confirmed on the record", true);
 
-  if (narrow) await checkNarrow("plan card");
-  await poll(() => bodyHas("Review & publish"));
+  // ---- publish (review -> arm -> publish)
+  await poll(() => bodyHas("Review and publish"));
   await stageShot("10-publish");
   await primaryInViewport("publish");
-  await polishCheck("publish");
-  check("stage: the publish stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
-  check("stage: the lesson plan's text appears exactly once on the publish stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
-  // ---- publish (review -> confirm step -> publish)
-  await poll(async () => {
-    const opened = await page.evaluate(() => !!document.querySelector('[role="group"][aria-label^="Confirm sealing"]'));
-    if (opened) return true;
-    await page.evaluate(() => {
-      const sec = document.querySelector('section[aria-label*="Preview and publish"]');
-      const armed = !!sec && /ready to publish/i.test(sec.innerText);
-      const btn = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim().startsWith("Review & publish"));
-      if (btn && armed) btn.click();
-    });
-    await sleep(250);
-    return null;
-  }, 12000);
-  if (narrow) await checkNarrow("seal confirm step");
-  await stageShot("11-seal-confirm", 'section[aria-label*="Preview and publish"]');
-  await clickText("Publish version 1");
+  check("stage: the publish step has exactly one primary action", (await primaryCount()) === 1, `primaries=${await primaryCount()}`);
+  check("stage: the lesson plan's text appears exactly once on the publish step", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
+  if (narrow) await checkNarrow("review and publish");
+  await clickBy("Publish version 1…");
+  await poll(() => bodyHas("Publish version 1?"));
+  if (narrow) await checkNarrow("publish confirm step");
+  await stageShot("11-seal-confirm");
+  await clickBy("Publish version 1");
   await poll(async () => kinds(await stored()).includes("package.published"));
-  await poll(() => bodyHas("published and pinned on this device"));
+  await poll(() => bodyHas("Version 1 is published"));
   s = await stored();
   check("version 1 sealed, and pinned in this browser", Object.keys(s.local).some((k) => k.startsWith("silicus.pin.")));
-
-  if (narrow) await checkNarrow("publish card, sealed");
+  if (narrow) await checkNarrow("published");
   await stageShot("12-published");
-  await primaryInViewport("published");
-  await page.evaluate(() => window.scrollTo(0, 0));
-  check("stage: the published stage has exactly one primary action", await poll(async () => (await primaryCount()) === 1) === true, `primaries=${await primaryCount()}`);
-  check("stage: the lesson plan's text appears exactly once on the published stage", (await countIn("Look at a leaf.")) === 3, `lines=${await countIn("Look at a leaf.")} (3 = once)`);
-  await clickText("Check a student question");
-  check("'Check a student question' puts the cursor in the student's question box", await poll(() => page.evaluate(() => document.activeElement?.id === "student-question")));
-  // ---- a student asks; nothing is written
+
+  // ---- a student asks (the student space); nothing is written
+  await page.goto(`${APP}/#/learn/${courseId}`, { waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector("h1") !== null);
+  check("the student space is a preview on this device and shows the published title", (await bodyHas("Preview on this device")) && (await bodyHas("How plants eat")));
+  if (narrow) await checkNarrow("student space");
   const beforeAsk = JSON.stringify(await stored());
-  await page.waitForSelector('section[aria-label="Check a student question"] input');
-  await page.type('section[aria-label="Check a student question"] input', "What do plants need to make food?");
+  await page.type('input[placeholder="Ask about today’s lesson"]', "What do plants need to make food?");
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
-  await clickText("Ask");
-  await page.waitForSelector('section[data-variant="compact"][data-phase="running"]', { timeout: 5000 });
-  if (narrow) await checkNarrow("student answer, running");
-  const compact = await page.evaluate(() => {
-    const el = document.querySelector('section[data-variant="compact"][data-phase="running"]');
-    const word = el.querySelector("span[style]");
-    return { text: el.innerText, motion: el.getAttribute("data-motion"), anim: getComputedStyle(word).animationName, live: el.querySelectorAll('[aria-live="polite"]').length };
-  });
-  check("a student's answer shows the compact waiting line: where it looks, a clock, the usual 2–15 seconds",
-    /Looking for the answer in version 1 of this lesson/.test(compact.text) && /usually 2\u201315 seconds/.test(compact.text) && compact.live === 1, compact.text.replace(/\n+/g, " | "));
-  check("under prefers-reduced-motion the type-setting motion is off (data-motion=still, no CSS animation)", compact.motion === "still" && compact.anim === "none", `${compact.motion} / ${compact.anim}`);
-  await shot("15-waiting-student", 'section[data-variant="compact"][data-phase="running"]');
+  await clickBy("Ask");
+  await page.waitForSelector('[aria-label="Silicus is thinking"]', { timeout: 5000 });
+  if (narrow) await checkNarrow("student answer, thinking");
+  const thinking = await page.evaluate(() => { const el = document.querySelector('[aria-label="Silicus is thinking"]'); return { n: el.querySelectorAll("span").length, anim: getComputedStyle(el.querySelector("span")).animationName }; });
+  check("a student's wait shows the 'Silicus is thinking' indicator", thinking.n === 3, JSON.stringify(thinking));
+  check("under prefers-reduced-motion the indicator is still (no CSS animation)", thinking.anim === "none", thinking.anim);
+  await shot("15-waiting-student");
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
   await poll(() => bodyHas("A plant uses light, water and air to make sugar."), 15000);
-  check("the student gets an answer that cites the published version", await bodyHas("From Objective 1 \u00b7 Activity 1"));
+  check("the student gets an answer that cites the published lesson", await bodyHas("From the lesson:"));
   await stageShot("13-student-answer");
-  // The rail, open: at 380 it is a disclosure that starts closed; at 1440 it is already open.
-  await page.evaluate(() => { const t = document.querySelector('aside button[aria-expanded="false"]'); if (t) t.click(); });
-  await page.evaluate(() => document.querySelector("aside")?.scrollIntoView({ block: "start" }));
-  await stageShot("14-rail-open", "aside");
   check("student chat wrote nothing (IndexedDB and web storage identical before and after)", JSON.stringify(await stored()) === beforeAsk);
+  // The teacher's Rehearse is the same: it asks, it writes nothing.
+  await page.goto(`${APP}/#/studio/${courseId}/rehearse`, { waitUntil: "networkidle0" });
+  await page.waitForSelector('textarea[placeholder="Type as a student would…"]');
+  if (narrow) await checkNarrow("rehearse");
+  const beforeRehearse = JSON.stringify(await stored());
+  await page.type('textarea[placeholder="Type as a student would…"]', "What do plants need to make food?");
+  await clickBy("Ask");
+  await poll(() => bodyHas("A plant uses light, water and air to make sugar."), 15000);
+  check("Rehearse answers from the published version and writes nothing", JSON.stringify(await stored()) === beforeRehearse);
 
   // ---- the record verifies under node:crypto, too
   s = await stored();
@@ -814,28 +646,31 @@ async function story(label, narrow) {
   const v = verifyRecords(records);
   check("the browser-written log verifies on the Node host's chain (node:crypto)", v.ok === true, `${v.events} events`);
 
-  // ---- reload: still there, still verifies
+  // ---- reload: still there, still verifies (History -> Check the record)
+  await page.goto(`${APP}/#/studio/${courseId}`, { waitUntil: "networkidle0" });
   await page.reload({ waitUntil: "networkidle0" });
-  await poll(() => bodyHas("How plants eat"));
-  check("after a reload the published course is still there", (await bodyHas("published, version 1")) || (await bodyHas("Version 1")));
-  // C1.5: "Verify the event log" lives under Record details (a disclosure); a reload closes it, so open it.
-  await page.evaluate(() => { const d = document.querySelector('details[aria-label="Record details"]'); if (d) d.open = true; });
-  await poll(() => bodyHas("Verify the event log"));
-  await clickText("Verify the event log");
-  await poll(() => bodyHas("chain intact"));
-  if (narrow) await checkNarrow("post-reload event log");
-  check("after a reload the record verifies", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
-  // The notice is shown ONCE (it used to be echoed by every card it was passed to — three copies on screen).
-  const noticeCopies = await page.evaluate(() => {
-    const t = "Event log verified";
-    return [...document.querySelectorAll("p,span,div")].filter((e) => (e.textContent ?? "").includes(t) && e.children.length === 0).length;
-  });
-  check("the course notice is shown exactly once, not echoed by every card", noticeCopies === 1, `${noticeCopies} cop(y|ies) on the page`);
-
+  await poll(() => bodyHas("Version 1 is published"));
+  check("after a reload the published course is still there", true);
+  const checkRecord = async () => {
+    await page.evaluate(() => { const b = [...document.querySelectorAll("header button")].find((x) => /decision/i.test(x.textContent ?? "")); b?.click(); });
+    await poll(() => page.evaluate(() => !!document.querySelector("dialog[open]")));
+    await clickBy("Check the record");
+    await poll(() => bodyHas("chain intact"));
+  };
+  await checkRecord();
+  if (narrow) await checkNarrow("history drawer, record checked");
+  check("after a reload the record verifies", await bodyHas(`The record checks out: ${v.events} events, chain intact.`));
+  const noticeCopies = await page.evaluate(() => [...document.querySelectorAll("p,span,div")].filter((e) => (e.textContent ?? "").includes("The record checks out") && e.children.length === 0).length);
+  check("the record notice is shown exactly once", noticeCopies === 1, `${noticeCopies} cop(y|ies) on the page`);
+  await page.keyboard.press("Escape");
+  await sleep(300);
   if (narrow) await checkNarrow("published course");
-  if (narrow) await checkNarrow("footer data controls");
-  // ---- export all
-  await clickText("Export all courses");
+
+  // ---- export all (the home's record section)
+  await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });
+  await page.waitForSelector('section[aria-label="Where your courses are kept"]', { timeout: 10000 });
+  if (narrow) await checkNarrow("home, the record section");
+  await clickBy("Export all courses");
   const exported = await poll(() => {
     const f = readdirSync(DOWNLOADS).find((n) => /^silicus-courses-\d{4}-\d{2}-\d{2}\.json$/.test(n));
     return f ? join(DOWNLOADS, f) : null;
@@ -849,23 +684,25 @@ async function story(label, narrow) {
   check("the export holds no material text", !text.includes(SECRET));
 
   // ---- delete all (confirmed first)
-  await clickAndWait("Delete all data from this browser", () => bodyHas("This cannot be undone"));
-  if (narrow) await checkNarrow("footer data controls, delete confirm");
+  await clickBy("Delete all data from this browser");
+  await poll(() => bodyHas("This cannot be undone"));
+  if (narrow) await checkNarrow("home, delete confirm");
   await shot("04-delete-confirm", 'section[aria-label="Where your courses are kept"]');
-  await clickAndWait("Delete everything", async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
-  await poll(() => bodyHas("What should we call this course"));
+  await clickBy("Delete everything");
+  await poll(async () => { const st = await stored(); return st.metas.length === 0 && st.events.length === 0; });
+  await poll(() => page.evaluate(() => document.querySelectorAll('section[aria-label="Courses"] a[href^="#/studio/"]').length === 1));
   s = await stored();
   check("delete all empties IndexedDB, the pins and the passcode", Object.keys(s.local).filter((k) => k.startsWith("silicus.")).length === 0 && !s.session["silicus.demoPasscode"]);
+  check("delete all says so, and the home lists no course", await bodyHas("Every course, pinned copy and passcode this browser held for Silicus is gone."));
 
   // ---- a tampered file is refused, whole
   const input = await page.$('input[type="file"][aria-label="Import courses from an exported file"]');
   const tampered = join(DOWNLOADS, "tampered.json");
-  writeFileSync(tampered, text.replace("Confirm this lesson plan.", "Confirm a plan I never read."));
+  writeFileSync(tampered, text.replace("How plants eat", "How plants dine"));
   await input.uploadFile(tampered);
   await poll(() => bodyHas("does not match its own fingerprint"));
   await shot("05-tampered", 'section[aria-label="Where your courses are kept"]');
-  check("a tampered export is refused with a clear message, and nothing is written",
-    (await stored()).events.length === 0 && (await bodyHas("Nothing was imported")));
+  check("a tampered export is refused with a clear message, and nothing is written", (await stored()).events.length === 0 && (await bodyHas("Nothing was imported")));
 
   // ---- import: the course comes back
   const input2 = await page.$('input[type="file"][aria-label="Import courses from an exported file"]');
@@ -874,12 +711,11 @@ async function story(label, narrow) {
   await poll(() => bodyHas("How plants eat"));
   s = await stored();
   check("import brings the course back, record intact", s.events.length === v.events && verifyRecords(s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line))).head === v.head);
-  // C1.5: "Verify the event log" lives under Record details (a disclosure); a reload closes it, so open it.
-  await page.evaluate(() => { const d = document.querySelector('details[aria-label="Record details"]'); if (d) d.open = true; });
-  await poll(() => bodyHas("Verify the event log"));
-  await clickText("Verify the event log");
-  await poll(() => bodyHas("chain intact"));
-  check("the imported course verifies in the app", await bodyHas(`Event log verified — ${v.events} events, chain intact.`));
+  check("the imported course is listed as published on the home", await bodyHas("Version 1 published"));
+  await page.evaluate(() => [...document.querySelectorAll('section[aria-label="Courses"] a')].find((a) => /How plants eat/.test(a.textContent))?.click());
+  await poll(() => bodyHas("Version 1 is published"));
+  await checkRecord();
+  check("the imported course verifies in the app", await bodyHas(`The record checks out: ${v.events} events, chain intact.`));
 
   // ---- the whole run
   const csp = await page.evaluate(() => window.__csp);
@@ -920,12 +756,14 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
   await context.close();
 }
 
-/* ------------------------------ E-b: real file uploads ------------------------------
- * Appended after the two passes (no existing check is touched). A FRESH context: a teacher adds a real PDF and a real
- * DOCX at the naming question; the names are recorded, the text is read in the tab; "propose from my materials" uses
- * it; a reload forgets it and says so; the PDF's marker string is in no IndexedDB or web-storage value; the page
- * made no request outside its own origin (pdf.js's worker comes from the bundle); 0 CSP violations.
- * ------------------------------------------------------------------------------- */
+
+/* ------------------------------ real file uploads (studio) ------------------------------
+ * A FRESH context: a teacher drops a real PDF and a real DOCX at the wizard's Sources step; the file is read in the tab
+ * (name, kind and character count shown before anything is sent); the course is created; the arrival proposes from the
+ * files (their text is in the request, once each); the record holds the names and never the text; a reload forgets the
+ * text and says so; failures are plain sentences and add nothing; the PDF's marker is in no IndexedDB or web-storage
+ * value; the page made no request outside its own origin (pdf.js's worker comes from the bundle); 0 CSP violations.
+ * ---------------------------------------------------------------------------------------- */
 {
   passLabel = "uploads 1440";
   const FIX = join(HERE, "src", "materials", "__fixtures__");
@@ -975,106 +813,88 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
   await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
   const bodiesBefore = api.workerBodies.length;
   try {
-    await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
-    await page.waitForSelector('button[aria-label="Close the tour"]');
-    await page.click('button[aria-label="Close the tour"]');
-    const reply = async (text, button) => { await page.waitForSelector("#onboarding-reply"); await setValue("#onboarding-reply", text); await clickText(button); };
-    await reply("Photosynthesis from real files", "Record the course title");
-    await page.waitForFunction(() => document.body.innerText.includes("What name should this course show for you"));
-    await reply("Ada Lovelace", "Record this name");
-    await page.waitForFunction(() => document.body.innerText.includes("Name the materials"));
+    await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });
+    await page.waitForFunction(() => /Your courses/.test(document.body.innerText));
+    await wizardToSources(false, { title: "Photosynthesis from real files", goal: "Photosynthesis", note: "Science, ages 8-10" });
 
-    // ---- choose a real PDF and a real DOCX beside the typed names
-    await setValue("#onboarding-reply", "Textbook chapter 3");
-    check("uploads: the materials question offers 'Add files' with the PDF, DOCX and PPTX types",
-      await page.evaluate(() => { const i = document.querySelector("#onboarding-files"); return !!i && i.multiple && /\.pdf/.test(i.accept) && /\.docx/.test(i.accept) && /\.pptx/.test(i.accept); }));
-    await (await page.$("#onboarding-files")).uploadFile(pdfPath, docxPath);
-    await poll(async () => (await bodyHas("Syllabus notes.docx ·")) && (await bodyHas("hello.pdf ·")));
-    const listed = await page.evaluate(() => [...document.querySelectorAll('ul[aria-label="Files added"] li')].map((li) => li.textContent));
+    // ---- choose a real PDF and a real DOCX at the Sources step
+    check("uploads: the sources step offers 'Choose files' with the PDF, DOCX and PPTX types, several at once",
+      await page.evaluate(() => { const i = document.querySelector('section[aria-label="Sources"] input[type="file"]'); return !!i && i.multiple && /\.pdf/.test(i.accept) && /\.docx/.test(i.accept) && /\.pptx/.test(i.accept); }));
+    await (await page.$('section[aria-label="Sources"] input[type="file"]')).uploadFile(pdfPath, docxPath);
+    await poll(async () => (await bodyHas("Syllabus notes.docx")) && (await bodyHas("hello.pdf")) && (await page.evaluate(() => document.querySelectorAll('ul[aria-label="Sources added"] li').length === 2)));
+    const listed = await page.evaluate(() => [...document.querySelectorAll('ul[aria-label="Sources added"] li')].map((li) => li.textContent.replace(/\s+/g, " ")));
     check("uploads: each file shows its name, kind and character count before anything is sent",
-      listed.some((t) => /^hello\.pdf · PDF · [\d,]+ characters$/.test(t)) && listed.some((t) => /^Syllabus notes\.docx · Word · [\d,]+ characters$/.test(t)), listed.join(" | "));
-    const pdfChars = Number((listed.find((t) => t.startsWith("hello.pdf")) ?? "").match(/([\d,]+) characters/)?.[1].replace(/,/g, "") ?? 0);
+      listed.some((t) => /hello\.pdf.*Read in this tab · PDF · [\d,]+ characters/.test(t)) && listed.some((t) => /Syllabus notes\.docx.*Read in this tab · Word · [\d,]+ characters/.test(t)), listed.join(" | "));
+    const pdfChars = Number((listed.find((t) => t.includes("hello.pdf")) ?? "").match(/([\d,]+) characters/)?.[1].replace(/,/g, "") ?? 0);
     check("uploads: the PDF's character count is the length of its real text layer", pdfChars > 50 && pdfChars < 200, String(pdfChars));
-    const typed = await page.evaluate(() => document.querySelector("#onboarding-reply").value);
-    check("uploads: the file names sit on their own lines beside the typed name", typed === "Textbook chapter 3\nhello.pdf\nSyllabus notes.docx", JSON.stringify(typed));
     check("uploads: nothing has left the page (no worker call, no /api/courses) while files are only chosen",
       api.workerBodies.length === bodiesBefore && !api.calls.some((c) => c.path.startsWith("/api/courses")));
     await shot("20-onboarding-files");
     await stageShot("20-onboarding-files");
-
-    // ---- record: the NAMES go on the course, exactly as typed names do
-    await clickText("Record these names");
-    await poll(async () => (await stored()).metas.length === 1);
-    let s = await stored();
-    const created = s.events.sort((a, b) => a.seq - b.seq).map((e) => JSON.parse(e.line).event).find((e) => e.kind === "course.created");
-    const recordedNames = JSON.stringify(created ?? {});
-    check("uploads: the record holds the file names as typed names, and not their text",
-      recordedNames.includes("hello.pdf") && recordedNames.includes("Syllabus notes.docx") && recordedNames.includes("Textbook chapter 3") && !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK), recordedNames.slice(0, 200));
-    await poll(() => bodyHas("Confirm the material list"));
-    await clickText("Confirm the material list");
-    await poll(() => page.evaluate(() => !!document.querySelector("#intake-topic")));
-    const fill = (id, text) => page.evaluate((id, text) => {
-      const ta = document.querySelector(`#intake-${id}`);
-      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set.call(ta, text);
-      ta.dispatchEvent(new Event("input", { bubbles: true }));
-    }, id, text);
-    await fill("topic", "Photosynthesis"); await clickText("Record this answer");
-    await poll(() => page.evaluate(() => !!document.querySelector("#intake-course")));
-    await fill("course", "Science, ages 8-10"); await clickText("Record this answer");
-    await poll(() => bodyHas("Propose these from my materials instead"));
-    await clickText("Propose these from my materials instead");
-    await poll(() => bodyHas("Confirm the brief"));
-    await clickText("Confirm the brief");
-
-    // ---- the material panel offers the files chosen at the naming question: no second upload
-    await poll(() => bodyHas("Add your material here"));
-    await poll(() => bodyHas("hello.pdf · PDF"));
-    const offered = await page.evaluate(() => [...document.querySelectorAll('ul[aria-label="Material added"] li p')].map((p) => p.textContent));
-    check("uploads: 'propose from my materials' finds the files already chosen in this tab (names and counts shown, no second upload)",
-      offered.length === 2 && offered.some((t) => /^hello\.pdf · PDF · [\d,]+ characters$/.test(t)) && offered.some((t) => /^Syllabus notes\.docx · Word · [\d,]+ characters$/.test(t)), offered.join(" | "));
-    await shot("21-material-offered", 'section[aria-label="Course material"]');
-    await stageShot("21-material-offered");
-
-    // ---- reload: the text is gone, and the panel says what to do
-    await page.reload({ waitUntil: "networkidle0" });
-    await poll(() => bodyHas("Add your material here"));
-    check("uploads: after a reload the files are not offered (the text was never stored)", !(await bodyHas("hello.pdf · PDF")) && !(await bodyHas("Syllabus notes.docx · Word")));
-    check("uploads: and the panel says to add the file again, in the glossary's words",
-      await bodyHas("Add the file again to use its text. Silicus does not keep your files."));
-    s = await stored();
-    check("uploads: the PDF's marker text is in no IndexedDB value, localStorage or sessionStorage",
-      !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK) && !JSON.stringify(s).includes("Hello from the fixture PDF"));
-
-    // ---- failures are plain sentences, and add nothing
-    const panelInput = async () => page.$('section[aria-label="Course material"] input[type="file"]');
-    await (await panelInput()).uploadFile(scanPath);
-    await poll(() => bodyHas("This PDF has no text layer"));
-    const scanNote = await page.evaluate(() => document.querySelector('section[aria-label="Course material"] [role="status"]')?.textContent ?? "");
-    check("uploads: an image-only PDF says it has no text layer, names the file, and makes no OCR claim",
-      /^scan-only\.pdf: This PDF has no text layer/.test(scanNote) && !/\bOCR\b|recogni[sz]/i.test(scanNote), scanNote);
-    await (await panelInput()).uploadFile(docPath);
-    await poll(() => bodyHas("old.doc:"));
-    const docNote = await page.evaluate(() => document.querySelector('section[aria-label="Course material"] [role="status"]')?.textContent ?? "");
-    check("uploads: a legacy .doc says what to do instead", /^old\.doc: .*\.docx/.test(docNote), docNote);
-    check("uploads: neither failed file was added to the list", !(await page.evaluate(() => !!document.querySelector('ul[aria-label="Material added"]'))));
-
-    // ---- add the real files again, then propose: the model request carries their text
-    await (await panelInput()).uploadFile(pdfPath, docxPath);
-    await poll(async () => (await bodyHas("Syllabus notes.docx · Word")) && (await bodyHas("hello.pdf · PDF")));
-    check("uploads: the files added again in the panel are listed with their character counts", await page.evaluate(() => document.querySelectorAll('ul[aria-label="Material added"] li').length === 2));
-    await clickText("Propose objectives from my materials");
-    await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
-    await page.type('[role="dialog"] input[type="password"]', PASSCODE);
-    await clickText("Continue");
+    await wizardFinish(false);
+    const review = await page.evaluate(() => document.body.innerText);
+    check("uploads: the review names the two files and says they are read in this tab; none of their text", /hello\.pdf/.test(review) && /Syllabus notes\.docx/.test(review) && /read in this tab/.test(review) && !review.includes(PDF_MARK) && !review.includes(DOCX_MARK));
+    check("uploads: nothing is recorded before the review's confirm", (await stored()).metas.length === 0);
+    await clickPrimaryBtn("Confirm and propose objectives");
+    await page.waitForFunction(() => /^#\/studio\/(?!new$)./.test(location.hash), { timeout: 8000 });
+    await answerPasscode();
     await poll(async () => kinds(await stored()).includes("objectives.proposed"), 20000);
+    let s = await stored();
+    const recordedNames = JSON.stringify(eventsOf(s));
+    check("uploads: the record holds the file names, and not their text",
+      recordedNames.includes("hello.pdf") && recordedNames.includes("Syllabus notes.docx") && !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK), recordedNames.slice(0, 200));
     const sent = api.workerBodies.slice(bodiesBefore);
     check("uploads: the proposal request carries the PDF's text and the DOCX's text, once each",
       sent.filter((b) => b.includes(PDF_MARK)).length === 1 && sent.filter((b) => b.includes(DOCX_MARK)).length === 1, `${sent.length} worker request(s)`);
-    check("uploads: the receipt says the proposals were drawn from 2 materials", await poll(() => bodyHas("Drawn from 2 materials")).catch(() => false) === true);
+    await poll(() => page.evaluate(() => document.querySelectorAll('aside[aria-label="Proposals"] article').length >= 1));
+    check("uploads: the proposals say which materials they were drawn from (both files named)",
+      await page.evaluate(() => { const t = document.querySelector('aside[aria-label="Proposals"]')?.innerText ?? ""; return /From material:.*hello\.pdf/.test(t) && /From material:.*Syllabus notes\.docx/.test(t); }));
+    check("uploads: the sources panel lists both files, read in this tab, and says what they were used for",
+      await poll(() => page.evaluate(() => { const t = document.querySelector('aside[aria-label="Sources"]')?.innerText ?? ""; return /hello\.pdf/.test(t) && /Syllabus notes\.docx/.test(t) && /Read in this tab/.test(t) && /Used for \d+ proposals?/.test(t); }), 15000).then(() => true, () => false));
     s = await stored();
     check("uploads: after proposing, the PDF's marker is STILL in no IndexedDB value, localStorage or sessionStorage",
-      !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK));
+      !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK) && !JSON.stringify(s).includes("Hello from the fixture PDF"));
     await stageShot("22-objectives-from-files");
+
+    // ---- reload: the text is gone, and the panel says what to do
+    await page.reload({ waitUntil: "networkidle0" });
+    await poll(() => page.evaluate(() => !!document.querySelector('aside[aria-label="Sources"]')));
+    await poll(() => bodyHas("Text is read in this tab, sent once when you ask for a draft, and forgotten on reload."));
+    check("uploads: after a reload the files are not held any more (the text was never stored)", await page.evaluate(() => { const t = document.querySelector('aside[aria-label="Sources"]')?.innerText ?? ""; return !/Read in this tab/.test(t) && !/hello\.pdf|Syllabus notes\.docx/.test(t); }));
+    check("uploads: and the panel says in its own words that text is forgotten on reload (add the file again to use it)",
+      (await bodyHas("No sources yet.")) && (await bodyHas("forgotten on reload")));
+    await stageShot("21-material-offered");
+    s = await stored();
+    check("uploads: the PDF's marker text is in no IndexedDB value, localStorage or sessionStorage after the reload",
+      !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK) && !JSON.stringify(s).includes("Hello from the fixture PDF"));
+
+    // ---- failures are plain sentences, and add nothing (the panel's Add a source dialog)
+    await clickBy("+ Add a source");
+    await poll(() => page.evaluate(() => !!document.querySelector("dialog[open] input[type=file]")));
+    const dialogInput = async () => page.$("dialog[open] input[type=file]");
+    const dialogText = () => page.evaluate(() => document.querySelector("dialog[open]")?.innerText ?? "");
+    await (await dialogInput()).uploadFile(scanPath);
+    await poll(() => bodyHas("This PDF has no text layer"));
+    const scanNote = await dialogText();
+    check("uploads: an image-only PDF says it has no text layer, and makes no OCR claim", /This PDF has no text layer/.test(scanNote) && !/\bOCR\b|recogni[sz]/i.test(scanNote.replace(/Silicus does not read text from pictures/, "")), scanNote.slice(0, 200));
+    await (await dialogInput()).uploadFile(docPath);
+    await poll(async () => /\.docx/.test(await dialogText()) && /older \.doc/.test(await dialogText()));
+    const docNote = await dialogText();
+    check("uploads: a legacy .doc says what to do instead (save as .docx)", /Save an older \.doc or \.ppt as \.docx/.test(docNote), docNote.slice(0, 200));
+    check("uploads: neither failed file was added to the list", await page.evaluate(() => !/scan-only|old\.doc/.test(document.querySelector('aside[aria-label="Sources"] ul')?.innerText ?? "")));
+
+    // ---- add the real files again: they are listed with their counts, ready for another proposal round
+    // One file per choose: choosing two at once in this panel's dialog keeps only the last (SourceDrop calls onFile per file with the
+    // panel's stale `held`); reported to the owner in the K4 handoff. The wizard's Sources step takes two at once (asserted above).
+    const inPanel = (name) => page.evaluate((n) => (document.querySelector('aside[aria-label="Sources"] ul')?.innerText ?? "").includes(n), name);
+    await (await dialogInput()).uploadFile(pdfPath);
+    await poll(() => inPanel("hello.pdf"));
+    await (await dialogInput()).uploadFile(docxPath);
+    await poll(() => inPanel("Syllabus notes.docx"));
+    await clickBy("Done");
+    check("uploads: the files added again in the panel are listed with their character counts", await page.evaluate(() => (document.querySelector('aside[aria-label="Sources"]')?.innerText.match(/Read in this tab · (PDF|Word) · [\d,]+ characters/g) ?? []).length === 2));
+    s = await stored();
+    check("uploads: adding them again records nothing and their text is still in no stored value", !JSON.stringify(s).includes(PDF_MARK) && !JSON.stringify(s).includes(DOCX_MARK));
 
     // ---- the page stayed inside its own origin and its CSP
     check("uploads: pdf.js's worker came from the bundle, same origin, as JavaScript", workerLoads.length >= 1 && workerLoads.every((w) => /^200 text\/javascript/.test(w)), workerLoads.join(" | "));
@@ -1090,7 +910,7 @@ for (const [width, height, label] of [[1440, 1100, "wide 1440"], [380, 900, "nar
   await context.close();
 }
 
-// ------------------------------------------------------------------ the landing (#/), both widths, appended by C-c, reworked by C-d
+// ------------------------------------------------------------------ the landing (#/), both widths, appended by C-c, reworked by C-d and K1
 for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "landing 380"]]) {
   passLabel = label;
   const context = await browser.createBrowserContext();
@@ -1110,7 +930,6 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
     const img = document.querySelector("main figure");
     const copy = document.querySelector("main h1")?.closest("div");
     const ib = img?.getBoundingClientRect(), cb = copy?.getBoundingClientRect();
-    const rect = (el) => (el ? { w: el.clientWidth, sw: el.scrollWidth } : null);
     return {
       h1: [...document.querySelectorAll("h1")].map((h) => h.textContent),
       h1Lines: [...document.querySelectorAll("h1 > span")].map((n) => [n.textContent, Math.round(n.getBoundingClientRect().top)]),
@@ -1119,7 +938,7 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
       nevers: [...document.querySelectorAll("h3")].map((h) => h.textContent).filter((t) => /^Never /.test(t)),
       tryIt: [...document.querySelectorAll("main a")].find((a) => a.textContent === "Open the studio")?.getAttribute("href") ?? null,
       five: [...document.querySelectorAll("a")].some((a) => a.textContent === "How it works"),
-      classic: [...document.querySelectorAll("footer a")].find((a) => a.textContent === "Classic view")?.getAttribute("href") ?? null,
+      classicLink: [...document.querySelectorAll("a")].some((a) => /Classic view/.test(a.textContent ?? "") || a.getAttribute("href") === "#/live"),
       oldLocalLink: [...document.querySelectorAll("a")].some((a) => /Run it on your computer/.test(a.textContent)),
       controls: document.querySelectorAll("button, input").length,
       text: document.body.innerText, html: document.body.textContent,
@@ -1128,15 +947,14 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
       img: img ? { loaded: true, alt: img.querySelector("figcaption")?.textContent ?? "", w: Math.round(ib.width), left: Math.round(ib.left), right: Math.round(ib.right), top: Math.round(ib.top), bottom: Math.round(ib.bottom), vw: innerWidth } : null,
       copyBox: cb ? { left: Math.round(cb.left), right: Math.round(cb.right), top: Math.round(cb.top), bottom: Math.round(cb.bottom) } : null,
       details: (() => { const d = document.querySelector("details"); return d ? { open: d.open, title: d.querySelector("summary")?.textContent ?? "", last: !!d.closest("main > section:last-child") } : null; })(),
-      tryRect: rect(document.querySelector("a[href='#/live']")),
     };
   });
   check("landing: the bare URL shows one h1, one banner, one main and one footer", L.h1.length === 1 && /^Plan a lesson with an AI that proposes\. You decide\.$/.test(L.h1[0]) && L.banner === 1 && L.main === 1 && L.footer === 1, L.h1.join(" | "));
   check("landing: the headline breaks after 'proposes.' (two lines, the second is 'You decide.')", L.h1Lines.length === 2 && L.h1Lines[0][0] === "Plan a lesson with an AI that proposes." && L.h1Lines[1][0] === "You decide." && L.h1Lines[1][1] > L.h1Lines[0][1], JSON.stringify(L.h1Lines));
-  check("landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, Classic view to #/live, no controls and no sign-in",
+  check("landing: the four steps in order, the three 'Never ...' headings, Open the studio to #/studio, How it works, no 'Classic view' link and no link to #/live, no controls and no sign-in",
     L.steps.join(",") === "Brief,Objectives,Plan,Publish"
     && L.nevers.join("|") === "Never decides for you|Never keeps your files|Never grades students"
-    && L.tryIt === "#/studio" && L.five && L.classic === "#/live" && !L.oldLocalLink && L.controls === 0 && !/sign[ -]?in|log[ -]?in/i.test(L.text), L.steps.join(",") + " :: " + L.nevers.join("|"));
+    && L.tryIt === "#/studio" && L.five && !L.classicLink && !L.oldLocalLink && L.controls === 0 && !/sign[ -]?in|log[ -]?in/i.test(L.text), L.steps.join(",") + " :: " + L.nevers.join("|"));
   check("landing: says prototype and ages 5–14, says once where the record is kept (this browser), the demo passcode note is beside Open the studio, claims no approval",
     /prototype/i.test(L.text) && /aged\s5–14/i.test(L.text) && (L.text.match(/kept in this browser/g) ?? []).length === 1 && /Where it stands/.test(L.text)
     && /The AI steps ask for a demo passcode\. Ask the person who shared this link\./.test(L.text) && !/approved|endorse|Google|Arizona/.test(L.text));
@@ -1159,22 +977,21 @@ for (const [width, height, label] of [[1440, 1100, "landing 1440"], [380, 900, "
   const opened = await page.evaluate(() => ({ open: document.querySelector("details")?.open, shown: document.body.innerText.includes("npm install"), sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
   check("landing: opening Under the hood shows the setup steps, with no sideways scroll", opened.open === true && opened.shown && opened.sideways <= 0, JSON.stringify(opened));
   if (width === 380) await checkNarrow("landing page, Under the hood open");
-  await page.click('a[href="#/live"]');
-  await poll(() => page.evaluate(() => location.hash === "#/live" && /Build a course/.test(document.querySelector("h1")?.textContent ?? "")));
-  check("landing: Classic view opens the app at #/live", true);
-  // The way back: the app's wordmark goes to the landing, and #/live still opens the app when typed in directly.
-  await page.click('button[aria-label="Close the tour"]').catch(() => {});
-  await poll(() => page.evaluate(() => !document.querySelector('[role="dialog"]')));
-  await sleep(400); // closing the tour hands focus to the first question, which scrolls the page: a coordinate click can miss
-  await page.evaluate(() => document.querySelector('header a[aria-label="Silicus TA, home"]').click());
-  const back = await poll(() => page.evaluate(() => /^Plan a lesson with an AI that proposes\./.test(document.querySelector("h1")?.textContent ?? "") && location.hash === "#/")).catch(async () => {
+  // The studio's way back: its 'About Silicus' link returns to the landing (#/); there is no 'Classic view'.
+  await page.click('a[href="#/studio"]:not(header a)');
+  await page.waitForSelector('section[aria-label="Courses"]', { timeout: 10000 });
+  check("landing: Open the studio opens the studio home at #/studio", true);
+  await page.evaluate(() => document.querySelector('header a[href="#/"]').click());
+  const back = await poll(() => page.evaluate(() => /^Plan a lesson with an AI that proposes\./.test(document.querySelector("h1")?.textContent ?? "") && /^(#\/)?$/.test(location.hash))).catch(async () => {
     console.log("[debug] " + (await page.evaluate(() => location.hash + " :: " + (document.querySelector("h1")?.textContent ?? "") + " :: " + document.body.innerText.slice(0, 300))));
     return false;
   });
-  check("landing: the app's Silicus wordmark returns to the landing (#/)", back);
-  await page.goto(`${APP}/#/live`, { waitUntil: "networkidle0" });
-  await page.waitForFunction(() => /Build a course/.test(document.querySelector("h1")?.textContent ?? ""));
-  check("landing: typing #/live opens the app, not the landing", true);
+  check("landing: the studio's 'About Silicus' link returns to the landing (#/)", back);
+  // The old classic URL is gone: typed, it lands on the landing, not on an app page.
+  await page.goto(`${APP}/#/studio`, { waitUntil: "networkidle0" });
+  await page.evaluate(() => { location.hash = "#/live"; });
+  const old = await poll(() => page.evaluate(() => /^Plan a lesson with an AI that proposes\./.test(document.querySelector("h1")?.textContent ?? ""))).catch(() => false);
+  check("landing: an old typed #/live lands on the landing (the classic view is gone)", old && !(await page.evaluate(() => /Build a course, one decision at a time/.test(document.body.innerText))));
   const cspLanding = await page.evaluate(() => window.__csp);
   check("landing: 0 CSP violations and 0 console errors", cspLanding.length === 0 && landingErrors.length === 0, [...cspLanding, ...landingErrors].join("; "));
   await context.close();

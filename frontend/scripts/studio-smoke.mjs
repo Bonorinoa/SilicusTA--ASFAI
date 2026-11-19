@@ -554,6 +554,32 @@ try {
     await page.evaluate(() => document.querySelector('form[data-plan-edit-form="activity 3"] button[type="submit"]')?.click());
     const back = await page.waitForFunction(() => /activities 45 min/i.test(document.body.innerText) && !/Activities add up to/.test(document.body.innerText), { timeout: 10000 }).then(() => true, () => false);
     check("N3 setting the minutes back clears the length note (the check re-runs again)", back);
+
+    // N5 (C5): the plan's shape in the real studio. Move activity 2 up, then back down (net: the plan as before), and
+    // open the Add form (then cancel). Each move is a recorded edit on the trace.
+    const titles = () => page.evaluate(() => [...document.querySelectorAll("li h2")].map((h) => h.textContent));
+    const before = await titles();
+    await page.click('button[aria-label="Move activity 2 up"]');
+    const up = await page.waitForFunction(() => document.body.innerText.includes("You edited Activities: moved activity 2 to position 1"), { timeout: 10000 }).then(() => true, () => false);
+    const swapped = await titles();
+    check("N5 Move up reorders the activities and the trace says so", up && swapped[0] === before[1] && swapped[1] === before[0], JSON.stringify(swapped));
+    await page.waitForSelector('button[aria-label="Move activity 1 down"]:not([disabled])', { timeout: 5000 }).catch(() => {});
+    await page.click('button[aria-label="Move activity 1 down"]');
+    const down = await page.waitForFunction(() => document.body.innerText.includes("You edited Activities: moved activity 1 to position 2"), { timeout: 10000 }).then(() => true, () => false);
+    check("N5 Move down puts it back (same ids, same order as before)", down && JSON.stringify(await titles()) === JSON.stringify(before));
+    await page.click("[data-plan-add] button");
+    const addForm = await page.waitForSelector('form[data-plan-edit-form="a new activity"]', { timeout: 5000 }).then(() => true, () => false);
+    const cites = await page.evaluate(() => document.querySelectorAll('form[data-plan-edit-form="a new activity"] [data-plan-edit-objectives] input[type=checkbox]').length);
+    check("N5 Add an activity opens a form that cites only the confirmed objectives", addForm && cites >= 1, String(cites));
+    if (process.env.N5_SHOTS) {
+      await page.evaluate(() => { document.querySelector('form[data-plan-edit-form="a new activity"]')?.scrollIntoView({ block: "start" }); window.scrollBy(0, -120); });
+      await page.screenshot({ path: `${process.env.N5_SHOTS}/n5-add-activity.png` }).catch(() => {});
+    }
+    await page.evaluate(() => [...document.querySelectorAll('form[data-plan-edit-form="a new activity"] button')].find((b) => b.textContent === "Cancel")?.click());
+    if (process.env.N5_SHOTS) {
+      await page.evaluate(() => { document.querySelector('[data-plan-shape="1"]')?.closest("li")?.scrollIntoView({ block: "start" }); window.scrollBy(0, -90); });
+      await page.screenshot({ path: `${process.env.N5_SHOTS}/n5-shape-row.png` }).catch(() => {});
+    }
   }
   await clickBy("Confirm the lesson plan");
   check("confirming the plan moves to Publish (Step 4 of 4)", await waitText("Review and publish", 10000));

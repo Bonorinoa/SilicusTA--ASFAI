@@ -101,9 +101,17 @@ export async function runScriptedCourse(call) {
   await step("POST", `${c}/plan`, { spec: { title: "smuggled plan" } });
   // N3: the teacher edits the plan in place (intents only; the forged keys must not reach the log), and a
   // bad edit is refused identically on both hosts. The parity test compares these logs byte for byte.
-  await step("POST", `${c}/plan/edit`, { text: "Edit activity 1: title and minutes.", provenance: { turnRef: "forged" },
+  const edited = await step("POST", `${c}/plan/edit`, { text: "Edit activity 1: title and minutes.", provenance: { turnRef: "forged" },
     edits: [{ path: "activities.0.title", value: "  How a leaf\u2028 makes food  ", decidedBy: "attacker" }, { path: "activities.0.minutes", value: 12 }] });
   await step("POST", `${c}/plan/edit`, { text: "Edit the plan title.", edits: [{ path: "activities.0.objectiveIds", value: ["urn:uuid:forged"] }] });
+  // N5 (C5): the plan's shape on both hosts: add (a forged key inside the new activity is dropped), move, remove.
+  // Net, the plan reads as before, so the steps after this are unchanged.
+  const cite = edited.json?.plan?.activities?.[0]?.objectiveIds?.[0] ?? "none";
+  const added = await step("POST", `${c}/plan/edit`, { text: "Add an activity.", edits: [{ path: "activities.add", value: { title: "Share out", minutes: 5,
+    objectiveIds: [cite], learnerDoes: "Each pair shows one drawing.", teacherDoes: "Asks what changed.", evidenceIfAny: "observation", decidedBy: "attacker" } }] });
+  const last = (added.json?.plan?.activities?.length ?? 1) - 1;
+  await step("POST", `${c}/plan/edit`, { text: "Move the new activity to the top.", edits: [{ path: `activities.${last}.moveTo`, value: 0 }] });
+  await step("POST", `${c}/plan/edit`, { text: "Remove activity 1.", edits: [{ path: "activities.0.remove", value: true }] });
   await step("POST", `${c}/plan/confirm`, { text: "Confirm this lesson plan." });
   await step("POST", `${c}/student/ask`, { question: "What do plants need?" }); // refused: not published
   await step("POST", `${c}/publish`, { text: "Publish the course package." });

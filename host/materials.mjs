@@ -104,6 +104,35 @@ export function isPrivateAddress(ip) {
   return true;
 }
 
+/**
+ * N5 C3: the kind of a non-public address, for the refusal's Details ("a link-local address"). Only read after
+ * isPrivateAddress said no; anything not named here is "a reserved address".
+ */
+export function addressKind(addr) {
+  const a = String(addr).toLowerCase();
+  if (isIP(a) === 4) {
+    const [p, q] = a.split(".").map(Number);
+    if (p === 127) return "a loopback address";
+    if (p === 10 || (p === 172 && q >= 16 && q <= 31) || (p === 192 && q === 168)) return "a private network address";
+    if (p === 169 && q === 254) return "a link-local address";
+    if (p === 100 && q >= 64 && q <= 127) return "a shared (carrier-grade NAT) address";
+    if (p === 0) return "a \"this network\" address";
+    if (p >= 224 && p <= 239) return "a multicast address";
+    return "a reserved address";
+  }
+  if (isIP(a) === 6) {
+    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(a);
+    if (mapped) return addressKind(mapped[1]);
+    if (a === "::1") return "a loopback address";
+    if (a === "::") return "an unspecified address";
+    if (/^fe[89ab]/.test(a)) return "a link-local address";
+    if (/^f[cd]/.test(a)) return "a private network (unique local) address";
+    if (/^ff/.test(a)) return "a multicast address";
+    return "a reserved address";
+  }
+  return "not an address";
+}
+
 /** Parse and vet a URL for a public fetch. Returns the URL; throws URL_REFUSED. */
 export async function assertPublicUrl(raw, { lookupImpl = dnsLookup } = {}) {
   let u;
@@ -117,7 +146,8 @@ export async function assertPublicUrl(raw, { lookupImpl = dnsLookup } = {}) {
   if (u.port && u.port !== "443") throw new MaterialError("URL_REFUSED", "only the standard https port can be read");
   const host = u.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
   if (isIP(host)) {
-    if (isPrivateAddress(host)) throw new MaterialError("URL_REFUSED", "that address is not a public one");
+    // N5 C3: a literal address gets the same useful Details as a DNS name: which kind of address it is.
+    if (isPrivateAddress(host)) throw new MaterialError("URL_REFUSED", `${host} is ${addressKind(host)}, not a public one`);
     return u;
   }
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {

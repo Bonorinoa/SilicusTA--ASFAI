@@ -111,6 +111,8 @@ export interface StudentAnswer {
    * Absent = a host older than this contract (treat as "plan").
    */
   basis?: "plan" | "explanation";
+  /** N5 C2: set on an assessment refusal when the host withheld the MODEL's answer because it judged the student. */
+  withheld?: "judged";
   /**
    * Set by the host whenever `grounded` is false. "off_topic" = no package item covers or names it;
    * "assessment" = the student asked to be graded, told they passed, or to have mastery judged.

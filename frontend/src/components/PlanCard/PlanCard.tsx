@@ -94,6 +94,8 @@ const SOURCE_LABEL: Record<string, string> = {
 export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, invalidation, rewordedSince = [], showAlignment = true, ids = "inline", onEdit, editBusy = false, aiEditable = false }: PlanCardProps) {
   // N3: which part is open for editing ("plan", "a:<activity id>", "r:<review index>"); one at a time.
   const [editing, setEditing] = useState<string | null>(null);
+  // N5 (C5): the activity whose removal waits for a second click ("Remove activity 2?").
+  const [removing, setRemoving] = useState<string | null>(null);
   const editButtons = useRef(new Map<string, HTMLButtonElement | null>());
   const canEdit = !!onEdit && plan.status !== "invalidated";
   const closeEdit = (key: string) => {
@@ -110,6 +112,14 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
     <EditButton what={what} disabled={editing !== null} onClick={() => setEditing(key)}
       buttonRef={(el) => { editButtons.current.set(key, el); }} />
   ) : null;
+  // N5 (C5): the objectives an activity may cite: the confirmed ones, numbered as the objectives step numbers them.
+  const objectiveOptions = objectives.map((o, i) => ({ id: o.id, label: `Objective ${i + 1}`, title: o.statement }));
+  const shape = (edit: PlanEdit, text: string) => async () => {
+    if (!onEdit) return;
+    setRemoving(null);
+    await onEdit([edit], text);
+  };
+  const shapeFree = canEdit && editing === null && !editBusy;
   const citedIds = plan.activities.flatMap((a) => a.objectiveIds);
   const cited = objectives.filter((o) => citedIds.includes(o.id));
   const citeNumber = new Map(cited.map((o, i) => [o.id, i + 1]));
@@ -242,7 +252,28 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
               {editing === `a:${activity.id}` ? (
                 <EditForm what={`activity ${index + 1}`} disabled={editBusy}
                   onCancel={() => closeEdit(`a:${activity.id}`)} onSave={save(`a:${activity.id}`, `activity ${index + 1}`)}
-                  fields={activityFields(activity, index, aiEditable)} />
+                  fields={activityFields(activity, index, aiEditable, objectiveOptions)} />
+              ) : null}
+              {canEdit && editing === null ? (
+                <div className={styles.shapeRow} data-plan-shape={index + 1}>
+                  {removing === activity.id ? (
+                    <>
+                      <span className={styles.editLabel}>Remove activity {index + 1}?</span>
+                      <button type="button" className={styles.editButton} disabled={!shapeFree}
+                        onClick={shape({ path: `activities.${index}.remove`, value: true }, `Remove activity ${index + 1}.`)}>Remove</button>
+                      <button type="button" className={styles.editButton} onClick={() => setRemoving(null)}>Keep</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className={styles.editButton} disabled={!shapeFree || index === 0} aria-label={`Move activity ${index + 1} up`}
+                        onClick={shape({ path: `activities.${index}.moveTo`, value: index - 1 }, `Move activity ${index + 1} up.`)}>Move up</button>
+                      <button type="button" className={styles.editButton} disabled={!shapeFree || index === plan.activities.length - 1} aria-label={`Move activity ${index + 1} down`}
+                        onClick={shape({ path: `activities.${index}.moveTo`, value: index + 1 }, `Move activity ${index + 1} down.`)}>Move down</button>
+                      <button type="button" className={styles.editButton} disabled={!shapeFree || plan.activities.length === 1} aria-label={`Remove activity ${index + 1}`}
+                        onClick={() => setRemoving(activity.id)}>Remove</button>
+                    </>
+                  )}
+                </div>
               ) : null}
               {activity.teacherOverride ? (
                 <p className={styles.override} data-teacher-override>{overrideLine(activity.teacherOverride)}</p>
@@ -377,6 +408,22 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
           );
         })}
       </ol>
+      {canEdit && objectiveOptions.length > 0 ? (
+        <div className={styles.addActivity} data-plan-add>
+          {editing === "add" ? (
+            <EditForm what="a new activity" whole saveLabel="Add activity" disabled={editBusy} onCancel={() => closeEdit("add")}
+              onSave={async (edits) => {
+                const value: Record<string, unknown> = {};
+                for (const e of edits) if (e.value !== null && e.value !== "") value[e.path.slice("new.".length)] = e.value;
+                return save("add", "the plan")([{ path: "activities.add", value }], [`add activity ${plan.activities.length + 1}`]);
+              }}
+              fields={newActivityFields(objectiveOptions)} />
+          ) : editing === null ? (
+            <button type="button" className={styles.editButton} data-print="hide" disabled={editBusy}
+              ref={(el) => { editButtons.current.set("add", el); }} onClick={() => setEditing("add")}>Add an activity</button>
+          ) : null}
+        </div>
+      ) : null}
 
       {reviews.length > 0 ? (
         <section className={styles.key} aria-label="Later" data-later>
@@ -394,6 +441,8 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
                 {editing === `r:${i}` ? (
                   <EditForm what={`later review ${i + 1}`} disabled={editBusy} onCancel={() => closeEdit(`r:${i}`)} onSave={save(`r:${i}`, `later review ${i + 1}`)}
                     fields={[
+                      { path: `spacedReviews.${i}.afterDays`, label: "After (days)", kind: "days", value: r.afterDays },
+                      ...(r.form ? [{ path: `spacedReviews.${i}.form`, label: "Form", kind: "reviewForm" as const, value: r.form }] : []),
                       { path: `spacedReviews.${i}.whatChanges`, label: "What changes", kind: "long", value: r.whatChanges, max: 300, required: true },
                       { path: `spacedReviews.${i}.prompt`, label: "Prompt", kind: "long", value: r.prompt, max: 400, required: true },
                     ]} />
@@ -491,7 +540,19 @@ export function PlanCard({ plan, lessonMinutes, objectives, teacher, onPrint, in
 }
 
 /** N3: the fields of one activity the teacher may edit, in the order the page reads them. */
-function activityFields(a: LessonPlanView["activities"][number], index: number, aiEditable: boolean): EditField[] {
+/** N5 (C5): the fields of a teacher's new activity; the host bounds each like an edit of that field. */
+function newActivityFields(options: EditField["options"]): EditField[] {
+  return [
+    { path: "new.title", label: "Title", kind: "text", value: "", max: 120, required: true },
+    { path: "new.minutes", label: "Minutes", kind: "minutes", value: 10 },
+    { path: "new.learnerDoes", label: "Learners", kind: "long", value: "", max: 600, required: true },
+    { path: "new.teacherDoes", label: "Teacher", kind: "long", value: "", max: 600, required: true },
+    { path: "new.evidenceIfAny", label: "Evidence", kind: "evidence", value: "none" },
+    { path: "new.objectiveIds", label: "Cites", kind: "objectives", value: options?.[0] ? [options[0].id] : [], options },
+  ];
+}
+
+function activityFields(a: LessonPlanView["activities"][number], index: number, aiEditable: boolean, options: EditField["options"] = []): EditField[] {
   const p = (f: string) => `activities.${index}.${f}`;
   return [
     { path: p("title"), label: "Title", kind: "text", value: a.title, max: 120, required: true },
@@ -507,6 +568,7 @@ function activityFields(a: LessonPlanView["activities"][number], index: number, 
       { path: p("noAiAlternative"), label: "Without AI", kind: "long" as const, value: a.noAiAlternative ?? null, max: 300 },
     ] : []),
     { path: p("evidenceIfAny"), label: "Evidence", kind: "evidence", value: a.evidenceIfAny },
+    ...(options && options.length > 0 ? [{ path: p("objectiveIds"), label: "Cites", kind: "objectives" as const, value: a.objectiveIds, options }] : []),
     { path: p("notEvidence"), label: "Not evidence", kind: "long", value: a.notEvidence ?? null, max: 300 },
   ];
 }

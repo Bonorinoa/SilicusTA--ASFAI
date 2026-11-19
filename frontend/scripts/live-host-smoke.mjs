@@ -557,6 +557,30 @@ check("revise: the host reads the record as drafting version 2, with the teacher
 await page.reload({ waitUntil: "networkidle0" });   // the API add happened behind the page's back
 await page.evaluate((id) => { location.hash = `#/studio/${encodeURIComponent(id)}`; }, course2);
 await waitBody("Publish version 2");
+// N5 C6 (N1V): N2 saw no "Revising this course" note here. Cause: the studio is on the PUBLISH step at this point, and
+// K5 renders the note on every step except publish (CourseStudio.tsx, `shown !== "publish"`); the publish card lists
+// the changes itself. Not a Node-host difference. Check both halves: absent on publish, present one step back.
+check("N5 C6 on the publish step the revision note is not shown (K5 hides it there; the publish card lists the changes)",
+  !(await page.evaluate(() => !!document.querySelector('section[aria-label="Revising this course"]'))));
+{
+  const back = await page.evaluate(() => { const b = [...document.querySelectorAll("button")].find((x) => /^← Back to /.test(x.textContent ?? "")); b?.click(); return b?.textContent ?? null; });
+  await sleep(600);
+  const orig = page.viewport();
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  await sleep(400);
+  const m = await page.evaluate(() => {
+    const card = document.querySelector('section[aria-label="Revising this course"]');
+    const btn = card && [...card.querySelectorAll("button")].find((x) => /Draft a new lesson plan/.test(x.textContent ?? ""));
+    return { card: !!card, text: card?.textContent?.slice(0, 120) ?? null, btn: !!btn, cardRight: card?.getBoundingClientRect().right ?? null, btnRight: btn?.getBoundingClientRect().right ?? null, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+  });
+  check("N5 C6 one step back, the Node host shows the 'Revising this course' note after the api add, and at 390 px it fits (any button inside its card, no sideways scroll)",
+    back !== null && m.card && (!m.btn || m.btnRight <= m.cardRight + 0.5) && m.sw <= m.cw, JSON.stringify({ back, ...m }));
+  await page.setViewport(orig);
+  // Return to where the flow was: a fresh load lands on the current (publish) step again.
+  await page.reload({ waitUntil: "networkidle0" });
+  await page.evaluate((id) => { location.hash = `#/studio/${encodeURIComponent(id)}`; }, course2);
+  await waitBody("Publish version 2");
+}
 check("revise: while drafting, the page lists what changed since version 1 and offers to publish version 2",
   (await hasText("Since version 1")) && (await hasText("Added: Students can debug a short program.")) && !(await hasText("Version 1 is published")));
 check("revise: the UI says you are drafting version 2, and version 1 is still the only sealed version",

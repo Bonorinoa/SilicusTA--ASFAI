@@ -20,9 +20,20 @@ export function reasoningBody(value) {
  * reasoning, ~100 s). Objectives and the plan keep the configured default. A task not listed keeps the default.
  * On the site the SERVER applies this from the task name; a client still cannot send a reasoning value.
  */
-export const TASKS = Object.freeze(["rank", "answer", "objectives", "suggest", "plan"]);
-export const TASK_REASONING = Object.freeze({ rank: "off", answer: "off" });
-export const TASK_TIMEOUT_MS = Object.freeze({ rank: 25_000, answer: 20_000 });
+export const TASKS = Object.freeze(["rank", "answer", "answer_adult", "objectives", "suggest", "plan"]);
+/*
+ * N5 (PM decision on item 6, 18 Nov; record docs/verification/2026-11-18-n5-helper-tuning.md): the helper's reasoning
+ * follows the course's recorded ages, the switch N4 uses (student.mjs adultCourse). Under 18, or no ages: "answer",
+ * reasoning OFF (with the clarify prompt rule). 18+: "answer_adult", reasoning LOW (every eval bar passed at low).
+ * The host picks the task name from the course, never from a request field; both keep the 20 s deadline.
+ */
+export const TASK_REASONING = Object.freeze({ rank: "off", answer: "off", answer_adult: "low" });
+export const TASK_TIMEOUT_MS = Object.freeze({ rank: 25_000, answer: 20_000, answer_adult: 20_000 });
+
+/** N5: the helper's task name for a course: "answer_adult" only for a strict-true 18+ course. */
+export function answerTask(adult) {
+  return adult === true ? "answer_adult" : "answer";
+}
 
 /** The reasoning a task runs with: its fixed setting, or the configured default. */
 export function taskReasoning(task, configured) {

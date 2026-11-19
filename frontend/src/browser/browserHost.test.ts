@@ -69,9 +69,14 @@ describe("parity: one API, two hosts", () => {
     expect(transcript.find((s: any) => s.path.endsWith("/publish"))?.status).toBe(200);
     // N3: the plan edit is a real recorded edit on both hosts (not two identical 404s), and the bad path is refused.
     const edits = transcript.filter((s: any) => s.path.endsWith("/plan/edit"));
-    expect(edits.map((s: any) => s.status)).toEqual([200, 422]);
+    expect(edits.map((s: any) => s.status)).toEqual([200, 422, 200, 200, 200]);
     expect(edits[0].json.plan.activities[0]).toMatchObject({ title: "How a leaf makes food", minutes: 12 });
-    expect(disk.lines.filter((l) => l.includes('"plan.edited"')).length).toBe(1);
+    // N5 (C5): add, move and remove are the same recorded plan.edited event on both hosts; the K2 check re-ran.
+    const titles = (k: number) => edits[k].json.plan.activities.map((a: any) => a.title);
+    expect(titles(2)).toEqual([...titles(0), "Share out"]);
+    expect(titles(3)).toEqual(["Share out", ...titles(0)]);
+    expect(titles(4)).toEqual(titles(0));
+    expect(disk.lines.filter((l) => l.includes('"plan.edited"')).length).toBe(4);
     expect(transcript.filter((s: any) => s.path.endsWith("/student/ask")).at(-1)?.json.grounded).toBe(true);
     // Forged keys are cut away: the provenance words never appear, and the forged alignment is
     // asserted by its EXACT value ("mt_1" as a JSON string) — never as a prefix, because a real

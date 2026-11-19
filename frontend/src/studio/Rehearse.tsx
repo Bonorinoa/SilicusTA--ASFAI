@@ -39,7 +39,7 @@ const kindLabel = (a: StudentAnswer) => {
     case "attempt_first": return "Try first · fixed text, nothing explained (under 18)";
     case "clarify": return "Asked what they meant · fixed text listing your plan’s items";
     case "about_helper": return "Introduced itself · fixed text";
-    case "assessment": return "Refused · grading or assessment";
+    case "assessment": return a.withheld === "judged" ? "Refused · grading or assessment · answer withheld: judged the student" : "Refused · grading or assessment";
     default: return "Refused · not in the published version · pointed back to your objectives";
   }
 };

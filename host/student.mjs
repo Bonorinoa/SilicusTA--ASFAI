@@ -18,6 +18,9 @@
  *     unchanged. 18+, a question on the course's subject that the lesson does not cover may get a general explanation
  *     (basis "explanation", general: true, no cites, labelled in the UI), and an attempt-first activity gets help led by
  *     one host-composed nudge line. The assessment refusal and its net still win first at every age.
+ *   - N5 (owner, 18 Nov, N1V C1/C2): under 18 the host ALSO matches the question against each try-first activity
+ *     (number or title, `namedTryFirst`), so attempt_first no longer rests on the model's cite; and every answer's
+ *     model words pass an output check (`judgesStudent`) — a verdict on the student is withheld (`withheld: "judged"`).
  *   - NOTHING is recorded: no log event, no ledger turn, no file. A student chat is not evidence of
  *     learning and must never be mistaken for it, so it leaves no trace to mistake.
  *   - No student identity is accepted. The request has a question and optional recent turns; any
@@ -224,6 +227,8 @@ export const ASSESSMENT_PATTERNS = [
   /\bam (i|we) (mastering|getting|learning)\b/,
   /\bam (i|we) (doing|going) (well|good|ok|okay|fine|alright|great|bad|poor)\b/,
   /\bam (i|we) (right|correct|wrong)\b/,
+  // N5 (N1V leak): "be honest, am I any good at thermodynamics".
+  /\bam (i|we) (any|much|even|actually|really|very|pretty|quite|that) (good|bad|great|decent|smart|clever|terrible|competent|use)\b/,
   /\bam (i|we) (good|bad|great|ok|okay|fine|better|worse|improving|smart|ready|prepared)\b/,
   /\bam (i|we) on (the right )?track\b/,
   /\b(am|are) (i|we) (smart|good|well|ready|prepared|strong|clever|talented) enough\b/,
@@ -246,6 +251,8 @@ export const ASSESSMENT_PATTERNS = [
   /\b(grade|score|rate|assess|evaluate|judge|rank) how (well |good )?(i|we)\b/,
   /\b(grade|score|mark|rating|level|credit|feedback|nota|note) (for|on|about) (my|our)\b/,
   /\b(score|grade|mark|rating) out of\b/,
+  // N5 (N1V leak): "Score my last reply out of 10": an assessment verb, a short object, then a scale.
+  /\b(grade|score|mark|rate|assess|evaluate|judge)\b(?:\s+[a-z0-9']+){0,3}\s+out of\s+(\d+|ten|five|twenty|a hundred)\b/,
   /\b(rank|rate|judge) (my|our) (understanding|mastery|progress|performance|level|standing|knowledge|ability|skills|effort|grade|score|mark|rating|answer|answers|work)\b/,
   /\bhow(?:'s|s| is| was)? (my|our) (work|answer|answers|explanation|effort|response|writing|essay|paper|solution|reasoning|draft|project)\b(?:\s+[a-z0-9']+){0,2}\s+(going|doing|looking|coming)\b/,
   /\bhow (good|bad|well) is (my|our) (answer|work|response|explanation|understanding)\b/,
@@ -307,6 +314,9 @@ const CLAIM = /\b(i|we) (?:think|feel|believe|reckon) (?:that )?(?:i|we)? ?(?:ha
 const CONFIRM = /\b(confirm|verify|correct|agree|right|say so)\b/;
 /** A standing the asker states about themselves, plus a request to be told it ("I'm proficient. Are you able to say?"). */
 const STANDING_CLAIM = /\b(i'm|im|i am|we're|we are) (proficient|behind|ahead|on track|at grade level|at the grade level|advanced|struggling)\b/;
+/** N5 (N1V leak): "Here is my answer, entropy is disorder. Right or wrong?" — a verdict on the ASKER's own answer. */
+const RIGHT_OR_WRONG = /\b(right or wrong|correct or (?:not|incorrect|wrong)|right or not|wrong or right)\b/;
+const ASKER_ANSWER = /\b(my|our) (answer|answers|reply|response|guess|attempt|explanation|work|idea|solution|definition)\b|\b(i|we) (said|say|think|thought|wrote|answered|guessed|put|reckon)\b/;
 const ASK_TO_BE_TOLD = /\b(able to say|would you say|say so|confirm|tell (me|us) (if|whether|how (i|we))|let (me|us) know (if|whether)|is that right)\b/;
 
 /* ------------------------------- normalisation (rule a) ------------------------------- */
@@ -413,6 +423,11 @@ function claimAndConfirm(q) {
   return CLAIM.test(q) && CONFIRM.test(q);
 }
 
+/** N5: "right or wrong?" about something the asker answered or thinks. "Is the first law right or wrong?" is not one. */
+function rightOrWrongAsk(q) {
+  return RIGHT_OR_WRONG.test(q) && ASKER_ANSWER.test(q);
+}
+
 /** A standing the asker states about themselves, plus a request to be told it. */
 function standingClaimAsk(q) {
   return STANDING_CLAIM.test(q) && ASK_TO_BE_TOLD.test(q);
@@ -421,9 +436,91 @@ function standingClaimAsk(q) {
 function looksLikeAssessment(question) {
   for (const q of readings(question)) {
     if (ASSESSMENT_PATTERNS.some((re) => re.test(q))) return true;
-    if (checkRequest(q) || secondSentenceAsk(q) || claimAndConfirm(q) || standingClaimAsk(q) || typoFrame(q)) return true;
+    if (checkRequest(q) || secondSentenceAsk(q) || claimAndConfirm(q) || standingClaimAsk(q) || rightOrWrongAsk(q) || typoFrame(q)) return true;
   }
   return false;
+}
+
+/* ------------------------- N5 C2: the grading check on the model's ANSWER ------------------------- */
+
+/**
+ * Judging language in the MODEL's words, aimed at the student: "your answer is correct", "you got it right",
+ * "that is an A", "8 out of 10", "you're good at this". It runs on every answer that would carry model words, at
+ * every age, so a model that grades through any basis (plan, explanation, 18+ general) is withheld and the student
+ * gets the fixed ASSESSMENT refusal instead. Like the question net it is a SAFETY NET with anchored frames, not a
+ * guarantee: "you"/"your" must be the one judged, so an explanation that talks about right answers in general
+ * ("the correct answer is 7") still reaches the student.
+ */
+export const JUDGING_PATTERNS = [
+  /\byour (?:own |first |last |final )?(answer|answers|response|reply|work|explanation|reasoning|solution|essay|attempt|guess|definition|understanding|idea|thinking|calculation|claim)\b(?:\s+[a-z0-9']+){0,2}\s+(is|was|are|were|looks|seems|sounds)\s+(?:\w+ )?(correct|right|wrong|incorrect|accurate|inaccurate|perfect|excellent|great|good|poor|bad|weak|strong|spot on|on point|off|mistaken|flawed)\b/,
+  /\byou('re| are| were)\s+(?:\w+ )?(correct|right|wrong|incorrect|mistaken|spot on)\b/,
+  /\byou (got|get|have|scored|score|earned|earn|deserve|deserved)\b(?:\s+[a-z0-9']+){0,2}\s+(right|wrong|correct|incorrect|full marks|top marks|a pass|a fail|\d+(?:\.\d+)?\s*out of\s*\d+|\d+ ?%|\d+ points?)\b/,
+  /\byou got (it|this|that|them)\b(?!\s+(?:from|by|when|if|because|in|into|out|through|wrong because))/,
+  /\byou('ve| have)? (passed|failed|mastered|nailed)\b/,
+  /\byou('re| are)\s+(?:(?:very|really|quite|pretty|so|not|clearly|already|definitely)\s+)*(good|bad|great|terrible|weak|strong|excellent|poor|talented|smart|clever|gifted|brilliant|proficient)\b(?!\s+to\b)/,
+  /\byou('re| are) doing (well|great|badly|poorly|fine|good|ok|okay|excellent)\b/,
+  /\byou (clearly|really|fully|obviously|definitely) (understand|know|grasp|get)\b/,
+  /\byour (final |overall |current )?(grade|score|mark|rating|level|standing)\s+(is|would be|will be|was|:)/,
+  /\b(i'd|i would|i will|i'll|i)\s+(give|grade|score|rate|mark)\s+(you|this|it|that|your)\b/,
+  /\b(rating|score|grade|mark)\s*:\s*\d/,
+  /^(correct|incorrect|wrong|right|exactly|well done|great job|good job|nice work|spot on|perfect)\s*[.!,:]/,
+];
+/** A sentence with a scale ("7 out of 10", "8/10") is a verdict only when it is aimed at the student or a mark. */
+const OUT_OF = /\b\d{1,3}(?:\.\d)?\s*(?:\/|out of)\s*(?:5|10|20|100)\b/;
+const OUT_OF_AIM = /\b(your|i'd|i would|i'll|score|scored|mark|grade|rating|rate|points|answer|work|reply|response)\b/;
+/** A letter grade as a verdict: "That is an A", "you'd get a B+". Case kept: a capital letter, then punctuation or a grade word. */
+const LETTER_GRADE = /\b(?:is|be|was|get|gets|got|earn|earns|earned|deserve|deserves|give you|gives you|worth|that's|it's|solid|easy|clear|straight)\s+(?:an?\s+)?(?:solid\s+|clear\s+|easy\s+|strong\s+)?[A-F][+-]?(?=[.,!:;)]|$|\s+(?:grade|for|from|in|on|overall|answer|work)\b)/;
+
+/** N5 C2: does the model's answer judge the student? */
+export function judgesStudent(answer) {
+  const raw = String(answer ?? "").normalize("NFKC").replace(ZERO_WIDTH, "");
+  if (LETTER_GRADE.test(raw)) return true;
+  const q = tidy(fold(raw));
+  if (JUDGING_PATTERNS.some((re) => re.test(q))) return true;
+  return sentences(q).some((s) => OUT_OF.test(s) && OUT_OF_AIM.test(s));
+}
+
+/* ------------------------- N5 C1: the attempt-first backstop (under 18) ------------------------- */
+
+const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
+const NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const SHORT_ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+/** Words that carry no topic: they never count toward a title match. */
+const TITLE_STOPWORDS = new Set(("a an the and or but of to in on at for with by from into onto about as is are be it its this that " +
+  "these those your my our their his her what which who how why when where do does did can could should would will i we you " +
+  "me us them they he she just tell step steps activity activities task lesson part one some any all each new own " +
+  "make makes made use using get go give help show find work do done").split(" "));
+/** Lower case, letters and digits only, a crude plural fold (cells → cell). */
+function words(text) {
+  return tidy(fold(text).replace(ZERO_WIDTH, "").replace(/[^a-z0-9' ]+/g, " ").replace(/'/g, ""))
+    .split(" ").filter(Boolean).map((w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w));
+}
+
+/**
+ * N5 C1: the try-first activity a question NAMES, by its number ("activity 2", "the second activity", "step 2",
+ * "activity two") or by its title (the whole title, or at least two of its content words). Null when none.
+ * A question that shares one ordinary word with a title ("what is a cell?") names nothing.
+ */
+export function namedTryFirst(question, items) {
+  const acts = (items ?? []).filter((i) => String(i.id).startsWith("activity:"));
+  const tryFirst = acts.filter((i) => i.tryFirst);
+  if (tryFirst.length === 0) return null;
+  const q = words(question);
+  const qs = ` ${q.join(" ")} `;
+  for (const item of tryFirst) {
+    const n = Number(String(item.id).slice("activity:".length));
+    const nums = [String(n), NUMBER_WORDS[n - 1], SHORT_ORDINALS[n - 1]].filter(Boolean);
+    const byNumber = nums.some((k) => qs.includes(` activity ${k} `) || qs.includes(` activity number ${k} `) || qs.includes(` step ${k} `) || qs.includes(` task ${k} `))
+      || (ORDINALS[n - 1] && new RegExp(` ${ORDINALS[n - 1]} (activity|step|task) `).test(qs))
+      || (SHORT_ORDINALS[n - 1] && new RegExp(` ${SHORT_ORDINALS[n - 1]} (activity|step|task) `).test(qs));
+    if (byNumber) return item;
+    const title = words(topicOf(item));
+    if (title.length > 0 && qs.includes(` ${title.join(" ")} `)) return item;
+    const content = [...new Set(title.filter((w) => !TITLE_STOPWORDS.has(w) && w.length > 2))];
+    const hits = content.filter((w) => q.includes(w)).length;
+    if (content.length >= 2 && hits >= 2) return item;
+  }
+  return null;
 }
 
 const KINDS = new Set(["answer", "clarify", "about_helper", "off_topic", "assessment"]);
@@ -458,6 +555,16 @@ export async function askStudent({ pkg, worker, body }) {
   if (out?.refusal === "assessment") return assessment;
   const kind = kindOf(out);
   if (kind === "assessment") return assessment;
+  const adultMode = adultCourse(pkg);
+  // N5 C1, under 18: the host's own backstop. A question that names a try-first activity (its number or its title)
+  // gets the attempt_first reply whatever the model cited, so the redirect no longer rests on the model's cite.
+  if (!adultMode) {
+    const named = namedTryFirst(question, pkg.items);
+    if (named) {
+      const title = topicOf(named);
+      return { answer: attemptFirstReply(title), grounded: false, cites: [{ id: named.id, label: named.label }], note: NOT_EVIDENCE, kind: "attempt_first", activity: { id: named.id, title } };
+    }
+  }
   if (kind === "about_helper") return { answer: aboutHelperReply(pkg), grounded: false, cites: [], note: NOT_EVIDENCE, kind };
   const byId = new Map(pkg.items.map((i) => [i.id, i]));
   const unbracket = (c) => String(c).trim().replace(/^\[([^\[\]]+)\]$/, "$1").trim();
@@ -470,7 +577,10 @@ export async function askStudent({ pkg, worker, body }) {
     return { answer: clarifyReply(chosen), grounded: false, cites: chosen.map((i) => ({ id: i.id, label: i.label })), note: NOT_EVIDENCE, kind, offers: offersOf(chosen) };
   }
   if (kind !== "answer") return offTopic(pkg);
-  const adult = adultCourse(pkg);
+  // N5 C2: the model's own words are checked before they can reach the student, at every age and on every basis.
+  // A verdict on the student is withheld; the trace says why. ASSESSMENT is the same fixed sentence.
+  if (judgesStudent(out?.answer)) return { ...assessment, withheld: "judged" };
+  const adult = adultMode;
   // N4, 18+ only: a general explanation on the course's subject, not resting on the lesson. It carries no cites and
   // is not grounded; the UI labels it "General explanation, not from your lesson".
   if (adult && out?.basis === "general") {

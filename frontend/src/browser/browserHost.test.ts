@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MATERIAL, MATERIAL_SECRET, runScriptedCourse } from "../../../host/test/scripted-course.mjs";
+import { MATERIAL, MATERIAL_SECRET, runAuthorshipCourse, runScriptedCourse } from "../../../host/test/scripted-course.mjs";
 import { linkDigest } from "../../../host/chain.mjs";
 import { CourseSession } from "../../../host/course.mjs";
 import { RecordStore, metaText } from "../../../host/record-store.mjs";
@@ -30,6 +30,7 @@ import { createBrowserHost } from "./browserHost";
 import { everythingStored, fakeSite, MemoryStorage, ORIGIN, rig, type Rig } from "./testkit";
 
 const PARITY_SCRIPT = fileURLToPath(new URL("../../../host/scripts/parity-run.mjs", import.meta.url));
+const N6_PARITY_SCRIPT = fileURLToPath(new URL("../../../host/scripts/n6-parity-run.mjs", import.meta.url));
 
 afterEach(() => { setPasscodePrompt(null); vi.restoreAllMocks(); });
 
@@ -86,6 +87,31 @@ describe("parity: one API, two hosts", () => {
     const joined = disk.lines.join("\n");
     expect(joined).not.toMatch(/forged|attacker/);
     expect(joined).not.toContain('"mt_1"');
+  }, 60_000);
+
+  it("N6 parity: teacher-typed authorship and the edited-plan marker are byte-identical on both hosts", async () => {
+    const node = spawnSync(process.execPath, [N6_PARITY_SCRIPT], { encoding: "utf8", timeout: 60_000 });
+    expect(node.status, node.stderr).toBe(0);
+    const disk = JSON.parse(node.stdout) as { transcript: any[]; lines: string[]; meta: string };
+
+    let n = 0;
+    vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(() => `00000000-0000-4000-8000-${String(++n).padStart(12, "0")}` as `${string}-${string}-${string}-${string}-${string}`);
+    vi.spyOn(Date, "now").mockReturnValue(1767225600000);
+    const r = await rig();
+    const { transcript } = await runAuthorshipCourse((method: string, path: string, body?: unknown) => r.call(method as "GET" | "POST", path, body));
+    const dump = await r.host.dump();
+
+    expect(transcript).toEqual(disk.transcript);
+    expect(dump.events.sort((a, b) => a.seq - b.seq).map((event) => event.line)).toEqual(disk.lines);
+    expect(dump.metas.map((meta) => meta.text)).toEqual([disk.meta]);
+
+    const exported = transcript.find((step: any) => step.path.endsWith("/export"))?.json;
+    expect(exported.objectives).toHaveLength(1);
+    expect(exported.objectives[0].proposedBy).toBe("teacher");
+    expect(exported.plan).toMatchObject({ proposedBy: "ai", editedByTeacher: true, teacherEditCount: 1 });
+    expect(disk.lines.some((line) => line.includes('"plan.confirmed"') && line.includes('"teacherEditCount":1'))).toBe(true);
+    const anchor = transcript.find((step: any) => step.path.endsWith("/anchor/1"))?.json.anchor as CourseAnchor;
+    expect(comparePin({ ...anchor, pinnedAt: 1767225600000 }, anchor).status).toBe("ok");
   }, 60_000);
 
   it("Marble parity: the browser host serves the same read-only search and topic shapes the Node host serves, from the same snapshot", async () => {

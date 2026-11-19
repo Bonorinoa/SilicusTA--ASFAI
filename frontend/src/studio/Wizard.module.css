@@ -129,7 +129,7 @@
   .page { grid-template-columns: minmax(0, 1fr); padding: 16px 16px 40px; row-gap: 14px; }
   .spine { display: none; }
   .mobileStep { display: flex; flex-direction: column; gap: 8px; font-size: 0.8125rem; color: var(--fn-ink-muted); }
-  .mobileBar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .mobileBar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; } /* K5: one row for every step count */
   .mobileSeg { height: 3px; border-radius: 3px; background: var(--fn-line); }
   .mobileSeg[data-done="true"] { background: var(--fn-accent); }
   .sheet { padding: 24px 18px 20px; border-radius: 12px; }

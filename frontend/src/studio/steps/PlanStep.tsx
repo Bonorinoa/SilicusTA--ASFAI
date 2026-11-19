@@ -22,7 +22,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
 
   let bar: React.ReactNode = null;
   if (looking) {
-    bar = <ActionBar text={plan?.status === "confirmed" ? <><strong>Plan confirmed.</strong> Nothing here changes.</> : "A look at the plan."}><Button variant="primary" onClick={() => onLook(null)}>Back to the current step</Button></ActionBar>;
+    bar = <ActionBar text={plan?.status === "confirmed" ? <><strong>Plan confirmed.</strong> Nothing here changes.</> : "A look at the plan."}><Button variant="primary" data-primary="true" onClick={() => onLook(null)}>Back to the current step</Button></ActionBar>;
   } else if (drafting) {
     // Drafting is spoken once, by the one status line; the skeleton card holds the place here.
     bar = null;
@@ -63,7 +63,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
         {drafting ? (
           <section className={s.card} aria-busy="true" aria-label="Drafting the plan">
             {/* M1 (Q6): the plan wait lives here, on the course's plan page. Lines follow DECISIONS §5. */}
-            <WaitLines label="Drafting the plan" every={4500} lateAfter={45000} late={PLAN_LATE} sub={PLAN_SUB}
+            <WaitLines live={false} label="Drafting the plan" every={4500} lateAfter={45000} late={PLAN_LATE} sub={PLAN_SUB}
               lines={planLines({
                 anchor: map?.anchor.name ?? null, before: map?.prerequisites[0]?.name ?? null, connected: connected?.anchor.name ?? null,
                 sources: [...c.sources.map((h) => h.name), ...(view.course.marbleAnchor ? ["the skill-map text"] : [])],

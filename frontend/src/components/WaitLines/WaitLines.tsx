@@ -7,8 +7,10 @@
 import { useEffect, useState } from "react";
 import css from "./WaitLines.module.css";
 
-export function WaitLines({ lines, every, sub, late, lateAfter, label }: {
+export function WaitLines({ lines, every, sub, late, lateAfter, label, live = true }: {
   lines: string[]; every: number; sub?: string; late?: string; lateAfter?: number; label: string;
+  /** K5: false where the page already has its one status line (the studio's StepStatus); then this is a labelled group. */
+  live?: boolean;
 }) {
   const [i, setI] = useState(0);
   const [isLate, setLate] = useState(false);
@@ -23,7 +25,7 @@ export function WaitLines({ lines, every, sub, late, lateAfter, label }: {
     return () => clearTimeout(t);
   }, [lateAfter]);
   return (
-    <div className={css.wait} role="status" aria-label={label} data-wait-lines>
+    <div className={css.wait} role={live ? "status" : "group"} aria-label={label} data-wait-lines>
       <p className={css.line}><span className={css.dot} aria-hidden="true" /><span key={i} className={css.text} data-line-index={i}>{lines[Math.min(i, lines.length - 1)]}</span></p>
       {isLate && late ? <p className={css.late}>{late}</p> : null}
       {sub ? <p className={css.sub}>{sub}</p> : null}

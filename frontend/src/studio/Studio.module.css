@@ -29,6 +29,14 @@
 .crumb { font-size: 0.9375rem; color: var(--fn-ink-soft); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }
 a.crumb:hover { color: var(--fn-ink); }
 .topRight { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* K5 (KV2 C3): on a phone the landing link says "About", so brand and link share one row. */
+.about { flex: 0 0 auto; }
+.aboutShort { display: none; }
+@media (max-width: 480px) {
+  .aboutLong { display: none; }
+  .aboutShort { display: inline; }
+  .brand .crumb { max-width: 16ch; }
+}
 
 .stepper { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 999px; background: #ece5d6; }
 .step {

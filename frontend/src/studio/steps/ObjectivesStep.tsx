@@ -220,7 +220,8 @@ export function ObjectivesStep({ c, view, worker, links, looking, onLook }: Step
           {bar}
         </div>
       </div>
-      {(rows.some((r) => r.by !== "teacher") || drafting) && (!confirmed || waitingRows.length > 0) ? tray : null}
+      {/* This tray is the decision queue: teacher-typed proposals also need an explicit decision. */}
+      {(rows.length > 0 || drafting) && (!confirmed || waitingRows.length > 0) ? tray : null}
     </>
   );
 }

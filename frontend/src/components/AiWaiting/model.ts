@@ -193,6 +193,7 @@ export type ReceiptView = Pick<HostView, "proposals" | "plan" | "objectives" | "
 
 /** After "propose objectives": counts from the resulting view. Never says the AI decided anything. */
 export function proposalsReceipt(view: ReceiptView): string[] {
+  // This receipt describes model output, so teacher-authored proposals are intentionally excluded.
   const ai = view.proposals.filter((p) => p.by === "ai");
   const n = ai.length;
   if (n === 0) return [];

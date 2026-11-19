@@ -55,6 +55,7 @@ export function objectivesOffer(args: {
   const { rows, confirmed } = args;
   const waiting = rows.filter((r) => r.status === "proposed");
   const decided = rows.filter((r) => DECIDED.has(r.status));
+  // This tracks model/source rounds only; teacher-typed rows must not consume the one auto-mode proposal round.
   const anyProposalRound = rows.some((r) => r.by !== "teacher");
 
   // Propose from sources. Explicit courses: a new round whenever nothing waits. Auto (older) courses: one round.

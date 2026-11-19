@@ -84,7 +84,8 @@ export function DecisionCard({
   const wasAdding = useRef(false);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const proposals = rows.filter((r) => r.by === "ai");
+  // This is the decision queue, not an AI-only list: teacher-typed proposals still await a decision.
+  const proposals = rows.filter((r) => r.status !== "added");
   const decided = proposals.filter((r) => r.status !== "proposed").length;
   const addedCount = rows.filter((r) => r.status === "added").length;
   const awaiting = proposals.length - decided;

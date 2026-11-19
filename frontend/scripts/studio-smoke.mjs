@@ -62,6 +62,9 @@ const server = createServer(async (req, res) => {
         const q = (prompt.trim().split("\n").at(-1) ?? "").replace(/^Student:\s*/, "").toLowerCase();
         // K3: the model only picks a kind; the host writes the words.
         if (/your name|who are you/.test(q)) reply = { kind: "about_helper", basis: null, answer: "", cites: [] };
+        // N4: a goal question rests on the objective only. The scripted v2 plan (ages 5-12) has AI forbidden in every
+        // activity, so an answer resting on an activity is the host's attempt_first reply instead (checked below).
+        else if (/plants need/i.test(q)) reply = { kind: "answer", basis: "plan", answer: "A plant uses light, water and air to make sugar.", cites: ["objective:1"] };
         else if (q === "plants") reply = { kind: "clarify", basis: null, answer: "", cites: ["[objective:1]", "activity:1"] };
         else if (/game|ignore|instructions|address|my name/.test(q)) reply = { inScope: false, basis: "plan", refusal: "off_topic", answer: "", cites: [] };
         else if (/grade|pass|how am i doing|score|mark/.test(q)) reply = { inScope: false, basis: "plan", refusal: "assessment", answer: "", cites: [] };
@@ -642,7 +645,16 @@ try {
   }
   const answersBefore = await page.evaluate(() => (document.body.innerText.match(/A plant uses light, water and air/g) ?? []).length);
   await page.evaluate((label) => [...document.querySelectorAll('[role="group"][aria-label="Ask about"] button')].find((b) => (b.textContent ?? "").trim() === label)?.click(), offers[offers.length - 1]);
-  check("K3 tapping an offered item asks about it", await page.waitForFunction((n) => (document.body.innerText.match(/A plant uses light, water and air/g) ?? []).length > n, { timeout: 8000 }, answersBefore).then(() => true, () => false));
+  // N4: the last offer is activity 1, and at ages 5-12 its AI status is forbidden, so the answer that rests on it is
+  // replaced by the host's attempt_first reply naming the activity. No model words reach the student.
+  void answersBefore;
+  const tapped = offers[offers.length - 1];
+  check("K3 tapping an offered item asks about it; N4 an attempt-first activity gets the host's try-first reply naming it",
+    await waitText(`This one is for you to try first: ${tapped}${/[.?!…]$/.test(tapped) ? "" : "."} Ask me after you've had a go.`, 8000), tapped);
+  if (process.env.K3_SHOTS) {
+    await sleep(400);
+    await page.screenshot({ path: `${process.env.K3_SHOTS}/n4-learn-attempt-first-desktop.png`, fullPage: true });
+  }
 
   // ---- lane C · R7: a second course through the wizard, proposing from a pasted source on arrival
   await page.goto(`${APP}/#/studio/new`, { waitUntil: "networkidle0" });

@@ -47,6 +47,12 @@ describe("explainRefusal", () => {
     expect(`${x.what} ${x.saved} ${x.next}`).not.toMatch(MACHINE);
   });
 
+  it("a final plan-draft failure uses the required plain sentence and names the recorded retry", () => {
+    const x = explainRefusal(new HostError("internal detail", "PLAN_DRAFT_FAILED"), "plan");
+    expect(x.what).toBe("Silicus couldn't finish this plan. Try again, or shorten the sources.");
+    expect(x.saved).toMatch(/retry.*kept|kept.*retry/i);
+  });
+
   it("WORKER_TRUNCATED never tells a plan step to cut sources (the plan is drafted from objectives)", () => {
     const plan = explainRefusal(new HostError("the reply was cut off", "WORKER_TRUNCATED"), "plan");
     expect(plan.next).not.toMatch(/sources/i);

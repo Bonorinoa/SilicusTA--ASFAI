@@ -26,7 +26,7 @@ export interface Explained extends RefusalText {
 
 /** The codes contract §3 names. The table below must cover every one of them (refusals.test.ts iterates this). */
 export const CONTRACT_CODES = [
-  "WORKER_NOT_CONFIGURED", "WORKER_UNREACHABLE", "WORKER_BAD_OUTPUT", "WORKER_TRUNCATED", "WORKER_FAILED",
+  "WORKER_NOT_CONFIGURED", "WORKER_UNREACHABLE", "WORKER_BAD_OUTPUT", "WORKER_TRUNCATED", "WORKER_FAILED", "PLAN_DRAFT_FAILED",
   "NO_MATERIALS", "MATERIAL_ROUND_PENDING", "ROUND_NOTHING_NEW", "ALREADY_PROPOSED", "NO_TEACHER_OUTCOMES", "OBJECTIVES_CONFIRMED",
   "OBJECTIVES_AUTO", "PROPOSE_FIRST", "SUGGESTIONS_PENDING", "NO_USABLE_SUGGESTIONS", "OBJECTIVES_PENDING",
   "NO_OBJECTIVES", "PASSCODE_REQUIRED", "PASSCODE_CANCELLED", "RATE_LIMITED", "URL_UNREACHABLE",
@@ -80,6 +80,11 @@ export const REFUSALS: Readonly<Record<string, RefusalText>> = {
     what: "Something went wrong while the model was drafting.",
     saved: NOTHING_ADDED,
     next: "Try again. If it keeps happening, open Details and pass it on to whoever runs Silicus for you.",
+  },
+  PLAN_DRAFT_FAILED: {
+    what: "Silicus couldn't finish this plan. Try again, or shorten the sources.",
+    saved: "The failed draft and its automatic retry were kept on the course record.",
+    next: "Try again, or shorten the sources.",
   },
   MODEL_NO_CREDITS: {
     what: "The AI service is out of credit, so it can’t draft right now.",

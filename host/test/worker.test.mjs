@@ -256,13 +256,20 @@ test("the reply cap (H): 16,000 by default, an override applies, and the 32,000 
   assert.equal(mock.st.lastBody.max_tokens, 16000, "a junk override falls back to the default");
 });
 
-test("the OpenAI wire sends each reasoning option exactly; model-default omits it", async () => {
+test("the OpenAI wire sends each configured reasoning option on tasks without a fixed setting", async () => {
   for (const [reasoning, want] of [["low", { effort: "low" }], ["medium", { effort: "medium" }], ["high", { effort: "high" }], ["off", { enabled: false }], ["model-default", undefined]]) {
-    const mock = await startMockWorker({ reply: goodPlan() }); MOCKS.push(mock);
+    const mock = await startMockWorker({ reply: { objectives: [{ statement: "Students can compare two examples." }] } }); MOCKS.push(mock);
     const w = new PlanWorker({ url: mock.url, model: "m", reasoning });
-    await w.draft({ objectives: OBJECTIVES });
+    await w.suggestObjectives({ outcomes: ["Students can explain one example."] });
     assert.deepEqual(mock.st.lastBody.reasoning, want, reasoning);
   }
+});
+
+test("the plan task always sends reasoning off, even when the configured default is low", async () => {
+  const mock = await startMockWorker({ reply: goodPlan() }); MOCKS.push(mock);
+  const w = new PlanWorker({ url: mock.url, model: "m", reasoning: "low" });
+  await w.draft({ objectives: OBJECTIVES });
+  assert.deepEqual(mock.st.lastBody.reasoning, { enabled: false });
 });
 
 test("reasoning is never sent on the Anthropic wire", async () => {
@@ -571,6 +578,50 @@ test("the host hands the teacher's course answer to the worker when it drafts th
     return seen.at(-1);
   };
   assert.equal((await run({ topic: "fractions", course: "Grade 3 math, one 45-minute lesson", learning_outcomes: "x" })).course, "Grade 3 math, one 45-minute lesson");
+});
+
+async function readyCourseForPlanRetry() {
+  const store = new CourseStore(mkdtempSync(join(tmpdir(), "silicus-plan-retry-")));
+  const session = CourseSession.create(store, { owner: "teacher:tk-1", title: "Reliable plans", ages: { min: 10, max: 11 }, lessonMinutes: 45 });
+  session.confirmCheckpoint({ id: "files", text: "Confirm the material list.", at: 1000 });
+  session.answerIntake({ text: "answers", answers: { topic: "Water cycles", course: "Middle school science", learning_outcomes: "Explain evaporation." }, at: 1100 });
+  session.confirmCheckpoint({ id: "outline", text: "Confirm the outline.", at: 1200 });
+  session.proposeObjectives({ items: [{ kind: "local", statement: "Students can explain evaporation." }], at: 1300 });
+  session.decideObjectives({ decisions: [{ verb: "accept", proposalId: session.view().proposals[0].id }], text: "Accept.", at: 1400 });
+  return { store, session };
+}
+
+const workerFailure = (code) => Object.assign(new Error(`scripted ${code}`), { code });
+
+test("the host retries one truncated plan automatically and records the retry before the completed draft", async () => {
+  const { store, session } = await readyCourseForPlanRetry();
+  let calls = 0;
+  const worker = { draft: async (args) => {
+    calls += 1;
+    if (calls === 1) throw workerFailure("WORKER_TRUNCATED");
+    return { title: "Water moves", audience: { ageRangeStart: 18, ageRangeEnd: 40 }, activities: [{ title: "Trace the cycle", minutes: 45, objectiveIds: args.objectives.map((o) => o.id), learnerDoes: "Trace water through a diagram.", teacherDoes: "Ask what changes state.", evidenceIfAny: "work-product", citations: ["asfai:fixture-water"] }] };
+  } };
+
+  const result = await session.draftPlanFromObjectives({ worker, at: 1500 });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(calls, 2);
+  const actions = session.view().activity.map((item) => item.action);
+  assert.deepEqual(actions.slice(-2), ["plan.retry", "plan.drafted"]);
+  assert.deepEqual(CourseSession.load(store, session.meta.courseId).view().activity.map((item) => item.action).slice(-2), ["plan.retry", "plan.drafted"], "the retry survives replay");
+});
+
+test("the host retries one empty plan, then records and returns the plain final failure", async () => {
+  const { store, session } = await readyCourseForPlanRetry();
+  let calls = 0;
+  const worker = { draft: async () => { calls += 1; throw workerFailure("WORKER_BAD_OUTPUT"); } };
+
+  const result = await session.draftPlanFromObjectives({ worker, at: 1500 });
+  assert.deepEqual(result, { ok: false, code: "PLAN_DRAFT_FAILED", reason: "Silicus couldn't finish this plan. Try again, or shorten the sources." });
+  assert.equal(calls, 2);
+  const failed = session.view().activity.at(-1);
+  assert.equal(failed.action, "plan.failed");
+  assert.deepEqual(failed.facts, { attempts: 2, reason: "WORKER_BAD_OUTPUT" });
+  assert.equal(CourseSession.load(store, session.meta.courseId).view().activity.at(-1).action, "plan.failed", "the failure survives replay");
 });
 
 

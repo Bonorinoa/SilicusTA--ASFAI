@@ -90,6 +90,7 @@ export function PlanStep({ c, view, worker, looking, onLook }: StepProps) {
             <PlanCard
               plan={shownPlan}
               lessonMinutes={view.course.lessonMinutes}
+              courseAges={view.course.ages ?? null}
               objectives={view.objectives}
               teacher={{ name: view.course.owner, confirmedAt: shownPlan.status === "confirmed" && published ? new Date(published.publishedAt) : undefined }}
               onPrint={() => window.print()}

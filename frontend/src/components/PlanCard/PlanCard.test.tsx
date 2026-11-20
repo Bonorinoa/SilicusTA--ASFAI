@@ -20,6 +20,7 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
     render(
       <PlanCard
         plan={scenario.plan}
+        courseAges={{ min: 8, max: 10 }}
         objectives={scenario.objectives}
         teacher={{ name: "R. Okonkwo", confirmedAt: new Date("2026-10-09T10:00:00Z") }}
       />,
@@ -33,6 +34,19 @@ describe("PlanCard, rendering a real gate-confirmed plan", () => {
     expect(screen.getByText("3 activities")).toBeInTheDocument();
     expect(screen.getByText("Course version 1")).toBeInTheDocument();
     expect(screen.getByText("Confirmed by R. Okonkwo")).toBeInTheDocument();
+  });
+
+  it("shows the course's recorded ages, never the model's audience guess", () => {
+    const guessed = { ...scenario.plan, audience: { ageRangeStart: 18, ageRangeEnd: 40 } };
+    const { rerender } = render(
+      <PlanCard plan={guessed} courseAges={{ min: 10, max: 12 }} objectives={scenario.objectives} />,
+    );
+
+    expect(screen.getByText("Ages 10–12")).toBeInTheDocument();
+    expect(screen.queryByText("Ages 18–40")).not.toBeInTheDocument();
+
+    rerender(<PlanCard plan={guessed} courseAges={null} objectives={scenario.objectives} />);
+    expect(screen.queryByText(/Ages /)).not.toBeInTheDocument();
   });
 
   it("uses the singular 'minute' when the plan totals one minute, and never '1 minutes'", () => {

@@ -149,8 +149,8 @@ describe("PlanCard, plan schema v2 learning design", () => {
     const golden = JSON.parse(readFileSync(path.join(here, "__fixtures__", "v1-plan.golden.json"), "utf8")) as Record<string, string>;
     const withCitations = { ...scenario.plan, citations: [{ ref: "marble:mt_x", label: "A topic", source: "marble", activityIndexes: [0], verified: true }] };
     const cases: Record<string, React.ReactElement> = {
-      plain: <PlanCard plan={scenario.plan} objectives={scenario.objectives} teacher={{ name: "R. Okonkwo", confirmedAt: new Date("2026-10-09T10:00:00Z") }} />,
-      record: <PlanCard plan={withCitations} objectives={scenario.objectives} ids="record" onPrint={() => {}} />,
+      plain: <PlanCard plan={scenario.plan} courseAges={{ min: 8, max: 10 }} objectives={scenario.objectives} teacher={{ name: "R. Okonkwo", confirmedAt: new Date("2026-10-09T10:00:00Z") }} />,
+      record: <PlanCard plan={withCitations} courseAges={{ min: 8, max: 10 }} objectives={scenario.objectives} ids="record" onPrint={() => {}} />,
     };
     for (const [name, el] of Object.entries(cases)) {
       const { container, unmount } = render(el);

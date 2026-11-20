@@ -10,9 +10,9 @@
  *     {role, content} strings;
  *   - max_tokens = SILICUS_WORKER_MAX_TOKENS, 16000 by default (hard ceiling 32000): the server decides it,
  *     because a client value could only shrink the reply and turn a normal call into a truncation refusal;
- *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it. N1: the client may name its
+ *   - reasoning is SILICUS_WORKER_REASONING, low by default; the client cannot set it. The client may name its
  *     TASK (rank | answer | objectives | suggest | plan, anything else ignored); the server applies the fixed
- *     per-task rule from host/worker-config.mjs (rank and answer: off; the rest: the configured default);
+ *     per-task rule from host/worker-config.mjs (rank, answer and plan: off; the rest: the configured default);
  *   - zero-data-retention routing `provider: {zdr: true, data_collection: "deny"}` is sent unless
  *     SILICUS_WORKER_ZDR === "0", and it fails CLOSED: one upstream attempt, never a retry elsewhere;
  *   - OPENROUTER_API_KEY goes only upstream as a Bearer token, never into a response or a log.

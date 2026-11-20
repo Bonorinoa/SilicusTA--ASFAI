@@ -184,7 +184,7 @@ export class PlanWorker {
       max_tokens: this.#maxTokens,
       ...(this.#zdr ? { provider: { zdr: true, data_collection: "deny" } } : {}),
     };
-    // N1: per-task reasoning (rank and answer: off). On the site the server applies the same rule from `task`.
+    // Per-task reasoning (rank, answer and plan: off). On the site the server applies the same rule from `task`.
     const reasoning = anthropic ? undefined : reasoningBody(known && Object.hasOwn(this.#taskReasoning, known) ? this.#taskReasoning[known] : taskReasoning(known, this.#reasoning));
     if (reasoning) body.reasoning = reasoning;
     if (this.#sendTask && known) body.task = known;
